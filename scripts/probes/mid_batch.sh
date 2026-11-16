@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # The middle-crossing check (mid_check.mjs, or SCRIPT=across_check.mjs / SCRIPT=edge_noise.mjs) on a dev server:
-#   bash scripts/probes/mid_batch.sh "<query>|<S0>|<A>[|IN] ..."      e.g. "chartLayout=0|0|0 chartLayout=1&chartCalm=1|0|0"
+#   bash scripts/probes/mid_batch.sh "<query>|<S0>|<A>[|IN] ..."      e.g. "idleOrbitOn=0|2|0" (the query: any tunables to set; ⛔ the switches: step 2.5)
 #   SCENE (default 4, Scene_0bis), SCRIPT, WIDTH; PX, PERIOD, RIM, FROM_SIDE, SHOW, BEFORE, AFTER, EVERY, FROM, GEOM pass through to the probe.
 #   The runbook: scripts/probes/ORBIT_GATES.md
 set -u

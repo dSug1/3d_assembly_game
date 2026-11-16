@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # One batch of deterministic headless replays (replay_probe.mjs, its seeded script: SEED 1, LEGS 40): a dev server from $REPO (default this
 # repository), the three scenes recorded as <OUT>/<prefix>_s1.json, _s0.json, _s0bis.json; the server stopped at the end.
-#   bash scripts/probes/replay_batch.sh <prefix> [twice]        EXTRA="&chartLayout=0&chartCalm=0" is appended to every URL
+#   bash scripts/probes/replay_batch.sh <prefix> [twice]        EXTRA="&<tunable>=<value>" is appended to every URL (⛔ the "off" replays: step 2.5)
 #   "twice" also records Scene_1 a second time (<prefix>_s1_again): a replay is deterministic, the two must be identical.
 #   The runbook: scripts/probes/ORBIT_GATES.md
 set -u

@@ -1,19 +1,19 @@
 /**
  * GOLDEN VECTORS — **THE ORBIT ON CHARTS, STEP 2.4a: THE ATLAS DECIDES WHERE A FRAME CHANGES** (2026-11-15, `Claude/40_RENDER_SCENE/spec/ORBIT_CHARTS.md`
- * §3 3. – 6., §12 2.4a; D-C2, D-C4, D-C6), under `chartLayout` 1 only:
+ * §3 3. – 6., §12 2.4a; D-C2, D-C4, D-C6) (⛔ its switch `chartLayout` and the old detectors deleted at step 2.5, 2026-11-16 — the default half kept):
  * * `capTiltHeading` — a face tilts only if it is a CAP with a square layout, its heading one of the layouts' (⛔ `holdsPole`: a side beyond 45°, a virtual
  *   cap): a box's caps (and `Scene_1`'s real cube) give EXACTLY today's `tiltHeading` on every yaw; a rectangle turned 30° its own edges' headings; a
  *   pentagon or a triangle cap none (D-C2); the lying heptagon's bottom a heading, its two top faces and its virtual top none (D-C4, D-C6).
- * * `chartZones` — the frames the atlas takes as zones: on `Scene_0bis`'s tipped heptagon the SAME zone as `polarZones`' (axis, frame, orientation,
- *   whole, facets, poles), whichever tip comes first; a box and the flat-ended heptagon none.
- * * The wiring (`render/assembly_wiring.ts`): each reader guarded by the switch, the old calls kept for `chartLayout` 0, the atlas cached per placed set.
+ * * `chartZones` — the frames the atlas takes as zones: on `Scene_0bis`'s tipped heptagon ONE zone (the axis along x, its frame, a spit, whole, its 14
+ *   facets, both apexes its poles — the numbers `polarZones` gave, pinned while it stood), whichever tip comes first; a box and the flat-ended heptagon none.
+ * * The wiring (`render/assembly_wiring.ts`): the atlas's readers, the atlas cached per placed set.
  * RED on the mutants listed in the step's report.
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { buildFaceMap, DEFAULT_FACET_OPTS, holdsPole, type FaceMap, type FacetOpts, type MapFace } from "../src/input/face_map";
+import { buildFaceMap, DEFAULT_FACET_OPTS, type FaceMap, type FacetOpts, type MapFace } from "../src/input/face_map";
 import { assignCharts, capTiltHeading, chartContour, chartZones, type ChartAssignment, type ChartFace } from "../src/input/orbit_charts";
-import { polarZones } from "../src/input/polar_zone";
+import { zoneFrame } from "../src/input/polar_zone";
 import { capTilt, snapHeading, tiltHeading } from "../src/input/orbit_tilt";
 import { prismOutline } from "../src/core/prism";
 import type { ShellBox } from "../src/input/orbit_shell";
@@ -102,7 +102,7 @@ describe("⭐⭐⭐ a cap's tilt heading from its square layouts (`capTiltHeadin
       }
     }
   });
-  it("⭐ `Scene_0`'s lying heptagon: the bottom a heading (today's); the two top faces NO tilt (D-C4 — ⛔ `holdsPole` beyond 45°); the virtual top none (D-C6)", () => {
+  it("⭐ `Scene_0`'s lying heptagon: the bottom a heading (today's); the two top faces NO tilt (D-C4 — ⛔ `holdsPole` beyond 45°, deleted at step 2.5); the virtual top none (D-C6)", () => {
     for (const [, fo] of LAYOUTS) {
       const map = mapOf(heptagonPolys(), fo);
       const { C, A } = atlas(map);
@@ -112,12 +112,10 @@ describe("⭐⭐⭐ a cap's tilt heading from its square layouts (`capTiltHeadin
       const tops = map.facets.map((f, i) => (f.real && f.kind === "SIDE" && f.n[1] > Math.SQRT1_2 ? i : -1)).filter((i) => i >= 0);
       expect(tops.length).toBe(2);
       for (const i of tops) {
-        expect(holdsPole(map, i)).toBe("TOP"); // today's detector tilts them
         for (const y of YAWS) expect(capTiltHeading(A, C, i, map.facets[i]!.n, y)).toBeNull();
       }
       // the ridge: a pole held by an EDGE — the map's virtual top, not on the contour
       expect(map.facets[map.top]!.real).toBe(false);
-      expect(holdsPole(map, map.top)).toBe("TOP");
       expect(capTiltHeading(A, C, map.top, map.facets[map.top]!.n, 0.3)).toBeNull();
     }
   });
@@ -139,36 +137,36 @@ describe("⭐⭐⭐ a cap's tilt heading from its square layouts (`capTiltHeadin
 });
 
 describe("⭐⭐⭐ the zones from the atlas (`chartZones`, §3 3. – 4.)", () => {
-  it("⭐ `Scene_0bis`'s tipped heptagon (apex centred or off): ONE zone, the SAME as `polarZones`' — axis, frame, orientation, whole, facets, poles", () => {
+  // ⛔ (2026-11-16, step 2.5) compared with `polarZones`' zone while it stood (equal: axis, frame, orientation, whole, facets, poles); now pinned on its own
+  it("⭐ `Scene_0bis`'s tipped heptagon (apex centred or off): ONE zone — the axis along x, its frame, a spit, the whole assembly, its 14 facets, both apexes", () => {
     for (const centred of [true, false])
       for (const [, fo] of LAYOUTS) {
         const map = mapOf(tippedPolys(7, 0.12, centred), fo);
         const { C, A } = atlas(map);
         const zs = chartZones(A, C);
-        const ps = polarZones(map);
         expect(zs.length).toBe(1);
-        expect(ps.length).toBe(1);
-        const [z, p] = [zs[0]!, ps[0]!];
-        expect(z.axis).toEqual(p.axis);
-        expect(z.frame).toEqual(p.frame);
+        const z = zs[0]!;
+        expect(Math.abs(z.axis[0])).toBe(1);
+        expect([z.axis[1], z.axis[2]].map(Math.abs)).toEqual([0, 0]);
+        expect(z.frame).toEqual(zoneFrame(z.axis));
         expect(z.orientation).toBe("SPIT");
-        expect(z.orientation).toBe(p.orientation);
         expect(z.whole).toBe(true);
-        expect(z.whole).toBe(p.whole);
-        expect(z.facets).toEqual(p.facets);
         expect(z.facets.length).toBe(14);
-        expect(z.poles).toEqual(p.poles);
+        expect(z.facets.every((i) => Math.abs(map.facets[i]!.n[0]) > 0.5)).toBe(true); // the tips' triangles
+        expect(z.poles.length).toBe(2);
+        expect(z.poles.map((p) => Math.abs(p[0])).every((x) => Math.abs(x - (0.245 + 0.12)) < 1e-9)).toBe(true);
+        expect(z.poles[0]![0] * z.poles[1]![0]).toBeLessThan(0); // one apex each side
+        expect(z.poles[0]![0] * z.axis[0]).toBeLessThan(0); // the axis from the first pole toward the second
       }
   });
-  it("⭐ the same with the tips' order reversed: the axis's sense follows the contour's first pole, as `polarZones`' does (+x then)", () => {
+  it("⭐ the same with the tips' order reversed: the axis's sense follows the contour's first pole (+x then)", () => {
     const P = tippedPolys(7, 0.12);
     const map = mapOf([...P.slice(0, 7), ...P.slice(14), ...P.slice(7, 14)]);
     const { C, A } = atlas(map);
-    const [z, p] = [chartZones(A, C)[0]!, polarZones(map)[0]!];
-    expect(p.axis).toEqual([1, 0, 0]);
-    expect(z.axis).toEqual(p.axis);
-    expect(z.frame).toEqual(p.frame);
-    expect(z.poles).toEqual(p.poles);
+    const z = chartZones(A, C)[0]!;
+    expect(z.axis).toEqual([1, 0, 0]);
+    expect(z.frame).toEqual(zoneFrame([1, 0, 0]));
+    expect(z.poles[0]![0]).toBeLessThan(0);
   });
   it("a box and the flat-ended heptagon: no zone", () => {
     for (const polys of [boxPolys(0.483, 0.483, 0.483), heptagonPolys()])
@@ -199,39 +197,31 @@ describe("⭐⭐⭐ the zones from the atlas (`chartZones`, §3 3. – 4.)", () 
   });
 });
 
-describe("⭐⭐⭐ the wiring: the atlas decides only under the switch (`render/assembly_wiring.ts`)", () => {
+describe("⭐⭐⭐ the wiring: the atlas decides (`render/assembly_wiring.ts`) — ⛔ the old detectors of the switch off deleted at step 2.5", () => {
   const raw = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\r\n/g, "\n");
   const fn = (sig: string): string => {
     const i = raw.indexOf(sig);
     expect(i, sig).toBeGreaterThanOrEqual(0);
     return raw.slice(i, raw.indexOf("\n}\n", i) + 3).replace(/\s+/g, " ");
   };
-  it("`tiltOn`: the atlas's test and heading under `chartLayout` 1, `holdsPole` / `tiltHeading` otherwise", () => {
+  it("`tiltOn`: the atlas's test and heading (⛔ `holdsPole` / `tiltHeading`: step 2.5)", () => {
     const f = fn("function tiltOn(");
-    expect(f).toContain("if (st.cfg.chartLayout === 1) { ");
     // ⭐⭐⭐ (2026-11-16, C2W, W5) the heading carried in by the entry edge (`free_face_caps.test.ts`)
-    expect(f).toContain("const h = capTiltHeading(at.assign, at.contour, capStack, f.n, q.yaw, en?.heading ?? null); if (h === null) return;");
-    expect(f).toContain("} else { ");
-    expect(f).toContain("const pole = holdsPole(wm, capStack); if (pole === null) return; top = pole === \"TOP\";");
-    expect(f).toContain("hs = tiltHeading(cap.n, q.yaw);");
-    expect(f.indexOf("capTiltHeading(")).toBeLessThan(f.indexOf("} else {"));
-    expect(f.indexOf("holdsPole(")).toBeGreaterThan(f.indexOf("} else {"));
+    expect(f).toContain("const hs = capTiltHeading(at.assign, at.contour, capStack, cap.n, q.yaw, en?.heading ?? null); if (hs === null) return;");
+    expect(f).not.toContain("holdsPole(");
+    expect(f).not.toContain("tiltHeading(cap.n");
   });
-  it("`nextTiltHeading`: the same", () => {
-    const f = fn("function nextTiltHeading(");
-    expect(f).toContain("if (st.cfg.chartLayout === 1) { const at = atlasOf(st); return f === undefined || at === null ? null : capTiltHeading(at.assign, at.contour, i, f.n, yaw); }");
-    expect(f).toContain("return f === undefined || holdsPole(wm, i) === null ? null : tiltHeading(f.n, yaw);");
+  it("`nextTiltHeading` deleted (the roll back's target)", () => {
+    expect(raw).not.toContain("function nextTiltHeading(");
   });
-  it("`zonesOf`: the atlas's zones under the switch, its own key; `polarZones` otherwise; `zoneOn` 0 none first", () => {
+  it("`zonesOf`: the atlas's zones, its own key; `zoneOn` 0 none first (⛔ `polarZones`: step 2.5)", () => {
     const f = fn("function zonesOf(");
     expect(f).toContain("if (wm === null || st.cfg.zoneOn !== 1) return [];");
-    expect(f).toContain("if (st.cfg.chartLayout === 1) { const at = atlasOf(st); if (at === null) return []; const keyA = `atlas#${at.key}`;");
+    expect(f).toContain("const at = atlasOf(st); if (at === null) return []; const keyA = `atlas#${at.key}`;");
     expect(f).toContain("const zonesA = chartZones(at.assign, at.contour);");
-    expect(f).toContain("const zones = polarZones(wm, o);");
-    expect(f.indexOf("st.cfg.zoneOn !== 1")).toBeLessThan(f.indexOf("chartLayout === 1"));
-    expect(f.indexOf("chartZones(")).toBeLessThan(f.indexOf("polarZones("));
+    expect(f.indexOf("st.cfg.zoneOn !== 1")).toBeLessThan(f.indexOf("atlasOf(st)"));
   });
-  it("⭐ the atlas: from the WORLD face map, cached per its key and the three knobs — computed in ONE place, read only under the switch", () => {
+  it("⭐ the atlas: from the WORLD face map, cached per its key and the three knobs — computed in ONE place", () => {
     const f = fn("function atlasOf(");
     expect(f).toContain("const wm = worldFaceMap(st);");
     expect(f).toContain("const key = `${st.asmWorldMap?.key ?? \"\"}#${c.zoneUprightMaxDeg}#${c.zoneSpitMinDeg}#${c.zoneWholeShare}`;");
@@ -240,19 +230,14 @@ describe("⭐⭐⭐ the wiring: the atlas decides only under the switch (`render
     expect(f).toContain("assignCharts(contour, { ...DEFAULT_CHART_OPTS, uprightMaxDeg: c.zoneUprightMaxDeg, spitMinDeg: c.zoneSpitMinDeg, wholeShare: c.zoneWholeShare });");
     expect(raw.match(/assignCharts\(/g)?.length).toBe(1);
     expect(raw.match(/chartContour\(/g)?.length).toBe(1);
-    // its four readers, each inside its function's `chartLayout === 1` branch (⭐ step 2.4b: the pole's crossing in `assemblyFrame`)
-    // ⭐ (2026-11-16, step C4) the fifth: a spit's free face (`freeFaceFrame`), whose one call is under the switch
-    // ⭐ (2026-11-16, C2W) `freeEntry` takes the atlas from its callers (`freeFaceFrame`, `tiltOn`): still five
-    expect(raw.match(/atlasOf\(st\)/g)?.length).toBe(5);
-    for (const sig of ["function tiltOn(", "function nextTiltHeading(", "function zonesOf(", "export function assemblyFrame("]) {
-      const g = fn(sig);
-      expect(g.indexOf("st.cfg.chartLayout === 1")).toBeLessThan(g.indexOf("atlasOf(st)"));
-    }
-    expect(fn("function freeFaceFrame(")).toContain("atlasOf(st)");
+    // its readers: `tiltOn`, `zonesOf`, the pole's crossing in `assemblyFrame` (step 2.4b), a spit's free face (`freeFaceFrame`, step C4) — ⛔
+    // `nextTiltHeading`'s deleted at step 2.5 (`freeEntry` takes the atlas from its callers)
+    expect(raw.match(/atlasOf\(st\)/g)?.length).toBe(4);
+    for (const sig of ["function tiltOn(", "function zonesOf(", "export function assemblyFrame(", "function freeFaceFrame("]) expect(fn(sig)).toContain("atlasOf(st)");
     expect(raw.match(/freeFaceFrame\(st, /g)?.length).toBe(1);
-    expect(fn("export function assemblyFrame(")).toContain("if (st.cfg.chartLayout === 1) { st.asmPlaceWas = placeWas; freeFaceFrame(st, "); // ⭐ (C2W)
-    // the old detectors: in the wiring only on the switch's other path
-    expect(raw.match(/holdsPole\(/g)?.length).toBe(2);
-    expect(raw.match(/polarZones\(/g)?.length).toBe(1);
+    expect(fn("export function assemblyFrame(")).toContain("st.asmPlaceWas = placeWas; freeFaceFrame(st, "); // ⭐ (C2W)
+    // the old detectors: gone from the wiring (comments aside)
+    const codeOnly = raw.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+    expect(codeOnly).not.toMatch(/holdsPole\(|polarZones\(/);
   });
 });

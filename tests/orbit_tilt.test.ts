@@ -2,12 +2,15 @@
 // 2 (a), 3 (a), 4 the "no camera roll" rule removed). RED against `46d24db`: `src/input/orbit_tilt.ts` and the wiring (`tiltOnPress`, `tiltOff`) absent.
 // ⛔⛔⛔ (2026-11-15, the owner: *"cancel my rule and remove the press action on the orbit"*) no press tilts: the tilt close in only (the automatic tilt).
 // ⭐ The cube's fixture is the REAL specimen (the 240 faces the page fed to `buildFaceMap`, 2026-11-09).
+// ⛔⛔ (2026-11-16, step 2.5 — `Claude/00_CORE/queue_notes/RND5.md`) the press's swing (`swingDir`, `headingTurn`) and the roll back off the tilted facet
+// (`rollStep`, `tiltUnderWay`, `tiltExits`, `headingFrom`, `nextTiltHeading`, `holdsPole`'s test, the tie `TILT_TIE_M`) of the game before the charts
+// DELETED with their vectors; the wiring's pins keep their default half (the charts' one transition).
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { anglesOfDir, onTiltedFacet, TILT_TIE_M, blendCrossed, blendShare, tiltPendingStep, tiltHeading, TILT_SLANT_MIN, capTilt, frameMix, gizmoGlide, headingFrom, wholeShareStep, headingTurn, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, tiltAutoLatch, tiltBox, tiltCalmWholeHV, tiltExits, mouthHold, squareTurn, squareTurning, tiltFaces, type Mat3 } from "../src/input/orbit_tilt";
+import { anglesOfDir, onTiltedFacet, blendCrossed, blendShare, tiltPendingStep, tiltHeading, TILT_SLANT_MIN, capTilt, frameMix, gizmoGlide, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, snapHeading, tiltAutoLatch, tiltBox, tiltCalmWholeHV, mouthHold, squareTurn, squareTurning, tiltFaces, type Mat3 } from "../src/input/orbit_tilt";
 import { gizmoLag, gizmoShownAt, offsetFrame, orbitDir, pitchOfV, vOfPitch } from "../src/input/assembly_orbit";
-import { calmHeading, capEdgePitch } from "../src/input/orbit_calm";
-import { buildFaceMap, holdsPole, mapAngles, mapTarget, type MapFace } from "../src/input/face_map";
+import { capEdgePitch } from "../src/input/orbit_calm";
+import { buildFaceMap, mapAngles, mapTarget, type MapFace } from "../src/input/face_map";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 import type { ShellBox } from "../src/input/orbit_shell";
 import type { Vec3 } from "../src/core/vec";
@@ -42,13 +45,10 @@ describe("⭐⭐⭐ the tilt on a cap (1 (c); ⛔ 2026-11-15 no longer at a pres
     }
   });
 
-  it("⭐ the heading snapped to the nearest world axis; the swing's turn adds its angle to a heading", () => {
+  it("⭐ the heading snapped to the nearest world axis", () => {
     expect(snapHeading(30 * D)).toBeCloseTo(0, 12);
     expect(snapHeading(50 * D)).toBeCloseTo(90 * D, 12);
     expect(snapHeading(-140 * D)).toBeCloseTo(-180 * D, 12);
-    const v = mulM(headingTurn(25 * D), dirOf(10 * D, 40 * D));
-    expect(Math.atan2(v[2], v[0])).toBeCloseTo(35 * D, 12);
-    expect(Math.asin(v[1])).toBeCloseTo(40 * D, 12);
   });
 
   it("⭐⭐⭐ NO ROLL AT THE TILT: the camera upright in F, turned into the world, IS the world's upright camera — offsets included, from above a top and below a bottom", () => {
@@ -62,27 +62,6 @@ describe("⭐⭐⭐ the tilt on a cap (1 (c); ⛔ 2026-11-15 no longer at a pres
           expect(dist(f.dir, w.dir)).toBeLessThan(1e-9);
           expect(dist(f.up, w.up)).toBeLessThan(1e-9);
         }
-  });
-
-  it("⭐⭐⭐ THE SWING (1 (c)): at the press the camera exactly where it was; at its end at the snapped heading, the same pitch, upright — no roll on the way", () => {
-    const psi = 32 * D;
-    const hs = snapHeading(psi);
-    const delta = hs - psi;
-    const R = capTilt(hs, [0, 1, 0]);
-    const u0 = dirOf(psi, 60 * D);
-    const uF = mulT(swingDir(R, delta, 0), u0); // the press: the orbit's angles in F
-    expect(dist(mulM(swingDir(R, delta, 0), uF), u0)).toBeLessThan(1e-12);
-    const u1 = mulM(swingDir(R, delta, 1), uF);
-    expect(Math.atan2(u1[2], u1[0])).toBeCloseTo(hs, 9);
-    expect(Math.asin(u1[1])).toBeCloseTo(60 * D, 9);
-    for (const e of [0, 0.3, 0.7, 1]) {
-      // mid-swing: the F camera turned into the world is upright there (its up in the vertical plane of its direction)
-      const Re = swingDir(R, delta, e);
-      const f = frameViaF(Re, mulM(Re, uF), 0, 0);
-      const side = [f.dir[2], 0, -f.dir[0]] as Vec3;
-      expect(Math.abs(dot(f.up, side))).toBeLessThan(1e-9);
-      expect(f.up[1]).toBeGreaterThan(0);
-    }
   });
 
   it("⭐ a direction's angles round-trip (the frame changes turn every stored angle through them)", () => {
@@ -111,19 +90,20 @@ describe("⭐⭐⭐ the tilt on a cap (1 (c); ⛔ 2026-11-15 no longer at a pres
     }
   });
 
-  // ⭐⭐⭐ (2026-11-15) ON THE TILTED FACET'S BORDER IS ON IT — a tie, not a band: under the charts' layout a press with the gizmo on `Scene_0`'s ridge made
-  // the tilt with the gizmo exactly on the tilted facet's border; the map's place there was read on the NEIGHBOUR — "over the edge", the roll back, the
-  // exit, all within four frames of the press. RED on: the stack alone decides; the tie as wide as a millimetre.
-  it("⭐⭐⭐ the gizmo is on the tilted facet on its stack, or within the tie of its border (`TILT_TIE_M`, a micrometre)", () => {
-    expect(TILT_TIE_M).toBe(1e-6);
-    expect(onTiltedFacet(7, 7, 0)).toBe(true);
-    expect(onTiltedFacet(7, 7, 0.3)).toBe(true); // its own stack: whatever the distance handed
-    expect(onTiltedFacet(6, 7, 0)).toBe(true); // the neighbour's stack, exactly on the border
-    expect(onTiltedFacet(6, 7, 1e-9)).toBe(true);
-    expect(onTiltedFacet(6, 7, 1e-6)).toBe(true);
-    expect(onTiltedFacet(6, 7, 2e-6)).toBe(false);
-    expect(onTiltedFacet(6, 7, 1e-3)).toBe(false); // a millimetre past the edge: off it
-    expect(onTiltedFacet(6, 7, Infinity)).toBe(false);
+  // ⭐⭐⭐ (2026-11-15) ON THE TILTED FACET'S BORDER IS ON IT: under the charts' layout a press with the gizmo on `Scene_0`'s ridge made the tilt with the
+  // gizmo exactly on the tilted facet's border; the map's place there was read on the NEIGHBOUR — "over the edge", the roll back, the exit, all within four
+  // frames of the press. RED on: the stack alone decides. ⛔ (step 2.5) the default tie (`TILT_TIE_M`) deleted: the tolerance is the caller's (the band,
+  // `orbit_charts_face_band.test.ts`) — here a micrometre handed
+  it("⭐⭐⭐ the gizmo is on the tilted facet on its stack, or within the tolerance handed of its border", () => {
+    const tie = 1e-6;
+    expect(onTiltedFacet(7, 7, 0, tie)).toBe(true);
+    expect(onTiltedFacet(7, 7, 0.3, tie)).toBe(true); // its own stack: whatever the distance handed
+    expect(onTiltedFacet(6, 7, 0, tie)).toBe(true); // the neighbour's stack, exactly on the border
+    expect(onTiltedFacet(6, 7, 1e-9, tie)).toBe(true);
+    expect(onTiltedFacet(6, 7, 1e-6, tie)).toBe(true);
+    expect(onTiltedFacet(6, 7, 2e-6, tie)).toBe(false);
+    expect(onTiltedFacet(6, 7, 1e-3, tie)).toBe(false); // a millimetre past the edge: off it
+    expect(onTiltedFacet(6, 7, Infinity, tie)).toBe(false);
   });
 });
 
@@ -234,23 +214,6 @@ describe("⭐⭐⭐ the camera's frame turned back to the world's upright (`fram
   });
 });
 
-describe("⭐⭐⭐ (2026-11-10, the owner: *\"Make the roll back by finger && minimum of xx ms\"*) the roll SHOWN follows the finger, a whole roll never under `tiltRollMinMs`", () => {
-  it("⭐⭐ the finger's whole share at once: 0 → 1 over 250 ms at 16 ms frames (16 frames), never faster; reversible; 0 ms: the finger alone", () => {
-    let k = 0;
-    let frames = 0;
-    while (k < 1 && frames < 100) {
-      const k2 = rollStep(k, 1, 16, 250);
-      expect(k2 - k).toBeLessThanOrEqual(16 / 250 + 1e-12);
-      k = k2;
-      frames++;
-    }
-    expect(frames).toBe(16);
-    expect(rollStep(0.6, 0.2, 16, 250)).toBeCloseTo(0.6 - 16 / 250, 12); // the finger back: the roll comes back, as slowly
-    expect(rollStep(0.5, 0.52, 16, 250)).toBe(0.52); // a slow finger: exactly the finger's
-    expect(rollStep(0.1, 1, 16, 0)).toBe(1);
-  });
-});
-
 describe("⭐⭐⭐ (2026-11-10, the owner: *\"fix the gap\"* — *\"poles held by edges or slanted faces\"*) A FACE HOLDING A POLE, WHATEVER ITS SLANT", () => {
   // a prism along x: its section a regular polygon in (z, y), `off` the first vertex's angle — a hexagon with a VERTEX up (an edge holds the pole: two faces
   // at 60°), a square turned 45° (a diamond: two faces at 45°, none beyond — the pole held by an edge, a VIRTUAL cap)
@@ -302,8 +265,8 @@ describe("⭐⭐⭐ (2026-11-10, the owner: *\"fix the gap\"* — *\"poles held 
     expect(world.facets[world.top]!.real).toBe(false); // ⭐ the ridge: neither face is the cap
     const ridge = world.facets.map((f, i) => ({ f, i })).filter(({ f }) => f.kind === "SIDE" && Math.abs(Math.asin(f.n[1]) / D - 60) < 1e-6);
     expect(ridge.length).toBe(2);
-    for (const { f, i } of ridge) {
-      expect(holdsPole(world, i)).toBe("TOP");
+    for (const { f } of ridge) {
+      // ⛔ (step 2.5) `holdsPole(world, i)` "TOP" deleted: the atlas decides which face tilts (`capTiltHeading`) — here the heading rule itself
       // its own heading, whatever the orbit's (the camera on the OTHER side included): never past the vertical
       for (const yaw of [hs, hs + Math.PI, hs + Math.PI / 2]) {
         const h = tiltHeading(f.n, yaw);
@@ -372,23 +335,7 @@ describe("⭐⭐⭐ (2026-11-10, THE REBUILD — *\"once the tilt starts, it can
     expect(rollDurationMs(0, 360)).toBe(0);
     expect(rollDurationMs(Math.PI, 0)).toBe(0);
   });
-  it("⭐⭐⭐ A TILT UNDER WAY HOLDS THE GIZMO (1-b): its swing, or its roll back started (over the edge, or out past the threshold) and not whole; whole: free", () => {
-    expect(tiltUnderWay(true, false, 0)).toBe(true);
-    expect(tiltUnderWay(false, true, 0.4)).toBe(true);
-    expect(tiltUnderWay(false, true, 1)).toBe(false);
-    expect(tiltUnderWay(false, false, 0)).toBe(false); // on the tilted face, no crossing yet: the finger has the orbit
-  });
-  it("⭐⭐⭐ THE ROLL ON ITS OWN CLOCK: from the crossing to whole in its duration, whatever the finger (it never comes back: the asked share is 1 from the crossing)", () => {
-    const dur = rollDurationMs(Math.PI, 360);
-    let k = 0;
-    let t = 0;
-    while (k < 1 && t < 2000) {
-      k = rollStep(k, 1, 16, dur);
-      t += 16;
-    }
-    expect(t).toBeGreaterThanOrEqual(dur);
-    expect(t).toBeLessThan(dur + 16 + 1e-9);
-  });
+  // ⛔ (step 2.5) a tilt under way holding the gizmo (`tiltUnderWay`) and the roll on its own clock (`rollStep`) deleted with the roll back
 });
 
 describe("⭐⭐⭐ (2026-11-10, the owner: *\"Build 2\"*) THE GLIDE AT AN EDGE — the switch at the edge, the jump eased by time", () => {
@@ -431,17 +378,8 @@ describe("⭐⭐⭐ (2026-11-10, the owner: *\"at close distance … it toggles 
     expect(tiltAutoLatch(true, 0.36, 0.3)).toBe(false); // off
     expect(tiltAutoLatch(false, 0.01, 0)).toBe(false);
   });
-  it("⭐⭐⭐ THE OWNER'S HYSTERESIS: no tilt back before the tilt's swing is over and the roll shown whole — so a tilt and its tilt back take at least `tiltSwingMs` + the roll's time at `tiltRollDegS`", () => {
-    expect(tiltExits(false, 1, false)).toBe(false);
-    expect(tiltExits(false, 0.8, true)).toBe(false);
-    expect(tiltExits(true, 1, true)).toBe(false);
-    expect(tiltExits(false, 1, true)).toBe(true);
-    // ⭐⭐⭐ (the owner: *"if the piece crosses the hysteresis threshold, the tilt automatically triggers on or off"*) out past it: off on the facet too — once
-    // the roll shown is whole and the swing over
-    expect(tiltExits(true, 1, true, true)).toBe(true);
-    expect(tiltExits(true, 0.5, true, true)).toBe(false);
-    expect(tiltExits(true, 1, false, true)).toBe(false);
-  });
+  // ⛔ (step 2.5) the owner's hysteresis of the roll back (`tiltExits`: the swing over and the roll whole) deleted with it — the exit asked at once
+  // (`tiltLeavesNow`, `orbit_charts_one_state.test.ts`)
 });
 
 describe("⛔⛔⛔ (2026-11-15, the owner: *\"cancel my rule and remove the press action on the orbit\"*, `ORBIT_CHARTS.md` §11.1) NO ACTION AT A PRESS — the tilted pole close in only", () => {
@@ -463,47 +401,41 @@ describe("⛔⛔⛔ (2026-11-15, the owner: *\"cancel my rule and remove the pre
 });
 
 describe("⭐⭐ wired", () => {
-  it("⭐⭐⭐ (⛔ 2026-11-15 no press tilts: the block above) the frame's every direction through `dirFrame`, the map built in F, the exit back to the world (`tiltOff`), the camera's roll by the exit's share", () => {
+  it("⭐⭐⭐ (⛔ 2026-11-15 no press tilts: the block above) the frame's every direction through `dirFrame`, the map built in F, the exit back to the world (`tiltOff`) — ⛔ (step 2.5) the camera's roll back by the exit's share deleted", () => {
     // ⛔ (2026-11-15, the owner: *"cancel my rule and remove the press action on the orbit"*) the press's call (`tiltOnPress`) removed — pinned absent above
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("buildFaceMap(tiltFaces(placedFaces(st), R), fb,"); // ⭐ (C2W, W7) `fb`: `frameBox` under the charts, `tiltBox` otherwise
-    expect(a).toContain(": tiltBox(box, R);");
-    expect(a).toContain("turnAngles(st, (d) => mulT(D0, d));");
+    expect(a).toContain("buildFaceMap(tiltFaces(placedFaces(st), R), frameBox(box, R, parts.parts),"); // ⭐ (C2W, W7) the parts' own box in F (⛔ `tiltBox`: step 2.5)
+    expect(a).not.toContain("mulT(D0, d)"); // ⛔ (step 2.5) the tilt's angles turned by the swing's frame: `seamRebase` (one state)
     // ⭐⭐⭐ (2026-11-15) the exit hands the heading SHOWN for a pole of the world (`shownHeading`; none drawn: the tilt's own) — ⛔ none: yaw 0 there
     expect(a).toContain("const hP = shownHeading(st, mulM(D, orbitDir(st.orbit.yaw, st.orbit.elevation))) ?? tl.heading;");
     expect(a).toContain("turnAngles(st, (d) => mulM(D, d), Math.atan2(Math.sin(hP), Math.cos(hP)));");
     expect(a).toContain("function turnAngles(st: SceneState, turn: (d: Vec3) => Vec3, poleYaw = 0): void {");
     expect(a).toContain("const o = anglesOfDir(turn(orbitDir(st.orbit.yaw, st.orbit.elevation)), 0, poleYaw);");
     // ⭐⭐⭐ (2026-11-15) …and the gizmo on the tilted facet's border is on it (`onTiltedFacet`, the place's distance to the facet in F's map)
-    expect(a).toContain("tiltFrame(st, dtMs, m.t.stack, m.t.surface);");
-    // ⭐⭐⭐ (2026-11-16, §12 2.4d) the distance read once; the switch off: the tie (the default), as before — on: the band (`orbit_charts_face_band.test.ts`)
+    expect(a).toContain("tiltFrame(st, m.t.stack, m.t.surface);");
+    // ⭐⭐⭐ (2026-11-16, §12 2.4d) the distance read once; the band (`orbit_charts_face_band.test.ts`) — ⛔ the tie (step 2.5)
     expect(a).toContain("const borderM = stack === tl.facet ? 0 : fmB === null ? Infinity : distanceToFacets(fmB, [tl.facet], surface);");
-    expect(a).toContain(": onTiltedFacet(stack, tl.facet, borderM);");
     expect(a).not.toContain("const onFacet = stack === tl.facet;");
-    expect(a).toContain("const mix = frameMix(f, offsetFrame(uW, hW, o.yawRad, o.pitchRad), tl.k, tl.axis);");
-    expect(a).toContain("const crossing = !onFacet && !tl.finishing;"); // ⭐ the roll starts as the gizmo crosses the edge — no stretch
-    // ⭐⭐⭐ (2026-11-14) stepped from the frame its angle is read (⛔ at once by last frame's: the ridge's half turn whole in one frame), and the exit leaves
-    // the world map's place set (a tilt that follows made the same frame: ⛔ one frame of the world's camera between the two)
-    expect(a).toContain("if (!crossing) tl.k = rollStep(tl.k, tl.kT, dtMs, rollDurationMs(tl.rollRad, st.cfg.tiltRollDegS));");
+    expect(a).not.toMatch(/\bframeMix\(/); // ⛔ (step 2.5) the roll back deleted: no camera frame mixed toward the world's inside F
+    expect(a).not.toMatch(/\brollStep\(|\btiltUnderWay\(|\btiltExits\(|\bswingDir\(/);
     expect(a).toContain("st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch };");
     expect(a).not.toContain("exitShare("); // ⛔ the stretch's share deleted
-    expect(a).toContain("if (!turning && (tl === null || !(tiltUnderWay(swingTimed, tl.finishing || tl.off, tl.k) || tl.finishing || tl.off))) return false;"); // ⭐ (2026-11-10) held to the exit itself
+    expect(a).toContain("if (!turning && (tl === null || !(tl.exit || tl.off))) return false;"); // ⭐ held from the exit asked to the exit made
     expect(a).toContain("if (nW !== null) sqO.target = nW;"); // ⭐ the turn's target at the crossing itself // ⭐ 1-b: held (⭐ `1.0.120b-`: and while the square camera turns)
     expect(a).toContain("const g = m === null ? gizmoFor(st) : withGOff(st, m.hit.point);");
-    expect(a).toContain("tl.k = rollStep(tl.k, tl.kT, dtMs, rollDurationMs(tl.rollRad, st.cfg.tiltRollDegS));");
-    expect(a).toContain("const swingDurMs = rollDurationMs(deltaShown, st.cfg.tiltRollDegS);"); // ⭐ one speed for every tilt — ⭐ (2026-11-10) the camera's own swing: from the heading SHOWN
-    expect(a).toContain("dir: swingDir(R1, deltaShown, 0)"); // ⭐ the directions' frame by the shown heading; the orbit's angles by their own (`D0`)
-    // ⭐⭐⭐ (2026-11-14) the swing from the heading ON THE GLASS (the camera drawn last frame), the roll back to what follows the exit (the next tilt,
-    // `tiltOn`'s own test), the map's pole a virtual cap — the walks: every ridge crossing closed by 104° – 180° in one frame; a dy at the end cap's corner dead
+    expect(a).toContain("const swingDurMs = rollDurationMs(deltaShown, st.cfg.tiltRollDegS);"); // ⭐ one speed for every tilt — the relocation's duration from the heading SHOWN
+    expect(a).toContain("st.asmTilt = { id: ++TILT_SEQ, map: R1, facet: -1, off: false, exit: false, exitAcross: false, heading: hs };"); // ⭐ the directions' frame `map` at once
+    // ⭐⭐⭐ (2026-11-14) the heading ON THE GLASS (the camera drawn last frame), the map's pole a virtual cap — ⛔ (step 2.5) the roll back to what follows
+    // the exit (`nextTiltHeading`, `holdsPole`) deleted
     expect(a).toContain("const hSh = shownHeading(st, sw);");
-    expect(a).toContain("const hR = nextTiltHeading(st, nX, yW);");
-    expect(a).toContain("return f === undefined || holdsPole(wm, i) === null ? null : tiltHeading(f.n, yaw);");
+    expect(a).not.toContain("nextTiltHeading(");
+    expect(a).not.toContain("holdsPole(");
     expect(a).toContain("const atPole = mqP === null || !(Math.abs(mqP.pitch) >= ORBIT_PITCH_MAX_RAD - 1e-9) ? null : mqP.pitch > 0;");
     expect(a).toContain("if (st.asmCalm !== null && tf >= 0 && map.facets[tf] !== undefined) st.asmCalm = { n: map.facets[tf]!.n, sH: st.asmCalm.sH, sV: 1, wA: 1 };"); // ⭐ the calm carried into F
     expect(a).toContain("st.asmCalm = tl.exitAcross && nW !== null ? { n: nW, sH: st.asmCalm.sH, sV: 1, wA: 1 } : { ...st.asmCalm, sH: 1, sV: 1 };"); // ⭐ …and out of it
     expect(a).toContain("const holdNow = mouthHold(wasHeld, m0g.mouth, dP, dY);"); // ⭐ build b
     expect(a).toContain('tiltOn(st, st.asmMouth !== null ? st.asmMouth.hi : atPole);');
-    expect(a).toContain("const kH = Math.max(tl !== null && !tl.exitAcross ? tl.k : 0, st.asmCalmWhole);");
+    expect(a).toContain("const kH = Math.max(0, st.asmCalmWhole);"); // ⛔ (step 2.5) the roll back's share (`tl.k`) no longer read
     // ⭐⭐⭐ (2026-11-11, the owner: *"you accumulate a position gap on screen between the gizmo and the piece"*) one base for the piece and the camera:
     expect(a).toContain("const foot = footOf(st, target, us, d + liftOf(st, us));"); // the base along the SHOWN direction (the piece's own)
     expect(a).not.toContain("const foot = footOf(st, target, u, d + liftOf(st, u));"); // ⛔ along the orbit's: the base off the gizmo's line (±4° at a crossing)
@@ -512,15 +444,13 @@ describe("⭐⭐ wired", () => {
     // ⭐⭐⭐ (`1.0.120b-`) the square camera close in: over the calm by `q`, turned at one speed, the gizmo held meanwhile, carried through the tilt's frames
     expect(a).toContain("sq.n = squareTurn(sq.n, sq.target, dtMs, st.cfg.tiltRollDegS, t);");
     expect(a).toContain("const turning = squareTurning(st.asmSquare.n, st.asmSquare.target, st.asmSquare.q);");
-    expect(a).toContain("if (sqB.n !== null) sqB.n = mulT(st.asmTilt.dir, sqB.n);");
+    expect(a).toContain("if (sqB.n !== null) sqB.n = mulT(st.asmTilt.map, sqB.n);");
     expect(a).toContain("if (sqO.n !== null) sqO.n = mulM(D, sqO.n);");
-    // ⭐⭐⭐ the roll back's target the world's camera exactly (⛔ a vertical view's heading off its own up: 0 ms, then a 180° flip)
-    expect(a).toContain("const hW = cameraHeading(yW, uOW, headingFrom(uW, nX), hR ?? calmLevelHeading(yW, cW));"); // (2026-11-11) a vertical view read toward the exit's face // ⭐ (2026-11-13, ORBIT_ANY_SHAPE.md §9) toward the poles the calm read level (`cameraHeading`): the roll at the zenith
+    expect(a).not.toContain("headingFrom("); // ⛔ (step 2.5) the roll back's target deleted with it
     expect(a).not.toContain("tiltCarry("); // ⛔ the carry over the edge deleted
     expect(a).toContain("const glide = st.asmMouth !== null ? null : gizmoGlide(st.asmG, st.asmShown === null ? null : wasHeld ? s1 : tiltDir(R, st.asmShown.t.surface), s1, m.hit.point);"); // ⭐ the glide of the depth (held at a mouth: none; let go: straight from the held place)
     expect(code("render/pointer_wiring.ts")).toContain("tiltClampStep(st, yawBefore, vBefore);");
     expect(code("render/green_box_wiring.ts")).toContain("if (tiltClampStep(st, y0, v0)) st.orbitInertia.stop();");
-    expect(a).toContain("tl.exit = tiltExits(onFacet, tl.k, tl.swingMs === null, tl.off);"); // ⭐ the world's frame only once the swing is over and the roll whole
     expect(a).toContain("st.asmTiltAuto = tiltAutoLatch(st.asmTiltAuto, approachDistance(st.cfg, st.approach), st.cfg.tiltAutoM);");
     expect(a).toContain("if (autoWas && !st.asmTiltAuto && st.asmTilt !== null && !st.asmTilt.off) {"); // ⭐ out past the threshold: the tilt off
     expect(a).toContain('if (st.asmTiltAuto && st.asmTilt === null) tiltOn(st, st.asmMouth !== null ? st.asmMouth.hi : atPole);'); // ⭐ (2026-11-10) on the crossing's frame (or at a mouth's floor edge)
@@ -529,13 +459,12 @@ describe("⭐⭐ wired", () => {
     // ⭐⭐ (the owner: *"fix the gap"*) any face holding a pole, tilted by its own angle — a virtual one (a pole on an edge) too
     expect(a).toContain("const R1 = capTilt(hs, cap.n);");
     // ⭐⭐⭐ the calm made whole by position on the SHOWN direction (never eased): the back-and-forth at a crossing
-    expect(a).toContain("const kV = Math.max(tl?.k ?? 0, st.asmCalmWhole, st.asmCalmWholeV);"); // ⭐ (2026-11-10) the vertical share alone toward a top / bottom edge
+    expect(a).toContain("const kV = Math.max(0, st.asmCalmWhole, st.asmCalmWholeV);"); // ⭐ (2026-11-10) the vertical share alone toward a top / bottom edge
     expect(a).not.toContain("capYawRelease"); // ⛔ (2026-11-11) the entry side's calm kept over a cap, released by a dx: the yaw at an exit elsewhere (§9.14)
     expect(a).not.toContain('sh.t.band !== "SIDE") st.asmCalmWhole = 1;'); // ⛔ whole at once on a cap: the withheld yaw released at the edge
     expect(a).toContain("st.asmCalmWhole = wholeShareStep(prev, st.asmCalmWhole, dtMs, st.cfg.gizmoEaseMs);"); // ⭐ the rig's one time law
     expect(a).not.toContain("st.asmTiltAuto) st.asmCalmWhole"); // ⛔ close in only
-    expect(a).toContain("const ends = wholeEnds(rules.ownRun, i, col.facets.length);"); // ⭐ (2026-11-15, step 2.4e) the ends by the rule; off: the column's outer ends, as before
-    expect(a).toContain("st.asmCalmWholeV = poleEdgeWhole(sh.t.surface, map.facets[sh.t.stack]!, ends.lo, ends.hi, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100);");
+    expect(a).toContain("st.asmCalmWholeV = poleEdgeWhole(sh.t.surface, map.facets[sh.t.stack]!, true, true, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100);"); // ⭐ (step 2.4e) both own ends (⛔ `wholeEnds`: step 2.5)
     expect(a).not.toContain("if (!cap.real) return;"); // ⭐ the solver's memory turned too (the first probe: the pitch thrown to −90° at the press)
   });
   it("⭐ its sliders: on / off, every tilt's speed, the automatic distance (⛔ 2026-11-15 no press tilts)", () => {
@@ -574,20 +503,7 @@ describe("⭐⭐⭐ (2026-11-10, `1.0.120b-`, the owner: *\"build the square cam
 });
 
 describe("⭐⭐⭐ (2026-11-11) the roll at an exit elsewhere on the edge, and the gizmo drawn on the rig's lag", () => {
-  it("⭐⭐⭐ a view straight down reads its heading from the face it exits onto — the same wherever along the top the orbit's yaw has gone", () => {
-    const down: Vec3 = [0, -1, 0];
-    const front: Vec3 = [0, 0, -1];
-    const h0 = calmHeading(-90 * D, orbitDir(-90 * D, 0.3), headingFrom(down, front));
-    const h8 = calmHeading(-69 * D, orbitDir(-69 * D, 0.3), headingFrom(down, front)); // 8 steps along the top: the yaw 21° on
-    expect(Math.abs(h8 - h0)).toBeLessThan(1e-9); // ⛔ the orbit's yaw: 21° apart — the roll there and back
-    expect(Math.abs(calmHeading(-69 * D, orbitDir(-69 * D, 0.3), down) - calmHeading(-90 * D, orbitDir(-90 * D, 0.3), down))).toBeGreaterThan(20 * D); // the old reading
-  });
-  it("⭐ a view with a heading of its own keeps it; no face, or a vertical one: as it is", () => {
-    const u: Vec3 = [0.6, -0.8, 0];
-    expect(headingFrom(u, [0, 0, -1])).toEqual(u);
-    expect(headingFrom([0, -1, 0], null)).toEqual([0, -1, 0]);
-    expect(headingFrom([0, -1, 0], [0, 1, 0])).toEqual([0, -1, 0]);
-  });
+  // ⛔ (step 2.5) a view straight down read toward the face it exits onto (`headingFrom`, the roll back's target) deleted with the roll back
   it("⭐⭐⭐ the gizmo drawn at the base's lag along its face — never off its surface; none: at its exact point", () => {
     const l = gizmoLag([0.01, 0.02, 0.5], [0, 0, 0.47], [0, 1, 0]);
     expect(l[0]).toBeCloseTo(0.01, 12);
@@ -598,9 +514,8 @@ describe("⭐⭐⭐ (2026-11-11) the roll at an exit elsewhere on the edge, and 
     expect(gizmoShownAt([1, 1, 1], [9, 9, 9])).toEqual([1, 1, 1]);
     expect(gizmoShownAt(null, [9, 9, 9], [1, 1, 1])).toEqual([9, 9, 9]);
   });
-  it("⭐⭐ wired: the roll's target through `headingFrom` toward the exit's face; the ring and the sections drawn on the lag", () => {
+  it("⭐⭐ wired: the ring and the sections drawn on the lag", () => {
     const aw = code("render/assembly_wiring.ts");
-    expect(aw).toContain("const hW = cameraHeading(yW, uOW, headingFrom(uW, nX), hR ?? calmLevelHeading(yW, cW));"); // ⭐ (2026-11-13, ORBIT_ANY_SHAPE.md §9) toward the poles the calm read level (`cameraHeading`): the roll at the zenith
     expect(aw).toContain("st.asmGizmoLag = gizmoLag(st.asmGizmo, foot, st.gizmoNormal ?? null);");
     expect(aw).toContain("if (sl !== null) sl.position.set(lg?.[0] ?? 0, lg?.[1] ?? 0, lg?.[2] ?? 0);");
     expect(code("render/green_box_wiring.ts")).toContain("gizmoShownAt(st.asmGizmoAt, st.centreBlend.targetM, st.asmGizmoLag)");
@@ -657,26 +572,24 @@ describe("⭐⭐⭐ (2026-11-11) the automatic tilt: the sections at once, the C
     expect(blendShare(25, 10)).toBe(1);
     expect(blendShare(5, 0)).toBe(1);
   });
-  it("⭐⭐⭐ the blend whole at the first edge crossed: another tilt, the roll back under way, or the square camera's target another face", () => {
+  it("⭐⭐⭐ the blend whole at the first edge crossed: another tilt, or the square camera's target another face (⛔ the roll back under way: step 2.5)", () => {
     const n: Vec3 = [0, 0, -1];
-    expect(blendCrossed(3, 3, false, n, n)).toBe(false);
-    expect(blendCrossed(3, 3, false, n, [0, 0.0001, -1])).toBe(false);
-    expect(blendCrossed(3, 0, false, n, n)).toBe(true); // off the tilted cap
-    expect(blendCrossed(0, 4, false, n, n)).toBe(true); // onto a cap: a new tilt
-    expect(blendCrossed(3, 3, true, n, n)).toBe(true); // the roll back under way
-    expect(blendCrossed(0, 0, false, n, [1, 0, 0])).toBe(true); // a vertical edge
-    expect(blendCrossed(0, 0, false, null, [1, 0, 0])).toBe(false);
+    expect(blendCrossed(3, 3, n, n)).toBe(false);
+    expect(blendCrossed(3, 3, n, [0, 0.0001, -1])).toBe(false);
+    expect(blendCrossed(3, 0, n, n)).toBe(true); // off the tilted cap
+    expect(blendCrossed(0, 4, n, n)).toBe(true); // onto a cap: a new tilt
+    expect(blendCrossed(0, 0, n, [1, 0, 0])).toBe(true); // a vertical edge
+    expect(blendCrossed(0, 0, null, [1, 0, 0])).toBe(false);
   });
-  it("⭐⭐ wired: the tilt made at once, only the camera pending (the swing and the square share held), then by the finger; the gizmo held only by a swing at the tilts' speed", () => {
+  it("⭐⭐ wired: the tilt made at once, only the camera pending (the square share held), then by the finger (⛔ the swing's state: step 2.5)", () => {
     const aw = code("render/assembly_wiring.ts");
     expect(aw).toContain("st.asmTiltPending = tiltPendingStep(pendWas, autoWas, st.asmTiltAuto, fingerMm);");
     expect(aw).toContain('if (st.asmTiltAuto && st.asmTilt === null) tiltOn(st, st.asmMouth !== null ? st.asmMouth.hi : atPole);');
     expect(aw).toContain("const byMm = st.asmTiltPending;"); // ⛔ (2026-11-15) `why === "auto" &&` gone with the press: every tilt is the automatic one
     expect(aw).toContain("if (st.asmTiltPending) return;");
     expect(aw).toContain("if (st.asmTiltAuto && st.asmBlend !== null) sq.q = Math.max(sq.q, blendShare(st.asmBlend.mm, st.cfg.tiltBlendMm));");
-    expect(aw).toContain("else tl.swingE = rollStep(tl.swingE, 1, dtMs, tl.swingDurMs);");
-    expect(aw).toContain("const swingTimed = tl !== null && tl.swingMs !== null && !(tl.byMm && (st.asmTiltPending || st.asmBlend !== null));");
-    expect(aw).toContain("blendCrossed(bl.tiltId, tid, st.asmTilt?.finishing ?? false, bl.target, st.asmSquare.target)");
+    expect(aw).not.toContain("swingTimed");
+    expect(aw).toContain("blendCrossed(bl.tiltId, tid, bl.target, st.asmSquare.target)");
     expect(code("render/pointer_wiring.ts")).toContain("if (asmOn && !shiftApproach) st.asmOrbitMm += Math.hypot(db.dx, db.dy) / mmToPx(1);");
   });
 });

@@ -9,7 +9,7 @@
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { blendThroughEdges, buildFaceMap, capCentre, chordAt, holdsPole, mapAngles, mapTarget, RIDGE_TIE_DEG, type FaceMap, type MapFace } from "../src/input/face_map";
+import { blendThroughEdges, buildFaceMap, capCentre, chordAt, mapAngles, mapTarget, RIDGE_TIE_DEG, type FaceMap, type MapFace } from "../src/input/face_map";
 import type { Vec3 } from "../src/core/vec";
 import type { ShellBox } from "../src/input/orbit_shell";
 
@@ -78,18 +78,17 @@ describe("⭐⭐⭐ `Scene_1`'s cube UNCHANGED — its face map is `12dc4b6`'s, 
 describe("⭐⭐⭐ the heptagon (`Scene_0`'s shape: extruded along x, a face on the floor, a vertex at the zenith)", () => {
   const fm = buildFaceMap(HEPT.faces, HEPT.box);
 
-  it("⭐⭐⭐ F2b — A RIDGE HOLDS THE POLE: the two top faces (tied) are neither the cap — each holds it, from its own side; the side columns run to 90°", () => {
+  it("⭐⭐⭐ F2b — A RIDGE HOLDS THE POLE: the two top faces (tied) are neither the cap; the side columns run to 90°", () => {
     expect(fm.facets[fm.top]!.real).toBe(false);
     const tops = fm.facets.map((f, i) => ({ f, i })).filter(({ f }) => f.kind === "SIDE" && f.n[1] > Math.SQRT1_2);
     expect(tops.length).toBe(2);
-    for (const { i } of tops) expect(holdsPole(fm, i)).toBe("TOP");
+    // ⛔ (2026-11-16, step 2.5) each "holds the pole, from its own side" (`holdsPole`) deleted with the game before the charts: the atlas decides
+    // which face tilts (`capTiltHeading` — the ridge's faces none, `orbit_charts_atlas.test.ts`)
     expect(Math.abs(Math.asin(tops[0]!.f.n[1]) - Math.asin(tops[1]!.f.n[1])) / D).toBeLessThan(RIDGE_TIE_DEG);
     for (const c of fm.columns) expect(c.bounds[c.bounds.length - 1]).toBeCloseTo(90 * D, 12);
     // the bottom is a real level cap (the floor's face): its band from −45°, as a box's
     expect(fm.facets[fm.bottom]!.real).toBe(true);
     for (const c of fm.columns) expect(c.bounds[0]).toBeCloseTo(-45 * D, 12);
-    // ⭐ a vertical side holds no pole (a box's sides: its caps alone)
-    expect(fm.facets.filter((f) => f.kind === "SIDE" && Math.abs(f.n[1]) < 1e-9).every((_, j, a) => holdsPole(fm, fm.facets.indexOf(a[j]!)) === null)).toBe(true);
   });
 
   it("⭐⭐⭐ F1 — THE ROPE ON THE SURFACE: every place, every yaw and pitch, lies ON the heptagon (⛔ the ends' squares: up to 184 mm off it, walked)", () => {
@@ -188,15 +187,8 @@ describe("⭐⭐⭐ F4 — the pitch asked PAST A POLE reaches the map (⛔ the 
   });
 });
 
-describe("⭐⭐⭐ F2b / F2c wired — the tilt on ANY face holding a pole (`holdsPole`), toward its own heading (`tiltHeading`)", () => {
-  it("⭐⭐⭐ `tiltOn`: a pole by `holdsPole` (the cap, or a side beyond 45°), its heading by `tiltHeading` (⛔ the cap alone; the orbit's heading)", () => {
-    const a = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
-    // ⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4a) the switch's `chartLayout` 0 path — the atlas decides under 1 (`orbit_charts_atlas.test.ts`)
-    expect(a).toContain("const pole = holdsPole(wm, capStack); if (pole === null) return; top = pole === \"TOP\";");
-    expect(a).toContain("hs = tiltHeading(cap.n, q.yaw);");
-    expect(a).not.toContain("const hs = snapHeading(q.yaw);");
-  });
-});
+// ⛔ (2026-11-16, step 2.5) F2b / F2c wired — `tiltOn`'s pole by `holdsPole` and heading by `tiltHeading` (the `chartLayout` 0 path) — deleted with it:
+// the atlas decides (`orbit_charts_atlas.test.ts`)
 
 describe("⭐⭐⭐ F5 — A FRAME NEVER SPENDS MORE THAN THE OWNER'S 24 (⛔ 25 – 38 on both scenes, the walks)", () => {
   it("⭐⭐ a solve's first iteration — the frame's reserve — is 12 at most (its worst branch counted)", async () => {
@@ -241,24 +233,12 @@ describe("⭐⭐⭐ F5 — A FRAME NEVER SPENDS MORE THAN THE OWNER'S 24 (⛔ 25
 });
 
 describe("⭐⭐⭐ §8 — THE DY HOLD after a pole-holding face's FAR edge (the owner: *\"just give an hysteresis of the dy … This will also be OK in case of the cube of scene 1\"*)", () => {
-  it("⭐⭐⭐ set only over the edge AWAY from the tilt's heading (the camera turns round): the heptagon's ridge, the cube's far edge, the nadir's far edge — never the near edge, a side edge", async () => {
-    const { edgeHoldAt } = await import("../src/input/orbit_tilt");
-    const front = -Math.PI / 2; // the heading toward −z (the user's side)
-    const n = (deg: number): Vec3 => [0, Math.cos(deg * D), -Math.sin(deg * D)]; // a face's normal tilted `deg` from up toward −z
-    // the heptagon: the front top face tilted (heading front), left over the ridge onto the back top face
-    expect(edgeHoldAt(front, n(25.7), n(-25.7), 1)).not.toBeNull();
-    // the cube: its top tilted (heading front), left over the far edge onto the back side (+z) — and over the near edge onto the front side: none
-    expect(edgeHoldAt(front, [0, 1, 0], [0, 0, 1], 1)).not.toBeNull();
-    expect(edgeHoldAt(front, [0, 1, 0], [0, 0, -1], 1)).toBeNull();
-    // across, onto a side (±x): none; no dy: none; the nadir's far edge (the bottom tilted, heading front, onto a back lower face): set, its sign kept
-    expect(edgeHoldAt(front, [0, 1, 0], [1, 0, 0], 1)).toBeNull();
-    expect(edgeHoldAt(front, [0, 1, 0], [0, 0, 1], 0)).toBeNull();
-    expect(edgeHoldAt(front, [0, -1, 0], [0, -0.614, 0.789], -1)!.sign).toBe(-1);
-  });
+  // ⛔ (2026-11-16, step 2.5) the hold SET by the tilt's heading (`edgeHoldAt`: over the edge away from it) deleted with the game before the charts — the
+  // one event sets it (`crossingEvent`, `crossing_event.test.ts`); its release by the finger stays (below)
   it("⭐⭐⭐ the held sign none, the other whole; released after `edgeHoldMm` of FINGER the other way (2026-11-14 — the owner's hysteresis, a finger's: the same far out as close in)", async () => {
-    const { edgeHoldAt, edgeHoldFinger, edgeHoldDy } = await import("../src/input/orbit_tilt");
+    const { edgeHoldFinger, edgeHoldDy } = await import("../src/input/orbit_tilt");
     const { DEFAULT_CONFIG } = await import("../src/input/gestureConfig");
-    const h = edgeHoldAt(-Math.PI / 2, [0, 1, 0], [0, 0, 1], 1)!;
+    const h = { sign: 1 as const, back: 0 }; // a hold as the one event sets it (⛔ `edgeHoldAt`: step 2.5)
     expect(h.back).toBe(0);
     expect(edgeHoldDy(h, 3)).toBe(0);
     expect(edgeHoldDy(h, -3)).toBe(-3);
@@ -274,16 +254,17 @@ describe("⭐⭐⭐ §8 — THE DY HOLD after a pole-holding face's FAR edge (th
     expect(b.back).toBeCloseTo(29.9, 12);
     expect(edgeHoldFinger(b, -0.2, 30)).toBeNull();
     // a held nadir (−1): the up way gathers
-    const n = edgeHoldAt(-Math.PI / 2, [0, -1, 0], [0, -0.614, 0.789], -1)!;
+    const n = { sign: -1 as const, back: 0 };
     expect(edgeHoldFinger(n, -5, 30)).toBe(n);
     expect(edgeHoldFinger(n, 31, 30)).toBeNull();
     expect(edgeHoldFinger(h, 0, 30)).toBe(h);
     expect(DEFAULT_CONFIG.edgeHoldMm).toBe(30);
   });
-  it("⭐⭐⭐ wired: the tilt keeps its heading; `tiltOff` sets the hold from the dy that crossed (the coast stopped); released by the FINGER (2026-11-14); the drag's dy through it", () => {
+  it("⭐⭐⭐ wired: the tilt keeps its heading; `tiltOff` hands the hold of the dy that crossed to the one event (`crossingEvent`; ⛔ `edgeHoldAt`: step 2.5); released by the FINGER (2026-11-14); the drag's dy through it", () => {
     const a = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
     expect(a).toContain("exit: false, exitAcross: false, heading: hs };");
-    expect(a).toContain("const hold = edgeHoldAt(tl.heading, nT, nW, st.asmDySign);");
+    expect(a).toContain("crossingEvent(mulM(tl.map, [0, 1, 0]), nT, nW, WORLD_UP, st.asmDySign).hold");
+    expect(a).not.toContain("edgeHoldAt(");
     expect(a).toContain("if (st.asmEdgeHold !== null && (!assemblyOn(st) || st.asmG === null)) st.asmEdgeHold = null;");
     expect(a).not.toContain("edgeHoldDepth");
     const p = readFileSync(new URL("../src/render/pointer_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");

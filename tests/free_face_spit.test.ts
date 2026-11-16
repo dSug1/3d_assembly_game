@@ -1,7 +1,7 @@
 /**
  * GOLDEN VECTORS — **A SPIT ZONE'S LEVEL FACES ON THE CARRIED HEADING, STEP C4** (2026-11-16, `Claude/40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md` §3.4,
  * §4.1, §7; the owner's D-T2: *"a spit's level faces follow the same rule — no turn in the middle of the bottom face, the half turn at its far edge, the
- * picture unchanged when coming in from a tip"*), under `chartLayout` 1 only:
+ * picture unchanged when coming in from a tip"*) (⛔ the switch `chartLayout` deleted at step 2.5, 2026-11-16 — the default half of the pins kept):
  * * `contourFaceAt` — a map's facet found on the atlas's contour by its normal and a point: every face of `Scene_0bis` from its own; a point off its plane,
  *   a normal 2° off: none; two faces sharing a normal told apart by the plane; every real facet of the ZONE's map (built in F) found back on the contour.
  * * `freeHeadingAngle` — `offsetFrame`'s up IS the carried heading laid square to the view, exactly, within 30° of the vertical from below and above.
@@ -9,7 +9,7 @@
  *   along it, its dx round it; from a long side the axis across the glass, dx along it, dy round it — both the finger's way (as the camera upright in F);
  *   the exits 0, π/2, π and the hold from 120° only at the far edge; the entry with no edge (`freeEntryHeading`).
  * * IN AT THE EDGE, OUT ONE BAND PAST IT — the place 1, 3, 6 mm past each side of the bottom face (in the zone's map): on, on, off.
- * * The wiring (`render/assembly_wiring.ts`): source pins, every new branch under `chartLayout === 1`.
+ * * The wiring (`render/assembly_wiring.ts`): source pins.
  * RED on the mutants listed in the step's report.
  */
 import { describe, expect, it } from "vitest";
@@ -332,11 +332,11 @@ const before = (src: string, a: string, b: string) => {
   expect(src.indexOf(a), `${a} before ${b}`).toBeLessThan(src.indexOf(b));
 };
 
-describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): the carried heading under the switch, in a spit only", () => {
+describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): the carried heading, in a spit only", () => {
   const W = "render/assembly_wiring.ts";
   it("⭐ the camera's spit branch: `freeHeadingAngle` with `asmFree` set, `spitCameraHeading` otherwise", () => {
     const c = fnCode(W, "function assemblyCameraFrameRaw(");
-    const g = "if (st.cfg.chartLayout === 1 && st.asmFree !== null) return offsetFrame(uW, freeHeadingAngle(st.asmFree.heading, uW), o.yawRad, o.pitchRad);";
+    const g = "if (st.asmFree !== null) return offsetFrame(uW, freeHeadingAngle(st.asmFree.heading, uW), o.yawRad, o.pitchRad);";
     expect(c).toContain(g);
     before(c, "const uW = mulM(B, sF);", g);
     before(c, g, "return offsetFrame(uW, spitCameraHeading(uW, st.asmZone!.zone.axis, side), o.yawRad, o.pitchRad);");
@@ -344,27 +344,27 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): the carried headin
   });
   it("⭐ `zoneFinger`: `fingerInFrame`'s own answer with `asmFree` set — before the swap", () => {
     const z = fnCode(W, "export function zoneFinger(");
-    const g = "if (st.cfg.chartLayout === 1 && st.asmFree !== null) return { dx: r.dx, fdy: r.dy };";
+    const g = "if (st.asmFree !== null) return { dx: r.dx, fdy: r.dy };";
     expect(z).toContain(g);
     before(z, "st.asmZoneAlpha = r.alpha;", g);
     before(z, g, "const sw = fingerSwapped(dx, dy, r.alpha);");
   });
   it("⭐ `spitStep`: returns with `asmFree` set before any side change", () => {
     const s = fnCode(W, "export function spitStep(");
-    const g = "if (st.cfg.chartLayout === 1 && st.asmFree !== null) return;";
+    const g = "if (st.asmFree !== null) return;";
     expect(s).toContain(g);
     before(s, g, "const side = spitSide(u, z.axis, prev);");
     before(s, g, "st.asmSpitSide = side;");
   });
-  it("⭐ read once a frame in `assemblyFrame`, after the place and its band, under the switch — the previous place with the map it indexed", () => {
+  it("⭐ read once a frame in `assemblyFrame`, after the place and its band — the previous place with the map it indexed", () => {
     const a = fnCode(W, "export function assemblyFrame(");
     expect(a).toContain("const sh0 = st.asmShown; const fbWas = st.asmFaceBand;");
     // ⭐ (2026-11-16, C2W) the previous place named (`placeWas`) and kept for the tilt's entry (`asmPlaceWas`)
     expect(a).toContain("const placeWas = sh0 !== null && fbWas !== null ? { map: fbWas.map, stack: sh0.t.stack } : null;");
-    const g = "if (st.cfg.chartLayout === 1) { st.asmPlaceWas = placeWas; freeFaceFrame(st, m.t, placeWas); }";
+    const g = "st.asmPlaceWas = placeWas; freeFaceFrame(st, m.t, placeWas);";
     expect(a).toContain(g);
     before(a, "faceBandRead(st, m.t);", g);
-    before(a, "tiltFrame(st, dtMs, m.t.stack, m.t.surface);", g);
+    before(a, "tiltFrame(st, m.t.stack, m.t.surface);", g);
     before(a, g, "calmFrame(st, dtMs);");
     expect(raw(W).match(/freeFaceFrame\(st, /g)?.length).toBe(1);
   });
@@ -401,17 +401,16 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): the carried headin
     for (const sig of ["function zoneSwitch(", "function tiltOn("]) expect(fnCode(W, sig), sig).toContain("st.asmShown = null; st.asmFaceBand = null; st.asmFree = null;");
     expect(fnCode(W, "export function orbitStateStart(")).toContain("asmFree: null,");
   });
-  it("⭐ N1 (`freeFaceSquare` 1): the square camera's target the free face's normal and its share whole — under the switch and with a face carried only", () => {
+  it("⭐ N1 (`freeFaceSquare` 1): the square camera's target the free face's normal and its share whole — with a face carried only", () => {
     const q = fnCode(W, "function squareFrame(");
-    expect(q).toContain("const freeSq = st.cfg.chartLayout === 1 && st.cfg.freeFaceSquare === 1 && st.asmFree !== null ? st.asmFree.map.facets[st.asmFree.facet] : undefined;");
+    expect(q).toContain("const freeSq = st.cfg.freeFaceSquare === 1 && st.asmFree !== null ? st.asmFree.map.facets[st.asmFree.facet] : undefined;");
     expect(q).toContain("sq.target = bf === undefined || onCapB ? sq.target : bf.n; if (freeSq !== undefined) sq.target = freeSq.n;");
     expect(q).toContain("else sq.q = wholeShareStep(sq.q, st.asmTiltAuto || freeSq !== undefined ? 1 : 0, dtMs, rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS));");
   });
-  it("⭐ every read of `asmFree` is under `chartLayout === 1` (the switch off: it is never set — nothing changes)", () => {
+  it("⭐ the reads of `asmFree`: five (⛔ each under `chartLayout === 1` before step 2.5 — the switch deleted)", () => {
     const code = codeOnly(raw(W));
     const reads = [...code.matchAll(/[^\n]*st\.asmFree !== null[^\n]*/g)].map((m) => m[0]);
     expect(reads.length).toBe(5);
-    for (const l of reads) if (!l.includes("st.asmFree.map !== map")) expect(l, l).toContain("st.cfg.chartLayout === 1");
     // the only writes: the start, the clears, the entry
     expect(code.match(/st\.asmFree = /g)?.length).toBe(6);
   });

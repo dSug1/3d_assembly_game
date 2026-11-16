@@ -1,7 +1,8 @@
 // Does the tilted-pole orbit still fire close in? A deterministic headless run (the replay probe's virtual clock): approach until the automatic
 // tilt's latch is on, orbit by dy onto a face holding a pole, orbit in the tilt, approach back out. Prints every change of the tilt's state.
-//   URL=http://127.0.0.1:5191/?sceneIndex=1&idleOrbitOn=0[&chartLayout=1] [MODE=out|ridge|press|rim|pole] [SHOW=<leg>] node scripts/probes/tilt_check.mjs
+//   URL=http://127.0.0.1:5191/?sceneIndex=1&idleOrbitOn=0 [MODE=out|ridge|press|rim|pole] [SHOW=<leg>] node scripts/probes/tilt_check.mjs
 //   (a dev server must serve the URL; scripts/probes/tilt_batch.sh starts one and stops it — the runbook: scripts/probes/ORBIT_GATES.md)
+import { guardProbe } from "./probe_guard.mjs";
 import { spawn, spawnSync } from "node:child_process";
 import { mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -18,6 +19,7 @@ const chrome = spawn(process.env.CHROME ?? "C:/Program Files/Google/Chrome/Appli
 const kill = () => { if (process.platform === "win32" && chrome.pid !== undefined) spawnSync("taskkill", ["/PID", String(chrome.pid), "/T", "/F"], { stdio: "ignore" }); else chrome.kill(); };
 const watchdog = setTimeout(() => { console.error("WATCHDOG"); kill(); try { rmSync(prof, { recursive: true, force: true }); } catch {} process.exit(2); }, 8 * 60_000);
 watchdog.unref();
+guardProbe({ chromePid: chrome.pid, prof, ms: 8 * 60_000 + 30_000 }); // (2026-11-16) the deadline in a process of its own: the timer above cannot fire while a write to a dead pipe blocks this loop (probe_guard.mjs)
 
 const CLOCK = `(() => { let T = 1000; const q = []; let id = 0;
   performance.now = () => T; Date.now = () => 1.7e12 + T;
@@ -30,7 +32,7 @@ const RECORD = `(() => { const st = window.__st; window.__log = []; window.__cam
     const s = { auto: !!st.asmTiltAuto, pend: !!st.asmTiltPending, tilt: t ? t.id + (t.off ? " off" : "") : "-", zone: z ? z.zone.orientation : "-",
       n: n ? [n[0], n[1], n[2]].map((x) => x.toFixed(2)).join(",") : "-", v: String(st.lastVerdict ?? "").slice(0, 120) };
     const key = JSON.stringify(s);
-    window.__cam.push([window.__leg, st.camera.position.x, st.camera.position.y, st.camera.position.z, st.camera.getTarget().x, st.camera.getTarget().y, st.camera.getTarget().z, st.camera.upVector.x, st.camera.upVector.y, st.camera.upVector.z, st.orbit.yaw, st.orbit.elevation, ...(st.asmGizmoAt ? st.asmGizmoAt : [NaN, NaN, NaN]), st.asmCalm ? st.asmCalm.sV : NaN, ...(st.asmPieceDrawn ? st.asmPieceDrawn : [NaN, NaN, NaN]), ...(st.asmMapQ && st.asmPrevQ ? [Math.atan2(Math.sin(st.asmMapQ.yaw - st.asmPrevQ.yaw), Math.cos(st.asmMapQ.yaw - st.asmPrevQ.yaw)), st.asmMapQ.pitch - (2 * st.asmPrevQ.v - 1) * (Math.PI / 2)] : [NaN, NaN]), (st.asmZoneMix || (st.asmTilt && (st.asmTilt.swingMs !== null || st.asmTilt.finishing))) ? 1 : 0, st.asmZoneMix ? st.asmZoneMix.k : -1, st.asmZoneMix && st.asmZoneMix.byMm ? 1 : 0, st.asmTilt ? st.asmTilt.id : 0, st.asmTiltPending ? 1 : 0, st.asmBlend ? st.asmBlend.mm : -1, st.asmDirEase ? st.asmDirEase.angle * 180 / Math.PI : 0, st.asmZoneMix ? st.asmZoneMix.rad * 180 / Math.PI : 0, st.approach, st.asmTiltAuto ? 1 : 0, st.asmEdgeHold ? 1 : 0]);
+    window.__cam.push([window.__leg, st.camera.position.x, st.camera.position.y, st.camera.position.z, st.camera.getTarget().x, st.camera.getTarget().y, st.camera.getTarget().z, st.camera.upVector.x, st.camera.upVector.y, st.camera.upVector.z, st.orbit.yaw, st.orbit.elevation, ...(st.asmGizmoAt ? st.asmGizmoAt : [NaN, NaN, NaN]), st.asmCalm ? st.asmCalm.sV : NaN, ...(st.asmPieceDrawn ? st.asmPieceDrawn : [NaN, NaN, NaN]), ...(st.asmMapQ && st.asmPrevQ ? [Math.atan2(Math.sin(st.asmMapQ.yaw - st.asmPrevQ.yaw), Math.cos(st.asmMapQ.yaw - st.asmPrevQ.yaw)), st.asmMapQ.pitch - (2 * st.asmPrevQ.v - 1) * (Math.PI / 2)] : [NaN, NaN]), st.asmZoneMix ? 1 : 0 /* ⛔ (step 2.5) the tilt's swing and roll back (swingMs, finishing) deleted: a turn is the one camera turn */, st.asmZoneMix ? st.asmZoneMix.k : -1, st.asmZoneMix && st.asmZoneMix.byMm ? 1 : 0, st.asmTilt ? st.asmTilt.id : 0, st.asmTiltPending ? 1 : 0, st.asmBlend ? st.asmBlend.mm : -1, st.asmDirEase ? st.asmDirEase.angle * 180 / Math.PI : 0, st.asmZoneMix ? st.asmZoneMix.rad * 180 / Math.PI : 0, st.approach, st.asmTiltAuto ? 1 : 0, st.asmEdgeHold ? 1 : 0]);
     if (key !== last) { last = key; window.__log.push({ f, leg: window.__leg, ap: +st.approach.toFixed(3), el: +st.orbit.elevation.toFixed(3), up: [st.camera.upVector.x, st.camera.upVector.y, st.camera.upVector.z].map((x) => +x.toFixed(2)), ...s }); }
   } catch (e) { window.__recErr = String(e); } }; return true; })()`;
 
@@ -65,7 +67,7 @@ try {
   await ev("window.__step(240)");
   await ev(RECORD);
   const step = (n) => ev(`window.__step(${n})`);
-  const state = async () => JSON.parse(await ev(`(() => { const s = window.__st; const n = s.gizmoNormal; return JSON.stringify({ ap: s.approach, auto: !!s.asmTiltAuto, tilt: s.asmTilt ? s.asmTilt.id : null, ny: n ? n[1] : null, nz: n ? n[2] : null, el: s.orbit.elevation, yaw: s.orbit.yaw, chart: s.cfg.chartLayout, gx: s.asmGizmoAt ? s.asmGizmoAt[0] : null, gy: s.asmGizmoAt ? s.asmGizmoAt[1] : null, gz: s.asmGizmoAt ? s.asmGizmoAt[2] : null, hold: !!s.asmEdgeHold, mix: !!s.asmZoneMix }); })()`));
+  const state = async () => JSON.parse(await ev(`(() => { const s = window.__st; const n = s.gizmoNormal; return JSON.stringify({ ap: s.approach, auto: !!s.asmTiltAuto, tilt: s.asmTilt ? s.asmTilt.id : null, ny: n ? n[1] : null, nz: n ? n[2] : null, el: s.orbit.elevation, yaw: s.orbit.yaw, gx: s.asmGizmoAt ? s.asmGizmoAt[0] : null, gy: s.asmGizmoAt ? s.asmGizmoAt[1] : null, gz: s.asmGizmoAt ? s.asmGizmoAt[2] : null, hold: !!s.asmEdgeHold, mix: !!s.asmZoneMix }); })()`));
   const mouse = (type, x, y, buttons) => send("Input.dispatchMouseEvent", { type, x, y, button: "left", buttons, clickCount: 1 });
   const keyA = (down) => send("Input.dispatchKeyEvent", down ? { type: "rawKeyDown", key: "a", code: "KeyA", windowsVirtualKeyCode: 65, nativeVirtualKeyCode: 65 } : { type: "keyUp", key: "a", code: "KeyA", windowsVirtualKeyCode: 65 });
   // one drag of n frames (dx, dy px a frame) from (x, y); `a`: the approach's key held; `until`: stops it early (read every 4 frames)
@@ -85,7 +87,7 @@ try {
     return hit;
   };
   const s0 = await state();
-  console.log(`${URL}\n  boot: chartLayout ${s0.chart}, approach ${s0.ap.toFixed(3)}, auto ${s0.auto}, the gizmo's normal y ${s0.ny?.toFixed(2)}`);
+  console.log(`${URL}\n  boot: approach ${s0.ap.toFixed(3)}, auto ${s0.auto}, the gizmo's normal y ${s0.ny?.toFixed(2)}`);
   // 1. which way is IN: a short approach drag up
   const FAR = process.env.MODE === "rim" || process.env.MODE === "press"; // measured far out: no approach
   if (!FAR) await drag("probe", 250, 500, 0, -5, 12, true, null);

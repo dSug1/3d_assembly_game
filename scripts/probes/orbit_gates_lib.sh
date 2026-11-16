@@ -12,6 +12,7 @@ if [ -z "${OUT:-}" ]; then OUT="$(node -p "require('os').tmpdir()" | tr '\\' '/'
 mkdir -p "$OUT"
 PORT=5191
 SERVER_LOG=""
+SERVER=""
 
 # server_start <name>: a Vite dev server on 127.0.0.1:$PORT from $REPO, waited for (60 s at most)
 server_start() {
@@ -23,10 +24,16 @@ server_start() {
   for i in $(seq 1 60); do sleep 1; if curl -s -o /dev/null --max-time 2 "http://127.0.0.1:$PORT/"; then ok=1; break; fi; done
   if [ "$ok" != 1 ]; then echo "the dev server did not start"; tail -5 "$SERVER_LOG"; server_stop; exit 7; fi
   echo "dev server up from $REPO ($(git -C "$REPO" log --oneline -1 | cut -c1-60))"
+  # (2026-11-16) the server stopped on ANY exit of the batch (its end, an error, Ctrl-C, a kill it can trap) — and by a detached guard
+  # (probe_guard.mjs) when the batch shell is gone without running its trap: a server must never outlive its batch
+  trap server_stop EXIT
+  trap "exit 130" INT TERM HUP
+  node "$PROBES/probe_guard.mjs" server "$(cat /proc/$$/winpid 2>/dev/null || echo $$)" "$PORT" "$(cat /proc/$SERVER/winpid 2>/dev/null || echo 0)"
 }
 
 # server_stop: the server and everything it started (npx's node child: by the port it listens on), then its log removed
 server_stop() {
+  [ -z "${SERVER:-}" ] && return 0 # (2026-11-16) once only (the EXIT trap after an explicit call)
   if command -v taskkill >/dev/null 2>&1; then
     local WPID; WPID=$(cat /proc/$SERVER/winpid 2>/dev/null || echo "")
     [ -n "$WPID" ] && taskkill //PID "$WPID" //T //F > /dev/null 2>&1
@@ -38,4 +45,5 @@ server_stop() {
   sleep 1
   if curl -s -o /dev/null --max-time 2 "http://127.0.0.1:$PORT/"; then echo "⚠ the dev server is STILL up"; else echo "dev server stopped"; fi
   [ -n "$SERVER_LOG" ] && rm -f "$SERVER_LOG"
+  SERVER=""
 }

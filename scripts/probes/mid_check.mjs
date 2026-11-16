@@ -1,8 +1,9 @@
 // The owner's comment (2026-11-16): on Scene_0bis, coming from a tip's triangle onto the bottom face near its MIDDLE, noise sends the gizmo on one
 // half or the other and the camera keeps tilting. A deterministic headless run (the replay probe's virtual clock): the gizmo brought onto the
 // triangle under the +x tip at S0 mm from the middle plane, then ONE drag along the axis onto the bottom face with a wobble of A px across.
-//   URL=http://127.0.0.1:5191/?sceneIndex=4&idleOrbitOn=0[&chartLayout=1&chartCalm=1] S0=0 A=0 PX=3 [IN=1] [SHOW=1] node scripts/probes/mid_check.mjs
+//   URL=http://127.0.0.1:5191/?sceneIndex=4&idleOrbitOn=0S0=0 A=0 PX=3 [IN=1] [SHOW=1] node scripts/probes/mid_check.mjs
 //   (scripts/probes/mid_batch.sh starts a dev server and stops it — the runbook: scripts/probes/ORBIT_GATES.md)
+import { guardProbe } from "./probe_guard.mjs";
 import { spawn, spawnSync } from "node:child_process";
 import { mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -21,6 +22,7 @@ const chrome = spawn(process.env.CHROME ?? "C:/Program Files/Google/Chrome/Appli
 const kill = () => { if (process.platform === "win32" && chrome.pid !== undefined) spawnSync("taskkill", ["/PID", String(chrome.pid), "/T", "/F"], { stdio: "ignore" }); else chrome.kill(); };
 const watchdog = setTimeout(() => { console.error("WATCHDOG"); kill(); try { rmSync(prof, { recursive: true, force: true }); } catch {} process.exit(2); }, 8 * 60_000);
 watchdog.unref();
+guardProbe({ chromePid: chrome.pid, prof, ms: 8 * 60_000 + 30_000 }); // (2026-11-16) the deadline in a process of its own: the timer above cannot fire while a write to a dead pipe blocks this loop (probe_guard.mjs)
 
 const CLOCK = `(() => { let T = 1000; const q = []; let id = 0;
   performance.now = () => T; Date.now = () => 1.7e12 + T;
@@ -69,7 +71,7 @@ try {
   const step = (n) => ev(`window.__step(${n})`);
   const state = async () => JSON.parse(await ev(`(() => { const s = window.__st; const n = s.gizmoNormal; const g = s.asmGizmoAt; const z = s.asmZone; return JSON.stringify({ ap: s.approach, auto: !!s.asmTiltAuto,
     tilt: s.asmTilt ? s.asmTilt.id : null, n: n ? [n[0], n[1], n[2]] : null, g: g ? [g[0], g[1], g[2]] : null, side: s.asmSpitSide ?? 0, zone: z ? z.zone.orientation : null, axis: z ? [z.zone.axis[0], z.zone.axis[1], z.zone.axis[2]] : null, pole: z && z.zone.poles.length ? [z.zone.poles[0][0], z.zone.poles[0][1], z.zone.poles[0][2]] : null,
-    chart: s.cfg.chartLayout, calm: s.cfg.chartCalm, hold: !!s.asmEdgeHold, mix: !!s.asmZoneMix, el: s.orbit.elevation, yaw: s.orbit.yaw }); })()`));
+    hold: !!s.asmEdgeHold, mix: !!s.asmZoneMix, el: s.orbit.elevation, yaw: s.orbit.yaw }); })()`));
   const mouse = (type, x, y, buttons) => send("Input.dispatchMouseEvent", { type, x, y, button: "left", buttons, clickCount: 1 });
   const keyA = (down) => send("Input.dispatchKeyEvent", down ? { type: "rawKeyDown", key: "a", code: "KeyA", windowsVirtualKeyCode: 65, nativeVirtualKeyCode: 65 } : { type: "keyUp", key: "a", code: "KeyA", windowsVirtualKeyCode: 65 });
   // one drag of n frames; (dx, dy) px a frame, or a function k → [dx, dy]; `until` read every 4 frames
@@ -121,7 +123,7 @@ try {
   const off = (g) => (g[0] - P0[0]) * ref[0] + (g[1] - P0[1]) * ref[1] + (g[2] - P0[2]) * ref[2]; // the signed distance from the vertical plane through the AXIS (the bottom face's middle line)
   const along = (g) => g[0] * s0.axis[0] + g[1] * s0.axis[1] + g[2] * s0.axis[2];
   const f3 = (v) => v.map((x) => (x * 1000).toFixed(0)).join(",");
-  console.log(`${URL}\n  boot: chartLayout ${s0.chart}, chartCalm ${s0.calm}, zone ${s0.zone} axis [${s0.axis.map((x) => x.toFixed(2))}], approach ${s0.ap.toFixed(3)}, the gizmo (${f3(s0.g)}) mm, normal [${s0.n.map((x) => x.toFixed(2))}], side ${s0.side}`);
+  console.log(`${URL}\n  boot: zone ${s0.zone} axis [${s0.axis.map((x) => x.toFixed(2))}], approach ${s0.ap.toFixed(3)}, the gizmo (${f3(s0.g)}) mm, normal [${s0.n.map((x) => x.toFixed(2))}], side ${s0.side}`);
   if (process.env.GEOM) {
     const G = JSON.parse(await ev(`(() => { const s = window.__st; const m = s.asmWorldMap ? s.asmWorldMap.map : null; const c = s.camera; const t = c.getTarget();
       const fs = m ? m.facets.map((f, i) => { const k = f.poly.length; const cx = f.poly.reduce((a, p) => [a[0] + p[0] / k, a[1] + p[1] / k, a[2] + p[2] / k], [0, 0, 0]); return { i, n: f.n, c: cx, k }; }) : [];

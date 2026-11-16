@@ -353,16 +353,16 @@ export interface SceneState {
   asmSectionKey: string;
   /** ⭐⭐⭐ (2026-11-04, Step 4c-bis) the face map's place for the gizmo of this frame and the map's angles it was found at — the lines and the calm read it */
   asmShown: { readonly t: import("../input/face_map").MapTarget; readonly yaw: number; readonly pitch: number } | null;
-  /** ⭐⭐⭐ (2026-11-16, `ORBIT_CHARTS.md` §12 2.4d — `chartLayout` 1 only; `null` with it 0) THE BANDED FACET under the gizmo (`bandedFacet`): the facet
+  /** ⭐⭐⭐ (2026-11-16, `ORBIT_CHARTS.md` §12 2.4d) THE BANDED FACET under the gizmo (`bandedFacet`): the facet
    *  index and the face map it indexes (the world's, a tilted frame's, a zone's — another map's reading is none), read once a frame where `asmShown` is set;
    *  `null`: none — taken afresh at the place's facet (cleared with `asmShown` at every change of frame) */
   asmFaceBand: { readonly map: import("../input/face_map").FaceMap; readonly facet: number } | null;
-  /** ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §3.4, step C4 — `chartLayout` 1 only, in a SPIT zone only; `null` everywhere else) THE FREE FACE the
+  /** ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §3.4, step C4 — in a SPIT zone only; `null` everywhere else) THE FREE FACE the
    *  gizmo is on: the face map it indexes and the facet's index in it (another map's entry is none — a seat), the face's position `ci` in the atlas's contour
    *  (the WORLD's coordinates), and the HEADING carried (a unit vector in the world, in the face's plane — the camera's up there): set IN AT THE EDGE, kept
    *  until the place is one band past the face (`freeFaceFrame`) */
   asmFree: { readonly map: import("../input/face_map").FaceMap; readonly facet: number; readonly ci: number; readonly heading: import("../core/vec").Vec3 } | null;
-  /** ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §16 — package C2W, `chartLayout` 1 only) THE PLACE BEFORE THE ONE SHOWN: the facet of the frame before
+  /** ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §16 — package C2W) THE PLACE BEFORE THE ONE SHOWN: the facet of the frame before
    *  `asmShown`'s, with the map it indexed — the tilt, made one frame after the gizmo reached a cap (`tiltOn` reads the place shown), takes its entry edge
    *  from it (`freeEntry`); `null`: none (the start, the switch off) */
   asmPlaceWas: { readonly map: import("../input/face_map").FaceMap; readonly stack: number } | null;
@@ -370,27 +370,26 @@ export interface SceneState {
   asmMapQ: { readonly yaw: number; readonly pitch: number } | null;
   /**
    * ⭐⭐⭐ (2026-11-10, POLAR_ORBIT_CLEANUP.md §9.4) THE TILTED POLE (`input/orbit_tilt.ts`): the orbit's frame F while a pressed cap is a side — `map` F →
-   * world (the face map built in F), `dir` the directions' (the press's swing, `swingDir`), the tilted `facet` (F's map), the swing's `delta` and clock,
-   * `k` the share of the way off the facet (the roll back), `axis` the roll's last axis, `exit` the crossing seen (the world's frame next frame); `null`:
-   * the world's frame. ⛔ (2026-11-15, the owner: *"cancel my rule and remove the press action on the orbit"*) no press makes it: the automatic tilt alone.
+   * world (the face map built in F, and the directions' frame), the tilted `facet` (F's map), `exit` the crossing seen (the world's frame next frame);
+   * `null`: the world's frame. ⛔ (2026-11-15, the owner: *"cancel my rule and remove the press action on the orbit"*) no press makes it: the automatic
+   * tilt alone. ⛔ (2026-11-16, step 2.5) the swing's and the roll back's state of the game before the charts deleted (`dir`, `delta`, `swingMs`, `byMm`,
+   * `swingE`, `swingDurMs`, `k`, `kT`, `finishing`, `rollRad`, `axis`): `map` is the directions' frame from the tilt's first frame.
    */
-  /** ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8) THE DY HOLD after a pole-holding face's far edge (`edgeHoldAt`); `null`: none */
+  /** ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8) THE DY HOLD after a crossing (`crossTurn`'s hold; ⛔ `edgeHoldAt` deleted at step 2.5); `null`: none */
   asmEdgeHold: import("../input/orbit_tilt").EdgeHold | null;
-  /** ⭐⭐⭐ (2026-11-13, `POLAR_ZONES.md`) the placed set's polar zones (`polarZones` on the world's face map), per its key */
+  /** ⭐⭐⭐ (2026-11-13, `POLAR_ZONES.md`) the placed set's polar zones (the atlas's frames, `chartZones`; ⛔ `polarZones` deleted at step 2.5), per its key */
   asmZones: { readonly key: string; readonly zones: readonly import("../input/polar_zone").PolarZone[] } | null;
-  /** ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4a — `chartLayout` 1 only) the placed set's ATLAS: the world face map's contour (`chartContour`) and its
+  /** ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4a) the placed set's ATLAS: the world face map's contour (`chartContour`) and its
    *  assignment (`assignCharts`), per its key (the world map's and the three zone knobs it reads) — where a frame changes (the tilt, the zones) */
   asmAtlas: { readonly key: string; readonly contour: readonly import("../input/orbit_charts").ChartFace[]; readonly assign: import("../input/orbit_charts").ChartAssignment } | null;
   /** ⭐⭐⭐ (POLAR_ZONES.md) the zone the orbit is in (`zoneAt`) — its frame F the orbit's base frame unless it is the world's; `id` per switch (the maps' keys) */
   asmZone: { readonly id: number; readonly zone: import("../input/polar_zone").PolarZone } | null;
   /** ⭐⭐⭐ (D-Z7; 2026-11-14 about the piece) the camera's turn into a zone's frame (or out): the POSE on the glass at the switch, the share, the turn's
    *  angle, its axis kept frame to frame (`null`: not yet) */
-  asmZoneMix: { readonly from: import("../input/orbit_tilt").CamPose; k: number; rad: number; axis: import("../core/vec").Vec3 | null; /** (2026-11-14) the turn's rule, chosen at its first frame and kept: 0 not yet, 1 the two framed (`poseFramingTwo`), 2 about the piece alone */ rule: 0 | 1 | 2; /** (2026-11-14) the two's angles carried frame to frame (`FramingKeep`; null: not yet) */ keep: import("../input/orbit_tilt").FramingKeep | null; /** (2026-11-14) the angle turned so far (rad) — the turn's progress at one speed */ done: number; /** ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4c — `chartLayout` 1 only) the automatic tilt's entry made with the camera PENDING: paced as its swing was (`seamTurnPace`: held while pending, then by the finger's travel, then by time); absent: by time */ byMm?: boolean; /** ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §8, step C3 — `chartLayout` 1 and `tiltOutBlendMm` > 0 only) THE WAY OUT OF CLOSE IN paced by the finger (`seamOutPaced`): its progress `p` (never back; `k` its smooth share, `seamOutShare`), the approach finger's travel OUTWARD and the orbit finger's travel (mm on the glass) since it started — counted only while it is alive (`seamOutFeed`); absent: by time or `byMm` */ out?: { p: number; outMm: number; orbitMm: number } } | null;
-  /** ⭐ (2026-11-14) which facets of the map in use are the polar zone's own (`zoneFacetOf`), per map and zone */
-  asmZoneFacetsF: { readonly key: string; readonly of: Map<number, boolean> } | null;
+  asmZoneMix: { readonly from: import("../input/orbit_tilt").CamPose; k: number; rad: number; axis: import("../core/vec").Vec3 | null; /** (2026-11-14) the turn's rule, chosen at its first frame and kept: 0 not yet, 1 the two framed (`poseFramingTwo`), 2 about the piece alone */ rule: 0 | 1 | 2; /** (2026-11-14) the two's angles carried frame to frame (`FramingKeep`; null: not yet) */ keep: import("../input/orbit_tilt").FramingKeep | null; /** (2026-11-14) the angle turned so far (rad) — the turn's progress at one speed */ done: number; /** ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4c) the automatic tilt's entry made with the camera PENDING: paced as its swing was (`seamTurnPace`: held while pending, then by the finger's travel, then by time); absent: by time */ byMm?: boolean; /** ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §8, step C3 — `tiltOutBlendMm` > 0 only) THE WAY OUT OF CLOSE IN paced by the finger (`seamOutPaced`): its progress `p` (never back; `k` its smooth share, `seamOutShare`), the approach finger's travel OUTWARD and the orbit finger's travel (mm on the glass) since it started — counted only while it is alive (`seamOutFeed`); absent: by time or `byMm` */ out?: { p: number; outMm: number; orbitMm: number } } | null;
   /** ⭐ (2026-11-14) where the piece was drawn last frame around the assembly (a zone's turn starts from the piece's place on the glass then) */
   asmPieceDrawn: import("../core/vec").Vec3 | null;
-  /** ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4c — `chartLayout` 1 only) THE PIECE'S SHOWN DIRECTION EASED on the camera turn's clock: the one rotation from
+  /** ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4c) THE PIECE'S SHOWN DIRECTION EASED on the camera turn's clock: the one rotation from
    *  the new chart's direction back to the one drawn before the change of frame (`dirGap`), its rest `1 − k` of the turn `mix` (`asmZoneMix`, the same
    *  object — another turn, or none: whole), applied in `dirAt` (`easedDir`); `null`: none */
   asmDirEase: { readonly axis: import("../core/vec").Vec3; readonly angle: number; readonly mix: object } | null;
@@ -415,30 +414,13 @@ export interface SceneState {
   asmTilt: {
     readonly id: number;
     readonly map: import("../input/orbit_tilt").Mat3;
-    dir: import("../input/orbit_tilt").Mat3;
     facet: number;
-    readonly delta: number;
-    swingMs: number | null;
-    /** ⭐⭐⭐ (2026-11-11) the swing of the automatic tilt made as it switched on: held while the camera is pending, paced by the finger's travel (`asmBlend`) — the gizmo never held by it — then, the blend whole at a crossing, at the tilts' one speed */
-    readonly byMm: boolean;
-    /** ⭐⭐⭐ (2026-11-11) that swing's share shown */
-    swingE: number;
-    /** ⭐ (2026-11-10, *"one speed for every tilt"*) the swing's duration: its angle at `tiltRollDegS` */
-    readonly swingDurMs: number;
-    k: number;
-    /** ⭐ (2026-11-10) the finger's share of the way off (`exitShare`; 1 beyond the facet) — `k` the roll SHOWN, following it at most `tiltRollDegS` (`rollStep`, `rollDurationMs`) */
-    kT: number;
-    /** ⭐ (2026-11-10) out past the automatic tilt's threshold: the tilt turned off (the roll back by time, then the world's frame) */
+    /** ⭐ (2026-11-10) out past the automatic tilt's threshold (or a zone's switch): the tilt turned off — the world's frame at the next frame's start */
     off: boolean;
-    /** ⭐ (2026-11-10, the rebuild) the gizmo CROSSED the edge: the roll back under way, irreversible, the gizmo held until it is whole */
-    finishing: boolean;
-    /** ⭐ (2026-11-10) the roll's whole angle last frame (`frameMix`) — its duration at `tiltRollDegS` */
-    rollRad: number;
-    axis: Vec3 | null;
     exit: boolean;
     /** ⭐ (2026-11-10) the crossing off it is over a `b` end (a turn about the edge's line: the horizontal calm carried over), not across */
     exitAcross: boolean;
-    /** ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8) the tilt's snapped heading (`tiltHeading`) — leaving over the edge away from it sets the dy hold */
+    /** ⭐⭐⭐ (2026-11-12) the tilt's heading (`capTiltHeading`) — the yaw kept when left at the world's pole with no camera drawn yet (`tiltOff`) */
     readonly heading: number;
   } | null;
   /** ⭐⭐⭐ (§9.4) the gizmo's relocation where a frame change moves it: its offset from the map's point, the share left (eased over the swing's time, or by the finger's travel after an exit) */

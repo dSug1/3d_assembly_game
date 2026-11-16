@@ -1,5 +1,5 @@
 /**
- * ⭐⭐⭐ (2026-11-15, `Claude/40_RENDER_SCENE/spec/ORBIT_CHARTS.md` §12 2.4b — read under `chartLayout` 1 only) **A POLE HELD BY AN EDGE OR A POINT,
+ * ⭐⭐⭐ (2026-11-15, `Claude/40_RENDER_SCENE/spec/ORBIT_CHARTS.md` §12 2.4b) **A POLE HELD BY AN EDGE OR A POINT,
  * CROSSED BY THE ONE TRANSITION**, close in: `Scene_0`'s ridge (gravity's pole, an EDGE — no virtual cap since 2.4a), a pyramid's apex (a POINT). The
  * rules, engine-free; the wiring (`render/assembly_wiring.ts`, `poleCross`) gathers the facts and makes the crossing. ⛔ Far out a pole stays the polar
  * orbit's limit (D-C6); a pole that is a level FACE (a cap) is the tilt's business, never this.
@@ -18,8 +18,6 @@ export type PoleEndKind = "FACE" | "EDGE" | "POINT";
 
 /** ⭐ The facts the trigger reads, one frame (the wiring's, gathered where the automatic tilt is made). */
 export interface PoleCrossingFacts {
-  /** the charts' switch (`chartLayout`): 1 only */
-  readonly chartLayout: number;
   /** a tilt under way (`asmTilt` not null): its own frame — never */
   readonly tilted: boolean;
   /** in a polar zone (`asmZone` not null): its own frame — never */
@@ -42,12 +40,13 @@ export interface PoleCrossingFacts {
 }
 
 /**
- * ⭐⭐⭐ THE TRIGGER: the pole to cross this frame — every condition of the brief: the switch on; the world's frame (no tilt, no zone); close in; no camera
+ * ⭐⭐⭐ THE TRIGGER: the pole to cross this frame — every condition of the brief (⛔ the switch `chartLayout`: deleted at step 2.5, the charts always on):
+ * the world's frame (no tilt, no zone); close in; no camera
  * turn under way, no mouth held; the map's angles AT a pole with a place shown; the finger asking BEYOND that pole (`beyondV` > 0 at the top, < 0 at the
  * bottom); and that end of gravity's chart an EDGE or a POINT (a FACE: a cap — the tilt's). `null`: none.
  */
 export function poleCrossingDue(f: PoleCrossingFacts): "TOP" | "BOTTOM" | null {
-  if (f.chartLayout !== 1 || f.tilted || f.zoned || !f.closeIn || f.turning || f.mouth || !f.shown || f.atPole === null) return null;
+  if (f.tilted || f.zoned || !f.closeIn || f.turning || f.mouth || !f.shown || f.atPole === null) return null;
   const top = f.atPole;
   if (top ? !(f.beyondV > 0) : !(f.beyondV < 0)) return null;
   const kind = top ? f.topKind : f.bottomKind;

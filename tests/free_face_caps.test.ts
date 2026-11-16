@@ -1,6 +1,6 @@
 /**
  * GOLDEN VECTORS — **PACKAGE C2W: C2's WIRING ON GRAVITY'S CAPS** (2026-11-16, `Claude/40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md` §16), under
- * `chartLayout` 1 only:
+ * the charts (⛔ their switch `chartLayout` deleted at step 2.5, 2026-11-16 — the default half of the pins kept):
  * * **W5** — `capTiltHeading(…, along)`: the tilt's heading on a cap is the layout whose up (F's vertical in the world) is the heading CARRIED IN by the
  *   entry edge (`freeEdges` / `entryHeading`, the functions C4's spit entry calls) — on a box turned 30° every entry edge's own layout at every yaw
  *   (⛔ the snapped yaw's nearest: 90° off at some); on an axis-aligned box the SAME number as before (`tiltHeading`, bit for bit) for a yaw over the
@@ -224,7 +224,7 @@ describe("⭐⭐⭐ W7 — a frame's map in the parts' own box read in that fram
   });
 });
 
-describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`) — under `chartLayout` 1", () => {
+describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`)", () => {
   const raw = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\r\n/g, "\n");
   const fn = (sig: string): string => {
     const i = raw.indexOf(sig);
@@ -242,21 +242,21 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`) — under `chartLay
   });
   it("⭐ `tiltOn`: the cap the gizmo's own place, a free face — the heading carried in (`freeEntry` on the world's map, the place before the one shown)", () => {
     const f = fn("function tiltOn(");
-    expect(f).toContain("const en = capStack === sh.t.stack && isFreeFace(f.n, WORLD_UP) ? freeEntry(st, wm, IDENTITY3, at, capStack, st.asmPlaceWas) : null;");
-    expect(f).toContain("const h = capTiltHeading(at.assign, at.contour, capStack, f.n, q.yaw, en?.heading ?? null); if (h === null) return;");
-    expect(f.indexOf("freeEntry(")).toBeLessThan(f.indexOf("} else {"));
+    expect(f).toContain("const en = capStack === sh.t.stack && isFreeFace(cap.n, WORLD_UP) ? freeEntry(st, wm, IDENTITY3, at, capStack, st.asmPlaceWas) : null;");
+    expect(f).toContain("const hs = capTiltHeading(at.assign, at.contour, capStack, cap.n, q.yaw, en?.heading ?? null); if (hs === null) return;");
+    expect(f.indexOf("freeEntry(")).toBeLessThan(f.indexOf("capTiltHeading("));
   });
-  it("⭐ the place before the one shown, kept by the map's step under the switch (the same `prev` C4's entry reads), reset with the orbit's state", () => {
+  it("⭐ the place before the one shown, kept by the map's step (the same `prev` C4's entry reads), reset with the orbit's state", () => {
     const a = fn("export function assemblyFrame(");
     expect(a).toContain("const placeWas = sh0 !== null && fbWas !== null ? { map: fbWas.map, stack: sh0.t.stack } : null;");
-    expect(a).toContain("if (st.cfg.chartLayout === 1) { st.asmPlaceWas = placeWas; freeFaceFrame(st, m.t, placeWas); }");
+    expect(a).toContain("st.asmPlaceWas = placeWas; freeFaceFrame(st, m.t, placeWas);");
     expect(fn("export function orbitStateStart(")).toContain("asmPlaceWas: null,");
     expect(raw.match(/st\.asmPlaceWas = /g)?.length).toBe(1);
   });
-  it("⭐ `faceMapOf`: the frame's box the parts' own under the switch (`frameBox`), the turned world box otherwise", () => {
+  it("⭐ `faceMapOf`: the frame's box the parts' own (`frameBox`) — ⛔ the turned world box of the switch off (`tiltBox`): step 2.5", () => {
     const f = fn("function faceMapOf(");
-    expect(f).toContain("const fb = st.cfg.chartLayout === 1 ? frameBox(box, R, parts.parts) : tiltBox(box, R);");
-    expect(f).toContain("const map = buildFaceMap(tiltFaces(placedFaces(st), R), fb, { mergeDeg: st.cfg.facetMergeDeg, minShare: st.cfg.facetMinShare, ...chartOpts(st) });");
+    expect(f).toContain("const map = buildFaceMap(tiltFaces(placedFaces(st), R), frameBox(box, R, parts.parts), { mergeDeg: st.cfg.facetMergeDeg, minShare: st.cfg.facetMinShare, ...CHART_MAP_OPTS });");
+    expect(f).not.toContain("tiltBox(box, R)");
   });
   it("⭐ `IDENTITY3` is the identity — `contourOfFacet` on the world's map turns nothing", () => {
     expect(raw).toContain("const IDENTITY3: Mat3 = [\n  [1, 0, 0],\n  [0, 1, 0],\n  [0, 0, 1],\n];");

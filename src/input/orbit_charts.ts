@@ -12,7 +12,7 @@
  *    camera's turn at a seam between two charts (`seamTurn`).
  * 5. **The assignment** (`assignCharts`, §3): gravity's chart, the frames taken greedily (the fans, the tilted rectangles), the rings, the whole rule, each
  *    cap's square layouts.
- * 6. **Where a frame changes** (step 2.4a, §12, under `chartLayout` 1): a cap's tilt heading from its square layouts (`capTiltHeading`), the zones from
+ * 6. **Where a frame changes** (step 2.4a, §12): a cap's tilt heading from its square layouts (`capTiltHeading`), the zones from
  *    the frames taken (`chartZones`) — ⛔ `holdsPole`, `polarZones`' detectors.
  * ⭐ The reference this module is checked against, exactly, on 35 shapes: `scripts/probes/chart_lib.ts` (`scripts/probes/chart_assign_check.ts`).
  * ⛔ ENGINE-FREE. Plane geometry, a greedy cover — textbook; no licence, no patent.

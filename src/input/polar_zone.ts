@@ -1,18 +1,12 @@
 /**
  * ⭐⭐⭐ (2026-11-13, `Claude/40_RENDER_SCENE/spec/POLAR_ZONES.md` — the owner: *"if the faces contour is small and many faces converge to a singularity,
- * polar orbit shall be the only way"*, *"the polar orbit has to snap its pole to the local pole"*) THE POLAR ZONES of the faces contour, engine-free:
- *
- *  * WHERE (§3.2 – §3.3): a corner where ≥ `valenceMin` REAL facets meet (T1 — Blender's pole), off the orbit's own pole, whose star's facets are SMALL
- *    (T3: 2·area / perimeter under `facetMinRatio` × the smallest side of the PLACED set's box — D-Z1, the owner: the assembly as it stands, not the
- *    finished one, never the held piece) seeds a zone; the facets touching it that fail T2 (a slanted edge to the facet above / below in their column)
- *    or T3 join it; zones that touch merge; a failing facet with no pole stays tilted (D-Z4).
- *  * ITS AXIS (§3.4): from the zone's rim's centroid to its pole, snapped onto a world axis within `snapDeg` (D-Z2); two zones on one line are one zone
- *    with two poles (`Scene_0bis`: the line through both apexes).
- *  * ITS FRAME F (F → world, by rows like `orbit_tilt`'s `Mat3`): F's vertical the axis, F's yaw 0 the world axis most square to it.
- *  * ITS ORIENTATION (§3.5, D-Z6): ≤ `uprightMaxDeg` from the vertical UPRIGHT (S1, today's tilted), ≥ `spitMinDeg` SPIT (S2, the rotisserie), between: the
- *    author's tag, untagged UPRIGHT.
- *  * ITS EXTENT (D-Z5): the WHOLE assembly in F when the zone's facets and the facets whose sections are the same in F and in the world cover more than
- *    `wholeShare` of the contour's area.
+ * polar orbit shall be the only way"*, *"the polar orbit has to snap its pole to the local pole"*) THE POLAR ZONES, engine-free: what a zone is
+ * (`PolarZone`), ITS FRAME F (F → world, by rows like `orbit_tilt`'s `Mat3`: F's vertical the axis, F's yaw 0 the world axis most square to it,
+ * `zoneFrame`), and the runtime helpers below. ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §3, step 2.4a) the zones are the frames the charts' ATLAS takes
+ * (`chartZones`, `orbit_charts.ts`). ⛔ (2026-11-16, step 2.5) the DETECTORS of the game before the charts deleted with its switch (`chartLayout`):
+ * `polarZones` — a corner where ≥ `valenceMin` real facets meet whose star's facets are small (T1, T3), the facets failing T2 / T3 joined, the axis from
+ * the rim's centroid snapped onto a world axis within `snapDeg`, the orientation, the extent — and its helpers (`contourCorners`, `facetSize`,
+ * `snapToWorldAxis`, `zoneOrientation`), with the three knobs only they read (`valenceMin`, `facetMinRatio`, `snapDeg`; the record: `POLAR_ZONES.md`).
  *
  * The runtime helpers: which zone the gizmo is in with the exit's hysteresis (`zoneAt`, D-Z7), the finger read in F's upright screen (`fingerInFrame`), and
  * the zenith edge crossed as on `Scene_0` (`spitSide`, `spitHeading`, `crossingHold` — the owner: *"the dy hold happens after the crossing, not before
@@ -22,14 +16,8 @@ import type { Vec3 } from "../core/vec";
 import type { FaceMap, Facet } from "./face_map";
 import type { Mat3 } from "./orbit_tilt";
 
-/** ⭐ The zones' knobs — each a `GestureConfig` field with a slider (`zoneOptsOf` in the wiring). */
+/** ⭐ The zones' knobs — each a `GestureConfig` field with a slider (the atlas's, `atlasOf` in the wiring; the defaults `DEFAULT_CHART_OPTS`'s). */
 export interface ZoneOpts {
-  /** T1: a corner where at least this many real facets meet is a pole (Blender's: 5) */
-  readonly valenceMin: number;
-  /** T3: a facet is small under this share of the placed set's box's smallest side (0.22) */
-  readonly facetMinRatio: number;
-  /** the axis snapped onto a world axis within this (deg) */
-  readonly snapDeg: number;
   /** S1 up to this angle from the vertical (deg) */
   readonly uprightMaxDeg: number;
   /** S2 from this angle from the vertical (deg) */
@@ -38,7 +26,7 @@ export interface ZoneOpts {
   readonly wholeShare: number;
 }
 
-export const DEFAULT_ZONE_OPTS: ZoneOpts = { valenceMin: 5, facetMinRatio: 0.22, snapDeg: 10, uprightMaxDeg: 30, spitMinDeg: 60, wholeShare: 0.5 };
+export const DEFAULT_ZONE_OPTS: ZoneOpts = { uprightMaxDeg: 30, spitMinDeg: 60, wholeShare: 0.5 };
 
 export type ZoneOrientation = "UPRIGHT" | "SPIT";
 
@@ -69,118 +57,10 @@ const unit = (a: Vec3): Vec3 | null => {
 const D = Math.PI / 180;
 /** ⭐ two corners within this are one (m) — the charts' too (`orbit_charts.ts`) */
 export const CORNER_TOL_M = 0.0005;
-/** ⭐ T2: an edge is level within this (deg) — `RIDGE_TIE_DEG`'s */
-const LEVEL_DEG = 1;
-/** ⭐ D-Z5: a facet's section is the same in F and in the world when its normal is square to the axis within this (deg) */
-const ALIKE_DEG = 10;
-
-/** ⭐ The facets that count: real, with a polygon. */
-function realFacets(map: FaceMap): number[] {
-  const out: number[] = [];
-  map.facets.forEach((f, i) => {
-    if (f.real && f.poly.length >= 3) out.push(i);
-  });
-  return out;
-}
-
 /** ⭐ A facet's polygon without repeated points. */
 function polyOf(f: Facet): Vec3[] {
   const P = f.poly;
   return P.filter((p, k) => len(sub(p, P[(k + 1) % P.length]!)) > 1e-7);
-}
-
-/** ⭐ T3's size: 2 · area / perimeter (a disc's radius, a square's half side). */
-export function facetSize(f: Facet): number {
-  const P = polyOf(f);
-  if (P.length < 3) return 0;
-  let a: Vec3 = [0, 0, 0];
-  let per = 0;
-  for (let k = 0; k < P.length; k++) {
-    const p = P[k]!;
-    const q = P[(k + 1) % P.length]!;
-    a = [a[0] + p[1] * q[2] - p[2] * q[1], a[1] + p[2] * q[0] - p[0] * q[2], a[2] + p[0] * q[1] - p[1] * q[0]];
-    per += len(sub(q, p));
-  }
-  const area = len(a) / 2;
-  return per > 0 ? (2 * area) / per : 0;
-}
-
-function facetArea(f: Facet): number {
-  const P = polyOf(f);
-  let a: Vec3 = [0, 0, 0];
-  for (let k = 0; k < P.length; k++) {
-    const p = P[k]!;
-    const q = P[(k + 1) % P.length]!;
-    a = [a[0] + p[1] * q[2] - p[2] * q[1], a[1] + p[2] * q[0] - p[0] * q[2], a[2] + p[0] * q[1] - p[1] * q[0]];
-  }
-  return len(a) / 2;
-}
-
-/** ⭐ The contour's corners: polygon vertices that are corners (not on a straight side), merged within `CORNER_TOL_M`, with the facets around each. */
-export function contourCorners(map: FaceMap): { readonly p: Vec3; readonly facets: readonly number[] }[] {
-  const out: { p: Vec3; facets: number[] }[] = [];
-  for (const i of realFacets(map)) {
-    const Q = polyOf(map.facets[i]!);
-    for (let k = 0; k < Q.length; k++) {
-      const a = Q[(k - 1 + Q.length) % Q.length]!;
-      const p = Q[k]!;
-      const b = Q[(k + 1) % Q.length]!;
-      const u = sub(a, p);
-      const w = sub(b, p);
-      const c = dot(u, w) / (len(u) * len(w));
-      if (!(c > -1 + 1e-9)) continue; // a point on a straight side
-      let v = out.find((x) => len(sub(x.p, p)) < CORNER_TOL_M);
-      if (v === undefined) {
-        v = { p, facets: [] };
-        out.push(v);
-      }
-      if (!v.facets.includes(i)) v.facets.push(i);
-    }
-  }
-  return out;
-}
-
-/** ⭐ Two facets share an edge: two of their polygons' points in common (within `CORNER_TOL_M`) — the shared points, or `null`. */
-function sharedEdge(a: Facet, b: Facet): [Vec3, Vec3] | null {
-  const A = polyOf(a);
-  const B = polyOf(b);
-  const common: Vec3[] = [];
-  for (const p of A) if (B.some((q) => len(sub(p, q)) < CORNER_TOL_M) && !common.some((c) => len(sub(c, p)) < CORNER_TOL_M)) common.push(p);
-  if (common.length < 2) return null;
-  // the two farthest apart
-  let best: [Vec3, Vec3] = [common[0]!, common[1]!];
-  for (let i = 0; i < common.length; i++)
-    for (let j = i + 1; j < common.length; j++) if (len(sub(common[i]!, common[j]!)) > len(sub(best[0], best[1]))) best = [common[i]!, common[j]!];
-  return best;
-}
-
-/** ⭐ T2 fails: in a column the facet meets the facet above / below along an edge that is not level. */
-function t2Fails(map: FaceMap, fi: number): boolean {
-  const f = map.facets[fi]!;
-  for (const col of map.columns) {
-    const k = col.facets.indexOf(fi);
-    if (k < 0) continue;
-    for (const j of [col.facets[k - 1], col.facets[k + 1]]) {
-      if (j === undefined || j === fi) continue;
-      const g = map.facets[j]!;
-      if (!g.real) continue;
-      const e = sharedEdge(f, g);
-      if (e === null) continue;
-      const d = unit(sub(e[1], e[0]));
-      if (d !== null && Math.abs(d[1]) > Math.sin(LEVEL_DEG * D)) return true;
-    }
-  }
-  return false;
-}
-
-/** ⭐ The axis `a` snapped onto the nearest world axis within `deg`. */
-export function snapToWorldAxis(a: Vec3, deg: number): Vec3 {
-  const axes: Vec3[] = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
-  for (const e of axes) {
-    const c = dot(a, e);
-    if (Math.abs(c) >= Math.cos(deg * D)) return c > 0 ? e : [-e[0], -e[1], -e[2]];
-  }
-  return a;
 }
 
 /** ⭐ F → world for the axis `a` (by rows): F's y the axis, F's x the world axis most square to it (ties: y, x, z) laid square to it, F's z = x × y. */
@@ -197,152 +77,6 @@ export function zoneFrame(a: Vec3): Mat3 {
     [ex[1], ey[1], ez[1]],
     [ex[2], ey[2], ez[2]],
   ];
-}
-
-/** ⭐ S1 / S2 from the axis's angle with the world's vertical (D-Z6); the band between: the tag, else S1. */
-export function zoneOrientation(a: Vec3, o: ZoneOpts, tag: ZoneOrientation | null = null): ZoneOrientation {
-  const ang = Math.acos(Math.min(1, Math.abs(a[1]))) / D;
-  if (ang <= o.uprightMaxDeg) return "UPRIGHT";
-  if (ang >= o.spitMinDeg) return "SPIT";
-  return tag ?? "UPRIGHT";
-}
-
-/** ⭐ The zone's rim's centroid: its facets' edges not shared with another of its facets, weighted by length. */
-function rimCentroid(map: FaceMap, facets: readonly number[]): Vec3 | null {
-  let s: Vec3 = [0, 0, 0];
-  let w = 0;
-  for (const i of facets) {
-    const P = polyOf(map.facets[i]!);
-    for (let k = 0; k < P.length; k++) {
-      const p = P[k]!;
-      const q = P[(k + 1) % P.length]!;
-      const inner = facets.some((j) => {
-        if (j === i) return false;
-        const Q = polyOf(map.facets[j]!);
-        return Q.some((x) => len(sub(x, p)) < CORNER_TOL_M) && Q.some((x) => len(sub(x, q)) < CORNER_TOL_M);
-      });
-      if (inner) continue;
-      const l = len(sub(q, p));
-      s = [s[0] + ((p[0] + q[0]) / 2) * l, s[1] + ((p[1] + q[1]) / 2) * l, s[2] + ((p[2] + q[2]) / 2) * l];
-      w += l;
-    }
-  }
-  return w > 0 ? [s[0] / w, s[1] / w, s[2] / w] : null;
-}
-
-/**
- * ⭐⭐⭐ THE ZONES of the map (the WORLD's face map of the placed set, recomputed at each seat — the cache's key is the map's). `tags`: the author's
- * orientation per zone where its pole lies within 1 mm of the tag's point (none yet: the proxies' `orbit:` tag is `3d_assembly_game-scene2`'s, §4.3).
- */
-export function polarZones(map: FaceMap, o: ZoneOpts = DEFAULT_ZONE_OPTS, tags: readonly { readonly at: Vec3; readonly orientation: ZoneOrientation }[] = []): PolarZone[] {
-  const real = realFacets(map);
-  if (real.length === 0) return [];
-  const b = map.box;
-  const minSide = Math.min(b.hi[0] - b.lo[0], b.hi[1] - b.lo[1], b.hi[2] - b.lo[2]);
-  const sMin = o.facetMinRatio * minSide;
-  const size = new Map<number, number>();
-  for (const i of real) size.set(i, facetSize(map.facets[i]!));
-  const small = (i: number): boolean => (size.get(i) ?? Infinity) < sMin;
-  // ── T1: the poles — off the orbit's own pole (the vertical line through the box's centre, at its top or bottom)
-  const cx = (b.lo[0] + b.hi[0]) / 2;
-  const cz = (b.lo[2] + b.hi[2]) / 2;
-  const onOrbitPole = (p: Vec3): boolean => Math.hypot(p[0] - cx, p[2] - cz) < 0.001 && (Math.abs(p[1] - b.hi[1]) < 0.001 || Math.abs(p[1] - b.lo[1]) < 0.001);
-  const poles = contourCorners(map).filter((c) => c.facets.length >= o.valenceMin && !onOrbitPole(c.p));
-  // ── the seeds: a pole's star, when its facets are small (T3 — the median)
-  interface Z { facets: Set<number>; poles: Vec3[]; pole: Set<number>; t2: Set<number>; t3: Set<number> }
-  const zs: Z[] = [];
-  for (const c of poles) {
-    const ss = c.facets.map((i) => size.get(i) ?? Infinity).sort((x, y) => x - y);
-    if (!(ss[Math.floor(ss.length / 2)]! < sMin)) continue;
-    zs.push({ facets: new Set(c.facets), poles: [c.p], pole: new Set(c.facets), t2: new Set(), t3: new Set() });
-  }
-  if (zs.length === 0) return [];
-  // ── the growth: a facet touching a zone that fails T2 or T3 joins it (repeated until none joins)
-  const touches = (i: number, z: Z): boolean => [...z.facets].some((j) => j !== i && sharedEdge(map.facets[i]!, map.facets[j]!) !== null);
-  for (const z of zs) {
-    let grew = true;
-    while (grew) {
-      grew = false;
-      for (const i of real) {
-        if (z.facets.has(i) || !touches(i, z)) continue;
-        const f3 = small(i);
-        const f2 = !f3 && t2Fails(map, i);
-        if (!f2 && !f3) continue;
-        z.facets.add(i);
-        (f3 ? z.t3 : z.t2).add(i);
-        grew = true;
-      }
-    }
-  }
-  // ── zones that touch (a facet in common, or an edge) merge
-  const merged: Z[] = [];
-  for (const z of zs) {
-    const m = merged.find((y) => [...z.facets].some((i) => y.facets.has(i) || touches(i, y)));
-    if (m === undefined) merged.push(z);
-    else {
-      for (const i of z.facets) m.facets.add(i);
-      for (const p of z.poles) if (!m.poles.some((q) => len(sub(p, q)) < CORNER_TOL_M)) m.poles.push(p);
-      for (const i of z.pole) m.pole.add(i);
-      for (const i of z.t2) m.t2.add(i);
-      for (const i of z.t3) m.t3.add(i);
-    }
-  }
-  // ── each zone's axis: rim centroid → pole, snapped
-  const withAxis = merged.map((z) => {
-    const f = [...z.facets];
-    const c = rimCentroid(map, f);
-    let a: Vec3 | null = c === null ? null : unit(sub(z.poles[0]!, c));
-    if (a === null) {
-      let n: Vec3 = [0, 0, 0];
-      for (const i of f) n = [n[0] + map.facets[i]!.n[0], n[1] + map.facets[i]!.n[1], n[2] + map.facets[i]!.n[2]];
-      a = unit(n) ?? [0, 1, 0];
-    }
-    return { z, a: snapToWorldAxis(a, o.snapDeg) };
-  });
-  // ── two zones on one line (axes within the snap, each pole on the other's line): ONE zone with two poles, its axis pole to pole
-  const diag = Math.hypot(b.hi[0] - b.lo[0], b.hi[1] - b.lo[1], b.hi[2] - b.lo[2]);
-  const lineDist = (p: Vec3, q: Vec3, a: Vec3): number => len(cross(sub(p, q), a));
-  const groups: { z: Z; a: Vec3 }[] = [];
-  for (const w of withAxis) {
-    const g = groups.find((y) => Math.abs(dot(y.a, w.a)) >= Math.cos(o.snapDeg * D) && lineDist(w.z.poles[0]!, y.z.poles[0]!, y.a) < 0.05 * diag);
-    if (g === undefined) {
-      groups.push({ z: w.z, a: w.a });
-      continue;
-    }
-    for (const i of w.z.facets) g.z.facets.add(i);
-    for (const p of w.z.poles) g.z.poles.push(p);
-    for (const i of w.z.pole) g.z.pole.add(i);
-    for (const i of w.z.t2) g.z.t2.add(i);
-    for (const i of w.z.t3) g.z.t3.add(i);
-    const ab = unit(sub(g.z.poles[g.z.poles.length - 1]!, g.z.poles[0]!));
-    if (ab !== null) g.a = snapToWorldAxis(ab, o.snapDeg);
-  }
-  // ── the frame, the orientation, the extent
-  let total = 0;
-  for (const i of real) total += facetArea(map.facets[i]!);
-  return groups.map(({ z, a: a0 }) => {
-    const tag = tags.find((t) => z.poles.some((p) => len(sub(p, t.at)) < 0.001))?.orientation ?? null;
-    const orientation = zoneOrientation(a0, o, tag);
-    // UPRIGHT: the axis up (the screen's up in F is F's vertical); SPIT: as found (P− → P+)
-    const a: Vec3 = orientation === "UPRIGHT" && a0[1] < 0 ? [-a0[0], -a0[1], -a0[2]] : a0;
-    let share = 0;
-    for (const i of real) {
-      const f = map.facets[i]!;
-      const alike = !z.facets.has(i) && f.kind === "SIDE" && Math.abs(f.n[1]) <= Math.SQRT1_2 && Math.abs(dot(f.n, a)) < Math.sin(ALIKE_DEG * D) && Math.abs(a[1]) < Math.sin(ALIKE_DEG * D);
-      if (z.facets.has(i) || alike) share += facetArea(f);
-    }
-    const whole = total > 0 && share / total > o.wholeShare;
-    const facets = [...z.facets].sort((x, y) => x - y);
-    return {
-      facets,
-      poles: z.poles,
-      axis: a,
-      frame: zoneFrame(a),
-      orientation,
-      whole,
-      reason: { pole: [...z.pole].sort((x, y) => x - y), t2: [...z.t2].sort((x, y) => x - y), t3: [...z.t3].sort((x, y) => x - y) },
-    };
-  });
 }
 
 /** ⭐ The distance (m) from `p` to the nearest of the facets' polygons (in its plane inside it, else to its sides). */
@@ -536,7 +270,7 @@ export function crossingPitch(u0: Vec3 | null, u1: Vec3, a: Vec3): number {
  * ⭐⭐⭐ (§8's hold, after the crossing) THE DY HOLD once the side changed, the gizmo on its face (normal `n`): the dy sign that crossed (`sign`, the
  * finger's last) held until the finger has gone `edgeHoldMm` the other way. `null`: no dy to hold, or no way along the face toward the new `side` (its
  * normal along that way). ⛔ (2026-11-16, step C5) where the gizmo crossed (`g0`) and the way into the face beyond (`d`) no longer returned: read by
- * nothing. ⭐ (step C5) kept under `chartLayout` 1 too, handed to the one event (`crossTurn`; `TILTED_POLE_CLOSE_IN.md` §13.3).
+ * nothing. ⭐ (step C5) kept under the charts too, handed to the one event (`crossTurn`; `TILTED_POLE_CLOSE_IN.md` §13.3).
  */
 export function crossingHold(n: Vec3 | null, a: Vec3, side: number, sign: number): { readonly sign: 1 | -1; readonly back: number } | null {
   if (sign === 0 || n === null) return null;

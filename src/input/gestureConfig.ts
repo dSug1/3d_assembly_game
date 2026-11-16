@@ -411,7 +411,7 @@ export interface GestureConfig {
   /** ⭐⭐⭐ (2026-11-11, the owner: *"during the approach … if the gizmo is on a face holding the pole … when the tilted-pole-orbit toggles on there is an immediate alignment of the camera … this does not blend with the approach. I would like to keep the camera orientation when the tilted-pole-orbit toggles on as long as the approach continue, then the camera blends with the new alignment with the delta position mm when the orbit at close in starts"*, *"gizmo moving from first millimeter and also the same for all the faces"*) the automatic tilt's blend: the finger's travel (mm) over which the camera turns into the close-in alignment once the orbit starts (0: at once). */
   tiltBlendMm: number;
   /** ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §8, step C3 — D-T1, the owner: *"Find a way to blend properly the camera movement on the way out"*; with
-   * `chartLayout` 1) THE WAY OUT OF CLOSE IN: the camera's turn after the automatic tilt is left BY DISTANCE spread over this much of the approach finger's
+   * the charts) THE WAY OUT OF CLOSE IN: the camera's turn after the automatic tilt is left BY DISTANCE spread over this much of the approach finger's
    * travel outward (mm on the glass; never faster than `tiltRollDegS`; the gizmo free) — 0: the timed turn, the gizmo held, as before (0 … 60) */
   tiltOutBlendMm: number;
   /** ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8) after an edge that turns the camera round, the dy that crossed held until the FINGER has gone this far the other way (mm; ⛔ 2026-11-14 the gizmo's depth in the face beyond) */
@@ -420,12 +420,8 @@ export interface GestureConfig {
   approachPinchGain: number;
   /** ⭐⭐⭐ (2026-11-13, `POLAR_ZONES.md`) the polar zones on (1) / off (0) */
   zoneOn: number;
-  /** ⭐⭐⭐ (D-Z1, T1) a corner where this many real facets meet is a pole */
-  zoneValenceMin: number;
-  /** ⭐⭐⭐ (D-Z1, T3 — the owner: the assembly as it stands) a facet is small under this share of the placed set's box's smallest side */
-  zoneFacetMinRatio: number;
-  /** ⭐⭐⭐ (D-Z2) the zone's axis snapped onto a world axis within this (deg) */
-  zoneSnapDeg: number;
+  /* ⛔ (2026-11-16, step 2.5) `zoneValenceMin`, `zoneFacetMinRatio`, `zoneSnapDeg` (D-Z1, D-Z2: the detectors' knobs, `polarZones`) deleted with the game
+   * before the charts — the zones are the atlas's frames (`chartZones`) */
   /** ⭐⭐⭐ (D-Z6) upright (S1) up to this angle of the axis from the vertical (deg) */
   zoneUprightMaxDeg: number;
   /** ⭐⭐⭐ (D-Z6) the spit (S2) from this angle of the axis from the vertical (deg) */
@@ -434,7 +430,7 @@ export interface GestureConfig {
   zoneWholeShare: number;
   /** ⭐⭐⭐ (D-Z7) the gizmo leaves a zone this far past its rim (mm) */
   zoneExitMm: number;
-  /** ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §3.4, step C4 — with `chartLayout` 1) A SPIT'S LEVEL FACE (a free face, the heading carried): 0 — N2,
+  /** ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §3.4, step C4) A SPIT'S LEVEL FACE (a free face, the heading carried): 0 — N2,
    * the camera's direction as built (the calm); 1 — N1, the camera square to the face at every distance (the square camera whole there) (0 or 1) */
   freeFaceSquare: number;
   /** ⭐⭐⭐ (2026-11-12, CLOSE_IN_CONTACT.md step 3) THE CLOSE-IN GAIN (`closeInGain`): the orbit's full gain from this distance of the piece to the gizmo out (m),
@@ -448,14 +444,9 @@ export interface GestureConfig {
   /** ⭐⭐⭐ …and a facet is kept only when the real face area in its plane (its main region, holes closed) is at least this share of its own polygon on the
    * contour (0 … 1) — a frustum's slanted side, a plane cutting the contour across, never tilts the orbit; `Scene_1` keeps exactly its six faces */
   facetMinShare: number;
-  /** ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §2.2 / §5.2, step 2.2 — behind a switch, off by default, to compare on a device) THE CHARTS' LAYOUT: 1 — the
-   * face maps (the world's and a frame's) are built with the pole as the shape's top / bottom set and the pitch scale read from the faces' normals;
-   * 0 — as built (0 or 1) */
-  chartLayout: number;
-  /** ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §5.1, step 2.3 — behind a switch, off by default) THE CALM ON EVERY SIDE FACE: 1 — a polar zone's own facets
-   * (a fan's) calmed as any side facet, the share continuous on a narrow run (`edgeShareSmooth`), a side facet's reading not faded by the pitch; only
-   * with `chartLayout` 1 too (`calmRules`); 0 — as built (0 or 1) */
-  chartCalm: number;
+  /* ⛔ (2026-11-16, step 2.5 — `ORBIT_CHARTS.md` §7.2) the two switches `chartLayout` (the charts' layout, step 2.2) and `chartCalm` (the calm on every side
+   * face, step 2.3) deleted with the game before the charts: both always on (their default since 2026-11-16, the owner: *"For the next deploys always
+   * toggle on the two switches by default in all the scenes"*) */
   /** ⭐⭐⭐ THE CALM (58d86ff's face-span orbit share, ported 2026-11-04 `1.0.95-` — the owner: *"It shall stay"*): the share of the orbit's angle shown along
    * dx's axis in the middle of a face (0 … 1), its edge zone (% of the gizmo's run along it) and the zone's minimum (cm) */
   faceSpanShareH: number;
@@ -871,9 +862,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
   tiltRollDegS: 360, // ⭐⭐⭐ (2026-11-10, *"yes"*) …its roll back at most 360°/s (a half turn 0.5 s, a side's 63° 0.18 s) — a guess until a hand sets it
   approachPinchGain: 1, // ⭐⭐⭐ (2026-11-13, the owner: *"build A"* — the pinch is the approach) a guess with a slider: a mm of spread = a mm of the old two-finger dy
   zoneOn: 1, // ⭐⭐⭐ (2026-11-13, POLAR_ZONES.md) the polar zones
-  zoneValenceMin: 5, // ⭐⭐⭐ (D-Z1) Blender's pole
-  zoneFacetMinRatio: 0.22, // ⭐⭐⭐ (D-Z1, the owner: relative to the placed set) Scene_0bis's tips 0.15, Scene_0 0.31, Scene_1 0.50
-  zoneSnapDeg: 10, // ⭐⭐⭐ (D-Z2)
   zoneUprightMaxDeg: 30, // ⭐⭐⭐ (D-Z6)
   zoneSpitMinDeg: 60, // ⭐⭐⭐ (D-Z6)
   zoneWholeShare: 0.5, // ⭐⭐⭐ (D-Z5)
@@ -887,8 +875,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
   tiltAutoM: 0.6, // ⭐⭐⭐ (2026-11-10, the owner: *"instead Percent use m for the slider tilted pole automatic within this and set the default to 0.3 m"* → *"correction: set the default at 0.6m"*) the automatic tilt within 0.6 m of the gizmo (off beyond 0.65 m) — 20 % of the far distance before (1.2 m on `Scene_1`), 30 % before that
   facetMergeDeg: 20, // ⭐⭐⭐ (2026-11-04, Step 5, D5) the faces contour: the faces within 20° of a facet's normal are its (MAP_AXIS_DEG's)…
   facetMinShare: 0.25, // …and a facet kept with a quarter of its polygon real face at least
-  chartLayout: 1, // ⭐⭐⭐ (2026-11-16, the owner after his looks: *"For the next deploys always toggle on the two switches by default in all the scenes"*, `TILTED_POLE_CLOSE_IN.md` §11) ON — the charts' layout (`ORBIT_CHARTS.md` §2.2 / §5.2); 0: the face maps as built before the charts
-  chartCalm: 1, // ⭐⭐⭐ (2026-11-16, the same word) ON — the calm on every face (`ORBIT_CHARTS.md` §5.1; acts only with `chartLayout` 1); 0: the calm as built before
   faceSpanShareH: 0.25, // ⭐⭐⭐ (58d86ff, *"1- ok as recommended"*) a quarter of the orbit's angle shown in the middle of a face
   faceSpanZoneHPct: 25, // ⭐⭐⭐ (58d86ff, *"2- ok as recommended"*) the edge zone a quarter of the run
   faceSpanZoneMinHCm: 3, // …at least 3 cm
@@ -1042,9 +1028,6 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.tiltBlendMm >= 0 && cfg.tiltBlendMm <= 200)) throw new Error(`tiltBlendMm (${cfg.tiltBlendMm}) must be in [0, 200] mm.`);
   if (!(cfg.tiltOutBlendMm >= 0 && cfg.tiltOutBlendMm <= 60)) throw new Error(`tiltOutBlendMm (${cfg.tiltOutBlendMm}) must be in [0, 60] mm.`);
   if (cfg.zoneOn !== 0 && cfg.zoneOn !== 1) throw new Error(`zoneOn (${cfg.zoneOn}) must be 0 or 1.`);
-  if (!(Number.isInteger(cfg.zoneValenceMin) && cfg.zoneValenceMin >= 3 && cfg.zoneValenceMin <= 20)) throw new Error(`zoneValenceMin (${cfg.zoneValenceMin}) must be an integer in [3, 20].`);
-  if (!(cfg.zoneFacetMinRatio >= 0 && cfg.zoneFacetMinRatio <= 1)) throw new Error(`zoneFacetMinRatio (${cfg.zoneFacetMinRatio}) must be in [0, 1].`);
-  if (!(cfg.zoneSnapDeg >= 0 && cfg.zoneSnapDeg <= 45)) throw new Error(`zoneSnapDeg (${cfg.zoneSnapDeg}) must be in [0, 45] deg.`);
   if (!(cfg.zoneUprightMaxDeg >= 0 && cfg.zoneUprightMaxDeg <= cfg.zoneSpitMinDeg && cfg.zoneSpitMinDeg <= 90)) throw new Error(`zoneUprightMaxDeg (${cfg.zoneUprightMaxDeg}) ≤ zoneSpitMinDeg (${cfg.zoneSpitMinDeg}) ≤ 90 deg.`);
   if (!(cfg.zoneWholeShare >= 0 && cfg.zoneWholeShare <= 1.01)) throw new Error(`zoneWholeShare (${cfg.zoneWholeShare}) must be in [0, 1.01].`);
   if (!(cfg.zoneExitMm >= 0 && cfg.zoneExitMm <= 200)) throw new Error(`zoneExitMm (${cfg.zoneExitMm}) must be in [0, 200] mm.`);
@@ -1055,8 +1038,6 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.orbitContactMmPerMm > 0 && cfg.orbitContactMmPerMm <= 50)) throw new Error(`orbitContactMmPerMm (${cfg.orbitContactMmPerMm}) must be in (0, 50] mm/mm.`);
   if (!(cfg.facetMergeDeg >= 1 && cfg.facetMergeDeg <= 44)) throw new Error(`facetMergeDeg (${cfg.facetMergeDeg}) must be in [1, 44] °.`);
   if (!(cfg.facetMinShare >= 0 && cfg.facetMinShare <= 1)) throw new Error(`facetMinShare (${cfg.facetMinShare}) must be in [0, 1].`);
-  if (cfg.chartLayout !== 0 && cfg.chartLayout !== 1) throw new Error(`chartLayout (${cfg.chartLayout}) must be 0 or 1.`);
-  if (cfg.chartCalm !== 0 && cfg.chartCalm !== 1) throw new Error(`chartCalm (${cfg.chartCalm}) must be 0 or 1.`);
   for (const k of ["faceSpanShareH", "faceSpanShareV"] as const) if (!(cfg[k] >= 0 && cfg[k] <= 1)) throw new Error(`${k} (${cfg[k]}) must be in [0, 1].`);
   for (const k of ["faceSpanZoneHPct", "faceSpanZoneVPct"] as const) if (!(cfg[k] >= 0 && cfg[k] <= 50)) throw new Error(`${k} (${cfg[k]}) must be in [0, 50] %.`);
   for (const k of ["faceSpanZoneMinHCm", "faceSpanZoneMinVCm"] as const) if (!(cfg[k] >= 0 && cfg[k] <= 30)) throw new Error(`${k} (${cfg[k]}) must be in [0, 30] cm.`);

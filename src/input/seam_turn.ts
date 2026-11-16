@@ -1,6 +1,6 @@
 /**
  * ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4c, "THE ONE TRANSITION" 4.) **THE ONE TRANSITION'S TURN** — the pure rules a change of frame needs under the
- * charts' layout (`chartLayout` 1; the wiring in `render/assembly_wiring.ts`):
+ * charts' layout (the wiring in `render/assembly_wiring.ts`):
  *
  * * **The piece's shown direction eased on the camera turn's clock** (`dirGap`, `easedDir`): a change of frame SETS every angle state to the new chart's
  *   angles at the gizmo (`seamRebase`), and the direction the piece hangs along steps from the one DRAWN before to the new chart's own — by the gap between
@@ -139,12 +139,12 @@ export function seamTurnStep(
 
 /**
  * ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §8, step C3 — D-T1, the owner: *"Find a way to blend properly the camera movement on the way out"*) THE WAY
- * OUT OF CLOSE IN, BLENDED: is the turn after the tilt's exit PACED BY THE FINGER — under the charts' layout (`chartLayout` 1), the tilt left BY DISTANCE
+ * OUT OF CLOSE IN, BLENDED: is the turn after the tilt's exit PACED BY THE FINGER — the tilt left BY DISTANCE
  * (`off`: turned off, and `closeIn` false: the automatic tilt's latch is off — ⛔ a tilt turned off by a zone's switch keeps the latch on), with the span
  * over 0 (`outBlendMm`, `tiltOutBlendMm`). Otherwise (an edge's exit, a zone's, the span 0): the timed turn, the gizmo held — as built.
  */
-export function seamOutPaced(chartLayout: number, off: boolean, closeIn: boolean, outBlendMm: number): boolean {
-  return chartLayout === 1 && off && !closeIn && outBlendMm > 0;
+export function seamOutPaced(off: boolean, closeIn: boolean, outBlendMm: number): boolean {
+  return off && !closeIn && outBlendMm > 0;
 }
 
 /**

@@ -1,6 +1,6 @@
 /**
  * GOLDEN VECTORS — **THE ORBIT ON CHARTS, STEP 2.4b: A POLE HELD BY AN EDGE OR A POINT IS CROSSED BY THE ONE TRANSITION** (2026-11-15,
- * `Claude/40_RENDER_SCENE/spec/ORBIT_CHARTS.md` §1 "the top and the bottom", §4.1, §12 2.4b and "THE ONE TRANSITION"; D-C6), under `chartLayout` 1 only:
+ * `Claude/40_RENDER_SCENE/spec/ORBIT_CHARTS.md` §1 "the top and the bottom", §4.1, §12 2.4b and "THE ONE TRANSITION"; D-C6) (⛔ its switch `chartLayout` deleted at step 2.5):
  * * `poleCrossingDue` — the trigger, as a table: every condition off gives no crossing; the top and the bottom; a FACE end (a cap) never; far out never.
  * * `farFacetAt` — the far facet on the lying heptagon (`Scene_0`'s): from a top face on the ridge the other top face, at the ridge's END corner too
  *   (an end face holds the point there); off the ridge none; from an end face at its top none; a pyramid's apex (and an inverted one's) the opposite fan
@@ -49,14 +49,13 @@ const opposite = (map: FaceMap, i: number, among: readonly number[]) => {
 };
 
 describe("⭐⭐⭐ the trigger (`poleCrossingDue`, §12 2.4b)", () => {
-  const BASE: PoleCrossingFacts = { chartLayout: 1, tilted: false, zoned: false, closeIn: true, turning: false, mouth: false, atPole: true, shown: true, beyondV: 0.01, topKind: "EDGE", bottomKind: "FACE" };
+  const BASE: PoleCrossingFacts = { tilted: false, zoned: false, closeIn: true, turning: false, mouth: false, atPole: true, shown: true, beyondV: 0.01, topKind: "EDGE", bottomKind: "FACE" };
   it("⭐ every condition met: the top crossed (an EDGE, a POINT)", () => {
     expect(poleCrossingDue(BASE)).toBe("TOP");
     expect(poleCrossingDue({ ...BASE, topKind: "POINT" })).toBe("TOP");
   });
   it("⭐ each condition off: no crossing", () => {
     const off: Partial<PoleCrossingFacts>[] = [
-      { chartLayout: 0 }, // the switch
       { tilted: true }, // a tilt's frame
       { zoned: true }, // a zone's frame
       { closeIn: false }, // ⛔ far out: the polar orbit's limit (D-C6)
@@ -251,11 +250,11 @@ function fnSource(f: string, sig: string, close = "\n}\n"): string {
 
 describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`)", () => {
   const W = "render/assembly_wiring.ts";
-  it("⭐ the switch guards the trigger; placed after the tilt's making and before the map's step; the beyond consumed by a crossing", () => {
+  it("⭐ the trigger placed after the tilt's making and before the map's step; the beyond consumed by a crossing (⛔ the switch's guard: step 2.5)", () => {
     const a = code(W);
     const frame = fnSource(W, "export function assemblyFrame(");
     expect(frame).toContain("let beyondV = st.orbit.takeBeyond();");
-    const guard = "if (st.cfg.chartLayout === 1) { const atl = atlasOf(st); const due = poleCrossingDue({ chartLayout: st.cfg.chartLayout, tilted: st.asmTilt !== null, zoned: st.asmZone !== null, closeIn: st.asmTiltAuto, turning: st.asmZoneMix !== null, mouth: st.asmMouth !== null, atPole, shown: st.asmShown !== null && st.asmG !== null, beyondV, topKind: atl?.assign.gravity.top.kind ?? null, bottomKind: atl?.assign.gravity.bottom.kind ?? null, }); if (due !== null && poleCross(st)) beyondV = 0; }";
+    const guard = "{ const atl = atlasOf(st); const due = poleCrossingDue({ tilted: st.asmTilt !== null, zoned: st.asmZone !== null, closeIn: st.asmTiltAuto, turning: st.asmZoneMix !== null, mouth: st.asmMouth !== null, atPole, shown: st.asmShown !== null && st.asmG !== null, beyondV, topKind: atl?.assign.gravity.top.kind ?? null, bottomKind: atl?.assign.gravity.bottom.kind ?? null, }); if (due !== null && poleCross(st)) beyondV = 0; }";
     expect(frame).toContain(guard);
     const iTilt = frame.indexOf("if (st.asmTiltAuto && st.asmTilt === null) tiltOn(st, st.asmMouth !== null ? st.asmMouth.hi : atPole);");
     const iCross = frame.indexOf(guard);
@@ -333,9 +332,9 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`)", () => {
       at2 = i;
     }
     expect(c).not.toMatch(/getBoundingInfo|pickWithRay|absolutePosition|st\.camera\.|cameraPrev|modelCast|gizmoNormal/);
-    // the turn started exactly as the spit's crossing starts it (with the switch off, its own lines; on, the same event)
+    // the turn started exactly as the spit's crossing starts it (the same event, `crossTurn`; ⛔ the spit's own lines of the switch off: step 2.5)
     expect(fnSource(W, "function seamTurnStart(")).toContain("st.asmZoneMix = st.asmCamLast === null ? null : { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0, ...(paced ? { byMm: true } : {}) };");
-    expect(fnSource(W, "export function spitStep(")).toContain("if (st.asmCamLast !== null) st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0 };");
+    expect(fnSource(W, "export function spitStep(")).toContain("crossTurn(st, { at: null, uWas: null, carry: true, paced: false, hold: hold === null ? 0 : hold.sign });");
     // ⛔ the sway: nothing read off a drawn mesh, a pick or the camera for a place, a normal or a frame (the pose shown only starts the turn)
     expect(x).not.toMatch(/getBoundingInfo|pickWithRay|absolutePosition|st\.camera\.|cameraPrev|modelCast|gizmoNormal/);
   });

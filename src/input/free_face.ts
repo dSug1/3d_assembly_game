@@ -166,7 +166,7 @@ export function turnHolds(turnRad: number, fromRad: number): boolean {
   return turnRad > fromRad + FREE_TURN_TOL_RAD;
 }
 
-/* ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §3.4 — step C4: a spit zone's level faces on the carried heading, wired under `chartLayout` 1) ------------ */
+/* ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §3.4 — step C4: a spit zone's level faces on the carried heading, wired) ------------ */
 
 /**
  * ⭐⭐⭐ (`TILTED_POLE_CLOSE_IN.md` §10 — D-T4, the owner 2026-11-16: *"i have no particular opinion. Weigh the pros and the cons and build what is best"*)

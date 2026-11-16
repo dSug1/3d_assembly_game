@@ -13,6 +13,9 @@
 // ⚠ What it does NOT cover: the wiring (the eases, the lag, the tilted pole, the SQUARE camera close in — close in the view is square to the face
 // whatever the calm), shapes that are not convex, a device. The far and middle orbit only.
 // Usage: npx vite-node scripts/probes/calm_study.ts      (ONLY=text — the shapes whose name holds it; about two minutes for all)
+// ⛔ (2026-11-16, step 2.5 — `Claude/00_CORE/queue_notes/RND5.md`) NO LONGER RUNS ON THIS TREE: its "as built" column is the calm of the game before the
+// charts, deleted with the switch `chartCalm` (`calmTarget`'s `box` parameter; `contourCorners` with `polarZones`). Kept as step 0's record (its numbers:
+// `ORBIT_CHARTS.md` §6); to run it, check out `d917d04`.
 import { mapTarget, type FaceMap, type MapTarget } from "../../src/input/face_map";
 import { calmTarget, calmShown, capEdgePitch, shownDir, shownDirAcross, acrossWeight, edgeShare, type CalmKnobs } from "../../src/input/orbit_calm";
 import { poleEdgeWhole } from "../../src/input/orbit_tilt";

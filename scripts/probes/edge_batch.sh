@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # The edge run (edge_noise.mjs) on a dev server: bash scripts/probes/edge_batch.sh "<scene>|<query>|<EDGE>|<AMM>|<OFFMM> ..."
-#   e.g. "1|chartLayout=1&chartCalm=1|top|2.5|0"; RUN (default 240 frames), WIDTH; PARKTILT, PARKMM, TRACE, SIGN, PERIOD pass through to the probe.
+#   e.g. "1|idleOrbitOn=0|top|2.5|0" (the query: any tunables to set; ⛔ the switches: step 2.5); RUN (default 240 frames), WIDTH; PARKTILT, PARKMM, TRACE, SIGN, PERIOD pass through to the probe.
 #   The runbook: scripts/probes/ORBIT_GATES.md
 set -u
 source "$(dirname "${BASH_SOURCE[0]}")/orbit_gates_lib.sh"

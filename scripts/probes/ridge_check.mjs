@@ -5,8 +5,9 @@
 //   MODE=across: from the ridge's face on FROM_SIDE (+1 / -1), ONE drag round the axis over the ridge onto the other face, then (BACK) ONE drag back.
 // Per drag: the side's changes, the timed camera turns, the dy hold, the view's turn, and the gizmo's way on the glass against the finger's (sideways:
 // 60 – 120° off it; against: over 120°).
-//   URL=http://127.0.0.1:5191/?sceneIndex=4&idleOrbitOn=0[&chartLayout=1&chartCalm=1] MODE=tip S0=2 PX=3 [TIP=-1] [IN=1] node scripts/probes/ridge_check.mjs
+//   URL=http://127.0.0.1:5191/?sceneIndex=4&idleOrbitOn=0MODE=tip S0=2 PX=3 [TIP=-1] [IN=1] node scripts/probes/ridge_check.mjs
 //   (run through scripts/probes/mid_batch.sh with SCRIPT=ridge_check.mjs — the runbook: scripts/probes/ORBIT_GATES.md)
+import { guardProbe } from "./probe_guard.mjs";
 import { spawn, spawnSync } from "node:child_process";
 import { mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -25,6 +26,7 @@ const chrome = spawn(process.env.CHROME ?? "C:/Program Files/Google/Chrome/Appli
 const kill = () => { if (process.platform === "win32" && chrome.pid !== undefined) spawnSync("taskkill", ["/PID", String(chrome.pid), "/T", "/F"], { stdio: "ignore" }); else chrome.kill(); };
 const watchdog = setTimeout(() => { console.error("WATCHDOG"); kill(); try { rmSync(prof, { recursive: true, force: true }); } catch {} process.exit(2); }, 8 * 60_000);
 watchdog.unref();
+guardProbe({ chromePid: chrome.pid, prof, ms: 8 * 60_000 + 30_000 }); // (2026-11-16) the deadline in a process of its own: the timer above cannot fire while a write to a dead pipe blocks this loop (probe_guard.mjs)
 
 const CLOCK = `(() => { let T = 1000; const q = []; let id = 0;
   performance.now = () => T; Date.now = () => 1.7e12 + T;
@@ -73,7 +75,7 @@ try {
   const step = (n) => ev(`window.__step(${n})`);
   const state = async () => JSON.parse(await ev(`(() => { const s = window.__st; const n = s.gizmoNormal; const g = s.asmGizmoAt; const z = s.asmZone; return JSON.stringify({ ap: s.approach, auto: !!s.asmTiltAuto,
     tilt: s.asmTilt ? s.asmTilt.id : null, n: n ? [n[0], n[1], n[2]] : null, g: g ? [g[0], g[1], g[2]] : null, side: s.asmSpitSide ?? 0, zone: z ? z.zone.orientation : null, axis: z ? [z.zone.axis[0], z.zone.axis[1], z.zone.axis[2]] : null, pole: z && z.zone.poles.length ? [z.zone.poles[0][0], z.zone.poles[0][1], z.zone.poles[0][2]] : null,
-    chart: s.cfg.chartLayout, calm: s.cfg.chartCalm, hold: !!s.asmEdgeHold, mix: !!s.asmZoneMix, el: s.orbit.elevation, yaw: s.orbit.yaw }); })()`));
+    hold: !!s.asmEdgeHold, mix: !!s.asmZoneMix, el: s.orbit.elevation, yaw: s.orbit.yaw }); })()`));
   const mouse = (type, x, y, buttons) => send("Input.dispatchMouseEvent", { type, x, y, button: "left", buttons, clickCount: 1 });
   const keyA = (down) => send("Input.dispatchKeyEvent", down ? { type: "rawKeyDown", key: "a", code: "KeyA", windowsVirtualKeyCode: 65, nativeVirtualKeyCode: 65 } : { type: "keyUp", key: "a", code: "KeyA", windowsVirtualKeyCode: 65 });
   // one drag of n frames; (dx, dy) px a frame, or a function k → [dx, dy]; `until` read every 4 frames
@@ -125,7 +127,7 @@ try {
   const off = (g) => (g[0] - P0[0]) * ref[0] + (g[1] - P0[1]) * ref[1] + (g[2] - P0[2]) * ref[2]; // the signed distance from the vertical plane through the AXIS (the bottom face's middle line)
   const along = (g) => g[0] * s0.axis[0] + g[1] * s0.axis[1] + g[2] * s0.axis[2];
   const f3 = (v) => v.map((x) => (x * 1000).toFixed(0)).join(",");
-  console.log(`${URL}\n  boot: chartLayout ${s0.chart}, chartCalm ${s0.calm}, zone ${s0.zone} axis [${s0.axis.map((x) => x.toFixed(2))}], approach ${s0.ap.toFixed(3)}, the gizmo (${f3(s0.g)}) mm, normal [${s0.n.map((x) => x.toFixed(2))}], side ${s0.side}`);
+  console.log(`${URL}\n  boot: zone ${s0.zone} axis [${s0.axis.map((x) => x.toFixed(2))}], approach ${s0.ap.toFixed(3)}, the gizmo (${f3(s0.g)}) mm, normal [${s0.n.map((x) => x.toFixed(2))}], side ${s0.side}`);
   if (IN) {
     await drag("probe", 250, 500, [0, -5], 12, true, null);
     const s1 = await state();

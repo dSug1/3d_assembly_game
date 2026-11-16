@@ -94,11 +94,11 @@ describe("the camera's heading through the zenith (§9)", () => {
     expect(heldOffsetStep(half, 10 * D, 0.75, 0.5)).toBeCloseTo(7.5 * D, 12);
   });
 
-  it("wired: the world's camera through `cameraHeading` with the held level heading (stepped once a frame in `calmFrame`), the tilted pole's exit target with the level reading", () => {
+  it("wired: the world's camera through `cameraHeading` with the held level heading (stepped once a frame in `calmFrame`) — ⛔ (2026-11-16, step 2.5) the tilted pole's exit target (the roll back's) deleted", () => {
     const src = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8");
     expect(src).toMatch(/offsetFrame\(u, cameraHeading\(cam\.yaw, orbitDir\(cam\.yaw, cam\.v\), u, levelHeadingOf\(st, cam\.yaw\)\)/);
     expect(src).toMatch(/st\.asmHeadO = heldOffsetStep\(st\.asmHeadO, tgt, w, st\.asmHeadW, dYaw\)/);
     expect(src).toMatch(/return st\.asmHeadO !== null \? yaw \+ st\.asmHeadO : calmLevelHeading\(yaw, st\.asmCalm, st\.asmCalmWhole\)/);
-    expect(src).toMatch(/const hW = cameraHeading\(yW, uOW, headingFrom\(uW, nX\), hR \?\? calmLevelHeading\(yW, cW\)\)/);
+    expect(src).not.toMatch(/const hW = cameraHeading\(yW, uOW,/);
   });
 });

@@ -6,7 +6,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import type { Vec3 } from "../src/core/vec";
-import { capTilt, edgeHoldAt, mulM } from "../src/input/orbit_tilt";
+import { capTilt, mulM } from "../src/input/orbit_tilt";
 import { crossingEvent, crossingHoldSign, CROSSING_PUSH_MIN, edgeOut, exitHoldSign, faceOwnUp, freeEdges, unfoldAcross } from "../src/input/free_face";
 import type { ChartFace } from "../src/input/orbit_charts";
 
@@ -67,7 +67,6 @@ describe("⭐⭐⭐ the event on the tilt's exits (`Scene_1`'s cube: as before w
     expect(far.turnRad!).toBeCloseTo(Math.PI, 12);
     expect(far.hold).toBe(1);
     expect(crossingEvent(T, [0, 1, 0], [0, 0, -1], UP, -1).hold).toBe(0); // ⛔ `edgeHoldAt` held the finger's last sign, whatever it was
-    expect(edgeHoldAt(Math.PI / 2, [0, 1, 0], [0, 0, -1], -1)!.sign).toBe(-1); // (the switch off keeps it)
     for (const nX of [[1, 0, 0], [-1, 0, 0]] as Vec3[]) {
       const e = crossingEvent(T, [0, 1, 0], nX, UP, 1);
       expect(e.turnRad!).toBeCloseTo(Math.PI / 2, 12);
@@ -91,7 +90,6 @@ describe("⭐⭐⭐ the event on the tilt's exits (`Scene_1`'s cube: as before w
     const e = crossingEvent(T, [0, 1, 0], nX, UP, 1);
     expect(e.turnRad! / D).toBeCloseTo(103, 9);
     expect(e.hold).toBe(1);
-    expect(edgeHoldAt(Math.PI / 2, [0, 1, 0], nX, 1)).toBeNull();
     expect(crossingEvent(T, [0, 1, 0], [Math.sin(91 * D), 0, -Math.cos(91 * D)], UP, 1).hold).toBe(0); // 89°: not held
   });
   it("⭐ a level face beyond: no turn known here (it takes the entry's layout), no hold; the up shown along the face's normal: none", () => {
@@ -149,14 +147,14 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): ONE function the f
     expect(fn("export function spitStep(").match(/crossTurn\(st, /g)?.length).toBe(1);
     expect(fn("function freeFaceExit(").match(/crossTurn\(st, /g)?.length).toBe(1);
   });
-  it("⭐⭐ the hold under the charts' layout by the one rule at each site; the old tests only with the switch off", () => {
-    expect(fn("function tiltOff(")).toContain("if (st.cfg.chartLayout === 1) held = crossingEvent(mulM(tl.map, [0, 1, 0]), nT, nW, WORLD_UP, st.asmDySign).hold; else { const hold = edgeHoldAt(tl.heading, nT, nW, st.asmDySign);");
+  it("⭐⭐ the hold by the one rule at each site (⛔ the old tests of the switch off — `edgeHoldAt`, the spit's own turn and hold — deleted at step 2.5)", () => {
+    expect(fn("function tiltOff(")).toContain("const held: 1 | -1 | 0 = !byTime && nW !== null && nT !== null && g !== null ? crossingEvent(mulM(tl.map, [0, 1, 0]), nT, nW, WORLD_UP, st.asmDySign).hold : 0;");
     expect(fn("function poleCross(")).toContain("const hold = upL === null ? 0 : crossingEvent(upL, n0, nFar, WORLD_UP, st.asmDySign).hold;");
     const sp = fn("export function spitStep(");
     // the spit's change of side: §8's hold kept (the finger's last sign) — the next up is not known at a side read off the camera (§13.3); the event on
-    expect(sp).toContain("const hold = g === null ? null : crossingHold(st.gizmoNormal ?? null, z.axis, side, st.asmDySign); if (st.cfg.chartLayout === 1) { crossTurn(st, { at: null, uWas: null, carry: true, paced: false, hold: hold === null ? 0 : hold.sign }); } else { const mixWas = st.asmZoneMix;");
-    expect(sp).toContain("st.orbitInertia.stop(); if (hold !== null) st.asmEdgeHold = hold; }");
-    expect(code.match(/edgeHoldAt\(/g)?.length).toBe(1);
+    expect(sp).toContain("const hold = g === null ? null : crossingHold(st.gizmoNormal ?? null, z.axis, side, st.asmDySign); crossTurn(st, { at: null, uWas: null, carry: true, paced: false, hold: hold === null ? 0 : hold.sign });");
+    expect(sp).not.toContain("st.asmEdgeHold = hold");
+    expect(code).not.toMatch(/edgeHoldAt\(/);
     expect(code.match(/crossingHold\(/g)?.length).toBe(1);
   });
   it("⭐⭐ the event: the rebase (the angle states, the place shown, its relocation, the band) only with angles handed; one turn from the pose shown; the ease from the direction drawn or carried; the coast stopped; a hold set, never cleared", () => {

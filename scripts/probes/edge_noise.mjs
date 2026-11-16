@@ -1,8 +1,9 @@
 // THE EDGE RUN (2026-11-16, step 2.4d): close in, the gizmo parked just short of an edge, then the orbit's own angle wobbled across that edge
 // (a sine of +-AMM mm on the model) for RUN frames: how often the facet, the tilt, the square camera's target flip, and how far the view turns.
 // A deterministic headless run (the replay probe's virtual clock).
-//   URL=http://127.0.0.1:5191/?sceneIndex=1&idleOrbitOn=0&chartLayout=1&chartCalm=1 EDGE=top|side AMM=2.5 OFFMM=0 RUN=240 [PARKTILT=1] [TRACE=1] node scripts/probes/edge_noise.mjs
+//   URL=http://127.0.0.1:5191/?sceneIndex=1&idleOrbitOn=0&idleOrbitOn=0 EDGE=top|side AMM=2.5 OFFMM=0 RUN=240 [PARKTILT=1] [TRACE=1] node scripts/probes/edge_noise.mjs
 //   (scripts/probes/edge_batch.sh starts a dev server and stops it — the runbook: scripts/probes/ORBIT_GATES.md)
+import { guardProbe } from "./probe_guard.mjs";
 import { spawn, spawnSync } from "node:child_process";
 import { mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -21,6 +22,7 @@ const chrome = spawn(process.env.CHROME ?? "C:/Program Files/Google/Chrome/Appli
 const kill = () => { if (process.platform === "win32" && chrome.pid !== undefined) spawnSync("taskkill", ["/PID", String(chrome.pid), "/T", "/F"], { stdio: "ignore" }); else chrome.kill(); };
 const watchdog = setTimeout(() => { console.error("WATCHDOG"); kill(); try { rmSync(prof, { recursive: true, force: true }); } catch {} process.exit(2); }, 8 * 60_000);
 watchdog.unref();
+guardProbe({ chromePid: chrome.pid, prof, ms: 8 * 60_000 + 30_000 }); // (2026-11-16) the deadline in a process of its own: the timer above cannot fire while a write to a dead pipe blocks this loop (probe_guard.mjs)
 
 const CLOCK = `(() => { let T = 1000; const q = []; let id = 0;
   performance.now = () => T; Date.now = () => 1.7e12 + T;
@@ -69,7 +71,7 @@ try {
   const step = (n) => ev(`window.__step(${n})`);
   const state = async () => JSON.parse(await ev(`(() => { const s = window.__st; const n = s.gizmoNormal; const g = s.asmGizmoAt; const z = s.asmZone; return JSON.stringify({ ap: s.approach, auto: !!s.asmTiltAuto,
     tilt: s.asmTilt ? s.asmTilt.id : null, n: n ? [n[0], n[1], n[2]] : null, g: g ? [g[0], g[1], g[2]] : null, side: s.asmSpitSide ?? 0, zone: z ? z.zone.orientation : null, axis: z ? [z.zone.axis[0], z.zone.axis[1], z.zone.axis[2]] : null, pole: z && z.zone.poles.length ? [z.zone.poles[0][0], z.zone.poles[0][1], z.zone.poles[0][2]] : null,
-    mapN: s.asmShown ? [s.asmShown.t.normal[0], s.asmShown.t.normal[1], s.asmShown.t.normal[2]] : null, band: s.asmShown ? s.asmShown.t.band : null, chart: s.cfg.chartLayout, calm: s.cfg.chartCalm, stack: s.asmShown ? s.asmShown.t.stack : -1, hold: !!s.asmEdgeHold, mix: !!s.asmZoneMix, el: s.orbit.elevation, yaw: s.orbit.yaw }); })()`));
+    mapN: s.asmShown ? [s.asmShown.t.normal[0], s.asmShown.t.normal[1], s.asmShown.t.normal[2]] : null, band: s.asmShown ? s.asmShown.t.band : null, stack: s.asmShown ? s.asmShown.t.stack : -1, hold: !!s.asmEdgeHold, mix: !!s.asmZoneMix, el: s.orbit.elevation, yaw: s.orbit.yaw }); })()`));
   let EVERY = 4;
   const mouse = (type, x, y, buttons) => send("Input.dispatchMouseEvent", { type, x, y, button: "left", buttons, clickCount: 1 });
   const keyA = (down) => send("Input.dispatchKeyEvent", down ? { type: "rawKeyDown", key: "a", code: "KeyA", windowsVirtualKeyCode: 65, nativeVirtualKeyCode: 65 } : { type: "keyUp", key: "a", code: "KeyA", windowsVirtualKeyCode: 65 });
@@ -123,7 +125,7 @@ try {
   const EDGE = process.env.EDGE ?? "top", AMM = +(process.env.AMM ?? 2), OFFMM = +(process.env.OFFMM ?? 0), RUN = +(process.env.RUN ?? 200);
   const s0 = await state();
   const f3 = (v) => v.map((x) => (x * 1000).toFixed(0)).join(",");
-  console.log(`${URL}\n  boot: chartLayout ${s0.chart}, chartCalm ${s0.calm}, zone ${s0.zone}, approach ${s0.ap.toFixed(3)}, the gizmo (${f3(s0.g)}) mm, normal [${s0.n.map((x) => x.toFixed(2))}], facet ${s0.stack}`);
+  console.log(`${URL}\n  boot: zone ${s0.zone}, approach ${s0.ap.toFixed(3)}, the gizmo (${f3(s0.g)}) mm, normal [${s0.n.map((x) => x.toFixed(2))}], facet ${s0.stack}`);
   {
     await drag("probe", 250, 500, [0, -5], 12, true, null);
     const s1 = await state();

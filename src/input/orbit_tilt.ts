@@ -4,16 +4,16 @@
  * "no camera roll" rule removed) — **THE ORBIT'S FRAME**: one rotation between the orbit's angles and the world.
  *
  * * The orbit's angles (yaw, pitch) and the face map live in a frame F; `map` turns F into the world (the face map is BUILT in F: the faces turned by its
- *   transpose, `tiltFaces`), `dir` turns the orbit's DIRECTIONS (the piece, the camera) — `map` once the press's swing is over (`swingDir`).
+ *   transpose, `tiltFaces`) and the orbit's DIRECTIONS (the piece, the camera). ⛔ (2026-11-16, step 2.5) the press's swing (`swingDir`, a `dir` of its
+ *   own) deleted with the game before the charts: the heading's turn is the charts' one camera turn (`seam_turn.ts`).
  * * **At a press on a cap** (`capTilt`): the tilt about the world horizontal axis square to the SNAPPED heading (`snapHeading`, 1 (c)), 90°, the cap's
  *   normal turned onto that heading in F — the cap is a SIDE there (the red straight away from the viewer, the green straight across). A tilt about an axis
- *   square to the heading never rolls the view (`offsetFrame` is the same in both frames — vectored). The heading's swing to the snapped one (≤ 45° about
- *   the vertical, no roll) is the directions' frame turning from `headingTurn(−Δ)·map` to `map` (`swingDir`) — the camera at the press exactly where it was.
- * * **Off the face** (2026-11-10, the rebuild): the roll back starts as the gizmo CROSSES the edge and completes on its own clock at `tiltRollDegS`
- *   (`rollStep`, `rollDurationMs`) — the gizmo held meanwhile (`tiltUnderWay`); the camera's frame turned from F's upright to the world's (`frameMix`);
- *   whole, the world's frame again (the face exited polar again). The swing at the same speed: ONE speed for every tilt.
+ *   square to the heading never rolls the view (`offsetFrame` is the same in both frames — vectored).
+ * * **Off the face**: the world's frame again at once, the camera turned by the charts' one transition at `tiltRollDegS` (`rollDurationMs`) — ⛔ (step 2.5)
+ *   the roll back of the game before the charts (`rollStep`, `tiltUnderWay`, `tiltExits`, the camera's frame by `frameMix`) deleted. ONE speed for every
+ *   turn.
  * ⛔⛔⛔ (2026-11-15, the owner: *"cancel my rule and remove the press action on the orbit"*, `ORBIT_CHARTS.md` §11.1) a press no longer tilts: the tilt
- *   is made close in only, by itself (the automatic tilt, `tiltAutoLatch`) — every function here still serves it (the swing, `capTilt`, `snapHeading`).
+ *   is made close in only, by itself (the automatic tilt, `tiltAutoLatch`) — every function here still serves it (`capTilt`, `snapHeading`).
  * ⛔ ENGINE-FREE. Rotation matrices, Rodrigues' formula, a smoothstep — textbook; no licence, no patent.
  */
 import { cross, dot, type Vec3 } from "../core/vec";
@@ -36,18 +36,6 @@ export function mulT(R: Mat3, v: Vec3): Vec3 {
 }
 
 /** ⭐ `A · B` */
-export function matMul(A: Mat3, B: Mat3): Mat3 {
-  const col = (j: 0 | 1 | 2): Vec3 => [B[0][j], B[1][j], B[2][j]];
-  const c0 = col(0);
-  const c1 = col(1);
-  const c2 = col(2);
-  return [
-    [dot(A[0], c0), dot(A[0], c1), dot(A[0], c2)],
-    [dot(A[1], c0), dot(A[1], c1), dot(A[1], c2)],
-    [dot(A[2], c0), dot(A[2], c1), dot(A[2], c2)],
-  ];
-}
-
 /** ⭐ The turn by `th` about the unit axis `a` (Rodrigues). */
 export function axisAngle(a: Vec3, th: number): Mat3 {
   const l = Math.hypot(a[0], a[1], a[2]);
@@ -92,26 +80,17 @@ export const TILT_SLANT_MIN = 1e-3;
 /**
  * ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8 — the owner: *"just give an hysteresis of the dy: the dy upwards is blocked until a certain band is reached in
  * the face beyond but dx and dy downwards are allowed (the reverse for dy if the pole-holding edge was at the nadir). This will also be OK in case of the
- * cube of scene 1"*) **THE HOLD AFTER A POLE-HOLDING FACE'S FAR EDGE**: leaving a tilted face over the edge AWAY from its heading (`heading`, the tilt's
- * snapped one — the face beyond faces away from the camera: the roll back turns the camera round), the dy SIGN that crossed (`sign`, the finger's) is held
- * until the finger has gone `band` mm the other way (`edgeHoldFinger`; ⛔ 2026-11-14 the gizmo's depth in the face beyond) — dx and the other dy free. ⛔ Without it a finger still pushing
- * the same way went straight back over the edge in the turned frame: the heptagon's ridge bounced the gizmo between its two top faces (60 back-and-forths
- * in the walks). `null`: no hold (a near edge, a side edge, a level face beyond, no dy).
+ * cube of scene 1"*) **THE HOLD AFTER A POLE-HOLDING FACE'S FAR EDGE**: the dy SIGN that crossed (`sign`, the finger's) is held until the finger has gone
+ * `band` mm the other way (`edgeHoldFinger`; ⛔ 2026-11-14 the gizmo's depth in the face beyond) — dx and the other dy free. ⛔ Without it a finger still
+ * pushing the same way went straight back over the edge in the turned frame: the heptagon's ridge bounced the gizmo between its two top faces (60
+ * back-and-forths in the walks). Set by the one event (`crossTurn`'s hold: `crossingEvent`, `crossingHold`) — ⛔ (2026-11-16, step 2.5) `edgeHoldAt` (left
+ * over the edge away from the tilt's snapped heading) deleted with the game before the charts.
  */
 export interface EdgeHold {
   /** the dy sign held (the finger's that crossed) — ⛔ (2026-11-16, step C5) `g0` (where it crossed) and `d` (into the face beyond) deleted: read by nothing */
   readonly sign: 1 | -1;
   /** ⭐⭐⭐ (2026-11-14) the finger's travel THE OTHER WAY since the crossing (mm) — the hold ends at `edgeHoldMm` of it (`edgeHoldFinger`) */
   readonly back: number;
-}
-export function edgeHoldAt(heading: number, nTilted: Vec3, nExit: Vec3, sign: number): EdgeHold | null {
-  const h = Math.hypot(nExit[0], nExit[2]);
-  if (!(h > 1e-6) || sign === 0) return null;
-  if ((nExit[0] * Math.cos(heading) + nExit[2] * Math.sin(heading)) / h > -0.5) return null;
-  // ⭐ the two faces must meet at an edge (their normals not parallel); ⛔ (step C5) the direction into the face beyond (`d`) built from it: read by nothing
-  const e = cross(nTilted, nExit);
-  if (!(Math.hypot(e[0], e[1], e[2]) > 1e-9)) return null;
-  return { sign: sign > 0 ? 1 : -1, back: 0 };
 }
 /** ⛔ (2026-11-14) `edgeHoldDepth` (the release by the gizmo's depth on the SURFACE) deleted — the release is the finger's (`edgeHoldFinger`). */
 /**
@@ -132,17 +111,6 @@ export function edgeHoldDy(h: EdgeHold | null, dy: number): number {
   return h !== null && Math.sign(dy) === h.sign ? 0 : dy;
 }
 
-/** ⭐ The turn about the world's vertical that adds `d` to every heading (the orbit's convention) — the press's swing. */
-export function headingTurn(d: number): Mat3 {
-  const c = Math.cos(d);
-  const s = Math.sin(d);
-  return [
-    [c, 0, -s],
-    [0, 1, 0],
-    [s, 0, c],
-  ];
-}
-
 /**
  * ⭐⭐⭐ THE TILT ON A FACE HOLDING A POLE (1 (c)): F → world, about the world's horizontal axis square to the heading `hs` (snapped) — ⭐ no roll, whatever
  * the angle (vectored) — by the angle that lays the face's normal `n` HORIZONTAL in F, toward `hs`: the face a SIDE facing the camera. ⭐⭐ (2026-11-10, the
@@ -157,12 +125,7 @@ export function capTilt(hs: number, n: Vec3): Mat3 {
   return axisAngle(cross(hh, y), Math.atan2(n[1], dot(n, hh)));
 }
 
-/** ⭐ The directions' frame during the press's swing: `headingTurn(−Δ·(1 − e))·map` — at the press (`e` 0) the camera where it was, at its end (`e` 1) `map`. */
-export function swingDir(map: Mat3, delta: number, e: number): Mat3 {
-  return matMul(headingTurn(-delta * (1 - e)), map);
-}
-
-/** ⭐ The swing's ease over its time share (smoothstep): starting and ending at rest. */
+/** ⭐ The swing's ease over its time share (smoothstep): starting and ending at rest — the gizmo's relocation's (`gOffStep`). */
 export function swingEase(s: number): number {
   const x = Math.min(1, Math.max(0, s));
   return x * x * (3 - 2 * x);
@@ -268,17 +231,6 @@ export function tiltCalmWholeHV(
 }
 
 /**
- * ⭐⭐⭐ (2026-11-10, the owner: *"Make the roll back by finger && minimum of xx ms to smoothen it"*) THE ROLL SHOWN, one frame: toward the finger's share
- * `target` (`exitShare` — reversible) by at most `dtMs / minMs` — a whole roll never in less than `minMs` (⛔ by the finger alone: far out the edge's
- * stretch is ~1.5 mm of finger, the far edge's half turn passed in one or two input events — 105° in a frame, probed). `minMs` 0: the finger's share.
- */
-export function rollStep(shown: number, target: number, dtMs: number, minMs: number): number {
-  if (!(minMs > 0)) return target;
-  const r = Math.max(0, dtMs) / minMs;
-  return shown + Math.max(-r, Math.min(r, target - shown));
-}
-
-/**
  * ⭐⭐⭐ (2026-11-10, the owner: *"why is there a back-and-forth jump of the scene when the gizmo crosses an edge"*) THE CALM WHOLE TOWARD A FACE HOLDING A
  * POLE, close in (the automatic tilt on): on a side facet, the share (0 … 1) bringing both of the calm's shares to 1 toward its `b` end(s) that border a
  * face holding a pole (`lo`, `hi`) — the calm's own vertical edge zone (`edgeShare`, no interior). ⭐ Applied to the SHOWN direction, by position, never
@@ -370,37 +322,16 @@ export function tiltAutoLatch(on: boolean, distM: number, thresholdM: number): b
 
 
 
-/** ⭐⭐⭐ …and the frame back to the world's only once the tilt's swing is OVER and the roll shown is whole (the owner's hysteresis), off the facet — or out past the threshold (`off`). */
 /**
- * ⭐⭐⭐ (2026-11-11, the owner: *"there is still a shake at crossing the edge at a different location (the shake is a roll of the piece back and forth while
- * the piece is still on the horizontal face)"*) THE DIRECTION A CAMERA'S HEADING IS READ FROM (`calmHeading`): its own (`u`), or — a view straight down
- * or up (no heading of its own) — the face it turns toward next (`toward`: the face the gizmo exits onto; the square camera's turn goes there). ⛔ A
- * vertical view's heading fell back to the ORBIT's yaw — over the tilted top that followed the gizmo along it (18° after 8 finger steps): the roll back's
- * target rolled the camera by it on the edge's frame, the world's camera (its view already turning toward the next face) rolled it back the next.
- */
-export function headingFrom(u: Vec3, toward: Vec3 | null): Vec3 {
-  if (Math.hypot(u[0], u[2]) >= 1e-3 || toward === null || !(Math.hypot(toward[0], toward[2]) >= 1e-3)) return u;
-  return toward;
-}
-
-export function tiltExits(onFacet: boolean, k: number, swingDone: boolean, off = false): boolean {
-  return (!onFacet || off) && k >= 1 && swingDone;
-}
-
-/** ⭐ (2026-11-15) the tilted facet's border is the facet's: a place this near it (m) is on it — a TIE, not a band (the band against input noise:
- * `ORBIT_CHARTS.md` §10.2) */
-export const TILT_TIE_M = 1e-6;
-
-/**
- * ⭐⭐⭐ (2026-11-15) IS THE GIZMO ON THE TILTED FACET — the map's place on its stack (`stack` = `facet`), or on the neighbour's but within `TILT_TIE_M` of
- * the tilted facet itself (`borderM`: the place's distance to it): its border. ⛔ The stack alone: under the charts' layout the levels are the faces'
+ * ⭐⭐⭐ (2026-11-15) IS THE GIZMO ON THE TILTED FACET — the map's place on its stack (`stack` = `facet`), or on the neighbour's but within `tolM` of the
+ * tilted facet itself (`borderM`: the place's distance to it): its border. ⛔ The stack alone: under the charts' layout the levels are the faces'
  * bisectors — a press with the gizmo on `Scene_0`'s ridge made the tilt with the gizmo EXACTLY on the tilted facet's border, the place there was read on
  * the neighbour, and the tilt left at once ("over the edge", the roll back, the exit — four frames after the press).
- * ⭐⭐⭐ (2026-11-16, `ORBIT_CHARTS.md` §12 2.4d) `tolM`: how near the border is still on it — the tie by default (`TILT_TIE_M`: with `chartLayout` 0
- * nothing changes); under the charts' layout the wiring hands the one band (`gizmoEdgeMarginMm`): IN AT THE EDGE (the tilt's entry, unchanged), OUT ONE
- * BAND PAST IT — a place wobbling a few millimetres across the entry edge makes the tilt once and never leaves it (as `zoneAt`'s exit, `zoneExitMm`).
+ * ⭐⭐⭐ (2026-11-16, `ORBIT_CHARTS.md` §12 2.4d) `tolM`: how near the border is still on it — the wiring hands the one band (`gizmoEdgeMarginMm`): IN AT
+ * THE EDGE (the tilt's entry, unchanged), OUT ONE BAND PAST IT — a place wobbling a few millimetres across the entry edge makes the tilt once and never
+ * leaves it (as `zoneAt`'s exit, `zoneExitMm`). ⛔ (step 2.5) the tie of the game before the charts (`TILT_TIE_M`, a micrometre, the default) deleted.
  */
-export function onTiltedFacet(stack: number, facet: number, borderM: number, tolM: number = TILT_TIE_M): boolean {
+export function onTiltedFacet(stack: number, facet: number, borderM: number, tolM: number): boolean {
   return stack === facet || borderM <= tolM;
 }
 
@@ -706,19 +637,16 @@ export function blendShare(mm: number, spanMm: number): number {
 
 /**
  * ⭐⭐⭐ (2026-11-11, the owner: *"or it completely resolves when the first edge is crossed (otherwise, it may carry over a tilted view on another face)"*) HAS THE
- * GIZMO CROSSED AN EDGE SINCE THE BLEND STARTED: another tilt (`tiltId`: one off, or a new one), the roll back under way (`finishing`), or the square camera's
- * target another face (its normals more than 1° apart). ⭐ The blend is then whole — its rest resolved at the crossing's own speed, the gizmo held as at every
+ * GIZMO CROSSED AN EDGE SINCE THE BLEND STARTED: another tilt (`tiltId`: one off, or a new one), or the square camera's target another face (its normals
+ * more than 1° apart). ⛔ (2026-11-16, step 2.5) the roll back under way (`finishing`) deleted with the roll back. ⭐ The blend is then whole — its rest resolved at the crossing's own speed, the gizmo held as at every
  * crossing.
  */
-export function blendCrossed(tiltId0: number, tiltId: number, finishing: boolean, target0: Vec3 | null, target: Vec3 | null): boolean {
-  if (tiltId !== tiltId0 || finishing) return true;
+export function blendCrossed(tiltId0: number, tiltId: number, target0: Vec3 | null, target: Vec3 | null): boolean {
+  if (tiltId !== tiltId0) return true;
   if (target0 === null || target === null) return false;
   return dot(target0, target) < Math.cos(Math.PI / 180);
 }
 
-export function tiltUnderWay(swinging: boolean, rolling: boolean, k: number): boolean {
-  return swinging || (rolling && k < 1);
-}
 
 
 

@@ -1,24 +1,24 @@
 /**
  * GOLDEN VECTORS — **THE ORBIT ON CHARTS, STEP 2.4d: ONE BAND AGAINST NOISE AT THE TRIGGERS OF A CAMERA MOVEMENT** (2026-11-16,
  * `Claude/40_RENDER_SCENE/spec/ORBIT_CHARTS.md` §10.2, §12 2.4d; the owner: *"consider adding hysteresis where needed (for example crossing of edges which
- * trigger camera movement) so that input noise does not transfer to camera movement"*), under `chartLayout` 1 only — the one band `gizmoEdgeMarginMm`
+ * trigger camera movement) so that input noise does not transfer to camera movement"*) (⛔ its switch `chartLayout`: step 2.5) — the one band `gizmoEdgeMarginMm`
  * (5 mm), millimetres ON THE MODEL:
  * * THE BANDED FACET (`bandedFacet`, `input/face_band.ts`) — the square camera's target: the facet kept while the place is on it or within the band, the
  *   place's own beyond; none yet: the place's own. On a real face map: a ±3 mm wobble across an edge never changes it; a crossing changes it once, the way
  *   back once more only a band past the edge; a place circling a corner at 2 mm never leaves the first facet.
- * * IN AT THE EDGE, OUT ONE BAND PAST IT (`onTiltedFacet`'s tolerance) — the tilt's exit: the default the tie (today's, bit for bit); 5 mm: on at 4.9,
- *   off at 5.1, the same stack on at any distance.
+ * * IN AT THE EDGE, OUT ONE BAND PAST IT (`onTiltedFacet`'s tolerance) — the tilt's exit: 5 mm: on at 4.9, off at 5.1, the same stack on at any
+ *   distance (⛔ the default tie of the switch off: deleted at step 2.5).
  * * The two agree on a real map (a box and `Scene_1`'s real cube; the world's map and the tilted frame's): 1, 3 mm past the top's edge on a side face —
  *   both "still the top"; 6 mm — both "left".
- * * The wiring (`render/assembly_wiring.ts`): read once a frame where `asmShown` is set, afresh at every change of frame; `squareFrame` reads it under the
- *   switch; `tiltFrame` hands the band under the switch and nothing new off.
+ * * The wiring (`render/assembly_wiring.ts`): read once a frame where `asmShown` is set, afresh at every change of frame; `squareFrame` reads it;
+ *   `tiltFrame` hands the band.
  * RED on the mutants listed in the step's report.
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { buildFaceMap, DEFAULT_FACET_OPTS, facetOfNormal, mapAngles, mapTarget, type FaceMap, type Facet, type FacetOpts, type MapFace, type MapOpts } from "../src/input/face_map";
 import { assignCharts, capTiltHeading, chartContour } from "../src/input/orbit_charts";
-import { capTilt, mulT, onTiltedFacet, TILT_TIE_M, tiltBox, tiltFaces } from "../src/input/orbit_tilt";
+import { capTilt, mulT, onTiltedFacet, tiltBox, tiltFaces } from "../src/input/orbit_tilt";
 import { distanceToFacets } from "../src/input/polar_zone";
 import { bandedFacet } from "../src/input/face_band";
 import type { ShellBox } from "../src/input/orbit_shell";
@@ -150,15 +150,7 @@ describe("⭐⭐⭐ the banded facet on a real face map (a box, the charts' layo
 });
 
 describe("⭐⭐⭐ in at the edge, out one band past it (`onTiltedFacet`'s tolerance)", () => {
-  it("⭐ the default is today's tie, bit for bit, on a table of (stack, facet, border) — the existing tie cases included", () => {
-    const today = (s: number, f: number, b: number) => s === f || b <= 1e-6;
-    const borders = [0, 1e-12, 1e-9, 5e-7, 1e-6, 1.0000001e-6, 2e-6, 1e-3, 4.9e-3, 5e-3, 0.3, Infinity, Number.NaN];
-    for (const [s, f] of [[7, 7], [6, 7], [0, 1], [3, 3], [-1, 2]] as const)
-      for (const b of borders) {
-        expect(onTiltedFacet(s, f, b), `${s} ${f} ${b}`).toBe(today(s, f, b));
-        expect(onTiltedFacet(s, f, b, TILT_TIE_M), `${s} ${f} ${b}`).toBe(today(s, f, b));
-      }
-  });
+  // ⛔ (2026-11-16, step 2.5) the default — the tie of the switch off (`TILT_TIE_M`) — deleted: the band is always handed
   it("⭐ a 5 mm band: 4.9 mm on, the band itself on, 5.1 mm off; its own stack on at any distance", () => {
     expect(onTiltedFacet(6, 7, 4.9 * MM, BAND)).toBe(true);
     expect(onTiltedFacet(6, 7, BAND, BAND)).toBe(true);
@@ -265,7 +257,7 @@ function fnCode(f: string, sig: string, close = "\n}\n"): string {
   return codeOnly(s.slice(i, s.indexOf(close, i) + close.length)).replace(/\s+/g, " ");
 }
 
-describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): one band under the switch, nothing new off", () => {
+describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): one band", () => {
   const W = "render/assembly_wiring.ts";
   it("⭐ the reading: the map it indexes (another map's: none), the distance only off its facet, the band `edgeMarginM` — in the model's coordinates", () => {
     const r = fnSource(W, "function faceBandRead(");
@@ -276,9 +268,9 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): one band under the
     // ⛔ the sway: nothing drawn, picked or seen by the camera
     expect(r).not.toMatch(/getBoundingInfo|pickWithRay|absolutePosition|computeWorldMatrix|st\.camera\.|cameraPrev|asmCamLast|modelCast|asmG\b/);
   });
-  it("⭐ read once a frame in `assemblyFrame`, right where the place is set and before the tilt's frame reads it — under the switch only", () => {
+  it("⭐ read once a frame in `assemblyFrame`, right where the place is set and before the tilt's frame reads it", () => {
     const A = fnCode(W, "export function assemblyFrame(");
-    expect(A).toContain("st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch }; if (st.cfg.chartLayout === 1) faceBandRead(st, m.t); tiltFrame(st, dtMs, m.t.stack, m.t.surface);");
+    expect(A).toContain("st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch }; faceBandRead(st, m.t); tiltFrame(st, m.t.stack, m.t.surface);");
     expect(A.match(/faceBandRead\(/g)?.length).toBe(1);
     // the square camera reads it after (`calmFrame` → `squareFrame`)
     before(A, "faceBandRead(st, m.t);", "calmFrame(st, dtMs);");
@@ -297,17 +289,16 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): one band under the
     before(c, "st.asmFaceBand = null;", "faceBandRead(st, m.t);");
     const off = fnCode(W, "function tiltOff(");
     expect(off).toContain("crossTurn(st, { at: { mq: poleYawKept(mq0, ORBIT_PITCH_MAX_RAD, hP), g }, uWas, carry: false, paced, hold: held });");
-    expect(off).toContain("st.asmShown = { t: m.t, yaw: mq0.yaw, pitch: mq0.pitch }; if (chart) faceBandRead(st, m.t);"); // no place to keep under the switch, or the switch off
+    expect(off).toContain("st.asmShown = { t: m.t, yaw: mq0.yaw, pitch: mq0.pitch }; faceBandRead(st, m.t);"); // no place to keep
     before(off, "st.asmFaceBand = null;", "faceBandRead(st, m.t);");
     expect(fnCode(W, "function poleCross(")).toContain("crossTurn(st, { at: { mq: { yaw: seam.yaw, pitch: seam.pitch }, g: P }, uWas, carry: false, paced: false, hold });");
     // nowhere else is it written but the reading and the clears (and the starting state)
     expect(codeOnly(raw(W)).match(/st\.asmFaceBand = /g)?.length).toBe(6); // the reading's two, the four clears
     expect(raw(W).match(/faceBandRead\(st, /g)?.length).toBe(3);
   });
-  it("⭐ `squareFrame`: under the switch the BANDED facet's normal and kind (the cap test on it) — ⛔ not the place's own; off: as before", () => {
+  it("⭐ `squareFrame`: the BANDED facet's normal and kind (the cap test on it) — ⛔ not the place's own (the switch off's: step 2.5)", () => {
     const f = fnCode(W, "function squareFrame(");
-    const on = f.slice(f.indexOf("if (st.cfg.chartLayout === 1) {"), f.indexOf("} else {"));
-    const off = f.slice(f.indexOf("} else {"), f.indexOf("if (sq.n === null) sq.n = sq.target;"));
+    const on = f.slice(0, f.indexOf("if (sq.n === null) sq.n = sq.target;"));
     expect(on).toContain("const fb = sh === null ? null : st.asmFaceBand;");
     expect(on).toContain("const bf = fb === null ? undefined : fb.map.facets[fb.facet];");
     expect(on).toContain('const onCapB = fb !== null && bf !== undefined && bf.kind !== "SIDE" && (tl === null || fb.facet !== tl.facet);');
@@ -315,13 +306,11 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): one band under the
     expect(on).not.toContain("sh.t.normal");
     expect(on).not.toContain("sh.t.stack");
     expect(on).not.toContain("sh.t.band");
-    expect(off).toContain('const onCap = sh !== null && sh.t.band !== "SIDE" && (tl === null || sh.t.stack !== tl.facet);');
-    expect(off).toContain("sq.target = sh === null || onCap ? sq.target : sh.t.normal;");
   });
-  it("⭐ `tiltFrame`: the band handed under the switch (`edgeMarginM`), the tie (the default, nothing new) off — one distance to the tilted facet", () => {
+  it("⭐ `tiltFrame`: the band handed (`edgeMarginM`) — one distance to the tilted facet (⛔ the tie of the switch off: step 2.5)", () => {
     const t = fnCode(W, "function tiltFrame(");
     expect(t).toContain("const borderM = stack === tl.facet ? 0 : fmB === null ? Infinity : distanceToFacets(fmB, [tl.facet], surface);");
-    expect(t).toContain("const onFacet = st.cfg.chartLayout === 1 ? onTiltedFacet(stack, tl.facet, borderM, edgeMarginM(st)) : onTiltedFacet(stack, tl.facet, borderM);");
-    expect(t.match(/onTiltedFacet\(/g)?.length).toBe(2);
+    expect(t).toContain("const onFacet = onTiltedFacet(stack, tl.facet, borderM, edgeMarginM(st));");
+    expect(t.match(/onTiltedFacet\(/g)?.length).toBe(1);
   });
 });

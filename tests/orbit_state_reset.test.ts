@@ -66,15 +66,15 @@ const RESET: Record<string, unknown> = {
 };
 /** ⭐ The fields KEPT: the GEOMETRY caches (`asm` the pick's own), the RENDER objects, the re-entrancy flag, the running count. */
 const KEPT = [
-  "asm", "asmZones", "asmAtlas", "asmZoneFacetsF", "asmFaceMap", "asmWorldMap", "asmParts", "asmKey", "asmCast", "asmShell",
+  "asm", "asmZones", "asmAtlas", "asmFaceMap", "asmWorldMap", "asmParts", "asmKey", "asmCast", "asmShell",
   "asmSectionLines", "asmSectionKey", "asmZoneMesh", "asmRedCache", "asmGreenCache",
   "asmRestOff", "pieceHoldCount",
 ];
 
 describe("⭐⭐⭐ the orbit's starting state (`orbitStateStart`, `resetOrbitState`)", () => {
-  it("every `asm…` / `pieceHold…` field of the scene's state is decided: reset or kept (58)", () => {
+  it("every `asm…` / `pieceHold…` field of the scene's state is decided: reset or kept (57)", () => {
     const decl = [...raw("render/scene_state.ts").matchAll(/^ {2}((?:asm|pieceHold)\w*)\??:/gm)].map((m) => m[1]!);
-    expect(decl.length).toBe(58); // ⭐ (2026-11-16, C2W) + `asmPlaceWas`
+    expect(decl.length).toBe(57); // ⭐ (2026-11-16, C2W) + `asmPlaceWas`; ⛔ (step 2.5) − `asmZoneFacetsF` (`zoneFacetOf`'s memo, deleted with the old calm)
     expect([...Object.keys(RESET), ...KEPT].sort()).toEqual([...decl].sort());
   });
 
