@@ -40,7 +40,7 @@ import { crossingHold, crossingPitch, distanceToFacets, fingerInFrame, fingerSwa
 import { assignCharts, capTiltHeading, chartContour, chartZones, DEFAULT_CHART_OPTS, type ChartAssignment, type ChartFace } from "../input/orbit_charts";
 import { poseAboutPiece, poseFramingTwo, type CamPose } from "../input/orbit_tilt";
 import { poleCrossingDue, poleSeam } from "../input/pole_crossing";
-import { dirGap, easedDir, easeRest, poleYawKept, seamTurnHolds, seamTurnPace, seamTurnStep, seamWholeRad, tiltLeavesNow } from "../input/seam_turn";
+import { dirGap, easedDir, easeRest, poleYawKept, seamOutPaced, seamOutShare, seamOutStep, seamOutTarget, seamTurnPace, seamTurnStep, seamWholeRad, tiltLeavesNow, turnHoldsGizmo } from "../input/seam_turn";
 import { bandedFacet } from "../input/face_band";
 import { contourFaceAt, exitHoldSign, exitTurnRad, freeEdges, freeEntryHeading, freeHeadingAngle, isFreeFace } from "../input/free_face";
 import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, tiltHeading, edgeHoldAt, capTilt, frameMix, headingFrom, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, onTiltedFacet, type Mat3 } from "../input/orbit_tilt";
@@ -338,6 +338,43 @@ function seamTurnFrame(st: SceneState, dtMs: number): void {
   zm.k = r.k;
   zm.done = r.done;
   if (zm.k >= 1) st.asmZoneMix = null;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §8, step C3 — D-T1) THE WAY OUT OF CLOSE IN, BLENDED: the tilt left by distance (`seamOutPaced`) — the same
+ * one turn from the pose shown (`seamTurnStart`, by time), carrying its progress (`out`): paced by the finger instead (`seamOutFrame`), the gizmo free.
+ */
+function seamOutStart(st: SceneState): void {
+  seamTurnStart(st, false);
+  if (st.asmZoneMix !== null) st.asmZoneMix.out = { p: 0, outMm: 0, orbitMm: 0 };
+}
+
+/**
+ * ⭐⭐⭐ (step C3) THE WAY OUT'S FINGERS, counted ONLY WHILE ITS TURN IS ALIVE (`asmZoneMix.out`; none: nothing): the approach finger's travel outward
+ * (`approachInput`), the orbit finger's (`orbitDragStep`) — mm on the glass.
+ */
+export function seamOutFeed(st: SceneState, outMm: number, orbitMm: number): void {
+  const o = st.asmZoneMix?.out;
+  if (o === undefined) return;
+  o.outMm += outMm;
+  o.orbitMm += orbitMm;
+}
+
+/**
+ * ⭐⭐⭐ (step C3) ONE FRAME OF THE WAY OUT'S TURN: its target from the fingers' travels and whether any finger is down (`seamOutTarget`, the router's
+ * pointers — none: the gesture over, the turn completes), the progress toward it at the tilts' one speed over the turn's whole angle (`seamOutStep`,
+ * `turnWhole`), the share shown its smoothstep (`seamOutShare` — `zoneMixPose` and the piece's direction's ease read it); whole: none.
+ */
+function seamOutFrame(st: SceneState, dtMs: number): void {
+  const zm = st.asmZoneMix;
+  if (zm === null || zm.out === undefined) return;
+  const o = zm.out;
+  const whole = turnWhole(st, zm);
+  const target = seamOutTarget(o.outMm, o.orbitMm, st.cfg.tiltOutBlendMm, st.cfg.tiltBlendMm, st.router.all().length > 0);
+  o.p = seamOutStep(o.p, target, dtMs, whole, st.cfg.tiltRollDegS, zm.axis !== null);
+  zm.k = seamOutShare(o.p);
+  zm.done = zm.k * whole;
+  if (o.p >= 1) st.asmZoneMix = null;
 }
 
 /** ⭐⭐⭐ (2026-11-10, §9.4) the orbit's DIRECTIONS' frame (F → world; the press's swing included) — `null`: the world's. */
@@ -1142,6 +1179,8 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   // ⭐⭐⭐ (2026-11-15, §12 2.4c) the automatic tilt's ONE camera turn at its swing's pace (held while pending, by the finger's travel counted above, then by
   // time) — after the tilt's making, so a turn started this frame takes this frame's travel (as the swing did in `tiltFrame`)
   if (st.cfg.chartLayout === 1) seamTurnFrame(st, dtMs);
+  // ⭐⭐⭐ (2026-11-16, step C3) the way out of close in, paced by the fingers (`seamOutFrame` — a turn started by `seamOutStart` only)
+  if (st.cfg.chartLayout === 1) seamOutFrame(st, dtMs);
   const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
   const d = approachDistance(st.cfg, st.approach);
   // ⭐⭐⭐ (2026-11-04, STEP 4c-bis) THE GIZMO FROM THE FACE MAP at the orbit's angles (`mapGizmo`) — ⛔ the carrier on the sections' hulls, moved by the
@@ -1441,7 +1480,10 @@ export function approachMove(st: SceneState, da: number): number {
 
 /** ⭐ An approach input: `dyMm` of finger (UP brings the piece IN), at the orbit dy's pace on the curve's coordinate; recorded for the coast. */
 export function approachInput(st: SceneState, dyMm: number): void {
-  const taken = approachMove(st, dyMm * orbitDvPerMm(st));
+  const da = dyMm * orbitDvPerMm(st);
+  // ⭐⭐⭐ (2026-11-16, step C3) the finger's travel OUTWARD (the coordinate up) counted for the way out's turn, while it is alive (`seamOutFeed`)
+  if (da > 0) seamOutFeed(st, Math.abs(dyMm), 0);
+  const taken = approachMove(st, da);
   st.approachInertia.record(performance.now(), 0, taken);
   st.hudDirty = true;
 }
@@ -1666,7 +1708,8 @@ export function tiltClampStep(st: SceneState, yaw0: number, v0: number): boolean
   // ⭐⭐⭐ (2026-11-15, §12 2.4c) …a PACED turn (the automatic tilt's entry made pending, `byMm`: `chartLayout` 1 only) as its swing was: never while pending
   // or by the finger (`seamTurnHolds`); any other turn while short of whole, as ever
   const zm = st.asmZoneMix;
-  const zoneTurning = zm !== null && (zm.byMm === true ? seamTurnHolds(true, st.asmTiltPending, st.asmBlend !== null, zm.k) : zm.k < 1);
+  // ⭐⭐⭐ (2026-11-16, step C3) …the way out paced by the finger (`out`) never (`turnHoldsGizmo`)
+  const zoneTurning = zm !== null && turnHoldsGizmo(zm.out !== undefined, zm.byMm === true, st.asmTiltPending, st.asmBlend !== null, zm.k);
   // ⭐⭐⭐ (2026-11-10, the owner: *"Build that one alone"*) …and from the roll's end TO THE EXIT itself (`finishing` / `off`: the tilt still here) — ⛔ held only
   // while the roll was short of whole: one finger event slipped in the frame between the roll's end and the exit, the orbit a step ahead of the piece's
   // solved angles through the frame change; they caught up during the square camera's turn — the gizmo moved one step while the camera turned (walked)
@@ -1974,8 +2017,11 @@ function tiltOff(st: SceneState): void {
   } else st.asmMapQ = null;
   // ⭐⭐⭐ (§12 2.4c) the picture carried from the pose SHOWN by ONE camera turn (timed, the gizmo held — as a zone's), the piece's shown direction eased on it
   // (⭐ no place to keep — unreachable while a tilt holds one: the turn alone, the angles turned as today)
+  // ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §8, step C3 — D-T1) LEFT BY DISTANCE (`off`, the automatic tilt's latch off — `seamOutPaced`) with
+  // `tiltOutBlendMm` over 0: the same turn paced by the approach finger's travel outward, the gizmo free (`seamOutStart`); an edge's exit, a zone's, or 0: timed
   if (st.cfg.chartLayout === 1) {
-    seamTurnStart(st, false);
+    if (seamOutPaced(st.cfg.chartLayout, tl.off, st.asmTiltAuto, st.cfg.tiltOutBlendMm)) seamOutStart(st);
+    else seamTurnStart(st, false);
     if (uWas !== null) seamEase(st, uWas);
   }
   st.lastVerdict = byTime ? "orbit: the tilt off (out past the threshold) — the world's frame again" : "orbit: off the tilted face — the world's frame again";
@@ -2138,7 +2184,8 @@ function zoneStep(st: SceneState, dtMs: number): void {
   // the angle turned so far (`done`) over the turn's whole angle as it is NOW — ⛔ a share stepped by the angle of the moment: the first frame read 17°, the
   // share leapt to 0.49, the next frame the turn was 167° — 80° in one frame. If the whole grows, the camera keeps its speed toward the new whole
   // ⭐⭐⭐ (2026-11-15, §12 2.4c) a PACED turn (the automatic tilt's entry made pending, `chartLayout` 1 only) advances in `seamTurnFrame`, by its own pace
-  if (zm !== null && zm.axis !== null && zm.byMm !== true) {
+  // ⭐⭐⭐ (2026-11-16, step C3) …and the way out paced by the fingers (`out`) in `seamOutFrame`
+  if (zm !== null && zm.axis !== null && zm.byMm !== true && zm.out === undefined) {
     const degS = st.cfg.tiltRollDegS;
     // ⭐⭐⭐ (2026-11-15, §12 2.4c, the auditor's find) over the transition's WHOLE angle (`turnWhole`: the camera's plus the piece's direction's gap
     // eased on this turn; no ease: the camera's own, as ever)

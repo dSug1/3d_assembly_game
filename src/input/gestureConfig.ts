@@ -410,6 +410,10 @@ export interface GestureConfig {
   tiltAutoM: number;
   /** ⭐⭐⭐ (2026-11-11, the owner: *"during the approach … if the gizmo is on a face holding the pole … when the tilted-pole-orbit toggles on there is an immediate alignment of the camera … this does not blend with the approach. I would like to keep the camera orientation when the tilted-pole-orbit toggles on as long as the approach continue, then the camera blends with the new alignment with the delta position mm when the orbit at close in starts"*, *"gizmo moving from first millimeter and also the same for all the faces"*) the automatic tilt's blend: the finger's travel (mm) over which the camera turns into the close-in alignment once the orbit starts (0: at once). */
   tiltBlendMm: number;
+  /** ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §8, step C3 — D-T1, the owner: *"Find a way to blend properly the camera movement on the way out"*; with
+   * `chartLayout` 1) THE WAY OUT OF CLOSE IN: the camera's turn after the automatic tilt is left BY DISTANCE spread over this much of the approach finger's
+   * travel outward (mm on the glass; never faster than `tiltRollDegS`; the gizmo free) — 0: the timed turn, the gizmo held, as before (0 … 60) */
+  tiltOutBlendMm: number;
   /** ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8) after an edge that turns the camera round, the dy that crossed held until the FINGER has gone this far the other way (mm; ⛔ 2026-11-14 the gizmo's depth in the face beyond) */
   edgeHoldMm: number;
   /** ⭐⭐⭐ (2026-11-13, the pinch is the approach) the approach per mm of the two fingers' spread (× the two-finger dy it replaces — 1 the same pace) */
@@ -879,6 +883,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitGainFullM: 0.6, // ⭐⭐⭐ (2026-11-12, step 3) a guess with a slider: the automatic tilt's distance (`tiltAutoM`)
   orbitContactMmPerMm: 4, // ⭐⭐⭐ (2026-11-12, step 3; the owner on the device: "set ... to 4 mm" — 1 was the slide's 1 : 1)
   tiltBlendMm: 10, // ⭐⭐⭐ (2026-11-11, the owner: *"set a faster alignment per mm as the one you previously chose required a lot of delta position mm"*) the automatic tilt's blend by the orbit's first 10 mm of finger (30 before) — a guess until a hand sets it
+  tiltOutBlendMm: 12, // ⭐⭐⭐ (2026-11-16, step C3) the way out's turn over the approach finger's first 12 mm outward — a guess with a slider
   tiltAutoM: 0.6, // ⭐⭐⭐ (2026-11-10, the owner: *"instead Percent use m for the slider tilted pole automatic within this and set the default to 0.3 m"* → *"correction: set the default at 0.6m"*) the automatic tilt within 0.6 m of the gizmo (off beyond 0.65 m) — 20 % of the far distance before (1.2 m on `Scene_1`), 30 % before that
   facetMergeDeg: 20, // ⭐⭐⭐ (2026-11-04, Step 5, D5) the faces contour: the faces within 20° of a facet's normal are its (MAP_AXIS_DEG's)…
   facetMinShare: 0.25, // …and a facet kept with a quarter of its polygon real face at least
@@ -1035,6 +1040,7 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.tiltRollDegS >= 0 && cfg.tiltRollDegS <= 1440)) throw new Error(`tiltRollDegS (${cfg.tiltRollDegS}) must be in [0, 1440] °/s.`);
   if (!(cfg.tiltAutoM >= 0 && cfg.tiltAutoM <= 6)) throw new Error(`tiltAutoM (${cfg.tiltAutoM}) must be in [0, 6] m.`);
   if (!(cfg.tiltBlendMm >= 0 && cfg.tiltBlendMm <= 200)) throw new Error(`tiltBlendMm (${cfg.tiltBlendMm}) must be in [0, 200] mm.`);
+  if (!(cfg.tiltOutBlendMm >= 0 && cfg.tiltOutBlendMm <= 60)) throw new Error(`tiltOutBlendMm (${cfg.tiltOutBlendMm}) must be in [0, 60] mm.`);
   if (cfg.zoneOn !== 0 && cfg.zoneOn !== 1) throw new Error(`zoneOn (${cfg.zoneOn}) must be 0 or 1.`);
   if (!(Number.isInteger(cfg.zoneValenceMin) && cfg.zoneValenceMin >= 3 && cfg.zoneValenceMin <= 20)) throw new Error(`zoneValenceMin (${cfg.zoneValenceMin}) must be an integer in [3, 20].`);
   if (!(cfg.zoneFacetMinRatio >= 0 && cfg.zoneFacetMinRatio <= 1)) throw new Error(`zoneFacetMinRatio (${cfg.zoneFacetMinRatio}) must be in [0, 1].`);

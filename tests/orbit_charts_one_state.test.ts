@@ -272,7 +272,7 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): ONE STATE under th
     before(f, "const uWas = seam ? drawnDir(st) : null;", "st.asmTilt = null;");
     expect(f).toContain("if (!seam) turnAngles(st, (d) => mulM(D, d), Math.atan2(Math.sin(hP), Math.cos(hP)));");
     expect(f).toContain("const mq = seam ? poleYawKept(mq0, ORBIT_PITCH_MAX_RAD, hP) : mq0; if (seam) seamRebase(st, mq); else st.asmMapQ = mq;");
-    expect(f).toContain("if (st.cfg.chartLayout === 1) { seamTurnStart(st, false); if (uWas !== null) seamEase(st, uWas); }");
+    expect(f).toContain("if (st.cfg.chartLayout === 1) { if (seamOutPaced(st.cfg.chartLayout, tl.off, st.asmTiltAuto, st.cfg.tiltOutBlendMm)) seamOutStart(st); else seamTurnStart(st, false); if (uWas !== null) seamEase(st, uWas); }"); // ⭐ (2026-11-16, step C3) left by distance with `tiltOutBlendMm` > 0: paced; else timed as before
     expect(f).toContain("const hold = edgeHoldAt(tl.heading, nT, nW, g, st.asmDySign);"); // the dy hold: unchanged
     expect(f).toContain("if (nW !== null) sqO.target = nW;");
     expect(f.match(/turnAngles\(/g)?.length).toBe(1);
@@ -295,13 +295,13 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): ONE STATE under th
     expect(t).toContain("const pace = seamTurnPace(true, st.asmTiltPending, bl !== null);");
     expect(t).toContain("bl === null ? 1 : blendShare(bl.mm, st.cfg.tiltBlendMm)");
     const z = fnSource(W, "function zoneStep(");
-    expect(z).toContain("if (zm !== null && zm.axis !== null && zm.byMm !== true) {");
+    expect(z).toContain("if (zm !== null && zm.axis !== null && zm.byMm !== true && zm.out === undefined) {"); // ⭐ (2026-11-16, step C3) the way out paced in `seamOutFrame`
     const a = fnSource(W, "export function assemblyFrame(");
     before(a, "if (st.asmBlend !== null) st.asmBlend.mm += fingerMm;", "if (st.cfg.chartLayout === 1) seamTurnFrame(st, dtMs);");
     before(a, "if (st.asmTiltAuto && st.asmTilt === null) tiltOn(st,", "if (st.cfg.chartLayout === 1) seamTurnFrame(st, dtMs);");
     before(a, "if (st.cfg.chartLayout === 1) seamTurnFrame(st, dtMs);", "const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };");
     const h = fnSource(W, "export function tiltClampStep(");
-    expect(h).toContain("const zoneTurning = zm !== null && (zm.byMm === true ? seamTurnHolds(true, st.asmTiltPending, st.asmBlend !== null, zm.k) : zm.k < 1);");
+    expect(h).toContain("const zoneTurning = zm !== null && turnHoldsGizmo(zm.out !== undefined, zm.byMm === true, st.asmTiltPending, st.asmBlend !== null, zm.k);"); // ⭐ (2026-11-16, step C3) the rule in `turnHoldsGizmo`: as before for every turn but the way out paced by the finger
     expect(h).toContain("if (st.cfg.chartLayout === 1) { if (!turning && (tl === null || !(tl.exit || tl.off))) return false; } else if (!turning && (tl === null || !(tiltUnderWay(swingTimed, tl.finishing || tl.off, tl.k) || tl.finishing || tl.off))) return false;");
   });
   it("⭐ no roll back inside F under the switch: the exit asked at once (`tiltLeavesNow`), the camera upright in F to it", () => {

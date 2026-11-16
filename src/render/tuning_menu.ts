@@ -220,6 +220,8 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "tilted pole: every tilt's speed — its roll, its swing (°/s; 0: at once)", "tiltRollDegS", 0, 1440, 30),
             tunable(st, "tilted pole: automatic within this distance (m; 0: never)", "tiltAutoM", 0, 3, 0.05),
             tunable(st, "tilted pole: automatic — the camera blended in over the orbit's first (mm of finger; 0: at once)", "tiltBlendMm", 0, 100, 5),
+            // ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §8, step C3) the way out of close in, blended
+            tunable(st, "tilted pole: on the way out, the camera's turn spread over this much approach finger (mm; 0: timed)", "tiltOutBlendMm", 0, 60, 1),
             // ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8) the owner's hysteresis
             tunable(st, "past an edge that turns the camera round, the dy that crossed held until the finger goes this far the other way (mm)", "edgeHoldMm", 0, 100, 5),
           ],

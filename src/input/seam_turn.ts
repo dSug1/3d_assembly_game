@@ -138,6 +138,63 @@ export function seamTurnStep(
 }
 
 /**
+ * ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §8, step C3 — D-T1, the owner: *"Find a way to blend properly the camera movement on the way out"*) THE WAY
+ * OUT OF CLOSE IN, BLENDED: is the turn after the tilt's exit PACED BY THE FINGER — under the charts' layout (`chartLayout` 1), the tilt left BY DISTANCE
+ * (`off`: turned off, and `closeIn` false: the automatic tilt's latch is off — ⛔ a tilt turned off by a zone's switch keeps the latch on), with the span
+ * over 0 (`outBlendMm`, `tiltOutBlendMm`). Otherwise (an edge's exit, a zone's, the span 0): the timed turn, the gizmo held — as built.
+ */
+export function seamOutPaced(chartLayout: number, off: boolean, closeIn: boolean, outBlendMm: number): boolean {
+  return chartLayout === 1 && off && !closeIn && outBlendMm > 0;
+}
+
+/**
+ * ⭐⭐⭐ (step C3) THE WAY OUT'S TARGET PROGRESS (0 … 1): the larger of the approach finger's travel OUTWARD since the turn started over `outSpanMm`
+ * (`tiltOutBlendMm`) and the orbit finger's travel since then over `orbitSpanMm` (`tiltBlendMm` — the way in's own blend: an orbit started before the turn
+ * is whole finishes it over its first millimetres), each clamped to 1 (a span 0: whole at the first millimetre); 1 outright once NO finger is down
+ * (`fingerDown` false — the gesture over: never left half done).
+ */
+export function seamOutTarget(outMm: number, orbitMm: number, outSpanMm: number, orbitSpanMm: number, fingerDown: boolean): number {
+  if (!fingerDown) return 1;
+  const share = (mm: number, span: number): number => {
+    const m = Number.isFinite(mm) && mm > 0 ? mm : 0;
+    if (!(span > 0)) return m > 0 ? 1 : 0;
+    return Math.min(1, m / span);
+  };
+  return Math.max(share(outMm, outSpanMm), share(orbitMm, orbitSpanMm));
+}
+
+/**
+ * ⭐⭐⭐ (step C3) ONE FRAME OF THE WAY OUT'S PROGRESS `p`: toward `target`, NEVER BACK (a smaller target holds it), by at most the tilts' one speed
+ * (`degS` °/s over the turn's whole angle `wholeRad`, `turnWhole`'s — as the timed turn's clock) — a fast finger never flips the picture in a frame. Held
+ * until the camera's stage has read the turn's angle (`axisKnown`, as the timed clock). A turn of no angle, or `degS` 0: the target at once (no angle: whole).
+ */
+export function seamOutStep(p: number, target: number, dtMs: number, wholeRad: number, degS: number, axisKnown: boolean): number {
+  const p0 = Number.isFinite(p) ? Math.min(1, Math.max(0, p)) : 0;
+  if (!axisKnown) return p0;
+  if (!(wholeRad > 1e-9)) return 1;
+  const t = Number.isFinite(target) ? Math.min(1, Math.max(0, target)) : 1;
+  if (!(t > p0)) return p0;
+  if (!(degS > 0)) return t;
+  const r = (((degS * Math.PI) / 180) * (Math.max(0, dtMs) / 1000)) / wholeRad;
+  return Math.min(t, p0 + r);
+}
+
+/** ⭐⭐⭐ (step C3) THE SHARE SHOWN at the progress `p` (the turn's `k`): a smoothstep — no abrupt first or last frame; 0 at 0, ½ at ½, 1 at 1. */
+export function seamOutShare(p: number): number {
+  const x = Number.isFinite(p) ? Math.min(1, Math.max(0, p)) : 1;
+  return x * x * (3 - 2 * x);
+}
+
+/**
+ * ⭐⭐⭐ (step C3) DOES A CAMERA TURN HOLD THE GIZMO (`tiltClampStep`): the way out paced by the finger (`out`) — NEVER (an orbit step honoured while it
+ * runs, as a turn paced by the finger on the way in); the automatic tilt's entry made pending (`paced`) — `seamTurnHolds`; any other — while short of whole.
+ */
+export function turnHoldsGizmo(out: boolean, paced: boolean, pending: boolean, blendActive: boolean, k: number): boolean {
+  if (out) return false;
+  return paced ? seamTurnHolds(true, pending, blendActive, k) : k < 1;
+}
+
+/**
  * ⭐⭐⭐ A PLACE WITH NO UNIQUE ANGLES: at a pole of a chart (the map's pitch at ±`maxPitch` — a cap's centre: any yaw puts the gizmo there) the yaw that
  * keeps the HEADING SHOWN (`yawShown`; none: the map's own). Off a pole: the map's angles, untouched.
  */
