@@ -149,3 +149,7 @@ runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press
 * ✅ **C0 run** (the study's §7; `scripts/probes/free_face_study.ts`): 41 free faces on the 35 shapes, their exits' turns pure polygon geometry
   (a rectangle 0 / 90 / 180°; a wedge's triangle 100° — W6's gap); `Scene_0bis`'s bottom face modelled far out — today 89° and 180° of picture turn
   with no edge under the gizmo and 10 samples against the finger; the carried heading 0 – 1° and none, the half turn at the far edge.
+* ✅ **C2, the pure part, built and audited** (`c5538db`, an Opus agent): `src/input/free_face.ts` — the free faces under a holding "up", one layout
+  per side (the neighbour's up unfolded), the layout at an entry (by the edge, or the nearest with no edge), an exit's turn, the hold's test (its
+  threshold the caller's: D-T4 open). Equal to the offline round's reference on the 35 shapes; a concave edge and a zone held by its axis vectored;
+  53 vectors, red on 16 mutants; **2013 vectors**. ⛔ Not wired — nothing changes in the game. ⛔ C4 (the spit on this rule) waits for D-T7.
