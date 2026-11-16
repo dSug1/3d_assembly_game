@@ -246,3 +246,12 @@ runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press
   turned box): entries off the edge 4 of 10 → 1 (the first, the pending camera's); W7 found offline only (a long flat box turned 30° / 45°: a tilted
   map all virtual in the turned world box). ⛔ W8 and RINGS not built (W8 needs D-T5 reopened) →
   [`TILTED_POLE_CLOSE_IN.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) §16.1.
+
+## 2026-11-16 — T2, the test scenes again after C2W (an Opus agent; measured, nothing built)
+
+* **The brief**: the rebuild branch merged INTO the throwaway (`1.0.146t-`), every measurement of the T1 findings re-run, the column AFTER and WHAT
+  REMAINS (W8, RINGS) → [`TILTED_POLE_CLOSE_IN.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) §15.
+* **Measured**: F2 (W5) fixed but one (4 of 10 entries off the edge → 1, the first after the approach); F1, F3 – F8 unchanged (T_a – T_d, T_f
+  identical line for line); ⭐ F9 WITHDRAWN — the probe's own count (a zone's missing normal read as `null`; corrected on the throwaway, T_f 0
+  frames). ⛔ Open, the owner's: W8 (reopen D-T5: a layout square to the entry edge on any polygon cap, or polar with the cap's normal as the
+  square camera's target), RINGS (before step B or not), F1 (the surface's definition before step B).
