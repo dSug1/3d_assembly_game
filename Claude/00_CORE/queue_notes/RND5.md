@@ -255,3 +255,54 @@ runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press
   identical line for line); ⭐ F9 WITHDRAWN — the probe's own count (a zone's missing normal read as `null`; corrected on the throwaway, T_f 0
   frames). ⛔ Open, the owner's: W8 (reopen D-T5: a layout square to the entry edge on any polygon cap, or polar with the cap's normal as the
   square camera's target), RINGS (before step B or not), F1 (the surface's definition before step B).
+
+## 2026-11-16 — step 2.5, THE OLD DETECTORS AND THE TWO SWITCHES DELETED (an Opus agent) — as briefed, the list before any code change
+
+* **The brief**: every code path that runs only when `chartLayout` or `chartCalm` is 0 deleted — the zone detectors and the layout of the game
+  before the charts, the old tilt exits and holds, the old box of a frame's map, the old calm; the two tunables (their validation, sliders, URL
+  overrides); the state fields only those paths used; the vectors that test only what goes; the exports left with no caller
+  (`tests/unwired_debt.test.ts`). ⭐ The default game (both switches 1 since `cb55778`) BIT FOR BIT: the default replays of `Scene_0`, `Scene_0bis`,
+  `Scene_1` against the base (`d917d04`) and every default gate of `scripts/probes/ORBIT_GATES.md` line for line. A pure function that took a switch
+  loses the argument (never a constant `true` in its place). One new vector: no identifier `chartLayout` / `chartCalm` left under `src`. The probes'
+  "off" replays and `S:0` legs removed, their baseline tables moved to `history/`.
+* **THE LIST, read off the code at `d917d04`** (`src/render/assembly_wiring.ts` unless named):
+  * the CALM — `calmDir` L415-416 (`tl.k`: written by the old roll back only, always 0 now); `calmTargets` L548 `calmRules(chartLayout, chartCalm)`,
+    L552 / L601 `calmKnobs(st, rules.smooth, rules.ownRun)` and the `box` argument (read only by the box-height rule, `ownRun` false), L566-571 and
+    L619-623 (`!rules.everyFacet`: no calm on a polar zone's facets, whole toward them — and `zoneFacetOf` with them), L575 / L627 (`rules.noPitchFade`),
+    L613 `wholeEnds(rules.ownRun, …)`; `calmKnobs` L634-647 (`smooth`, `ownRun`). In `src/input/orbit_calm.ts`: `calmRules` and `CalmRules`,
+    `CalmKnobs.smooth` / `.ownRun`, `wholeEnds`, `calmTarget`'s `box` parameter and its two paths of the old calm (`edgeShare` for the shares, a vertical
+    facet's share on the box's height — the bounce's rule).
+  * the FACE MAPS — `faceMapOf` L877 (`#C…` in the key), L881 `frameBox(…) : tiltBox(…)` (the old box of a frame's map); `worldFaceMap` L893;
+    `chartOpts` L905-907 (always the charts' layout now: the call takes `{ layout: "chart", scale: "normals" }`).
+  * the ZONE DETECTORS — `zonesOf` L2193-2198 (`polarZones`, `zoneOptsOf` L2173-2176); in `src/input/polar_zone.ts` `polarZones` and what only it
+    reads (`contourCorners`, `facetSize`, `snapToWorldAxis`, `zoneOrientation`, the private helpers); `ZoneOpts.valenceMin` / `.facetMinRatio` /
+    `.snapDeg` and the three tunables they come from (`zoneValenceMin`, `zoneFacetMinRatio`, `zoneSnapDeg` — read by `zoneOptsOf` alone: left
+    unread, `tests/config_debt.test.ts` refuses them), their validation and their three sliders (POLAR ZONES).
+  * the TILT — `tiltOn` L1838-1851 (`holdsPole`, `tiltHeading`: the old test and heading), L1870-1878 (the swing's fields overwritten under the
+    charts), L1887 (`turnAngles` by the swing's `D0`), L1896 (`asmMapQ` alone); `nextTiltHeading` L1945-1957 (whole: its one caller is the old roll
+    back); `tiltFrame` L1658-1671 (the swing: `swingMs` is never set under the charts), L1684 (the tie without the band), L1695-1706 (the roll back:
+    `crossing`, `finishing`, `kT`, `k`, `rollStep`, `tiltExits`); the camera's tilted branch L1589-1611 (the roll back's frame: `exitNormal`'s read
+    there, `nextTiltHeading`, `headingFrom`, `frameMix`, `rollRad`, `axis`); `tiltClampStep` L1727, L1736 (`swingTimed`, `tiltUnderWay`); `tiltOff`
+    L1991-1997 (`edgeHoldAt`, the old hold), L2003 / L2034-2045 as reached with no place (kept: `turnAngles` there is the charts' path too);
+    `blendCrossed`'s `finishing` (L1292: always false now). In `src/input/orbit_tilt.ts`: `swingDir` (and `headingTurn` if left with no caller),
+    `headingFrom`, `tiltExits`, `tiltUnderWay`, `frameMix`, `rollStep`, `edgeHoldAt`, `TILT_TIE_M` and `onTiltedFacet`'s default `tolM` (every
+    caller hands the band); in `src/input/face_map.ts` `holdsPole`. The state (`scene_state.ts` `asmTilt`): `delta`, `swingMs`, `byMm`, `swingE`,
+    `swingDurMs`, `k`, `kT`, `finishing`, `rollRad`, `axis`, and `dir` (always the tilt's `map` now — read as `map`).
+  * the CROSSINGS — `squareFrame` L441-456 (the unbanded target, L452-455); `assemblyFrame` L1166-1182 (the guard and `PoleCrossingFacts.chartLayout`
+    in `src/input/pole_crossing.ts`), L1185, L1187, L1234, L1241; the camera's spit branch L1575; `zoneSwitch` L2283; `zoneFinger` L2471; `spitStep`
+    L2498, L2532-2541 (the old turn and hold); `seamOutPaced`'s `chartLayout` argument (`src/input/seam_turn.ts`).
+  * the TUNABLES — `gestureConfig.ts` `chartLayout`, `chartCalm` (L454-458, L890-891, L1058-1059), their sliders (`tuning_menu.ts` L294, L296); the
+    URL: a key no longer in the config is REPORTED by `parseConfigOverrides` (`… not an overridable tunable`), never applied — to check in the app.
+  * `play_recorder.ts` L169 (`asmTilt.k`), and the probes reading it (`walk_probe.mjs`, `tilt_probe.mjs`).
+  * the VECTORS — the files' switch pins and every vector of only the old paths: `tests/orbit_charts_switch.test.ts`, `tests/chart_calm_wiring.test.ts`
+    (the switches, `calmRules`), `tests/orbit_calm.test.ts` (`calmRules`, `smooth` / `ownRun` absent, `wholeEnds` false), `tests/calm_slanted.test.ts`
+    (the box-height rule), `tests/polar_zone.test.ts` (`polarZones`), `tests/orbit_tilt.test.ts` (`swingDir`, `frameMix`, `rollStep`, `tiltUnderWay`,
+    `tiltExits`, `headingFrom`, `TILT_TIE_M`, `holdsPole`, the old wiring pins), `tests/orbit_any_shape.test.ts` (`holdsPole`, the `chartLayout` 0
+    path), `tests/zenith_roll.test.ts`, `tests/orbit_charts_pole_crossing.test.ts` (`{ chartLayout: 0 }`), `tests/way_out_blend.test.ts`
+    (`seamOutPaced`'s argument) — a vector pinning both paths keeps its default half; every source pin of `chartLayout === 1` follows the source
+    (`facets`, `free_face_caps`, `free_face_spit`, `crossing_event`, `orbit_charts_atlas`, `orbit_charts_face_band`, `orbit_charts_one_state`,
+    `assembly_orbit`, `menu_layout`). The names, as deleted: in the as-built entry below.
+* ⛔ **Not in this step, kept and named**: `buildFaceMap`'s `layout` / `scale` options with their "built" defaults — a library default every
+  face-map vector and probe builds on (25 test files); the game no longer reaches it. `turnAngles` (the first frame of a zone, no place yet).
+  `tiltBox` (`frameBox`'s fallback). `edgeShare` (the tilted facet's shares). The dead edge blend (the inventory's F.1, `ORBIT_CHARTS.md` §4.4): not
+  on a switch.
