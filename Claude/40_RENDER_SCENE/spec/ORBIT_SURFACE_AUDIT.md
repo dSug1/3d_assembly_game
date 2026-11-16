@@ -409,3 +409,33 @@ S16, before Q6 — the table of the alternatives (the recommendation (2), with (
    steps are not the plan's 16 stages (six pistons share step 6); the proxy is an OPEN surface by design; the render meshes are opened by the
    finish pass; `UCX_` budgets have two homes (24 / 48 in `PART_AUTHORING.md`, 64 / 16 in `BLENDER_COLLISION_AUTHORING.md` — `Scene_2`'s upper
    case already has 19 pieces).
+
+---
+
+## 8. MOVED FROM THE SPECIFICATION AT THE FIFTH EXCHANGE (2026-11-16) — unchanged, to make room for the owner's three answers
+
+### 8.1 The specification §7 — the weaknesses, by what answers them
+
+* **P2 answers** WS3 (the support fills slots), WS4 (a gap with no floor: nothing to land on), WS5 (the fit only with a floor), WS10 (the
+  footprint the two smallest sizes), WS20 (no ruler for what stands out), WS22 (a floor within 20°, the fit at the plane only).
+* **§2.6 answers** WS8, WS9, WS21, WS23 (the rulers and tolerances); **S22 / B2** WS19 (exposed = not glued); **B1 / B6** WS2 (proxy vs
+  collision); **B4 / B5** WS24 (nothing checks the purpose).
+* **P4 / §2.4** WS12 (the mouth's hold); WS13 (the concave edge at the mouth — the edge is convex; S10 + the hold cover it, its domain restricted);
+  **S19** WS14 (the frames' maps).
+* **Still open**: WS1 (four notions: A′ removes one), WS6 (§2.5), WS7 (regions from triangles), WS11, WS15 (S27 (a)), WS16, WS17 (step 2.5).
+* *(study)* MEASURED: WS4, WS5, WS10, WS12, WS19, WS22, WS23 (F4, F3, F5, F12, F11, F10); WS18 answered by its library, WS25 by S29. One more found:
+  a plane's level is its FIRST face's and R1 pairs an opposite face on either side — a sub-0.5 mm layer erases a real cap (F6 → S27).
+
+### 8.2 The specification §7bis.5 — what the Blender checks cost per scene
+
+Estimates, not measured: B1, B4 — seconds per run; B2 — a voxel flood per stage (a 128³ grid in numpy: about a second each); B3 — the game's L2
+per stage × held piece × facet direction, in node (tens of seconds per scene); B5, B6 — negligible. Authoring: the brief's fields per part at W1,
+and a `fit_tol` where a proxy departs from its collision on purpose.
+
+### 8.3 The specification §9 — the code read, and the sources outside the tree
+
+* Code: `src/input/{face_map,orbit_charts,free_face,footprint,orbit_tilt,orbit_shell,assembly_orbit,ring_hold,polar_zone}.ts`,
+  `src/input/gestureConfig.ts`, `src/render/{assembly_wiring,contact_wiring,model_bodies_wiring,model_import}.ts`, `src/core/{collision,
+  model_catalog}.ts`, `tests/helpers/chart_shapes.ts`, `scripts/probes/void_sim.ts`; `Assets/Blender/scripts/{build_engine,review_proxies}.py`.
+* Outside this tree: `TILTED_ORBIT_REBUILD_SCOPE.md` §29 – §32 on branch `1.0.107-Close-in-atlas` (decisions 2 and 3, the bijection, the limited
+  surface); the session's record of the orbit designs already tried (the owner's 2026-11-13 answer on proposals A, B, C).

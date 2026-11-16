@@ -4,7 +4,9 @@
 > CODE CHANGED.** Branch `1.0.146s-Orbit-surface-spec` (from `1.0.146-Orbit-charts`, `1190db2`). **[OWNER]** quotes the owner, with its file, section
 > and date; **[DECIDED 2026-11-16]** marks what he decided, or accepted by agreeing with a written recommendation (*"I agree with the recommendations,
 > although they shall be later tested and could be reversed if the testing shows they need to be reversed"*); **[PROPOSED]** is this study's reading,
-> NOT his decision until he says so.
+> NOT his decision until he says so. ⛔ **WHAT HAPPENS NEXT (the owner, 2026-11-16): NOTHING HERE IS BUILT before the build chain and the orbit
+> charts are finished and `orbit_charts` (`1.0.146-Orbit-charts`) is merged into `3d_assembly_game` (`1.0.145-`); this branch is merged after it**
+> — his sentence and the notes for those merges: §0, end; what to ask him again when the surface work starts: §8, end.
 >
 > **The owner's request (2026-11-16, verbatim):** *"In the meantime, write the specifications for my review regarding the surface definition. What
 > does the surface aim at. What are the rules. What geometries, topologies, singularities shall be considered. What obstacles to overcome. What to
@@ -60,6 +62,15 @@ seat, D5 after a closing WS21, the camera's frame far out), to the CONTACT's que
 
 **What cannot be avoided (§4).** A direction field round a closed shape has singular points (the poles; a hole through adds saddles); a depth
 read along one direction cannot see under an overhang, gives zero width to a face parallel to it, and steps at every wall. Each has a fallback.
+
+⛔ **WHAT HAPPENS NEXT (the owner, 2026-11-16).** *"We have three worktrees: 3d_assembly_game on branch 1.0.145-, orbit_charts on branch 1.0.146-,
+orbit_surface_spec on branch 1.0.146s-. We will have to merge orbit_charts into 3d_assembly_game and then the work on orbit surface into
+3d_assembly_game. Therefore we will finish the work on the build chain and the orbit charts, then merge orbit_charts into 3d_assembly_game, before
+any rebuild work on the orbit’s surface is started."* So nothing of this specification is built before the build chain and the orbit charts are
+finished and `orbit_charts` (`1.0.146-Orbit-charts`) is merged into `3d_assembly_game` (`1.0.145-`); this branch (`1.0.146s-`) is merged after it.
+**For whoever does those merges:** this branch also changes `SCENE_WORKFLOW.md` (§7) and `PART_AUTHORING.md` (§6) (§7bis.5); two findings are handed
+to queues with no row yet — F17 and the mouth's lip to the ORBIT's, the drop into a slot in contact range to the CONTACT's (§2.2 P1, P5): their rows
+are to be written in `Claude/00_CORE/QUEUE.md` at that merge (that file is at its size budget). What to ask him again then: §8, end.
 
 ---
 
@@ -310,7 +321,8 @@ the orbit's angles and the held piece only, never of the path.*
 * **Already built.** The owner's Q1 (b) (the piece, the gizmo and the camera stop at a wall), R4 (a jump whose landing is refused is a WALL),
   the ring's hold, *"backing out frees it"* (`CLOSE_IN_CONTACT.md` §10.4); S9's second half and S14 are this one principle.
 * ⭐ **The piece does not drop [DECIDED 2026-11-16, Q10].** In contact range the orbit never lowers the piece: over a slot it fits (or off a
-  step down) it keeps its level; only A + dy lowers it, up to the contact or the gizmo (D3). *(study, F8, rerun)* In a contact model (the piece at
+  step down — there the test is that the gizmo reaches both sides, §2.8) it keeps its level; only A + dy lowers it, up to the contact or the
+  gizmo (D3). *(study, F8, rerun)* In a contact model (the piece at
   contact, no solver slide), kept at its level: drops 0 (367 cells today); travels ending at a wall 728 of 1596 (849 today) — 532 at a proud part,
   his Q1 (b) (40 mm 228, 6 mm 228, 1 mm 76: Q6), 196 that begin where a void opens on the facet's edge, the piece already at its floor; the traps
   after a drop gone (L03's reach 54 % → 100 %).
@@ -449,7 +461,7 @@ erase) are its two rules (§2.7); the study found today's tolerance erasing a re
 | P2 ② vs a turn of the piece | an oblong piece fits a slot one way only: the map changes at a turn | [DECIDED, Q2]: the map of the piece as held |
 | S21 vs OS3 | a goal inside a cavity or under an overhang is no place of a height field | the approach, the plunge, a ghost (S13); B4 says which goals need one; S28 |
 | S5 vs today's contact *(study, F8)* | in contact range today's contact drops the piece into every slot it fits (367 cells), then a dx is trapped at the far wall | [DECIDED, Q10] *"the piece shall not drop"*: D3 at every distance; today's drop a departure handed to the contact's queue (§2.2 P5) |
-| Q10 vs a step down *(decisions)* | kept at its level off a ledge as over a slot, the piece's gap to the gizmo grows by the step — beyond the shell's 60 mm it leaves contact range | [PROPOSED] read so: only A + dy lowers the piece; to be measured on the device |
+| Q10 vs a step down *(decisions)* | kept at its level off a ledge as over a slot, the piece's gap to the gizmo grows by the step (beyond the shell's 60 mm it leaves contact range) | ⭐ **[DECIDED 2026-11-16, his rule]**: *"A step down under "no drop": what matters is that the gizmo can reach both sides of the ledge (likely one side from one direction from one face and the other side from the other direction from the other face), not that the piece goes out or not of contact range."* — at a ledge the test is THE GIZMO'S TRAVEL (§1.3): it reaches BOTH SIDES — the upper side from the face it belongs to, the lower side from the face that faces it (likely from the other direction); whether the piece leaves contact range is not the test. No rule for one geometry: the catalogue's classes cover it (C3 the step, C12 the tread — a place of the facet that faces it, D-S7), and the coverage check B5 verifies that both sides are places |
 | the hold vs its purpose *(study, F5)* | it fires on the cap, along island gaps, in a V (32 cells, up to 479 mm — in the study's emulation, a dy as a travel along the facet's b); not at a channel closed far behind (L07) | [DECIDED, Q4] its domain restricted |
 
 ---
@@ -608,7 +620,7 @@ A + dy or a plunge. "⏳ open" = no principle answers it yet.
 | C7(b) cavity behind a narrow opening; C30 bent tunnel | P2 at the opening; behind it approached (S13) | — | — |
 | C10 overhang; C29 arch, legs | OS3: P2's first layer from the facet that faces it | the underside only from the bottom cap | — |
 | C11 protrusion; C13 fin; C33 pin, rib, plateau | P2 (+ P5 in contact range) | the top where the piece first touches it | as C3 |
-| C12 tread between risers | OS3: the facet that faces it *(study: L12, L13)* | a place of the top, not of the side's travel | a crossing |
+| C12 tread between risers | OS3: the facet that faces it *(study: L12, L13)* | a place of the top, not of the side's travel; a ledge's two sides each reached from its own face [DECIDED, §2.8] | a crossing |
 | C14 small face; C37 shallow edge | the orbit's merge and D5's share (read; §2.6) | part of its neighbours | none |
 | C15 curve; C38 doubly curved | authored flat proxies (B); else not supported, said | — | crossings between its facets |
 | C16 fan | the orbit's charts (S11; P6 withdrawn) | a polar zone (the charts' fans) | the zone's entry |
@@ -674,16 +686,8 @@ is withdrawn: F17 and the mouth are defects recorded for the orbit's queue, F7 a
 ## 7. THE AUDIT OF WHAT IS BUILT
 
 The 25 weaknesses (WS1 – WS25), the patches standing beside a rule, and the errata of this study's first version are in
-[ORBIT_SURFACE_AUDIT.md](ORBIT_SURFACE_AUDIT.md). In one line each, by what answers them:
-* **P2 answers** WS3 (the support fills slots), WS4 (a gap with no floor: nothing to land on), WS5 (the fit only with a floor), WS10 (the
-  footprint the two smallest sizes), WS20 (no ruler for what stands out), WS22 (a floor within 20°, the fit at the plane only).
-* **§2.6 answers** WS8, WS9, WS21, WS23 (the rulers and tolerances); **S22 / B2** WS19 (exposed = not glued); **B1 / B6** WS2 (proxy vs
-  collision); **B4 / B5** WS24 (nothing checks the purpose).
-* **P4 / §2.4** WS12 (the mouth's hold); WS13 (the concave edge at the mouth — the edge is convex; S10 + the hold cover it, its domain restricted);
-  **S19** WS14 (the frames' maps).
-* **Still open**: WS1 (four notions: A′ removes one), WS6 (§2.5), WS7 (regions from triangles), WS11, WS15 (S27 (a)), WS16, WS17 (step 2.5).
-* *(study)* MEASURED: WS4, WS5, WS10, WS12, WS19, WS22, WS23 (F4, F3, F5, F12, F11, F10); WS18 answered by its library, WS25 by S29. One more found:
-  a plane's level is its FIRST face's and R1 pairs an opposite face on either side — a sub-0.5 mm layer erases a real cap (F6 → S27).
+[ORBIT_SURFACE_AUDIT.md](ORBIT_SURFACE_AUDIT.md); each, by what answers it (P2, §2.6, S22 / B2, B1 / B6, B4 / B5, P4, S19), and the ones still
+open (WS1, WS6, WS7, WS11, WS15 – WS17): its §8.1 (moved there 2026-11-16, the fifth exchange).
 
 ---
 
@@ -740,11 +744,8 @@ fails, with a planted **control** in `CHECK_CONTROLS` (*"a check never seen fail
 * [`PART_AUTHORING.md`](../../30_OBJECTS_3D/spec/PART_AUTHORING.md) §6 (new): the checks' table, the entry set and the ghost, the checklist; pointers at
   §1 (exposed = reachable from outside, S22), §3 item 3 (the ghost at the depth already superseded; the ghost computed where the entry set is
   narrow), §4.2 (B1 under "not yet in the report"), §4.3 item 3 (the review gets B3 – B6's colours and pass rules).
-* The game: a `src/core` checker beside `readModelCatalog` (B1's subset at load; the rest in vectors on each scene's `.glb`) — not built.
-
-**What it costs per scene** (estimates, not measured): B1, B4 — seconds per run; B2 — a voxel flood per stage (a 128³ grid in numpy: about a
-second each); B3 — the game's L2 per stage × held piece × facet direction, in node (tens of seconds per scene); B5, B6 — negligible. Authoring:
-the brief's fields per part at W1, and a `fit_tol` where a proxy departs from its collision on purpose.
+* The game: a `src/core` checker beside `readModelCatalog` (B1's subset at load; the rest in vectors on each scene's `.glb`) — not built. What it
+  costs per scene (estimates): [ORBIT_SURFACE_AUDIT.md](ORBIT_SURFACE_AUDIT.md) §8.2.
 
 ---
 
@@ -768,6 +769,13 @@ round's decisions each answered: [ORBIT_SURFACE_AUDIT.md](ORBIT_SURFACE_AUDIT.md
 | **Q9** | The first round's open points? | (a), all as recommended: D-S4 (a) the rebuild events; D-S7 a tread a place of the facet that faces it; D-S9 (a) render faces for box scenes, proxies where authored; D-S11 (a) the first build on `Scene_0`, `0bis`, `1` and the study's shapes; D-S20 (a) a strongly non-convex assembly measured by B5 and warned; S29 | **ACCEPTED** |
 | **Q10** | In contact range, crossing a slot it fits — does the piece drop in? | **(b), in his words: *"the piece shall not drop"*** — D3 stands at every distance: the gizmo reads the depth; the piece enters a recess only by A + dy. The recommendation (a) (today's drop) is NOT taken; today's code departs (§2.2 P5) | **DECIDED** |
 
+**TO ASK THE OWNER AGAIN when the surface work starts** — on the first, his words (2026-11-16): *"Not sure I understand the question. Capture the
+question in the md file and ask again when we work on the orbit surface later on."*
+1. **A goal's way in: is "a free direction exists" enough, or must the player be able to get there?** Check B4 answers *"can this part slide into its seat along at least one direction without touching a placed part?"* Not yet *"can the player bring the piece to where that slide starts?"* Example: a seat open only from under an overhang — the slide upward is free, but the gizmo may never reach a place under the overhang (no face there is a place of the orbit). Accept a level only when, for every goal, a free direction starts at a place the gizmo reaches (needs the landing map B3 and the coverage B5 first; §2.5 already writes it so) — or is the first test enough for now?
+2. **The entry-set check was run on boxes only** (the study's shapes): run it on the real parts' collision pieces (`UCX_`, `Scene_2`) before the first surface build?
+3. Still [PROPOSED], his word owed: §3.0 the catalogue derived from a grid of questions; §5.1 the six layers L0 – L5; §5.2 "nothing to land on" (the gizmo on the facet's plane, marked) and "approached".
+4. Still ⏳ open (§5.2): C22 very long flat shapes; a piece wider than its facet (C24); C38 free-form; the layout's events at a pole (C41).
+
 ---
 
 ## 9. SOURCES
@@ -785,9 +793,4 @@ In this tree (`1190db2`), and read on `1.0.146-Orbit-charts` (`30f7bb3`) for thi
   §1, §2.3, §4, §6 — proxies, ghosts, the checks; the stages, the plan's rules, the limits, the playbook.
 * [SCENE_2_ASSEMBLY.md](../../30_OBJECTS_3D/spec/SCENE_2_ASSEMBLY.md) §2.9, §2.10, §6 (the bores, the plunge); [LEVEL_END.md](../../20_GAME_RULES/spec/LEVEL_END.md)
   §5quater (the goal capture during the orbit); [RND5.md](../../00_CORE/queue_notes/RND5.md) (the rebuild's dossier).
-* Code: `src/input/{face_map,orbit_charts,free_face,footprint,orbit_tilt,orbit_shell,assembly_orbit,ring_hold,polar_zone}.ts`,
-  `src/input/gestureConfig.ts`, `src/render/{assembly_wiring,contact_wiring,model_bodies_wiring,model_import}.ts`, `src/core/{collision,
-  model_catalog}.ts`, `tests/helpers/chart_shapes.ts`, `scripts/probes/void_sim.ts`; `Assets/Blender/scripts/{build_engine,review_proxies}.py`.
-
-Outside this tree: `TILTED_ORBIT_REBUILD_SCOPE.md` §29 – §32 on branch `1.0.107-Close-in-atlas` (decisions 2 and 3, the bijection, the limited
-surface); the session's record of the orbit designs already tried (the owner's 2026-11-13 answer on proposals A, B, C).
+* The code read, and the sources outside this tree (`1.0.107-Close-in-atlas`): [ORBIT_SURFACE_AUDIT.md](ORBIT_SURFACE_AUDIT.md) §8.3.
