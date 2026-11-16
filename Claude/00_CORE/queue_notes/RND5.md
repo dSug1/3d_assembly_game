@@ -146,3 +146,6 @@ runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press
 * ✅ **D-T2 agreed** (the owner, 2026-11-16: *"D-T2: agreed"*, after the plain-words account of comment 1): a spit's level faces on the carried
   heading — no turn in the middle of `Scene_0bis`'s bottom face, the half turn at its far edge, the picture kept when coming in from a tip; N1 / N2
   far out still to judge. D-T1, D-T3 – D-T7 open. Next: the study's C0 (the offline round, the two variants drawn).
+* ✅ **C0 run** (the study's §7; `scripts/probes/free_face_study.ts`): 41 free faces on the 35 shapes, their exits' turns pure polygon geometry
+  (a rectangle 0 / 90 / 180°; a wedge's triangle 100° — W6's gap); `Scene_0bis`'s bottom face modelled far out — today 89° and 180° of picture turn
+  with no edge under the gizmo and 10 samples against the finger; the carried heading 0 – 1° and none, the half turn at the far edge.

@@ -210,7 +210,7 @@ not what is missing**: the heading rule itself changes in the middle of a face (
 ### 4.3 The scripts — what no run covers
 
 * **The offline prototype never ran close in** ([`ORBIT_CHARTS.md`](ORBIT_CHARTS.md) §6: *not covered — the camera's path, the calm in motion, the square
-  camera*). No claim of §3 about a turn's angle on a shape other than the cube has been computed.
+  camera*). ✅ Since: §7 (the turns computed on the 35 shapes; the spit's bottom face modelled) — the close-in camera's PATH is still not modelled.
 * **The replay** (the gate of every step) never arrives on `Scene_0bis`'s bottom face from a tip, never crosses `Scene_0`'s ridge close in, never rests
   on an edge. §4.1 and W10 were found by three probes written this session (`mid_check.mjs`, `edge_noise.mjs`, `tilt_check.mjs` — the session's scratchpad).
 * **The walks** count jumps and rolls but have no rule for "a camera turn with no edge under the gizmo" (T4) nor "a finger moving, the gizmo not"
@@ -233,10 +233,38 @@ not what is missing**: the heading rule itself changes in the middle of a face (
 
 | step | what | gate |
 |---|---|---|
-| **C0** | **An offline round**, as for the charts: the free faces, their layouts and every exit's turn on the 35 shapes and on test scenes (a cube, a heptagon's end, an L-shaped top, a step, a spit body); a walker crossing every edge both ways — no turn without an edge, the turns round every corner adding up; N1 against N2 drawn for the owner | the tables; the owner's look at the drawings |
+| **C0** ✅ | run 2026-11-16 (§7) — **an offline round**, as for the charts: the free faces, their layouts and every exit's turn on the 35 shapes and on test scenes (a cube, a heptagon's end, an L-shaped top, a step, a spit body); a walker crossing every edge both ways — no turn without an edge, the turns round every corner adding up; N1 against N2 drawn for the owner | the tables; the owner's look at the drawings |
 | **C1** | W11: the entry's first frame measured and its cause named — before anything is built on it | the probe |
 | **C2** | Free faces and their layouts in the atlas (pure, `src/input`); the entry by the edge; the exit's turn and the hold computed (W5, W6); the frame's map in the contour's box (W7) | vectors; the three scenes replay unchanged |
 | **C3** | The layout kept until an edge (D-T1, W4); the square camera's target on every face (W8) | the close-in runs; the edge-noise run |
 | **C4** | The spit on the same rule (D-T2, W2, W3): `spitSide`, the bias and the swap deleted | `mid_check.mjs`: the arrival from a tip turns nothing; the owner's records of 2026-11-14 replayed |
 | **C5** | One half-turn event (W1); the mouth as a concave edge (W9) | the ridge and far-edge runs |
 | then | step 2.5 of the charts (the old detectors and the switch deleted) | — |
+
+## 7. C0 — THE OFFLINE ROUND (run 2026-11-16: `npx vite-node scripts/probes/free_face_study.ts`, a few seconds; `VERBOSE=1` for every table)
+
+**Part A — the free faces of the 35 shapes** (the world's hold): 41 level faces; on every one the layout of each edge is square to that edge (into
+a top face, out of a bottom one), so an exit's turn is the angle between two edges' own directions — pure polygon geometry:
+
+| the face | the exits' turns |
+|---|---|
+| a rectangle (33 of the 41 — the cube's, every lying prism's bottom, the frustums', the plates') | 0°, 90°, 180° |
+| a triangle (4) | 0°, 120° |
+| a regular pentagon (the dodecahedron's 2) · an irregular one (2) | 0°, 72°, 144° · 70 – 75°, 143 – 146° |
+| an octagon (the crossed heptagons' bottom) | 0°, 45°, 90°, 135°, 180° |
+| ⚠ a wedge's thin triangle (2) | 0°, **100°**, 160° — the exit W6 names: over 90° and under the 120° the hold is set from today |
+
+**Part B — `Scene_0bis` as a spit, far out** (a model: the real `spitSide`, `spitCameraHeading`, `fingerInFrame`, `fingerSwapped`; the calm by its
+rule's shape; no ease, no spring), its level bottom face by today's rules and by the carried heading:
+
+| the path | | the picture turned with NO edge under the gizmo | samples where the gizmo goes against the finger | the world's vertical DOWN the glass (worst) | the turn |
+|---|---|---|---|---|---|
+| from the triangle under a tip to the body's middle, 2° off the middle (either half) | today | **89°** | **10 of 161** — all on the level face | — | none asked: the app then adds the veer of §4.1 |
+| | N1 / N2 | 1° | 0 | — | none — the heading carried in |
+| across the bottom face round the axis | today | **180°** (the side changes in the middle of the face) | 0 | 0.03 | the half turn in the MIDDLE |
+| | N1 | 0° | 0 | 0.00 | ONE turn of 180° at the far edge, then the hold |
+| | N2 | 0° | 0 | **0.44** (just before the far edge) | the same |
+
+So D-T2's rule removes both turns that have no edge, and the finger's mapping is right at every sample; N2's cost is as estimated (the world's
+vertical pointing down by 0.44 of its length in the last part of the face), N1's is the orbit over that face becoming a pan. ⭐ To judge on the
+device: both behind one slider at C4.
