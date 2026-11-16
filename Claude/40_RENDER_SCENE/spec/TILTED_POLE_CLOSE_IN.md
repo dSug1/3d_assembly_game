@@ -753,3 +753,33 @@ vertex to the top), so "one edge flat at the bottom" holds for odd sides only.
 * **Expected**: `Scene_0`, `Scene_0bis`, `Scene_1` — nothing the gates see changes (on a box over a side the snapped yaw already gives that side's
   layout); the switch off bit for bit. The gain on the test scenes (merged INTO their throwaway branch): T_e's entries on the entry edge's layout.
 * **Not here**: W8 (the square camera's target on a cap with no layout) and RINGS — unless a direct consequence of W5 / W7.
+
+### 16.1 As built (2026-11-16: `e56f34f`, an Opus agent)
+
+* **W5**: `capTiltHeading(…, along)` (`orbit_charts.ts`) — `along` the heading carried in: the candidate whose F-vertical lies nearest it (a tie: the
+  first), unwrapped next to today's, today's number itself when it is that candidate. In the wiring ONE entry function, `freeEntry` (the contour's
+  face, the side shared with the place before, `freeEntryHeading`), called by a spit's free face (`freeFaceFrame`, C4) and by the tilt (`tiltOn`, on
+  the world's map, when the cap is the gizmo's own place and free); `asmPlaceWas` (new, reset with the orbit's state) keeps the place before the one
+  shown — the tilt is made one frame after the place reached the cap. A pole held at a mouth (W9) and `nextTiltHeading` (a cap right after a tilt's
+  exit: no convex contour has one) keep the yaw's nearest.
+* **W7**: `frameBox` (`orbit_tilt.ts`) — the parts' vertices turned into F, their bounds; a bound within `FRAME_BOX_NOISE_M` (1 nm) of `tiltBox`'s
+  that number (`Scene_1`'s real faces sit 0.6 nm inside its box: kept exact). `faceMapOf` builds every frame's map in it (a tilt's, a zone's) under
+  `chartLayout` 1; `tiltBox` otherwise.
+* **Vectors**: `tests/free_face_caps.test.ts` (17), five pinning files updated; **2088 vectors, 164 files**; red on 12 mutants (the report).
+* **Measured** (baseline: the same gates at `28827c6`, recorded before the change): the default replays of the three scenes identical in every frame
+  (a second run; the first run's `Scene_0bis` differed by ≤ 2.9e-9 from frame 3 — the runs' own noise, the second run equal to the baseline); the
+  switch off: the same noise only (`1e-6`: never; that path is untouched). `tilt_check` (default, off, `out`, `ridge`, `pole`), `mid_check`,
+  `across_check`, `edge_noise` (top, side): every output line identical to the baseline's.
+* **The test scenes** (the rebuild branch merged INTO `1.0.146t-`, `a9d11c2`; `t1_walk.mjs`): **T_e** (the box turned 30°) — entries off the entry
+  edge 4 of 10 → **1 of 10**: the three a quarter off (90°: the re-entries after the up and right exits, the bottom's first) now 0.0°, the view over
+  them 120° → 90° (the square camera's pitch alone); the view in all 9952° → 8584°, frames over 6° in a timed turn 429 → 305. ⚠ The one left is the
+  FIRST entry after the approach (35.9°, unchanged): the camera still pending, 38° off square (§15's artefact) — not shown to be the layout. **T_d**
+  and **T_f**: identical before and after (an axis-aligned square cap; the spit). `Scene_1` on this probe: every entry 0.0° but the first (4.8°, the
+  same pending camera) — no baseline on the same probe version.
+* **W7 found offline, not in a scene**: a long flat box (0.8 × 0.2 × 0.3 m) turned 30° or 45° — under two of its top's four layouts the tilted map
+  built in the turned world box had ALL six facets virtual; in `frameBox` six real (vectored). On T_e (0.5 × 0.3 × 0.3) both boxes give six real
+  facets — §15's "not found" stands.
+* **Not built — what each needs**: **W8** (close in on a cap with no layout, the square camera's target the face left — F3, F4, F6): no direct
+  consequence of W5 / W7 (such a cap has no layout to carry); it needs D-T5 reopened by the owner — a layout square to the entry edge on any polygon
+  (the free face's rule, `freeEdges` already gives one per side) or the cap's normal as the target with the polar orbit kept. **RINGS** (F5): as §15
+  lists. ⚠ An entry with no edge reads the camera's up: looking level it has nothing in the cap's plane and the first layout is taken (C4's rule too).

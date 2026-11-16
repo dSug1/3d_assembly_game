@@ -241,3 +241,8 @@ runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press
   the pure functions C4 calls in a spit zone (W5); a tilted frame's face map built in the shape's own box, not the world box's turned corners (W7);
   one wiring function for a free face's entry whatever its zone. `Scene_0`, `Scene_0bis`, `Scene_1` unchanged; the gain on the test scenes. W8 and
   RINGS not built → [`TILTED_POLE_CLOSE_IN.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) §16.
+* **Built** (`e56f34f`): `capTiltHeading(…, along)`, `frameBox`, one entry function `freeEntry` for a spit's free face and gravity's cap,
+  `asmPlaceWas`; 2088 vectors. Every gate on `Scene_0`, `Scene_0bis`, `Scene_1` identical to the baseline (the default replays bit for bit). T_e (the
+  turned box): entries off the edge 4 of 10 → 1 (the first, the pending camera's); W7 found offline only (a long flat box turned 30° / 45°: a tilted
+  map all virtual in the turned world box). ⛔ W8 and RINGS not built (W8 needs D-T5 reopened) →
+  [`TILTED_POLE_CLOSE_IN.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) §16.1.
