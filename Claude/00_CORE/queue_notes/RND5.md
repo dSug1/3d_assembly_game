@@ -170,4 +170,4 @@ runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press
   (2 – 5 mm off the middle against +79 mm), the middle reached, no side change, no hold, 76° of view against 334°; across the face: nothing at its
   middle, the half turn one band past the far edge, then the hold. **2038 vectors**; off: the three scenes bit for bit; on: `Scene_1`, `Scene_0` bit
   for bit, `Scene_0bis` another play, no worse. A new slider `freeFaceSquare` (POLAR ZONES: 0 the calm kept / 1 the camera square to a spit's level
-  face) — the owner's to judge. LOCAL: not deployed. ⛔ Next, on the owner's word only: §8 (the way out blended), to measure first.
+  face) — the owner's to judge. ✅ Deployed 2026-11-16 (the owner: *"Deploy"*): `301ada6` merged as main `6685f8f`, live; the owner's look owed. ⛔ Next, on the owner's word only: §8 (the way out blended), to measure first.
