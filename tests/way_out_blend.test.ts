@@ -229,7 +229,7 @@ describe("⭐⭐⭐ the wiring (source pins, comments stripped)", () => {
     expect(f).toContain("const whole = turnWhole(st, zm);");
     expect(f).toContain("const target = seamOutTarget(o.outMm, o.orbitMm, st.cfg.tiltOutBlendMm, st.cfg.tiltBlendMm, st.router.all().length > 0);");
     expect(f).toContain("o.p = seamOutStep(o.p, target, dtMs, whole, st.cfg.tiltRollDegS, zm.axis !== null && zm.dirFrom === undefined); zm.k = seamOutShare(o.p);"); // ⭐ (package A) …and its ease read
-    expect(f).toContain("if (o.p >= 1) st.asmZoneMix = null;");
+    expect(f).not.toContain("st.asmZoneMix = null"); // ⭐ (package A, the audit's blocker) whole: ended once DRAWN, in the camera's stage (`zoneMixPose`)
     const a = fnCode(W, "export function assemblyFrame(");
     before(a, "seamTurnFrame(st, dtMs);", "seamOutFrame(st, dtMs);");
     before(a, "seamOutFrame(st, dtMs);", "const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };");

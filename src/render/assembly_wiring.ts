@@ -40,7 +40,7 @@ import { crossingHold, crossingPitch, distanceToFacets, fingerInFrame, fingerSwa
 import { assignCharts, capTiltHeading, chartContour, chartZones, DEFAULT_CHART_OPTS, type ChartAssignment, type ChartFace } from "../input/orbit_charts";
 import { poseAboutPiece, poseFramingTwo, type CamPose } from "../input/orbit_tilt";
 import { poleCrossingDue, poleSeam } from "../input/pole_crossing";
-import { dirGap, easedDir, easeRest, poleYawKept, seamOutPaced, seamOutShare, seamOutStep, seamOutTarget, seamStepRad, seamTurnPace, seamTurnStep, seamWholeRad, squareRestarts, squareShareStep, tiltLeavesNow, turnHoldsGizmo } from "../input/seam_turn";
+import { dirGap, easedDir, easeRest, poleYawKept, poseTurnRad, seamOutPaced, seamOutShare, seamOutShareInv, seamOutStep, seamOutTarget, seamStepRad, seamTurnPace, seamTurnStep, seamWholeRad, shownShareCap, squareRestarts, squareShareStep, tiltLeavesNow, turnHoldsGizmo } from "../input/seam_turn";
 import { bandedFacet } from "../input/face_band";
 import { contourFaceAt, crossingEvent, exitHoldSign, exitTurnRad, faceOwnUp, freeEdges, freeEntryHeading, freeHeadingAngle, isFreeFace } from "../input/free_face";
 import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, capTilt, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, swingEase, tiltAutoLatch, frameBox, tiltDir, tiltFaces, onTiltedFacet, type Mat3 } from "../input/orbit_tilt";
@@ -386,7 +386,7 @@ function seamTurnFrame(st: SceneState, dtMs: number): void {
   const r = seamTurnStep({ k: zm.k, done: zm.done, rad: turnWhole(st, zm), axisKnown: zm.axis !== null && zm.dirFrom === undefined }, pace, bl === null ? 1 : blendShare(bl.mm, st.cfg.tiltBlendMm), dtMs, st.cfg.tiltRollDegS, turnEase(st, zm));
   zm.k = r.k;
   zm.done = r.done;
-  if (zm.k >= 1) st.asmZoneMix = null;
+  // ⭐⭐⭐ (package A, the audit's blocker) whole: ended once drawn (`zoneMixPose`)
 }
 
 /**
@@ -424,7 +424,7 @@ function seamOutFrame(st: SceneState, dtMs: number): void {
   o.p = seamOutStep(o.p, target, dtMs, whole, st.cfg.tiltRollDegS, zm.axis !== null && zm.dirFrom === undefined);
   zm.k = seamOutShare(o.p);
   zm.done = zm.k * whole;
-  if (o.p >= 1) st.asmZoneMix = null;
+  // ⭐⭐⭐ (package A, the audit's blocker) whole (`o.p` 1): ended once drawn (`zoneMixPose`)
 }
 
 /** ⭐⭐⭐ (2026-11-10, §9.4) the orbit's DIRECTIONS' frame (F → world; ⛔ the press's swing deleted at step 2.5: the tilt's `map`) — `null`: the world's. */
@@ -1540,12 +1540,38 @@ export function assemblyCameraFrame(st: SceneState, cam: OrbitAt, off?: CameraAn
  * assembly turns behind it; the turn's angle sets its time (`zoneStep`), its axis kept frame to frame. No turn: the pose as given. Measured (Scene_0bis,
  * the zenith edge, far out): the piece leapt from (−0.27, −0.06) of the half-glass to (0.27, 0.76) — the offsets turned with the heading — then went round.
  */
-export function zoneMixPose(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Vec3): CamPose {
+export function zoneMixPose(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Vec3, dtMs: number): CamPose {
   const zm = st.asmZoneMix;
   const to: CamPose = { eye, look, up };
   st.asmPieceDrawn = [piece[0], piece[1], piece[2]]; // ⭐ where the piece is drawn this frame: a turn starting next frame starts from it
   if (zm === null) return to;
-  const r = poseAboutPiece(zm.from, to, piece, zm.k, zm.axis);
+  // ⭐⭐⭐ (2026-11-17, package A — the audit's blocker; the owner: *"1- A"*, the picture never faster than the tilts' one speed) THE SHARE DRAWN: the
+  // clock's, unless the PICTURE would turn more than the one speed's step from the pose drawn last frame (`shownShareCap`, `poseTurnRad`) — the turn's end
+  // pose (`to`) still moves under the rig's own lags while the turn runs (the camera's leash catching up after a drag, the calm's ease), which the clock,
+  // reading only the angle from `from` to `to`, cannot count. ⛔ The clock's share drawn as it was: 6.66, 6.36, 6.17, 6.06° in the four frames after
+  // `Scene_0bis`'s free-face exit, the gizmo held (across_check). The clocks then carry on from the share drawn (`turnShareDrawn`)
+  const k0 = zm.kShown ?? 0;
+  const degS = st.cfg.tiltRollDegS;
+  let k = zm.k;
+  if (degS > 0 && k > k0) {
+    const was = poseShown(st);
+    const at = (x: number): CamPose => {
+      if (x >= 1) return to;
+      const rr = poseAboutPiece(zm.from, to, piece, x, zm.axis);
+      const tt = zm.rule === 2 ? null : poseFramingTwo(zm.from, to, piece, x, zm.keep);
+      return tt !== null ? tt.pose : rr.pose;
+    };
+    k = shownShareCap(k0, k, (x) => poseTurnRad(was, at(x)), ((degS * Math.PI) / 180) * (Math.max(0, dtMs) / 1000));
+    if (k !== zm.k) turnShareDrawn(st, zm, k);
+  }
+  zm.kShown = k;
+  // ⭐⭐⭐ (package A, the audit's blocker) THE TURN ENDS ONCE ITS WHOLE IS DRAWN — here, the camera's stage (⛔ in its clocks, before: the last frame's
+  // step drawn uncapped, the end pose itself as it was): the end pose itself, exactly
+  if (k >= 1) {
+    st.asmZoneMix = null;
+    return to;
+  }
+  const r = poseAboutPiece(zm.from, to, piece, k, zm.axis);
   zm.axis = r.axis ?? zm.axis ?? [0, 1, 0]; // ⭐ the angle read (a turn of nothing has no axis of its own: done at once — never held for ever)
   zm.rad = r.angle;
   // ⭐⭐⭐ (2026-11-14, the owner: *"Is there a way for the camera to realign without the piece nor the assembly/scene to sometimes fly off the screen view
@@ -1554,7 +1580,7 @@ export function zoneMixPose(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, 
   // piece alone, as above. ⛔ About the piece alone everywhere: far out the assembly swung round the piece (4.5° at 7.7 m — off a narrow glass)
   // ⭐ the rule chosen at the turn's first frame and kept (`zm.rule` 2: about the piece) — never switched mid-turn (a jump between the two poses); the
   // two's angles carried frame to frame (`zm.keep`, `FramingKeep`)
-  const t = zm.rule === 2 ? null : poseFramingTwo(zm.from, to, piece, zm.k, zm.keep);
+  const t = zm.rule === 2 ? null : poseFramingTwo(zm.from, to, piece, k, zm.keep);
   if (t === null && zm.rule === 0) zm.rule = 2;
   const pose = t !== null ? t.pose : r.pose;
   if (t !== null) {
@@ -1563,6 +1589,17 @@ export function zoneMixPose(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, 
   }
   st.asmCamLast = { dir: norm3([pose.eye[0] - pose.look[0], pose.eye[1] - pose.look[1], pose.eye[2] - pose.look[2]]), up: pose.up };
   return pose;
+}
+
+/**
+ * ⭐⭐⭐ (package A, the audit's blocker) THE CLOCKS CARRIED ON FROM THE SHARE DRAWN (`k`, held back by `shownShareCap`): the angle turned so far its share of
+ * the transition's whole (`zoneStep`, `seamTurnFrame`), the way out's progress the one whose smooth share it is (`seamOutShareInv`) — never ahead of the
+ * picture, so the next frame's step is the one speed's from what was shown.
+ */
+function turnShareDrawn(st: SceneState, zm: NonNullable<SceneState["asmZoneMix"]>, k: number): void {
+  zm.k = k;
+  zm.done = k * turnWhole(st, zm);
+  if (zm.out !== undefined) zm.out.p = seamOutShareInv(k);
 }
 
 /** ⭐ The pose on the glass now (the camera drawn last frame) — a zone's turn starts from it. */
@@ -2112,6 +2149,9 @@ function sameZone(a: PolarZone, b: PolarZone): boolean {
  * zone it was in), a change made when no tilt is under way (one under way is turned off first: a zone has none); the camera's turn advanced.
  */
 function zoneStep(st: SceneState, dtMs: number): void {
+  // ⭐⭐⭐ (package A, the audit's blocker) a turn whose clock reached its whole last frame and that no camera stage drew (`zoneMixPose` ends a turn drawn
+  // whole): ended here, as its clock ended it before
+  if (st.asmZoneMix !== null && st.asmZoneMix.k >= 1) st.asmZoneMix = null;
   const zm = st.asmZoneMix;
   // ⭐ (2026-11-14) from the frame its angle is known (`zoneMixPose` read it: its axis) — ⛔ by the placeholder's 90° first: 20° in the first frame, then 8.5°
   // ⭐⭐⭐ (2026-11-14, the owner's play recording: one-frame rolls of 60 – 100° inside the turns, very fast input) THE TURN BY ANGLE at the tilts' one speed:
@@ -2128,7 +2168,7 @@ function zoneStep(st: SceneState, dtMs: number): void {
     const whole = turnWhole(st, zm);
     zm.done = degS > 0 ? Math.min(whole, zm.done + seamStepRad((degS * Math.PI / 180) * (dtMs / 1000), zm.rad, turnEase(st, zm))) : whole;
     zm.k = whole > 1e-9 ? Math.min(1, zm.done / whole) : 1;
-    if (zm.k >= 1) st.asmZoneMix = null;
+    // ⭐⭐⭐ (package A, the audit's blocker) whole: ended once DRAWN, in the camera's stage (`zoneMixPose`) — the last step capped there as every other
   }
   const zones = zonesOf(st);
   const cur = st.asmZone;

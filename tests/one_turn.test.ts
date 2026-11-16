@@ -9,11 +9,15 @@
  *   restarted from the pose shown; a turn just started (its read pending): none (the snap is part of that turn).
  * * The wiring's source pins (comments stripped): the square camera at its target inside a running turn; the ease read after `calmFrame`; every clock
  *   waiting for that read; every turn start keeping the direction drawn before it (`dirFrom`).
+ * * (2026-11-17, the audit's blocker) `poseTurnRad`, `shownShareCap`, `seamOutShareInv` — the share DRAWN: the picture's turn from the pose drawn last
+ *   frame never over the one speed, the turn's end pose still moving under the rig's own lags (measured: 6.66° in a frame of `Scene_0bis`'s free-face
+ *   exit); the turn ended once drawn whole (`zoneMixPose`), the clocks carried on from the share drawn (`turnShareDrawn`).
  * RED on the mutants listed in the package's report.
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { nlerpAngle, seamStepRad, seamTurnStep, squareRestarts, squareShareStep, SQUARE_SAME_RAD } from "../src/input/seam_turn";
+import { nlerpAngle, poseTurnRad, seamOutShare, seamOutShareInv, seamStepRad, seamTurnStep, shownShareCap, squareRestarts, squareShareStep, SQUARE_SAME_RAD } from "../src/input/seam_turn";
+import { rotateAbout } from "../src/input/orbit_tilt";
 import type { Vec3 } from "../src/core/vec";
 
 const D = Math.PI / 180;
@@ -204,5 +208,66 @@ describe("⭐⭐⭐ the wiring (source pins, comments stripped)", () => {
     const tr = fnCode(W, "function turnRestart(");
     expect(tr).toContain("const uWas = drawnDir(st);");
     expect(tr).toContain("easeCarry(st, zm, uWas);");
+  });
+});
+
+describe("⭐⭐⭐ the share DRAWN: the picture never over the one speed, its end pose moving (`poseTurnRad`, `shownShareCap`) — the audit's blocker", () => {
+  const pose = (dir: Vec3, up: Vec3, eye: Vec3 = [0, 0, 0]) => ({ eye, look: [eye[0] + dir[0], eye[1] + dir[1], eye[2] + dir[2]] as Vec3, up });
+  it("⭐ `poseTurnRad`: the look's turn, the roll's turn, the two together — the one rotation of the camera's axes; the eye's place does not count", () => {
+    const a = pose([0, 0, 1], [0, 1, 0]);
+    expect(poseTurnRad(a, pose(rotateAbout([0, 0, 1], [0, 1, 0], 10 * D), [0, 1, 0]))).toBeCloseTo(10 * D, 12); // a yaw
+    expect(poseTurnRad(a, pose([0, 0, 1], rotateAbout([0, 1, 0], [0, 0, 1], 7 * D)))).toBeCloseTo(7 * D, 12); // a roll alone (⛔ the look only: 0)
+    const ax: Vec3 = [Math.SQRT1_2, 0.5, 0.5];
+    expect(poseTurnRad(a, pose(rotateAbout([0, 0, 1], ax, 23 * D), rotateAbout([0, 1, 0], ax, 23 * D), [5, -2, 3]))).toBeCloseTo(23 * D, 12);
+    // an up not square to the look: made square first (Babylon's `upSquareToView`)
+    expect(poseTurnRad(a, pose([0, 0, 1], [0, 1, 0.4]))).toBeCloseTo(0, 12);
+    expect(poseTurnRad(a, { eye: [0, 0, 0], look: [0, 0, 0], up: [0, 1, 0] })).toBe(0);
+  });
+  it("⭐ within the speed: the clock's share, exactly (nothing changes where nothing was over)", () => {
+    expect(shownShareCap(0.1, 0.13, () => 5 * D, STEP)).toBe(0.13);
+    expect(shownShareCap(0.1, 0.13, () => STEP, STEP)).toBe(0.13);
+  });
+  it("⭐ the end pose moving: the largest share whose picture turns exactly the one speed's step — ⛔ the clock's share: 6.66° in a frame", () => {
+    // a half turn about y whose END pose has moved on by `drift` since last frame (the camera's leash catching up): the picture at the share k, from
+    // the pose drawn last frame (k0 of the half turn then) — about one axis, so |k·(π + drift) − k0·π|: the clock's step plus the drift's share
+    const k0 = 0.2;
+    const drift = 3 * D;
+    const dirAt = (k: number, end: number) => rotateAbout([0, 0, 1], [0, 1, 0], k * end);
+    const was = pose(dirAt(k0, Math.PI), [0, 1, 0]);
+    const shown = (k: number) => poseTurnRad(was, pose(dirAt(k, Math.PI + drift), [0, 1, 0]));
+    const kClock = k0 + STEP / Math.PI;
+    expect(shown(kClock)).toBeGreaterThan(STEP); // the clock alone: over (the drift's share added)
+    const k = shownShareCap(k0, kClock, shown, STEP);
+    expect(k).toBeLessThan(kClock);
+    expect(k).toBeGreaterThan(k0);
+    expect(shown(k)).toBeLessThanOrEqual(STEP + 1e-12);
+    expect(shown(k)).toBeGreaterThan(STEP - 1e-6); // exactly the step (⛔ held at k0: the turn stalls behind a drift it could carry)
+  });
+  it("⭐ the end pose alone moving more than the speed: the share drawn last frame (the turn adds nothing); `kWant` not ahead, or no speed: the clock's", () => {
+    expect(shownShareCap(0.3, 0.35, () => 9 * D, STEP)).toBe(0.3);
+    expect(shownShareCap(0.3, 0.3, () => 9 * D, STEP)).toBe(0.3);
+    expect(shownShareCap(0.3, 0.35, () => 9 * D, 0)).toBe(0.35);
+    expect(shownShareCap(0.3, 0.35, () => 9 * D, Number.POSITIVE_INFINITY)).toBe(0.35);
+  });
+  it("⭐ `seamOutShareInv`: the way out's progress whose smooth share is k — `seamOutShare` undone, both ends exact", () => {
+    for (const p of [0, 0.03, 0.2, 0.5, 0.77, 0.99, 1]) expect(seamOutShareInv(seamOutShare(p))).toBeCloseTo(p, 12);
+    expect(seamOutShareInv(-1)).toBeCloseTo(0, 15);
+    expect(seamOutShareInv(2)).toBeCloseTo(1, 15);
+  });
+  it("⭐ wired: the camera's stage draws the capped share, ends the turn once drawn whole; the clocks never end it themselves, carried on from the share drawn", () => {
+    const W = "render/assembly_wiring.ts";
+    const z = fnCode(W, "export function zoneMixPose(");
+    expect(z).toContain("const k0 = zm.kShown ?? 0;");
+    expect(z).toContain("k = shownShareCap(k0, k, (x) => poseTurnRad(was, at(x)), ((degS * Math.PI) / 180) * (Math.max(0, dtMs) / 1000)); if (k !== zm.k) turnShareDrawn(st, zm, k);");
+    before(z, "const was = poseShown(st);", "shownShareCap(");
+    expect(z).toContain("zm.kShown = k; if (k >= 1) { st.asmZoneMix = null; return to; }");
+    expect(z).toContain("const r = poseAboutPiece(zm.from, to, piece, k, zm.axis);");
+    const d = fnCode(W, "function turnShareDrawn(");
+    expect(d).toContain("zm.k = k; zm.done = k * turnWhole(st, zm); if (zm.out !== undefined) zm.out.p = seamOutShareInv(k);");
+    for (const sig of ["function seamTurnFrame(", "function seamOutFrame("]) expect(fnCode(W, sig)).not.toContain("st.asmZoneMix = null");
+    const zs = fnCode(W, "function zoneStep(");
+    // the one end left in a clock: a turn whole last frame that no camera stage drew
+    expect(zs.match(/st\.asmZoneMix = null/g)?.length).toBe(1);
+    before(zs, "if (st.asmZoneMix !== null && st.asmZoneMix.k >= 1) st.asmZoneMix = null;", "const zm = st.asmZoneMix;");
   });
 });

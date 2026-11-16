@@ -259,6 +259,55 @@ export function squareShareStep(q0: number, qWant: number, thetaRad: number, max
   return s / (s + Math.sin(thetaRad - a1));
 }
 
+/**
+ * ⭐⭐⭐ (package A, the audit's blocker — 2026-11-17) THE PICTURE'S TURN between two camera poses (rad, 0 … π): the one rotation taking the first pose's
+ * axes (its look `look − eye`, its up made square to it, their right) onto the second's — what the eye sees turn, the look and the roll together (the
+ * gates' own measure). A degenerate pose (no look, an up along it): 0.
+ */
+export function poseTurnRad(a: { readonly eye: Vec3; readonly look: Vec3; readonly up: Vec3 }, b: { readonly eye: Vec3; readonly look: Vec3; readonly up: Vec3 }): number {
+  const axes = (p: { readonly eye: Vec3; readonly look: Vec3; readonly up: Vec3 }): { l: Vec3; u: Vec3; r: Vec3 } | null => {
+    const l = unit([p.look[0] - p.eye[0], p.look[1] - p.eye[1], p.look[2] - p.eye[2]]);
+    if (l === null) return null;
+    const k = dot(p.up, l);
+    const u = unit([p.up[0] - k * l[0], p.up[1] - k * l[1], p.up[2] - k * l[2]]);
+    if (u === null) return null;
+    return { l, u, r: cross(u, l) };
+  };
+  const A = axes(a);
+  const B = axes(b);
+  if (A === null || B === null) return 0;
+  const tr = dot(A.l, B.l) + dot(A.u, B.u) + dot(A.r, B.r);
+  return Math.acos(Math.max(-1, Math.min(1, (tr - 1) / 2)));
+}
+
+/**
+ * ⭐⭐⭐ (package A, the audit's blocker — 2026-11-17, the owner's *"1- A"*: the picture never faster than the tilts' one speed, in any path) THE SHARE
+ * DRAWN THIS FRAME: the clock's share `kWant`, unless the picture would turn more than `maxRad` from the pose drawn last frame (`turnAt(k)`: the picture's
+ * turn at the share `k`, `poseTurnRad`) — then the largest share from `k0` (the one drawn last frame) that keeps it within (bisected; the turn's picture
+ * grows with its share). ⭐ What the clock cannot count: the turn's END pose itself still moving under the rig's own lags (the camera's leash catching up
+ * on the orbit, the calm's ease) while the turn runs — measured on `Scene_0bis`'s free-face exit, 6.66° in the frame after a drag. Even `k0` over it (the
+ * end pose alone moving more): `k0` — the turn adds nothing that frame. `maxRad` not finite or not over 0 (no speed), or `kWant` not over `k0`: `kWant`.
+ */
+export function shownShareCap(k0: number, kWant: number, turnAt: (k: number) => number, maxRad: number): number {
+  if (!(Number.isFinite(maxRad) && maxRad > 0) || !(kWant > k0)) return kWant;
+  if (!(turnAt(kWant) > maxRad)) return kWant;
+  if (turnAt(k0) > maxRad) return k0;
+  let lo = k0;
+  let hi = kWant;
+  for (let i = 0; i < 30; i++) {
+    const m = (lo + hi) / 2;
+    if (turnAt(m) > maxRad) hi = m;
+    else lo = m;
+  }
+  return lo;
+}
+
+/** ⭐ (package A, the audit's blocker) the way out's progress whose smooth share (`seamOutShare`) is `k` (0 … 1): the smoothstep's inverse. */
+export function seamOutShareInv(k: number): number {
+  const y = Number.isFinite(k) ? Math.min(1, Math.max(0, k)) : 1;
+  return 0.5 - Math.sin(Math.asin(1 - 2 * y) / 3);
+}
+
 /** ⭐ (package A) under this angle two square normals are one (the gizmo's hold's own tie, `squareTurning`'s half degree) */
 export const SQUARE_SAME_RAD = (0.5 * Math.PI) / 180;
 
