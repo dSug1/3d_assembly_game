@@ -50,15 +50,16 @@ export const TEST_A = testScene("Test_a", "Test a — upright pentagon prism", [
   { id: "Pentagon", position: A_POS, colour: GREY, dims: A_DIMS, orientation: { quat: A_Q }, frozen: false, topScale: 1, prismSides: 5 },
 ], [A_POS[0], A_DIMS[2] + LIFT, A_POS[2]], ID, A_POS);
 
-// (b) the bipyramid: a square (axis-aligned in the body's x–y) of side S, apexes S/√2 out (a regular octahedron), a 1 mm band; turned about x so a
-// triangle lies level at the bottom (its outward normal (0, √2, 1)/√3 → (0, −1, 0))
-const B_S = 3.5;
-const B_TIP = B_S / Math.SQRT2;
+// (b) the bipyramid: ⚠ the engine's 4-sided prism is a DIAMOND (a vertex at the top — `render/bodies.ts`' apex turn — so one at the bottom too: the
+// `BodySpec.prismSides` note "one edge flat at the bottom" holds for odd sides only); its half diagonal A, apexes A out (a regular octahedron), a 1 mm
+// band; turned so the triangle of outward normal (1, 1, 1)/√3 lies level at the bottom (→ (0, −1, 0))
+const B_A = 1.75;
+const B_TIP = B_A;
 const B_BAND = 0.01;
-const B_DIMS: Triple = [B_S, B_S, 2 * B_TIP + B_BAND];
-const B_Q = nz(qFromAxisAngle([1, 0, 0], Math.PI - Math.atan2(1, Math.SQRT2)));
+const B_DIMS: Triple = [2 * B_A, 2 * B_A, 2 * B_TIP + B_BAND];
+const B_Q = nz(qFromAxisAngle([Math.SQRT1_2, 0, -Math.SQRT1_2], Math.acos(-1 / Math.sqrt(3))));
 const B_VERTS: Vec3[] = [
-  ...[[1, 1], [-1, 1], [-1, -1], [1, -1]].flatMap(([x, y]) => [-1, 1].map((z) => [(x! * B_S) / 2, (y! * B_S) / 2, (z * B_BAND) / 2] as Vec3)),
+  ...[[1, 0], [0, 1], [-1, 0], [0, -1]].flatMap(([x, y]) => [-1, 1].map((z) => [x! * B_A, y! * B_A, (z * B_BAND) / 2] as Vec3)),
   [0, 0, B_BAND / 2 + B_TIP] as Vec3,
   [0, 0, -B_BAND / 2 - B_TIP] as Vec3,
 ].map((v) => qRotate(B_Q, v));

@@ -226,7 +226,7 @@ try {
       let big = 0; for (let i = Math.max(1, e - 20); i < C2.length; i++) big = Math.max(big, rotF(Fm(C2[i - 1]), Fm(C2[i])));
       const net = rotF(Fm(C2[Math.max(0, e - 1)]), Fm(row));
       const gIn = [row[12], row[13], row[14]]; const iw = inward(ci, gPrev, gIn);
-      const w5 = iw ? wrap(glassAngle(row, iw.w) - DIRS[finger][2]) : NaN;
+      const w5 = iw && DIRS[finger] ? wrap(glassAngle(row, iw.w) - DIRS[finger][2]) : NaN;
       const tilt = row[I.tilt];
       const R = await ev("window.__st.asmTilt ? window.__st.asmTilt.map : null");
       let sqN = row[I.sqT] ? [row[I.sq], row[I.sq + 1], row[I.sq + 2]] : null;
@@ -242,7 +242,7 @@ try {
     const navTo = async (ci, label) => {
       const T = C0[ci].c; let last = null;
       for (let it = 0; it < 14; it++) {
-        let q = await state(); if (q.ci === ci) return last;
+        let q = await state(); if (q.ci === ci) return last ?? "here";
         let best = null;
         for (const d of ["up", "right", "down", "left"]) {
           const d0 = len(sub(q.g, T)); await nudge(`${label}-try`, d, 6); const q1 = await state();
@@ -323,6 +323,12 @@ try {
   }
   const CA = await ev("window.__cam");
   report(CA, 1, CA.length, "SUMMARY (every recorded frame)");
+  if (process.env.SHOW) {
+    // the frames round the largest one-frame turn of the leg SHOW: turn°, face, tilt, a turn runs, the square target set, approach, latch, the camera off square on that face
+    let im = -1, m = -1; for (let i = 1; i < CA.length; i++) { if (CA[i][0] !== process.env.SHOW) continue; const t = rotF(Fm(CA[i - 1]), Fm(CA[i])); if (t > m) { m = t; im = i; } }
+    console.log(`   SHOW ${process.env.SHOW}: frame ${im} (${m.toFixed(1)}°) — frame / turn° / face / tilt / turning / square target / approach / latch / el / looking down°`);
+    for (let i = Math.max(1, im - 10); i <= Math.min(CA.length - 1, im + 10); i++) { const r = CA[i]; const fr = Fm(r); console.log(`     ${i} ${rotF(Fm(CA[i - 1]), fr).toFixed(2)} ${r[I.ci]} ${r[I.tilt]} ${r[I.turning]} ${r[I.sqT]} ${Number(r[I.ap]).toFixed(3)} ${r[I.auto]} ${Number(r[I.el]).toFixed(3)} ${deg(Math.asin(-fr.l[1])).toFixed(1)}`); }
+  }
   const err = await ev("window.__recErr ?? window.__stepErr ?? null");
   console.log(`   errors ${errors}, recErr ${err}`);
   ws.close();
