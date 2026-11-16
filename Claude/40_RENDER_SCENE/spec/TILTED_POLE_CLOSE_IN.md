@@ -296,7 +296,7 @@ tilt's close in. Later scenes with shafts, pins or cones lying on their side get
 | **C1** | W11: the entry's first frame measured and its cause named — before anything is built on it | the probe |
 | **C2** 🔧 | the pure part built 2026-11-16 (`c5538db`, an Opus agent, audited: `src/input/free_face.ts` — `freeFaces`, `freeEdges`, `entryHeading`, `nearestHeading`, `exitTurnRad`, `turnHolds`; equal to §7's reference on the 35 shapes; 53 vectors, **2013**; NOT wired) — free faces and their layouts in the atlas (pure, `src/input`); the entry by the edge; the exit's turn and the hold computed (W5, W6); the frame's map in the contour's box (W7) | vectors; the three scenes replay unchanged |
 | **C3** | THE WAY OUT BLENDED (D-T1, W4, §8) — measured first; the square camera's target on every face (W8) | the way-out run (§8); the close-in runs; the edge-noise run — ⛔ §8 is a PROPOSAL: the owner's word before it is built |
-| **C4** 🔧 | in build 2026-11-16 (an Opus agent) — the spit on the same rule (D-T2, W2, W3): on a spit's level face the heading carried, the finger read off the picture, nothing in the face's middle, the half turn at the far edge; N1 / N2 behind `freeFaceSquare` | `mid_check.mjs`: the arrival from a tip turns nothing; one drag across the face; the owner's records of 2026-11-14 replayed |
+| **C4** 🔧 | built 2026-11-16 (`0125445`, an Opus agent, + the auditor's `28df70c`; §9.1), audited, LOCAL — the spit on the same rule (D-T2, W2, W3): on a spit's level face the heading carried, the finger read off the picture, nothing in the face's middle, the half turn at the far edge; N1 / N2 behind `freeFaceSquare`; ⛔ the owner's look owed | `mid_check.mjs`, `across_check.mjs` ✅; the replays ✅ (§9.1); the owner's records of 2026-11-14 not replayed |
 | **C5** | One half-turn event (W1), its hold from any turn over 90° (D-T4, W6); the mouth as a concave edge (W9) | the ridge and far-edge runs |
 | then | step 2.5 of the charts (the old detectors and the switch deleted) | — |
 
@@ -378,6 +378,27 @@ The record of what the build is asked to do (its as-built entry follows the audi
 * **The gates**: `mid_check.mjs` (the arrival from a tip: no veer, no turn, no hold, the drag reaches the body's middle); `across_check.mjs` (one drag
   across the face: nothing at its middle, ONE half turn one band past the far edge, then the hold); the replays (off: unchanged; on: `Scene_1` and
   `Scene_0` unchanged, `Scene_0bis` another play, its view's turns no worse).
+
+### 9.1 As built (2026-11-16: `0125445`, an Opus agent; audited by Fable, one completion `28df70c` — §10's hold)
+
+`asmFree` (the free face's map, facet, contour place and the heading carried), `freeFaceFrame` / `freeFaceExit` in the wiring; pure, in
+`src/input/free_face.ts`: `contourFaceAt` (a map's facet found on the contour by its normal and plane), `freeEntryHeading`, `freeHeadingAngle` (the
+heading for which `offsetFrame`'s up IS the carried heading — solved: the simple "plus below, minus above" is exact only straight up or down),
+`exitHoldSign` (§10). The camera's spit branch, `zoneFinger` and `spitStep` each read `asmFree` first. **2038 vectors** (25 for this step; red on
+27 mutants). **The gates** (`Scene_0bis`, both switches on, far out):
+
+| the run (one drag, a straight finger) | before (the live build) | C4 |
+|---|---|---|
+| from the triangle under a tip, 2 mm off the middle, toward the body's middle | the gizmo veers to +79 mm across the middle; the side changes; 334° of view, 18.7° in a frame; the dy hold blocks the last 308 frames; the middle NOT reached | the gizmo stays 2 – 5 mm off the middle; no side change; one entry turn (2 frames, at the rim edge); 76° of view, 6.2° in a frame; no hold; **the middle reached**; the body's axis stays up the glass |
+| across the bottom face from the rectangle beside it | the half turn in the MIDDLE of the face | nothing at the middle; **the half turn one band past the far edge**, then the dy hold (the finger must reverse); 6.6° in a frame |
+| the same two with `freeFaceSquare` 1 (N1) | — | the same events; 5.0° and 9.2° in a frame |
+
+The replays: switches off — the three scenes identical bit for bit; on — `Scene_1` and `Scene_0` identical bit for bit (no zone), `Scene_0bis` another
+play from drag 5: the view's largest turn in a frame 11.9° → 14.1°, its roll's 21.0° → 18.9°, frames with a roll over 10° 46 → 27, none over 20°.
+⚠ Known, by design: with `freeFaceSquare` 0 the world's vertical points down the glass in the last part of the face before a far edge (§7: up to
+0.44 of its length); an entry costs about one frame of finger (the gizmo held while its near-zero turn runs); the long-side entry seen off the
+plane square to the axis leaves the axis up to ~3° off the glass's horizontal. ⚠ Not measured: N1's gizmo hold at the face's edges
+(`squareTurning`); the ridge at the top arrived at from a tip (still the old rules).
 
 ## 10. D-T4 — WHEN A TURN SETS THE DY HOLD (weighed by the builder at the owner's word, 2026-11-16)
 

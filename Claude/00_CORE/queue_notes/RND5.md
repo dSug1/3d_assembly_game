@@ -165,3 +165,9 @@ runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press
 * ✅ **D-T4 left to the builder** (the owner, 2026-11-16: *"i have no particular opinion. Weigh the pros and the cons and build what is best"*) →
   the study's §10: the dy hold when the turn is over 90° AND the finger's dy was the one pushing the gizmo out over that edge (never a dy that
   crossed nothing — the gap of the 120° rule closed without the 90° rule's wrongly blocked direction); nothing changes on a rectangle.
+* ✅ **C4 built and audited** (`0125445`, an Opus agent, + the auditor's completion `28df70c`: the hold by `exitHoldSign`, D-T4): a spit's level
+  faces on the carried heading — the study's §9.1. `Scene_0bis`, the arrival from a tip that reproduced the owner's comment: the gizmo no longer veers
+  (2 – 5 mm off the middle against +79 mm), the middle reached, no side change, no hold, 76° of view against 334°; across the face: nothing at its
+  middle, the half turn one band past the far edge, then the hold. **2038 vectors**; off: the three scenes bit for bit; on: `Scene_1`, `Scene_0` bit
+  for bit, `Scene_0bis` another play, no worse. A new slider `freeFaceSquare` (POLAR ZONES: 0 the calm kept / 1 the camera square to a spit's level
+  face) — the owner's to judge. LOCAL: not deployed. ⛔ Next, on the owner's word only: §8 (the way out blended), to measure first.
