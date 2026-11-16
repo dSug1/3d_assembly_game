@@ -110,6 +110,7 @@ tilt's state (`f<frame> <leg> ap el auto pend tilt zone n up | the verdict`). `W
 | `MODE=rim` (`RIM` m, 0.2475; `PX` 2) | `Scene_0bis` far out: a slow dx from the rectangle over its end (x = RIM) onto the tip and back; prints the view's turn a frame away from the edge (median) and within 45 mm of it (largest), and a strip of the crossing | `MODE=rim bash scripts/probes/tilt_batch.sh "4"` | 20 s |
 | `MODE=pole` | far out to the zenith, the approach in there until the automatic tilt is made, the approach out past its threshold | `MODE=pole bash scripts/probes/tilt_batch.sh "1"` | 80 s |
 | `SHOW=<leg>` (any mode) | the 23 frames round the largest view turn of that leg: turn°, roll°, gizmo mm, the turn's share k, paced, tilt id, pending, blend mm, the direction's ease°, the whole turn° | `SHOW=orbit-dy-up bash scripts/probes/tilt_batch.sh "1"` | — |
+| `WORSTF=n` (any mode; `TURNONLY=1`) | (2026-11-17, package A) a `TURNS` line — the turns, the frames with a transition's turn running, the largest one-frame turn while one runs and with none — then the n frames of the largest whole turn (only those in a turn with `TURNONLY`): the turn's share before / after, paced, tilt, pending, blend, ease, whole, hold, the square camera's angle to its target and its share | `WORSTF=4 TURNONLY=1 bash scripts/probes/tilt_batch.sh "1 0 4"` | — |
 | `SWITCH=1` (default mode) | the orbited piece switched under the tilt (the test scenes' piece switch): the state before, one frame and 61 frames after | — | — |
 
 **Good**: no EXCEPTION, `errors 0, recErr null`; the largest one-frame turn no worse than the baseline (the one speed of a timed turn is 6.0° a
@@ -146,6 +147,8 @@ reverse: "reached the rectangle beyond false" is expected), ≤ 6.6° a frame.
   and the gizmo's way on the glass against the finger's (sideways 60 – 120°, against > 120°: a finger axis swapped under the finger); the path every
   `EVERY` frames with the axis's angle on the glass and how far the view looks down. ~60 s a run.
   `SCRIPT=ridge_check.mjs MODE=tip TIP=1 bash scripts/probes/mid_batch.sh "idleOrbitOn=0|2|0|IN"` (the 4th field: close in).
+  `TRACE=n` (2026-11-17, package A): per drag, the frames of its first camera turn (3 before, n in all) — the view's turn, the turn's share and
+  angle, the ease, the square camera.
 
 ## 5. Gate (e) — `edge_noise.mjs`: a place wobbling across an edge, close in (2.4d)
 

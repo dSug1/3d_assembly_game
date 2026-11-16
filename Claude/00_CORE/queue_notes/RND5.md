@@ -363,3 +363,16 @@ runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press
   [`TILTED_POLE_TEST_SCENES.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_TEST_SCENES.md); the decisions →
   [`TILTED_POLE_CLOSE_IN.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) §17, and the rows they settle (§5 D-T5, §12.4, §13.4, §16.1).
   Next on `1.0.147-`: A, then R1. Not in this chain: step B; anything on 3, 4, 5; any push or deploy.
+
+## 2026-11-16 (night) — PACKAGE A, W11's option A, as briefed (an Opus agent; base `e79d820`)
+
+* One transition, one turn: the square camera at its target inside a running turn (a target changed mid-turn restarts the turn from the pose shown);
+  the direction's ease read after the frame's view is set, at every turn start; the shown share capped at `tiltRollDegS` in every path (the
+  finger-paced entry, the square camera's own share). The design →
+  [`TILTED_POLE_CLOSE_IN.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) §18. No new tunable.
+* **As built** (`fe06c2c`, one commit: `git revert fe06c2c` undoes A): every transition close in at ≤ 6° a frame on the three scenes (`Scene_1`'s
+  default 8.7 → 6.0, the ridge 8.5 → 6.0, the way out 6.0 → 5.2; `Scene_0bis`'s spit 8.9 → ≤ 6.4 at a turn's first frame); the top ridge from a tip
+  kept as the owner saw it (125°, the same way round, ≤ 6.6°). Two causes fixed in the rule while building (the camera's angle growing with the ease;
+  the spit's turn axis read before the view was set). 17 vectors, 13 mutants; **2075 vectors**. ⚠ `mid_check` not reproduced on A (its climb lands
+  elsewhere); a drag across a vertical edge while the square camera turns on its own still reaches 7.6 – 8.0° (no transition there — the owner's to
+  decide). ⛔ No device look. → [`TILTED_POLE_CLOSE_IN.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) §18.1.
