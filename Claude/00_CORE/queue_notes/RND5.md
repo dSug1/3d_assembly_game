@@ -227,3 +227,10 @@ runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press
   top that is not a rectangle, a shape the charts leave to RINGS, a step, an L-shaped top, a box turned 30°, a thin lying bar with pointed ends —
   each walked far out and close in, headless; the findings tied to W5, W7, W8, RINGS (W12) or new →
   [`TILTED_POLE_CLOSE_IN.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) §14 – §15. Nothing in the game changes.
+* **Measured** (the scenes and the probe on the throwaway branch, `a828c92`; `Scene_1` the control): ⛔ **F1** a step and an L are not on the face
+  map at all (the faces contour is the polytope of each direction's main plane: the step's map a box neither part is, the L's its bounding square;
+  the gizmo on no face for stretches, flickering at the L's pole, a hold with no turn); **F2** W5 confirmed on the box turned 30° (4 of 10 entries
+  off the entry edge, 36° and 90°); **F3** W8 confirmed (the square camera's target the face left, 70 – 90° off, on the pentagon's and the
+  bipyramid's caps); **F4** those caps a stall close in; **F5** RINGS not wired (the bipyramid's place stalls on one triangle 494 frames); **F6** the
+  way out from a cap with no tilt not paced (9.6°/frame, once 55.6° in one frame); **F7** timed turns of 11.8 – 18.9°/frame at a bottom's side
+  exit → [`TILTED_POLE_CLOSE_IN.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) §15, each row with its command. Nothing fixed.
