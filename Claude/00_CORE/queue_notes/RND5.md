@@ -306,3 +306,39 @@ runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press
   face-map vector and probe builds on (25 test files); the game no longer reaches it. `turnAngles` (the first frame of a zone, no place yet).
   `tiltBox` (`frameBox`'s fallback). `edgeShare` (the tilted facet's shares). The dead edge blend (the inventory's F.1, `ORBIT_CHARTS.md` §4.4): not
   on a switch.
+
+## 2026-11-16 — step 2.5 AS BUILT (an Opus agent; base `0e758a7`, the code of `d917d04`; the code commit `ef5e899`)
+
+* **The list above, checked against the code**: right, and completed — also gone: `asmZoneFacetsF` (`zoneFacetOf`'s memo: `scene_state.ts`, its reset
+  in `scene.ts`, `orbit_state_reset.test.ts` 58 → 57 fields); `nextTiltHeading`, `exitNormal`'s read in the camera, `headingFrom` (the roll back's
+  target); `matMul` and `headingTurn` (only `swingDir` used them); `tiltFrame`'s `dtMs` (read only by the swing and the roll back); `blendCrossed`'s
+  `finishing` (the argument goes, the pure function with it); `PoleCrossingFacts.chartLayout`; `seamOutPaced`'s `chartLayout`; `onTiltedFacet`'s
+  default `tolM` (the tie, `TILT_TIE_M`); `ZoneOpts.valenceMin` / `.facetMinRatio` / `.snapDeg` (and `DEFAULT_ZONE_OPTS`'); in `polar_zone.ts` with
+  `polarZones` the helpers only it read (`contourCorners`, `facetSize`, `facetArea`, `realFacets`, `sharedEdge`, `t2Fails`, `snapToWorldAxis`,
+  `zoneOrientation`, `rimCentroid`, `LEVEL_DEG`, `ALIKE_DEG`); `CalmKnobs.smooth` / `.ownRun`, `calmRules`, `wholeEnds`, `calmTarget`'s `box` (every
+  share by `edgeShareSmooth`, every side facet on its own run); the `#C…` part of both face maps' cache keys; `chartOpts` (now one constant,
+  `CHART_MAP_OPTS`). `play_recorder.ts`'s `tl` is `[id]` (the roll back's `k`, always 0, gone). ⚠ Kept, not on a switch: `turnAngles` (a zone's first
+  frame, a tilt's exit with no place), `tiltBox` (`frameBox`'s fallback), `edgeShare` (`tiltCalmWholeHV`, `poleEdgeWhole`), `frameMix` (`poseAboutPiece`),
+  `swingEase` (the relocation's), `CalmState.poleFade` (a cap's reading keeps the fade), `buildFaceMap`'s "built" defaults (a library default).
+* **What went, by area** (`git diff --stat` of the code commit): `assembly_wiring.ts` (the calm's old paths, the switch's guards, the old tilt's swing,
+  roll back, exits and hold, the zones' detectors, the spit's old turn), `orbit_tilt.ts`, `orbit_calm.ts`, `polar_zone.ts` (286 lines), `face_map.ts`
+  (`holdsPole`), `gestureConfig.ts` (5 tunables, their defaults and validation), `tuning_menu.ts` (5 sliders: 122 → 117), `scene_state.ts` (11 fields of
+  `asmTilt`, `asmZoneFacetsF`), `pole_crossing.ts`, `seam_turn.ts`, `play_recorder.ts`.
+* **The vectors**: 32 deleted, 2 new, the rest of the 19 files' pins kept on their default half (names: the step's report; by file — `orbit_calm` 9,
+  `orbit_tilt` 7, `polar_zone` 7, `chart_calm_wiring` 3, `orbit_charts_switch` 3, `orbit_any_shape` 2, `orbit_charts_face_band` 1). ⭐ NEW
+  (`orbit_charts_switch.test.ts`): no identifier `chartLayout` / `chartCalm` under `src`, comments stripped — RED on restoring one (the tunable in
+  `gestureConfig.ts`; a guard in the wiring); a URL that still carries either is REPORTED and never applied (`parseConfigOverrides`).
+* **The gates** (one run at a time, the probes' guard on): the default replays of `Scene_1`, `Scene_0`, `Scene_0bis` recorded at the base and after —
+  IDENTICAL in all 2794 frames, every field (`replay_cmp`: largest difference 0, `1e-9: never`); every default gate of `ORBIT_GATES.md` recorded at the
+  base and after (`tilt_check` default, `out` ×4, `ridge` ×3, `press` ×3, `rim`, `pole` ×3; `mid`, `across`; `edge_noise` top ×3, side ×2): every output line for line EQUAL to the base's (the URL and the boot line aside: they named the switch) — and equal to §6 of the runbook (the
+  baseline at `276a6c2`), row for row. No process and no `replay_probe_profile_*` left after any batch.
+  `npm run verify`: typecheck clean, **164 test files, 2058 vectors** (2088 − 32 + 2), ~2 min.
+* **A URL with `chartLayout=0&chartCalm=0`**: measured on the three scenes (headless, `page_eval.mjs`): the scene boots and plays the default game; the config has no such key;
+  the HUD's tuning lines show `⛔ chartLayout: not an overridable tunable` and `⛔ chartCalm: not an overridable tunable`; no error panel.
+* **The probes' guard** (`scripts/probes/probe_guard.mjs`, the brief's fix): see `ORBIT_GATES.md` §0 — the in-probe watchdog was a timer that cannot fire
+  while the probe is blocked in a synchronous call (a pipe write to a dead reader, a `spawnSync`); a Windows tree kill of the tool's command does not reach
+  Git Bash's children. Reproduced (a tree kill of a running `tilt_batch.sh 1`: the batch's shell, the server, the probe and its Chrome survived); with the
+  guard everything ended by itself at the deadline, no process and no profile left. ⚠ Until the deadline (8.5 min) the stuck probe stays — the guard
+  cannot tell a stuck probe from a slow one before it.
+* ⛔ Not done here: step 3 (the owner holds it); `ORBIT_STATE_INVENTORY.md` still names the deleted `asmTilt` fields and `asmZoneFacetsF` (the
+  inventory of step 2.1, a record — to update at step 3's docs); `scripts/probes/calm_study.ts` (step 0's study) no longer runs on this tree (noted in it).
