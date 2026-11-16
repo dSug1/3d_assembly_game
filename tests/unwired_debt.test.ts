@@ -96,6 +96,13 @@ const PENDING: Record<string, string> = {
   buildRingChart: "ORBIT_CHARTS step 2.1 — the rings chart of the world face map, built at each seat from the assignment's contour; read by `ring_chart.test.ts`",
   ringTarget: "ORBIT_CHARTS step 2.1 — the rings place for the orbit's angles (the gizmo, both sections) on the faces the assignment homes on the rings; read by `ring_chart.test.ts`",
   ringAngles: "ORBIT_CHARTS step 2.1 — the rings angles of the gizmo's place, at a seam onto the rings chart; read by `ring_chart.test.ts`",
+  // ⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §3, step C2 — the pure part) the geometry of a FREE face, built and vectored ahead of its wiring.
+  freeFaces: "TILTED_POLE_CLOSE_IN step C2/C3 — the free faces under the holding up, at each seat with the atlas; read by `free_face.test.ts`",
+  freeEdges: "TILTED_POLE_CLOSE_IN step C2/C3 — a free face's layouts, one per side; read by `free_face.test.ts`",
+  entryHeading: "TILTED_POLE_CLOSE_IN step C2/C3 — the layout taken at an entry over an edge; read by `free_face.test.ts`",
+  nearestHeading: "TILTED_POLE_CLOSE_IN step C2/C3 — the layout at an entry with no edge (O4); read by `free_face.test.ts`",
+  exitTurnRad: "TILTED_POLE_CLOSE_IN step C2/C3 — the camera's turn at an exit; read by `free_face.test.ts`",
+  turnHolds: "TILTED_POLE_CLOSE_IN step C2/C3 — whether an exit's turn sets the dy hold (the threshold the owner's); read by `free_face.test.ts`",
   // ⭐ (2026-11-04, Step 4c-bis) the carrier's by-distance fallback (`loopStep`, `greenPace`, `greenFaces`) DELETED with the carrier — the face map
   // (`input/face_map.ts`); it stands at `da020af` (TILTED_ORBIT_REBUILD_SCOPE.md §13, §15).
   // ⭐ prototype (green box), 2026-10-02: the green piece is Piece17's pyramid now (`bodyNamed`, `greenPyramidSizeM`).
