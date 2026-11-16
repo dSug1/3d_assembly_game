@@ -14,7 +14,7 @@ function. A part picked (`MB:375 pick`) clears four fields only (`MB:398 – 401
 
 ## A. The `asm…` fields (and the three `pieceHold…` fields declared in the same block, `SS:329 – 470`)
 
-53 fields: 50 named `asm…`, plus `pieceHold`, `pieceHoldPrev`, `pieceHoldCount`.
+53 fields: 50 named `asm…`, plus `pieceHold`, `pieceHoldPrev`, `pieceHoldCount`. ⭐ Added since this inventory (not in the table): `asmAtlas`, `asmDirEase` (step 2.4, 2026-11-15); `asmFaceBand` (step 2.4d, 2026-11-16 — the banded facet under the gizmo and the map it indexes: HISTORY, the map's frame, `null` with `chartLayout` 0, cleared with `asmShown` at every change of frame).
 
 | field | decl | holds | written (fn, line) | read by | reset besides init | kind | space |
 |---|---|---|---|---|---|---|---|

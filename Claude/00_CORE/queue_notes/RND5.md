@@ -1,7 +1,7 @@
 # RND5 — The orbit on charts
 
-> **STATUS** · ✅ spec APPROVED 2026-11-15; ✅ steps 1.1 – 2.1; 🔧 2.2 and 2.3 built and DEPLOYED (main `157974f`); 🔧 **step 2.4 built 2026-11-15 night, LOCAL ONLY** (`1.0.146-Orbit-charts`, not pushed, not deployed): P (the press's action removed), 2.4a (the atlas decides where a frame changes), 2.4b (a ridge crossed by the one transition, close in), 2.4c (one state at every change of frame), 2.4e (the calm on one reference) — each audited, **1942 vectors**; ⛔ 2.4d (the trigger's band) NOT built: the owner's hysteresis session; ⛔ the owner's look owed on all of it; ⛔ 2.5 (the old detectors deleted) after that look → the spec's §12, and "DECISIONS TO REVIEW" below
-> **LAST VERIFIED** · 2026-11-15
+> **STATUS** · ✅ spec APPROVED 2026-11-15; ✅ steps 1.1 – 2.1; 🔧 2.2, 2.3 and **step 2.4 (P, 2.4a – 2.4c, 2.4e) built, DEPLOYED** (main `902ae88`), the owner's look 2026-11-16: *"looks on pc and mobile look good. OK with two comments"*; 🔧 **2.4d (the band against noise) built 2026-11-16, LOCAL** (`42a408a`, **1960 vectors**) — not deployed; ⭐ **the tilted-pole orbit's STUDY written, PROPOSED** (`TILTED_POLE_CLOSE_IN.md`: the owner's decisions D-T1 – D-T7 before any build); ⛔ 2.5 (the old detectors deleted) after it → the spec's §12.3
+> **LAST VERIFIED** · 2026-11-16
 
 ## 2026-11-15 — queued (the owner: *"I want to implement your systematic approach"*)
 
@@ -101,7 +101,7 @@
 
 | # | the decision | why | what undoes it |
 |---|---|---|---|
-| 1 | **2.4d (the trigger's band, the hysteresis) NOT built** | the owner: *"Tomorrow, we will work on the tilted-pole orbit at close in and the hysteresis"*; put to the owner before sleep: *"I agree. Proceed"* | one agent run; its design is the spec's §12 row 2.4d |
+| 1 | **2.4d (the trigger's band, the hysteresis) NOT built** | the owner: *"Tomorrow, we will work on the tilted-pole orbit at close in and the hysteresis"*; put to the owner before sleep: *"I agree. Proceed"* | ✅ built 2026-11-16, `42a408a` (the spec's §12.1) |
 | 2 | **All of step 2.4 sits under `chartLayout` 1** (2.4e under `chartCalm` too) — no third switch; "the layout with the old detectors" (what `157974f` shows with the switch on) is no longer reachable | fewer states to compare on a device: off = the game as it was (minus the press), on = the charts | a second switch around the 2.4a – 2.4c branches |
 | 3 | **Far out a pole stays the orbit's limit** (the spec's D-C6, unchanged): with the press gone, a top face, `Scene_0`'s ridge and a cap's centre are crossed CLOSE IN only (within `tiltAutoM`, 0.6 m); far out the dy stops there and the way round is a dx | D-C6 was approved with the charts; the owner removed the press knowing the tilt becomes close in only | `poleCrossingDue`'s `closeIn` condition (2.4b) for a ridge; a cap far out needs the tilt far out — the press's rule or another trigger |
 | 4 | **A new gesture pushing the same way over a ridge crosses it again** | the owner's rule of 2026-11-14 (the dy hold ends with the gesture that crossed), kept as it is | a hold that outlives the gesture — the hysteresis session's |
@@ -112,7 +112,7 @@
 | 9 | **2.4c, my fix: a transition's clock runs over the SUM of the camera's turn and the piece's direction's gap** | the two angles are unrelated; on the camera's alone the gap's rest landed in one frame (9.1°), on the longer of the two they added (8.9°) | `seamWholeRad` |
 | 10 | **2.4c, by design: leaving a tilt by distance with the gizmo on the FAR half of a cap turns the camera round to that side** | the camera is derived from the place; before, it stayed and the gizmo's angles disagreed — the owner's report 4 (the gizmo on the face opposite the camera) | none without the two states again |
 | 11 | **2.4e: a side face's vertical calm reads its OWN run, and is whole by position at both its own edges** — the bounce's rule (2026-11-04: the box's height for a vertical face) replaced under `chartCalm` 1 | one reference for every face (§11 3.); the owner's report 1 measured 8.1° → 4.9° a frame; ⚠ cost 1: walls of unequal extents side by side (an L-shaped tower) ease the view's pitch on a dx — no scene has them; ⚠ cost 2: `Scene_1`'s and `Scene_0`'s view changes by up to ~4° with `chartCalm` 1 (the old reference was the parts' box, 83 mm taller than the cube's side faces) | `chartCalm` 0; or `CalmKnobs.ownRun` / `wholeEnds` alone |
-| 12 | **Nothing pushed, nothing deployed** — live is still `157974f` (step 2.3); the branch's 15 commits since `6d5f2b7` are local | a push and a deploy are the owner's word each time | *"deploy"* — live about 4 minutes later; the default (both switches off) then differs from live by ONE thing: a press no longer tilts |
+| 12 | **Nothing pushed, nothing deployed** — live is still `157974f` (step 2.3); the branch's 15 commits since `6d5f2b7` are local → ✅ DEPLOYED 2026-11-16 on the owner's word (main `902ae88`; the first try `7e49ae7` failed the gate: a doc link's label in a docs commit not re-verified — fixed `67ccac3`) | a push and a deploy are the owner's word each time | *"deploy"* — live about 4 minutes later; the default (both switches off) then differs from live by ONE thing: a press no longer tilts |
 | 13 | **Step 2.5 (the old detectors and the switch deleted) not started** | it follows the owner's look on the switch-on behaviour | — |
 | 14 | **The shelved fix in `git stash` left in place** | superseded by 2.4e (it was the per-face form of the same idea), but dropping a stash is not mine to do unasked | `git stash drop` in the worktree, on the owner's word |
 | 15 | **`CLAUDE.md`'s status lines and `QUEUE.md`'s row not touched** | only when asked; `QUEUE.md` is 5 bytes under its budget | — |
@@ -124,3 +124,22 @@ leans 10° has its top built as a side under a virtual pole: 2.4b would cross fr
 runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press`, `MODE=rim`, the default close-in run) — to move into
 `scripts/probes/` when the walks' rules are written; (d) the replay's last-digit noise starts at frame 3 on any scene (≤ 3 × 10⁻⁹ m) — the
 "unexplained difference at frame 3" noted on the shelved fix was that noise.
+
+## 2026-11-16 — the owner's look, the band, the tilted pole's study
+
+* **The owner's look** on main `902ae88` (P, 2.4a – 2.4c, 2.4e): *"looks on pc and mobile look good. OK with two comments"* — 1. the hysteresis: *"don't
+  forget as well faces where the camera tilts when the gizmo crosses the middle (for example in scene 0bis, when coming from a triangle to the bottom
+  face around the middle of the bottom face, noise can send the gizmo on one half or the other half of the bottom face and the camera keeps
+  tilting)"*; 2. the tilted pole close in: *"do the same as what we have done so far"* (rules, obstacles and fallbacks, a systematic design from what
+  Blender or others solved, an audit of the scripts and code).
+* ✅ **2.4d built and audited** (`42a408a`, an Opus agent): the spec's §12.1 — the tilt made / left 21 → 0 and the view 1 188° → 0° for a place
+  wobbling ±2.5 mm across the cube's top edge; the square camera's target 20 → 0 flips across a vertical edge. LOCAL: a deploy is the owner's word.
+* ⭐ **Comment 1 measured, NOT patched**: with a straight finger and no noise the gizmo veers across the middle of `Scene_0bis`'s bottom face, the
+  half turn runs and the dy hold blocks the rest of the drag (3 of 3 runs, the game before the charts too). Cause: the spit swaps the finger's axes
+  and turns its heading in the middle of that face — a band cannot fix it (the study's §4.1).
+* ⭐ **The study**: `Claude/40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md` — 12 rules from the owner's words; the one obstacle and 13 cases (overcome,
+  or a fallback); the design (carry the heading across a FREE face, anchor it to gravity on a BOUND one, pay the difference as one turn at the
+  edge — the ViewCube's published rule, a frame field's bookkeeping); the audit (12 weaknesses, W1 – W12); seven decisions for the owner (D-T1 –
+  D-T7); the build's steps C0 – C5. ⛔ PROPOSED — nothing of it is built.
+* **The probes written for this** (the session's scratchpad, to move into `scripts/probes/` with the walks' rules): `mid_check.mjs` (the arrival on
+  `Scene_0bis`'s bottom face from a tip), `edge_noise.mjs` (a place wobbling across an edge, close in).
