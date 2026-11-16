@@ -189,6 +189,15 @@ export function farFeet(ctx: Ctx, reading: "T" | "P", pc: Piece, grid: [number, 
     return { foot: mul(ft, 1 / M), n: f.n as V, band: tg.band };
   });
 }
+/**
+ * THE FAR FOOT ALONG ONE ASSEMBLY (the critic's blocker B1, 2026-11-16): `farFeet` reads the foot with `u` = the facet's NORMAL, where a depth step under
+ * the gizmo cannot move the foot (zero by construction). The game calls `shellAnchor` with `u` = the orbit's direction (`dirAt`, assembly_wiring.ts:686),
+ * which the calm leaves oblique toward a face's edges. Here: the foot (mm) of a gizmo `gMm` (mm) along `u` (unit), d = 0.3 m — the same `shellAnchor`.
+ */
+export function farFootAlong(ctx: Ctx, gMm: V, u: V): V {
+  if (ctx.box === null) return gMm;
+  return mul(shellAnchor(mul(gMm, M), u, 0.3, SHELL_OFFSET_MM * M, ctx.box) as V, 1 / M);
+}
 export const FAR_GRID: [number, number][] = [];
 for (let y = 0; y < 360; y += 15) for (const p of [-80, -60, -40, -20, 0, 20, 40, 60, 80]) FAR_GRID.push([(y * Math.PI) / 180, (p * Math.PI) / 180]);
 export const FAR_GRID_SMALL: [number, number][] = [];

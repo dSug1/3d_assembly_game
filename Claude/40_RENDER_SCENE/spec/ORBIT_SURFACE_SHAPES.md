@@ -15,6 +15,12 @@
 >
 > Moved here from the specification at this step, so that it stays under its line budget: its §3.1b (the classes C25 – C47, unchanged, §7) and its
 > §3.2 sketches (§8). Their numbers are kept.
+>
+> ⭐ **Corrected after a critic's review (2026-11-16, the finisher):** (1) the far regime had been read with the shell's direction along the facet's
+> normal only, where a depth step cannot move the foot — the study now also reads it along ONE travel with the direction oblique (F17: the far
+> foot bumps by the step's depth × tan θ); P1 is restated in the owner's words with a mechanism (§6); (2) the goal check read the landing on a map
+> that still held the goal part — fixed (the map of the placed set without it) and rerun: L19's lid lands on its seat today too, its "tray's
+> floor" evidence withdrawn; the other goals unchanged.
 
 ---
 
@@ -26,28 +32,34 @@ runner), `run_library.ts`, `run_sweep.ts`, `report.ts` → `results.txt` (readab
 (1 MB) and `sweep.json` (766 KB) are regenerated and git-ignored.
 
 ```bash
-npx vite-node scripts/probes/surface_study/run_library.ts   # 63 shapes:   ≈ 23 – 25 s (23.3 s measured 2026-11-16, 28 s wall with start-up)
-npx vite-node scripts/probes/surface_study/run_sweep.ts     # 1596 cells:  ≈ 40 s (39.7 s)
-npx vite-node scripts/probes/surface_study/report.ts        # the report:  ≈ 3 s (3.4 s wall)
+npx vite-node scripts/probes/surface_study/run_library.ts   # 63 shapes:   ≈ 23 – 25 s (23.1 s measured 2026-11-16 by the finisher, 28 s wall)
+npx vite-node scripts/probes/surface_study/run_sweep.ts     # 1596 cells:  ≈ 40 s (41.9 s, 46 s wall)
+npx vite-node scripts/probes/surface_study/report.ts        # the report:  ≈ 4 s wall
 ```
 
 ⛔ The load rule (the owner: *"Make sure you manage the load on my computer"*): ONE process at a time, one core, each under a minute; no browser, no
-Blender, no `npm run verify`. Rerun by the consolidator once (library + report): `results.txt` and `results.json` came back identical to `903e50d`.
+Blender, no `npm run verify`. Rerun by the consolidator once (library + report): identical to `903e50d`. Rerun by the finisher once each (library,
+sweep, report) after the two fixes: every earlier number identical but L19's goal row (today 20 → 120); the far bump columns new.
 
 **What each reading is.** **TODAY (T)** = the game's own pure functions on this branch: `buildFaceMap` as shipped (layout "chart", scale "normals",
 merge 20°, share ¼), `stackDepthAt` (with `voidOpening`, `pieceEnters`), `castPoint`, `mapTarget` (far, d = 0.3 m), `shellBox` / `shellAnchor`,
-`footprintSupport` / `supportTop` / `levelRaise` (close in), `mouthHold`. Emulated, because engine-bound: `rawGizmo`'s D3 cast (an exact ray cast
+`footprintSupport` / `supportTop` / `levelRaise` (close in), `mouthHold` (⚠ emulated input: a dy taken as a travel along the facet's b; the game's
+hold reads the orbit's pitch and yaw deltas, and on the cap pitch is not b — the hold's millimetres on the cap are the emulation's). Emulated, because engine-bound: `rawGizmo`'s D3 cast (an exact ray cast
 for `modelCast`; `MAP_OUT` 50 mm; a bridge's hit counts 0.5 mm in front) and `heldFoot` (the two smallest sizes of the piece's own box).
 **PROPOSED (P)** = the principles as written: P2 the first contact of the held footprint (axis-aligned in the facet's t / b) along −n — from outside
 far, from the piece close in (a part above its bottom + 0.5 mm a wall, P5) — "nothing to land on" marked; P1 the same `shellAnchor` on P2's gizmo;
-S22 by a 4 mm voxel flood; S21 by withdrawal along the entry. **Left out**: the edge blend (dead), the depth glide and every ease (the shown
+S22 by a 4 mm voxel flood; S21 by withdrawal along the entry, the landing read on the map WITHOUT the goal part. **Far, two measures**: between two
+assemblies (the shape against its bare twin on a grid of angles, the shell's direction along the facet's normal: F7); along ONE travel (the foot of
+each 1 mm place with the direction tilted 20° and 45° off the normal toward the travel — the calm's oblique direction near a face's edge; F17). **Left out**: the edge blend (dead), the depth glide and every ease (the shown
 gizmo, not its target), the solver's slide, the ring's hold, the automatic tilt, the mouth's hand-over. **Close in** = the piece at contact
 (d = 0), a travel stopped at its first wall (the gizmo is read at the solved angles). **Pieces**: A 41.3 × 45 (48 tall, the green frustum's
 footprint), B 80 × 80 (40 tall), the bar 20 × 100 (20 tall), as held and turned. **Parts**: boxes and convex prisms only, on a 480 mm block.
 
-**Not covered** (the study builder's list): inclined held pieces; side columns other than the front; tilted frames and polar-zone switches (P6 not
-studied); curved parts (C15, C38); defective input (C47); ghosts and the plunge; P3's place-functions (only today's hold was measured); the sweep
-with piece A only.
+**Not covered** (the study builder's list, completed by the critic): inclined held pieces; facets other than the top, the front and a few bottoms;
+tilted frames and polar-zone switches (P6 not studied); curved parts (C15, C38); fans and apexes (C16), the floor (C20), ties (C21), long flat shapes
+(C22); defective input (C47); a narrowing profile in the sweep (library only); the relocation at a seat (C46); ghosts and the plunge; P3's
+place-functions (only today's hold was measured); P5 only in a contact model (no solver slide); the far bump through `mapTarget`'s angles with the
+calm itself (a fixed tilt stands for it); the sweep with piece A only.
 
 ---
 
@@ -142,8 +154,8 @@ L10 two islands 30 apart (narrower than A)             L12 a step 60 (half the t
   along the gap HELD for up to 479 mm (today); P2: closed by the rims, no mouth
 
 L17 a slab 100 mm proud over the front                 L19 the tray (L18), then its lid (two stages)
-  ##############################   <- the slab          T on the lid lands on the TRAY'S FLOOR (y 20): the lid judged
-            ####################      grows the box    20 x 300 (its two smallest sizes); P2 as held: 120, its seat
+  ##############################   <- the slab          read on the tray alone, the lid (300 wide) does not enter the
+            ####################      grows the box    260 mm opening: T and P2 both land it on its seat (120)
   ..........####################      by 100: the far   ###################   <- the lid: the cavity sealed —
   ..........####################      foot moves 100    #.................#      2397 cm² of inner faces counted
             (its underside: from the bottom cap only)   ###################      as surface today (S22: none)
@@ -191,122 +203,124 @@ feature's centre for the sensitivity across the width ruler.
 
 ### 3.1 The library, shape × rule (today → proposed)
 
-**Legend.** *landing* (far, the gizmo's target with the piece centred on it): `✓` holds · `✗n` the piece enters a part, up to n mm · `○` over
+**Legend.** *landing* (far, the gizmo's target with the piece centred on it): `✓` holds · `✗n` the piece would enter a part by at least n mm (n capped at the piece's own height: 48 for A, 40 for B — not a wall's height) · `○` over
 nothing, unmarked (today) · `◐` "nothing to land on", marked (P2) — for pieces A, B (and the bar on L53). *jumps*: depth steps 0.5 – 5 mm with no
 event, T / P. *path*: places whose target depends on the way in (all of them the mouth's hold), T / P. *close in*: piece A in contact — reach %
 · travels ended at a wall (P5) · drops ≥ 5 mm, T / P. *far*: the far foot's move against the bare block (mm), T = P on every shape, and what moved
-it (the box, the contour). *S22*: the exposed area today / reachable from outside (cm²), shown where they differ. *cover*: the share of the
+it (the box, the contour) — between two assemblies. *bump*: along ONE travel, piece A, the far foot's largest jump beyond the place's 1 mm step with
+the direction 20° / 45° off the normal (mm), T · P. *S22*: the exposed area today / reachable from outside (cm²), shown where they differ. *cover*: the share of the
 reachable area that is a place, T / P. *goal*: the withdrawal along the entry, and the landing today / P2 against the seat (y, mm). `·` = nothing.
 
-| # | landing today | landing P2 | jumps | path | close in (A) T / P | far | S22 | cover | goal |
-|---|---|---|---|---|---|---|---|---|---|
-| **L01** | A○ B○ | A◐ B◐ | · | · | 100·0·0 / 100·0·0 | · | · | 90 / 90 | · |
-| **L02** | A✓ B✓ | A✓ B✓ | · | · | 100·0·0 / 100·0·0 | · | · | 97 / 97 | · |
-| **L03** | A✗40 B✓ | A✓ B✓ | · | · | 54·4·4 / 54·4·4 | · | · | 99 / 99 | clear; 200 / 200 vs 200 |
-| **L04** | A✓ B✓ | A✓ B✓ | · | · | 100·0·0 / 100·0·0 | · | · | 99 / 99 | · |
-| **L05** | A✗30 B✗30 | A✓ B✓ | · | · | 52·4·2 / 77·3·3 | · | · | 98 / 98 | clear; -100 / -100 vs 120 |
-| **L06** | A✗30 B✗30 | A✓ B✓ | · | · | 77·2·2 / 77·2·2 | · | · | 97 / 97 | · |
-| **L07** | A○ B✓ | A✓ B✓ | · | · | 100·0·0 / 84·1·1 | · | · | 98 / 98 | · |
-| **L08** | A✓ B✓ | A✓ B✓ | · | · | 100·0·0 / 100·0·0 | · | · | 99 / 99 | · |
-| **L09** | A✓ B✓ | A✓ B✓ | · | · | 100·0·0 / 100·0·0 | · | 11520 / 9216 | 100 / 100 | · |
-| **L10** | A✓ B✓ | A✓ B✓ | · | 844 / 0 | 100·0·0 / 100·0·0 | · | · | 79 / 79 | · |
-| **L11** | A○ B✓ | A◐ B✓ | · | 844 / 0 | 100·0·0 / 100·0·0 | · | · | 78 / 78 | · |
-| **L12** | A✗48 B✗40 | A✓ B✓ | · | · | 86·2·2 / 86·2·2 | · | · | 100 / 100 | · |
-| **L13** | A✗48 B✗40 | A✓ B✓ | · | · | 41·6·8 / 81·2·8 | · | · | 100 / 100 | · |
-| **L14** | A✗48 B✗40 | A◐ B◐ | · | · | 98·1·1 / 98·1·1 | · | · | 100 / 100 | · |
-| **L15** | A✗48 B✓ | A✓ B✓ | · | · | 56·6·6 / 56·6·6 | · | · | 99 / 99 | · |
-| **L16** | A✗48 B✗40 | A✓ B✓ | · | · | 72·4·4 / 72·4·4 | · | · | 100 / 100 | · |
-| **L17** | A✗48 B✗40 | A✓ B✓ | · | · | 52·7·1 / 69·5·3 | 100 (box 100) | · | 91 / 91 | · |
-| **L18** | A✗48 B✗40 | A✓ B✓ | · | · | 88·4·4 / 88·4·4 | · | · | 75 / 74 | clear; 20 / 20 vs 20 |
-| **L19** | A✓ B✓ | A✓ B✓ | · | · | 100·0·0 / 100·0·0 | · | 5650 / 3252 | 100 / 100 | clear; 20 / 120 vs 120 |
-| **L20** | A✗48 B✗40 | A✓ B✓ | · | · | 25·4·0 / 25·4·0 | 70 (box 70) | 9769 / 9462 | 97 / 97 | · |
-| **L21** | A✗48 B✗40 | A✓ B✓ | · | · | 12·4·0 / 12·4·0 | 100 (box 100) | · | 92 / 92 | · |
-| **L22** | A✗48 B✗40 | A✓ B✓ | · | · | 56·2·4 / 28·4·0 | 100 (box 100) | · | 91 / 90 | · |
-| **L23** | A✗48 B✗40 | A◐ B◐ | · | · | 78·2·12 / 78·2·5 | · | · | 91 / 90 | · |
-| **L24** | A○ B○ | A◐ B◐ | · | 378 / 0 | 100·0·0 / 100·0·0 | 189 (contour 200) | · | 78 / 78 | · |
-| **L25** | A✗48 B✓ | A✓ B✓ | · | · | 65·6·8 / 65·6·8 | · | · | 93 / 92 | · |
-| **L26** | A✗48 B✗40 | A✓ B✓ | · | · | 100·0·0 / 66·4·2 | · | · | 97 / 96 | · |
-| **L27** | A○ B✓ | A✓ B✓ | · | 482 / 0 | 100·0·0 / 75·2·0 | · | · | 96 / 96 | · |
-| **L28** | A✗45 B✗40 | A✓ B✓ | · | · | 58·4·4 / 58·4·4 | · | · | 98 / 98 | · |
-| **L29** | A✓ B✓ | A✓ B✓ | · | 46 / 0 | 100·0·0 / 100·0·0 | · | · | 95 / 95 | · |
-| **L30** | A✗39 B✗39 | A✓ B✓ | · | · | 100·0·0 / 68·3·3 | · | · | 99 / 99 | · |
-| **L31** | A○ B✓ | A✓ B✓ | · | · | 100·0·0 / 68·3·38 | · | · | 98 / 98 | · |
-| **L32** | A✗40 B✗40 | A✓ B✓ | · | · | 34·4·4 / 34·4·4 | · | · | 97 / 97 | · |
-| **L33** | A✗48 B✗40 | A✓ B✓ | · | · | 25·4·0 / 25·4·0 | 60 (box 60) | · | 97 / 97 | · |
-| **L34** | A✗20 B✗20 | A✓ B✓ | · | · | 21·4·0 / 21·4·0 | 20 (box 20) | · | 99 / 99 | · |
-| **L35** | A✗40 B✗40 | A✓ B✓ | · | · | 37·4·0 / 37·4·0 | 40 (box 40) | · | 100 / 100 | · |
-| **L36** | A✗15 B✗15 | A✓ B✓ | · | · | 69·2·0 / 69·2·0 | 15 (box 15) | · | 99 / 98 | · |
-| **L37** | A✗30 B✗30 | A✓ B✓ | · | · | 27·4·0 / 27·4·0 | 40 (box 40) | · | 99 / 99 | · |
-| **L38** | A✓ B✓ | A✓ B✓ | · | · | 100·0·0 / 100·0·0 | · | · | 59 / 59 | · |
-| **L39** | A✗8 B✗8 | A✓ B✓ | · | · | 17·4·0 / 17·4·0 | 8 (box 8) | · | 100 / 98 | · |
-| **L40** | A✗20 B✗20 | A✓ B✓ | · | · | 87·4·4 / 87·4·4 | · | · | 97 / 97 | · |
-| **L41** | A✗30 B✗30 | A✓ B✓ | · | · | 91·1·1 / 79·2·2 | · | · | 98 / 100 | · |
-| **L42** | A✗0 B✗0 | A✓ B✓ | · | · | 100·0·0 / 100·0·0 | · | · | 100 / 100 | · |
-| **L43** | A✗1 B✗1 | A✓ B✓ | 2 / 2 | · | 86·1·0 / 86·1·0 | 1 (box 1) | · | 100 / 100 | · |
-| **L44** | A✗6 B✗6 | A✓ B✓ | · | · | 86·1·1 / 86·1·1 | 6 (box 6) | · | 100 / 100 | · |
-| **L45** | A✗3 B✗6 | A✓ B✓ | · | · | 50·2·0 / 100·0·0 | 34 (box 34) | · | 78 / 78 | · |
-| **L46** | A✗48 B✗40 | A◐ B◐ | · | · | 84·2·4 / 74·3·3 | 85 (box 85) | · | 94 / 94 | · |
-| **L47** | A✗48 B✗40 | A✓ B✓ | · | · | 70·2·0 / 70·2·0 | 80 (box 80) | · | 97 / 97 | · |
-| **L48** | A✗48 B✗40 | A◐ B◐ | · | 718 / 0 | 96·2·2 / 96·2·2 | 360 (contour 360) | · | 44 / 43 | · |
-| **L49** | A○ B○ | A◐ B◐ | · | · | 100·0·0 / 100·0·0 | · | · | 81 / 81 | · |
-| **L50** | A○ B○ | A◐ B◐ | · | 698 / 0 | 100·0·0 / 100·0·0 | 340 (contour 360) | · | 32 / 32 | · |
-| **L51** | no map | no map | — | — | — | — | — | — | — |
-| **L52** | A○ B○ | A◐ B◐ | · | · | 100·0·0 / 100·0·0 | — | · | 100 / 100 | · |
-| **L53** | A✓ bar✗20 bar⊥✗20 | A✓ bar✓ bar⊥✓ | · | · | 100·0·0 / 100·0·0 | · | · | 99 / 99 | clear; 210 / 210 vs 210 |
-| **Q01** | A○ B○ | A◐ B◐ | · | · | 100·0·0 / 100·0·0 | · | · | 91 / 91 | · |
-| **Q02** | A✗30 B✗30 | A◐ B✓ | · | 56 / 0 | 88·2·2 / 88·2·2 | · | · | 97 / 96 | · |
-| **Q03** | A✗40 B✗30 | A✓ B✓ | · | · | 45·4·3 / 45·4·3 | · | · | 99 / 99 | clear; 200 / 200 vs 200 |
-| **Q04** | A✗40 B✗40 | A✓ B✓ | · | · | 66·3·3 / 66·3·3 | · | · | 95 / 94 | · |
-| **Q05** | A✓ B✓ | A✓ B✓ | · | · | 100·0·0 / 100·0·0 | · | · | 99 / 99 | · |
-| **Q06** | A✗40 B✗40 | A✓ B✓ | · | · | 73·3·1 / 73·3·1 | 40 (box 40) | · | 99 / 99 | · |
-| **Q07** | A○ B✓ | A◐ B✓ | · | · | 100·0·0 / 100·0·0 | · | · | 91 / 91 | BLOCKED; 320 / 320 vs 200 |
-| **Q08** | A✓ B✓ | A✓ B✓ | · | · | 100·0·0 / 100·0·0 | · | · | 58 / 58 | · |
-| **Q09** | A✗48 B✗40 | A✓ B✓ | · | · | 37·4·0 / 37·4·0 | 10 (box 10) | · | 98 / 98 | · |
-| **Q10** | A✗48 B✗40 | A✓ B✓ | · | · | 70·2·1 / 70·2·1 | · | · | 95 / 95 | · |
+| # | landing today | landing P2 | jumps | path | close in (A) T / P | far | bump (A) T · P | S22 | cover | goal |
+|---|---|---|---|---|---|---|---|---|---|---|
+| **L01** | A○ B○ | A◐ B◐ | · | · | 100·0·0 / 100·0·0 | · | · | · | 90 / 90 | · |
+| **L02** | A✓ B✓ | A✓ B✓ | · | · | 100·0·0 / 100·0·0 | · | · | · | 97 / 97 | · |
+| **L03** | A✗40 B✓ | A✓ B✓ | · | · | 54·4·4 / 54·4·4 | · | 14.6/40 · 14.6/40 | · | 99 / 99 | clear; 200 / 200 vs 200 |
+| **L04** | A✓ B✓ | A✓ B✓ | · | · | 100·0·0 / 100·0·0 | · | · | · | 99 / 99 | · |
+| **L05** | A✗30 B✗30 | A✓ B✓ | · | · | 52·4·2 / 77·3·3 | · | 10.9/30 · 10.9/30 | · | 98 / 98 | clear; -100 / -100 vs 120 |
+| **L06** | A✗30 B✗30 | A✓ B✓ | · | · | 77·2·2 / 77·2·2 | · | 10.9/30 · 10.9/30 | · | 97 / 97 | · |
+| **L07** | A○ B✓ | A✓ B✓ | · | · | 100·0·0 / 84·1·1 | · | 0/0 · 118/264.4 | · | 98 / 98 | · |
+| **L08** | A✓ B✓ | A✓ B✓ | · | · | 100·0·0 / 100·0·0 | · | · | · | 99 / 99 | · |
+| **L09** | A✓ B✓ | A✓ B✓ | · | · | 100·0·0 / 100·0·0 | · | · | 11520 / 9216 | 100 / 100 | · |
+| **L10** | A✓ B✓ | A✓ B✓ | · | 844 / 0 | 100·0·0 / 100·0·0 | · | · | · | 79 / 79 | · |
+| **L11** | A○ B✓ | A◐ B✓ | · | 844 / 0 | 100·0·0 / 100·0·0 | · | · | · | 78 / 78 | · |
+| **L12** | A✗48 B✗40 | A✓ B✓ | · | · | 86·2·2 / 86·2·2 | · | 82.1/171.3 · 82/173 | · | 100 / 100 | · |
+| **L13** | A✗48 B✗40 | A✓ B✓ | · | · | 41·6·8 / 81·2·8 | · | 21.8/46.7 · 21.3/48.1 | · | 100 / 100 | · |
+| **L14** | A✗48 B✗40 | A◐ B◐ | · | · | 98·1·1 / 98·1·1 | · | 85.4/176 · 85.4/179.2 | · | 100 / 100 | · |
+| **L15** | A✗48 B✓ | A✓ B✓ | · | · | 56·6·6 / 56·6·6 | · | 21.8/50.7 · 21.8/48.9 | · | 99 / 99 | · |
+| **L16** | A✗48 B✗40 | A✓ B✓ | · | · | 72·4·4 / 72·4·4 | · | 35.4/97.4 · 34.8/98 | · | 100 / 100 | · |
+| **L17** | A✗48 B✗40 | A✓ B✓ | · | · | 52·7·1 / 69·5·3 | 100 (box 100) | 10.6/28 · 82.5/170.4 | · | 91 / 91 | · |
+| **L18** | A✗48 B✗40 | A✓ B✓ | · | · | 88·4·4 / 88·4·4 | · | 36.4/84.3 · 36.4/81.4 | · | 75 / 74 | clear; 20 / 20 vs 20 |
+| **L19** | A✓ B✓ | A✓ B✓ | · | · | 100·0·0 / 100·0·0 | · | · | 5650 / 3252 | 100 / 100 | clear; 120 / 120 vs 120 |
+| **L20** | A✗48 B✗40 | A✓ B✓ | · | · | 25·4·0 / 25·4·0 | 70 (box 70) | 25.5/60.3 · 25.5/63.6 | 9769 / 9462 | 97 / 97 | · |
+| **L21** | A✗48 B✗40 | A✓ B✓ | · | · | 12·4·0 / 12·4·0 | 100 (box 100) | 36.4/93.2 · 36/96 | · | 92 / 92 | · |
+| **L22** | A✗48 B✗40 | A✓ B✓ | · | · | 56·2·4 / 28·4·0 | 100 (box 100) | 71.8/141.8 · 70.8/141.3 | · | 91 / 90 | · |
+| **L23** | A✗48 B✗40 | A◐ B◐ | · | · | 78·2·12 / 78·2·5 | · | 76.4/201.4 · 76.4/192.9 | · | 91 / 90 | · |
+| **L24** | A○ B○ | A◐ B◐ | · | 378 / 0 | 100·0·0 / 100·0·0 | 189 (contour 200) | · | · | 78 / 78 | · |
+| **L25** | A✗48 B✓ | A✓ B✓ | · | · | 65·6·8 / 65·6·8 | · | 98.3/202.5 · 98.3/199 | · | 93 / 92 | · |
+| **L26** | A✗48 B✗40 | A✓ B✓ | · | · | 100·0·0 / 66·4·2 | · | 21.8/59.3 · 5.2/14.4 | · | 97 / 96 | · |
+| **L27** | A○ B✓ | A✓ B✓ | · | 482 / 0 | 100·0·0 / 75·2·0 | · | 0/0 · 0.4/0.7 | · | 96 / 96 | · |
+| **L28** | A✗45 B✗40 | A✓ B✓ | · | · | 58·4·4 / 58·4·4 | · | 16.4/45 · 5.5/15 | · | 98 / 98 | · |
+| **L29** | A✓ B✓ | A✓ B✓ | · | 46 / 0 | 100·0·0 / 100·0·0 | · | · | · | 95 / 95 | · |
+| **L30** | A✗39 B✗39 | A✓ B✓ | · | · | 100·0·0 / 68·3·3 | · | 12.1/27.8 · 7.3/18.3 | · | 99 / 99 | · |
+| **L31** | A○ B✓ | A✓ B✓ | · | · | 100·0·0 / 68·3·38 | · | 0/0 · 18/40.7 | · | 98 / 98 | · |
+| **L32** | A✗40 B✗40 | A✓ B✓ | · | · | 34·4·4 / 34·4·4 | · | 14.6/40 · 14.6/40 | · | 97 / 97 | · |
+| **L33** | A✗48 B✗40 | A✓ B✓ | · | · | 25·4·0 / 25·4·0 | 60 (box 60) | 21.8/60 · 21.8/59.6 | · | 97 / 97 | · |
+| **L34** | A✗20 B✗20 | A✓ B✓ | · | · | 21·4·0 / 21·4·0 | 20 (box 20) | 7.3/18.3 · 7.3/18 | · | 99 / 99 | · |
+| **L35** | A✗40 B✗40 | A✓ B✓ | · | · | 37·4·0 / 37·4·0 | 40 (box 40) | 14.6/39.9 · 14.6/39 | · | 100 / 100 | · |
+| **L36** | A✗15 B✗15 | A✓ B✓ | · | · | 69·2·0 / 69·2·0 | 15 (box 15) | 5.5/15 · 5.5/15 | · | 99 / 98 | · |
+| **L37** | A✗30 B✗30 | A✓ B✓ | · | · | 27·4·0 / 27·4·0 | 40 (box 40) | 14.6/38.6 · 14.6/38 | · | 99 / 99 | · |
+| **L38** | A✓ B✓ | A✓ B✓ | · | · | 100·0·0 / 100·0·0 | · | · | · | 59 / 59 | · |
+| **L39** | A✗8 B✗8 | A✓ B✓ | · | · | 17·4·0 / 17·4·0 | 8 (box 8) | 0/0 · 2.9/6.9 | · | 100 / 98 | · |
+| **L40** | A✗20 B✗20 | A✓ B✓ | · | · | 87·4·4 / 87·4·4 | · | 7.3/20 · 7.3/20 | · | 97 / 97 | · |
+| **L41** | A✗30 B✗30 | A✓ B✓ | · | · | 91·1·1 / 79·2·2 | · | 10.4/21 · 20.5/42.2 | · | 98 / 100 | · |
+| **L42** | A✗0 B✗0 | A✓ B✓ | · | · | 100·0·0 / 100·0·0 | · | · | · | 100 / 100 | · |
+| **L43** | A✗1 B✗1 | A✓ B✓ | 2 / 2 | · | 86·1·0 / 86·1·0 | 1 (box 1) | 0.4/0.7 · 0.4/0.6 | · | 100 / 100 | · |
+| **L44** | A✗6 B✗6 | A✓ B✓ | · | · | 86·1·1 / 86·1·1 | 6 (box 6) | 2.2/5 · 2.2/4.7 | · | 100 / 100 | · |
+| **L45** | A✗3 B✗6 | A✓ B✓ | · | · | 50·2·0 / 100·0·0 | 34 (box 34) | · | · | 78 / 78 | · |
+| **L46** | A✗48 B✗40 | A◐ B◐ | · | · | 84·2·4 / 74·3·3 | 85 (box 85) | 32.8/78.9 · 32.8/75.5 | · | 94 / 94 | · |
+| **L47** | A✗48 B✗40 | A✓ B✓ | · | · | 70·2·0 / 70·2·0 | 80 (box 80) | 29.1/77.3 · 29.1/77.5 | · | 97 / 97 | · |
+| **L48** | A✗48 B✗40 | A◐ B◐ | · | 718 / 0 | 96·2·2 / 96·2·2 | 360 (contour 360) | 131/285.6 · 131/279.3 | · | 44 / 43 | · |
+| **L49** | A○ B○ | A◐ B◐ | · | · | 100·0·0 / 100·0·0 | · | · | · | 81 / 81 | · |
+| **L50** | A○ B○ | A◐ B◐ | · | 698 / 0 | 100·0·0 / 100·0·0 | 340 (contour 360) | · | · | 32 / 32 | · |
+| **L51** | no map | no map | — | — | — | — | — | — | — | — |
+| **L52** | A○ B○ | A◐ B◐ | · | · | 100·0·0 / 100·0·0 | — | · | · | 100 / 100 | · |
+| **L53** | A✓ bar✗20 bar⊥✗20 | A✓ bar✓ bar⊥✓ | · | · | 100·0·0 / 100·0·0 | · | · | · | 99 / 99 | clear; 210 / 210 vs 210 |
+| **Q01** | A○ B○ | A◐ B◐ | · | · | 100·0·0 / 100·0·0 | · | · | · | 91 / 91 | · |
+| **Q02** | A✗30 B✗30 | A◐ B✓ | · | 56 / 0 | 88·2·2 / 88·2·2 | · | 10.9/26.4 · 10.9/25.3 | · | 97 / 96 | · |
+| **Q03** | A✗40 B✗30 | A✓ B✓ | · | · | 45·4·3 / 45·4·3 | · | 14.6/40 · 14.6/39.3 | · | 99 / 99 | clear; 200 / 200 vs 200 |
+| **Q04** | A✗40 B✗40 | A✓ B✓ | · | · | 66·3·3 / 66·3·3 | · | 14.6/40 · 14.6/40 | · | 95 / 94 | · |
+| **Q05** | A✓ B✓ | A✓ B✓ | · | · | 100·0·0 / 100·0·0 | · | · | · | 99 / 99 | · |
+| **Q06** | A✗40 B✗40 | A✓ B✓ | · | · | 73·3·1 / 73·3·1 | 40 (box 40) | 14.6/33.2 · 14.6/34.8 | · | 99 / 99 | · |
+| **Q07** | A○ B✓ | A◐ B✓ | · | · | 100·0·0 / 100·0·0 | · | 27.1/56.5 · 0/0 | · | 91 / 91 | BLOCKED; 320 / 320 vs 200 |
+| **Q08** | A✓ B✓ | A✓ B✓ | · | · | 100·0·0 / 100·0·0 | · | · | · | 58 / 58 | · |
+| **Q09** | A✗48 B✗40 | A✓ B✓ | · | · | 37·4·0 / 37·4·0 | 10 (box 10) | 18.2/49.3 · 3.6/10 | · | 98 / 98 | · |
+| **Q10** | A✗48 B✗40 | A✓ B✓ | · | · | 70·2·1 / 70·2·1 | · | 21.8/60 · 21.8/59.9 | · | 95 / 95 | · |
 
 ### 3.2 The sweep, cells broken per check (today / proposed)
 
-| group (sign, footprint, profile) | cells | enter | air | jump | path | far | trap | drop |
-|---|---|---|---|---|---|---|---|---|
-| void island straight | 64 | 40/0 | 0/0 | 8/8 | 0/0 | 0/0 | 24/24 | 16/16 |
-| void island stepped | 64 | 32/0 | 0/0 | 8/8 | 0/0 | 16/16 | 16/16 | 8/8 |
-| void island widening | 32 | 16/0 | 0/0 | 0/0 | 0/0 | 0/0 | 16/16 | 16/16 |
-| void island through | 16 | 0/0 | 8/0 | 0/0 | 4/0 | 0/0 | 0/0 | 0/0 |
-| void strip1 straight | 64 | 40/0 | 6/0 | 8/10 | 0/0 | 0/0 | 24/30 | 16/20 |
-| void strip1 stepped | 64 | 32/0 | 4/0 | 8/10 | 0/0 | 16/16 | 16/20 | 8/10 |
-| void strip1 widening | 32 | 16/0 | 4/0 | 0/0 | 0/0 | 0/0 | 16/20 | 16/20 |
-| void strip1 through | 16 | 0/0 | 10/0 | 0/0 | 8/0 | 0/0 | 0/0 | 0/0 |
-| void strip2 straight | 48 | 30/0 | 3/0 | 6/7 | 0/0 | 0/0 | 18/21 | 12/14 |
-| void strip2 stepped | 48 | 24/0 | 2/0 | 6/7 | 0/0 | 12/12 | 12/14 | 6/7 |
-| void strip2 widening | 24 | 12/0 | 2/0 | 0/0 | 0/0 | 0/0 | 12/14 | 12/14 |
-| void strip2 through | 12 | 0/0 | 7/0 | 0/0 | 8/0 | 4/4 | 0/0 | 0/0 |
-| void ring straight | 64 | 40/0 | 6/0 | 8/10 | 0/0 | 0/0 | 28/30 | 16/20 |
-| void ring stepped | 64 | 32/0 | 4/0 | 8/10 | 0/0 | 16/16 | 20/20 | 8/10 |
-| void ring widening | 32 | 16/0 | 4/0 | 0/0 | 0/0 | 0/0 | 16/20 | 16/20 |
-| void ring through | 16 | 0/0 | 9/0 | 0/0 | 4/0 | 0/0 | 0/0 | 0/0 |
-| void array straight | 64 | 40/0 | 0/0 | 8/8 | 0/0 | 0/0 | 29/24 | 16/16 |
-| void array stepped | 64 | 32/0 | 0/0 | 8/8 | 1/0 | 16/16 | 21/16 | 8/8 |
-| void array widening | 32 | 16/0 | 0/0 | 0/0 | 0/0 | 2/2 | 16/16 | 16/16 |
-| void array through | 16 | 0/0 | 8/0 | 0/0 | 9/0 | 3/3 | 0/0 | 0/0 |
-| protrusion island straight | 64 | 64/0 | 0/0 | 16/16 | 0/0 | 48/48 | 48/48 | 16/16 |
-| protrusion island stepped | 64 | 48/0 | 0/0 | 16/16 | 4/0 | 48/48 | 35/32 | 0/8 |
-| protrusion island widening | 32 | 32/0 | 0/0 | 0/0 | 0/0 | 32/32 | 32/32 | 16/16 |
-| protrusion strip1 straight | 64 | 64/0 | 0/0 | 16/16 | 0/0 | 48/48 | 48/48 | 32/32 |
-| protrusion strip1 stepped | 64 | 48/0 | 0/0 | 16/16 | 8/0 | 48/48 | 34/32 | 0/8 |
-| protrusion strip1 widening | 32 | 32/0 | 0/0 | 0/0 | 0/0 | 32/32 | 32/32 | 32/32 |
-| protrusion strip2 straight | 48 | 48/0 | 0/0 | 12/12 | 0/0 | 36/36 | 36/36 | 8/8 |
-| protrusion strip2 stepped | 48 | 36/0 | 0/0 | 12/12 | 8/0 | 36/36 | 25/24 | 0/4 |
-| protrusion strip2 widening | 24 | 24/0 | 0/0 | 0/0 | 0/0 | 24/24 | 24/24 | 8/8 |
-| protrusion ring straight | 64 | 64/0 | 0/0 | 16/16 | 0/0 | 48/48 | 52/48 | 16/16 |
-| protrusion ring stepped | 64 | 48/0 | 0/0 | 16/16 | 4/0 | 48/48 | 41/32 | 0/8 |
-| protrusion ring widening | 32 | 32/0 | 0/0 | 0/0 | 0/0 | 32/32 | 32/32 | 16/16 |
-| protrusion array straight | 64 | 64/0 | 0/0 | 16/16 | 0/0 | 50/50 | 54/48 | 16/18 |
-| protrusion array stepped | 64 | 48/0 | 0/0 | 16/16 | 9/0 | 50/50 | 40/32 | 1/9 |
-| protrusion array widening | 32 | 32/0 | 0/0 | 0/0 | 0/0 | 32/32 | 32/32 | 16/18 |
-| **ALL** | 1596 | 1102/0 | 77/0 | 228/238 | 67/0 | 697/697 | 849/833 | 367/432 |
+| group (sign, footprint, profile) | cells | enter | air | jump | path | far | bump | trap | drop |
+|---|---|---|---|---|---|---|---|---|---|
+| void island straight | 64 | 40/0 | 0/0 | 8/8 | 0/0 | 0/0 | 16/16 | 24/24 | 16/16 |
+| void island stepped | 64 | 32/0 | 0/0 | 8/8 | 0/0 | 16/16 | 16/16 | 16/16 | 8/8 |
+| void island widening | 32 | 16/0 | 0/0 | 0/0 | 0/0 | 0/0 | 16/16 | 16/16 | 16/16 |
+| void island through | 16 | 0/0 | 8/0 | 0/0 | 4/0 | 0/0 | 0/0 | 0/0 | 0/0 |
+| void strip1 straight | 64 | 40/0 | 6/0 | 8/10 | 0/0 | 0/0 | 16/20 | 24/30 | 16/20 |
+| void strip1 stepped | 64 | 32/0 | 4/0 | 8/10 | 0/0 | 16/16 | 16/20 | 16/20 | 8/10 |
+| void strip1 widening | 32 | 16/0 | 4/0 | 0/0 | 0/0 | 0/0 | 16/20 | 16/20 | 16/20 |
+| void strip1 through | 16 | 0/0 | 10/0 | 0/0 | 8/0 | 0/0 | 0/0 | 0/0 | 0/0 |
+| void strip2 straight | 48 | 30/0 | 3/0 | 6/7 | 0/0 | 0/0 | 12/14 | 18/21 | 12/14 |
+| void strip2 stepped | 48 | 24/0 | 2/0 | 6/7 | 0/0 | 12/12 | 12/14 | 12/14 | 6/7 |
+| void strip2 widening | 24 | 12/0 | 2/0 | 0/0 | 0/0 | 0/0 | 12/14 | 12/14 | 12/14 |
+| void strip2 through | 12 | 0/0 | 7/0 | 0/0 | 8/0 | 4/4 | 0/0 | 0/0 | 0/0 |
+| void ring straight | 64 | 40/0 | 6/0 | 8/10 | 0/0 | 0/0 | 16/20 | 28/30 | 16/20 |
+| void ring stepped | 64 | 32/0 | 4/0 | 8/10 | 0/0 | 16/16 | 16/20 | 20/20 | 8/10 |
+| void ring widening | 32 | 16/0 | 4/0 | 0/0 | 0/0 | 0/0 | 16/20 | 16/20 | 16/20 |
+| void ring through | 16 | 0/0 | 9/0 | 0/0 | 4/0 | 0/0 | 0/0 | 0/0 | 0/0 |
+| void array straight | 64 | 40/0 | 0/0 | 8/8 | 0/0 | 0/0 | 16/16 | 29/24 | 16/16 |
+| void array stepped | 64 | 32/0 | 0/0 | 8/8 | 1/0 | 16/16 | 16/16 | 21/16 | 8/8 |
+| void array widening | 32 | 16/0 | 0/0 | 0/0 | 0/0 | 2/2 | 16/16 | 16/16 | 16/16 |
+| void array through | 16 | 0/0 | 8/0 | 0/0 | 9/0 | 3/3 | 0/0 | 0/0 | 0/0 |
+| protrusion island straight | 64 | 64/0 | 0/0 | 16/16 | 0/0 | 48/48 | 28/28 | 48/48 | 16/16 |
+| protrusion island stepped | 64 | 48/0 | 0/0 | 16/16 | 4/0 | 48/48 | 36/28 | 35/32 | 0/8 |
+| protrusion island widening | 32 | 32/0 | 0/0 | 0/0 | 0/0 | 32/32 | 28/28 | 32/32 | 16/16 |
+| protrusion strip1 straight | 64 | 64/0 | 0/0 | 16/16 | 0/0 | 48/48 | 24/24 | 48/48 | 32/32 |
+| protrusion strip1 stepped | 64 | 48/0 | 0/0 | 16/16 | 8/0 | 48/48 | 40/32 | 34/32 | 0/8 |
+| protrusion strip1 widening | 32 | 32/0 | 0/0 | 0/0 | 0/0 | 32/32 | 24/24 | 32/32 | 32/32 |
+| protrusion strip2 straight | 48 | 48/0 | 0/0 | 12/12 | 0/0 | 36/36 | 20/20 | 36/36 | 8/8 |
+| protrusion strip2 stepped | 48 | 36/0 | 0/0 | 12/12 | 8/0 | 36/36 | 32/24 | 25/24 | 0/4 |
+| protrusion strip2 widening | 24 | 24/0 | 0/0 | 0/0 | 0/0 | 24/24 | 20/20 | 24/24 | 8/8 |
+| protrusion ring straight | 64 | 64/0 | 0/0 | 16/16 | 0/0 | 48/48 | 32/32 | 52/48 | 16/16 |
+| protrusion ring stepped | 64 | 48/0 | 0/0 | 16/16 | 4/0 | 48/48 | 36/32 | 41/32 | 0/8 |
+| protrusion ring widening | 32 | 32/0 | 0/0 | 0/0 | 0/0 | 32/32 | 32/32 | 32/32 | 16/16 |
+| protrusion array straight | 64 | 64/0 | 0/0 | 16/16 | 0/0 | 50/50 | 32/30 | 54/48 | 16/18 |
+| protrusion array stepped | 64 | 48/0 | 0/0 | 16/16 | 9/0 | 50/50 | 40/31 | 40/32 | 1/9 |
+| protrusion array widening | 32 | 32/0 | 0/0 | 0/0 | 0/0 | 32/32 | 32/30 | 32/32 | 16/18 |
+| **ALL** | 1596 | 1102/0 | 77/0 | 228/238 | 67/0 | 697/697 | 684/673 | 849/833 | 367/432 |
 
 *enter*: the piece set at the gizmo enters a part; *air*: nothing within 0.5 mm under it, unmarked; *jump*: a 0.5 – 5 mm depth step with no event;
-*path*: a target that depends on the way in; *far*: the far foot moves > 0.5 mm against the bare block; *trap*: a close-in travel that ends at a
+*path*: a target that depends on the way in; *far*: the far foot moves > 0.5 mm against the bare block (between two assemblies); *bump*: along ONE travel the far foot (the
+direction 20° off the normal) jumps > 0.5 mm beyond the place's 1 mm step (F17); *trap*: a close-in travel that ends at a
 wall; *drop*: close in the piece goes down ≥ 5 mm into something.
 
 ---
@@ -318,14 +332,14 @@ covers · (v) a difference between today and the proposal that the player sees. 
 
 | # | kind | the finding | the numbers | shapes |
 |---|---|---|---|---|
-| **F1** | (v) (i) | **The point against the body.** Today's gizmo is a point: the piece set centred on it enters the part beside every wall, rim and protrusion. P2 never does. Far and medium it is the MARKER only (the piece rides the shell); close in the footprint support covers it (F9) | today 41 of 62 library shapes, 1102 of 1596 cells, up to 48 mm (a wall's full height); P2: 0 entries, 0 unmarked air gaps | L03, L12, L17, L34 – L37, Q09 … (41) |
+| **F1** | (v) (i) | **The point against the body.** Today's gizmo is a point: the piece set centred on it enters the part beside every wall, rim and protrusion. P2 never does. Far and medium it is the MARKER only (the piece rides the shell); close in the footprint support covers it (F9) | today 41 of 62 library shapes, 1102 of 1596 cells, by at least the piece's height at worst (the metric's cap: 48 A, 40 B); P2: none — by construction (its level is the highest top under the footprint): the evidence is today's column | L03, L12, L17, L34 – L37, Q09 … (41) |
 | **F2** | (i) | **P2 moves each depth step half a piece off the wall; it does not remove it.** S5's "real depth under the gizmo" then holds in the central band only | 132 steps matched: median offset 21 mm (A's half-sizes 20.65 / 22.5), range 8 – 39; L03: today at 91 and 150 mm along the travel, P2 at 111 and 130 (a 19 mm band) | L03, L05, L12, L15 … (39) |
-| **F3** | (v) | **WS10: today's ruler is the piece's two smallest sizes**, not its footprint as held | B (80 × 80 × 40) judged 40 × 80: its gizmo on the floor of 60-wide channels, the piece entering the rims by up to 30 mm (35 shapes); the bar judged 20 × 20: across the keyed slot 130 entries today, 0 under P2; L19's lid lands on the tray's floor (20) instead of its seat (120); P2: 120 | L05, L06, Q02, L19, L53 … |
-| **F4** | (i) (v) | **"Nothing to land on" is one class**: wide through holes, gaps between islands, inside an L, a U, a ring, under a table or a bridge, round a small part | 13 shapes, 43 cells marked by P2; today the same places put the piece over nothing, unmarked (12 shapes, 77 cells) | L01, L11, L14, L23, L24, L48 – L50, L52, Q01, Q02, Q07 |
-| **F5** | (iv) (ii) | **The mouth's hold fires wherever a void is closed across and open up the facet with no floor** — on the TOP CAP too, along a gap between islands, in a V or a dovetail run the whole length. In the designed case it holds the red as labelled. A channel closed at its far end has NO mouth: the back wall 340 mm away counts as a floor | Q02: the red going up held 28 mm under the lip, not coming down; 32 sweep cells hold a dy on the cap for up to 479 mm; path-dependent places: L10 844, L11 844, L48 718, L50 698, L27 482, L24 378, Q02 56, L29 46; L07: held 0 | Q02, L07, L10, L11, L24, L27, L29, L48, L50 |
+| **F3** | (v) | **WS10: today's ruler is the piece's two smallest sizes**, not its footprint as held | B (80 × 80 × 40) judged 40 × 80: its gizmo on the floor of 60-wide channels, the piece entering the rims by up to 30 mm (35 shapes); the bar judged 20 × 20: across the keyed slot 130 entries today, 0 under P2. ⛔ Withdrawn: "L19's lid on the tray's floor" (the goal check's map still held the lid; on the tray alone today lands it on its seat, 120) | L05, L06, Q02, L53 … |
+| **F4** | (i) (v) | **"Nothing to land on" is one class**: wide through holes, gaps between islands, inside an L, a U, a ring, under a table or a bridge, round a small part | 13 shapes, 43 cells marked by P2; today 77 cells (12 shapes) over air, unmarked — some of them (L07, L27, L31) by bridging and a far floor, not by "nothing to land on" | L01, L11, L14, L23, L24, L46, L48 – L50, L52, Q01, Q02, Q07 |
+| **F5** | (iv) (ii) | **The mouth's hold fires wherever a void is closed across and open up the facet with no floor** — on the TOP CAP too, along a gap between islands, in a V or a dovetail run the whole length. In the designed case it holds the red as labelled. A channel closed at its far end has NO mouth: the back wall 340 mm away counts as a floor | Q02: the red going up held 28 mm under the lip, not coming down; 32 sweep cells hold a dy on the cap for up to 479 mm (the study's emulation: a dy as a travel along b — qualitatively, a mouth open at both ends holds any step where pitch dominates); path-dependent places: L10 844, L11 844, L48 718, L50 698, L27 482, L24 378, Q02 56, L29 46; L07: held 0 | Q02, L07, L10, L11, L24, L27, L29, L48, L50 |
 | **F6** | (ii) (iv) | **A layer thinner than the 0.5 mm coplanar tolerance erases the face above it** (today's code, inherited by the proposal): a plane's level is its FIRST face's (`stackOf`), and R1 glues any opposite face of another part within 0.5 mm of that plane, whichever side | 76 cells (0.15 mm layers): D5 drops the real top cap, the charts lose the pole, far out the foot moves up to 256.5 mm and the facet under the gizmo turns 90°; 32 cells (layers of exactly 0.5 mm): a false mouth, a hold on the top up to 235 mm; L42: the contour moves 0.3 mm with the parts' order | the stepped 0.3 mm voids, the stepped 1 mm protrusions; L42 |
-| **F7** | (ii) | **P1 against a shell built on the BOX**: every protrusion that rises above the box moves the far piece and camera by its own height — the move equal to the box's growth; voids keep P1 except where they cut the box's extreme. A strongly non-convex assembly moves it through its CONTOUR (D5 drops a mostly void facet) | 612 of 760 protrusion cells (the other 148: 0.3 mm, under the noise); a pin 40 mm, the knife 85, the slab 100; 9 of 836 void cells; L24 189, L48 360, L50 340 mm with the box unchanged (contour Δ 200 – 360 mm) | L17, L20, L21, L33 – L37, L46, L47, Q06, Q09; L24, L48, L50 |
-| **F8** | (iii) | **S5 ("the piece shall not go in") against the contact close in**: in contact, the piece drops into every slot it fits; a dx across it is then trapped at the far wall (P5). Traps at protrusions are a proud part acting as a wall, as his Q1 (b) intends. No rule says whether crossing a slot close in should capture the piece | drops ≥ 5 mm: 367 cells today / 432 P2; travels ended at a wall 849 / 833, of which 190 / 215 after a drop into a void, 565 / 532 at protrusions; L03: reach 54 % | L03, L05, L06, L12, L13, L15, L16, L18, L28, L32, Q03, Q04 … |
+| **F7** | (ii) | **P1 against a shell built on the BOX** (between two assemblies; along one, F17): every protrusion that rises above the box moves the far piece and camera by its own height — the move equal to the box's growth; voids keep P1 except where they cut the box's extreme. A strongly non-convex assembly moves it through its CONTOUR (D5 drops a mostly void facet) | 612 of 760 protrusion cells (the other 148: 0.3 mm, under the noise); a pin 40 mm, the knife 85, the slab 100; 9 of 836 void cells; L24 189, L48 360, L50 340 mm with the box unchanged (contour Δ 200 – 360 mm) | L17, L20, L21, L33 – L37, L46, L47, Q06, Q09; L24, L48, L50 |
+| **F8** | (iii) | **S5 ("the piece shall not go in") against the contact close in**: in contact, the piece drops into every slot it fits; a dx across it is then trapped at the far wall (P5). Traps at protrusions are a proud part acting as a wall, as his Q1 (b) intends. No rule says whether crossing a slot close in should capture the piece | drops ≥ 5 mm: 367 cells today / 432 P2; travels ended at a wall 849 / 833, of which 190 / 215 after a drop into a void, 565 / 532 at protrusions (by height: 40 mm 228, 6 mm 228, 1 mm 99 / 76, 0.3 mm 10 / 0); L03: reach 54 % — a contact model (no solver slide): an upper bound | L03, L05, L06, L12, L13, L15, L16, L18, L28, L32, Q03, Q04 … |
 | **F9** | (i) (iv) | **Close in, P2 started at the piece IS today's footprint support** — except where the footprint hangs past the assembly's edge: P2 then lands the piece in a rebate narrower than itself, open on the edge's side | 1398 of 1596 cells identical; the other 198: 80 on an edge, 62 on a corner, 30 inside, 26 at the pole; e.g. a 37 mm rebate: today bridged, P2 1 – 40 mm down | the sweep's edge and corner cells; L41 |
 | **F10** | (iv) | **C36 / WS23: depth steps between 0.5 and 5 mm are jumps with no event**, in both readings | 238 cells, up to 3 mm; L43 (1 mm): 2 jumps each reading; L44 (6 mm): glided | L43 |
 | **F11** | (v) | **Slopes**: today the point lands at the centre (the uphill half enters); beyond the 20° merge today's gizmo is bridged across the slope. P2 is exact on all | L45 (8°): 2.9 mm = half-width × tan 8°; L30: up to 38.7 mm in; L31 (35°): bridged 54.9 mm above; L27 (V): 9.4 mm above; L26: 48 mm in | L26, L27, L30, L31, L45, L46 |
@@ -334,6 +348,7 @@ covers · (v) a difference between today and the proposal that the player sees. 
 | **F14** | (i) | **OS15 / B6: a class flip at a ruler moves the gizmo by the feature's whole depth for a millimetre of width**, in both readings | L03 ± 1 mm round 45: 20 mm of gizmo per mm; width 0.9 → 1.1 × A flips the centre in 105 of 399 pairs today, 120 under P2; L30 at the 20° merge: today 31 mm for 2°, P2 2.7 mm; L53 at the bar's 100 mm: only P2 flips (today's 20 × 20 ruler never binds) | L03, L08, L30, L43, L53 |
 | **F15** | (i) (iv) | **Determinism**: P2 is exactly invariant to the parts' order and to a quarter turn plus a move; today's depth is too, but for ties exactly over a wall (measure zero) and the plane's first-face level (F6's cause) | ties: L17, L20, L47, Q09 (gone 0.37 mm off the wall); order: L42, 0.3 mm | L17, L20, L42, L47, Q09 |
 | **F16** | (iv) | **C42: nothing placed has no rule** (no box, no map); round one part smaller than the piece, most places are "nothing to land on" | L51: no map; L52 (a 30 mm cube, A): 96 of 242 places | L51, L52 |
+| **F17** | (ii) | **Along ONE assembly the far foot bumps at every depth step when the direction is oblique** (the critic's B1, measured by the finisher): the shell is reached along `u`, and from a gizmo stepped down by h the ray meets it h × tan θ further along; with `u` along the normal it is zero by construction — what F7 and the first consolidation measured | sweep, piece A, at 20°: 684 cells today (228 voids, 456 protrusions), 673 under P2; by depth, at 20° / 45°: 0.3 mm none, 1 mm none (0.36 / 1) but today's 32 false-mouth cells of F6 (the held place released: 116.8), 6 mm 2.2 / 6, 40 mm 14.6 / 40; more near the box's edge: L12 82 / 171, L48 131 / 286; L07 under P2 (its 340 mm landing at the lip) 118 / 264 | L03, L05, L12, L14, L17, L23, L25, L35, L48 … (40) |
 
 ---
 
@@ -341,9 +356,10 @@ covers · (v) a difference between today and the proposal that the player sees. 
 
 Read: `readings.ts` (both readings, the close-in travel, the far feet), `run_sweep.ts`, the report's aggregates; the shell's code
 (`orbit_shell.ts`) for F7. Trusted: the TODAY reading calls the game's functions, the emulations are the two the study names. **Doubted, and
-how it is read here**: (1) F7's "far" compares an assembly with its bare twin — a box grown by a placed part moves the far foot, but along ONE
-assembly the foot does not bump (the shell is a function of the box alone, `shellAnchor`): F7 is therefore a re-wording of P1, not a break of
-S17's spirit (§6, P1). (2) The close-in model is the piece at contact (d = 0) with no solver slide: F8's traps are an upper bound of what the
+how it is read here**: (1) F7's "far" compares an assembly with its bare twin. ⛔ The consolidator read it as "along ONE assembly the foot does
+not bump" — WRONG (the critic): the study read the foot with the direction along the normal, where a depth step cannot move it; the game reads it
+along the orbit's direction, oblique toward a face's edges, and there it bumps (F17, measured since). P1 keeps the owner's words with a new
+mechanism (§6, P1); it is not built. (2) The close-in model is the piece at contact (d = 0) with no solver slide: F8's traps are an upper bound of what the
 player meets; the drops are what the footprint support does. (3) P3 was not prototyped: F5 measures today's hold only. (4) F9's "landing in a
 rebate narrower than the piece" is physically right (the rebate is open on the edge's side; the piece overhangs it) — read as a clarification of
 P2 ③, not a defect.
@@ -358,26 +374,26 @@ repair: the fallback stated). "Built" = today's code already satisfies it.
 
 | rule / principle | verdict | the text (old → new), or why | shapes / finding |
 |---|---|---|---|
-| the landing rule (`ORBIT_CHARTS.md` §1 rule 1) + **P2** | confirmed | P2 is the only reading that never puts the piece into a part or unmarked over nothing; today breaks it on 41 of 62 shapes (the marker far out) | F1: L03, L12, L17, L34 – L37, Q09 |
+| the landing rule (`ORBIT_CHARTS.md` §1 rule 1) + **P2** | confirmed | P2 never marks a place where the piece cannot rest nor an unmarked one over nothing — by construction; today's marker does on 41 of 62 shapes (far out the piece rides the shell, close in the collision refuses it) | F1: L03, L12, L17, L34 – L37, Q09 |
 | **P2 ④** steps remain | confirmed | moved half a piece out (median 21 mm), not removed; S5's "real depth" in the central band only — the price, stated in Q2 | F2: L03, L05, L12, L15 |
 | **P2 ①** nothing to land on | confirmed | one class (holes, island gaps, inside L / U / ring, under a table, round a small part); on the glass only the mark changes | F4: L01, L11, L14, L23, L24, L48 – L50, L52 |
-| **P2 ②** the piece as held | confirmed — the recommendation strengthened | today's two-smallest-sizes ruler mislands real cases (a lid on a tray's floor); Q3 merged into Q2 | F3: L19, L53, L05, L06, Q02 |
+| **P2 ②** the piece as held | confirmed — the recommendation strengthened | today's two-smallest-sizes ruler misjudges real cases (B 80 × 80 judged 40 × 80; the bar judged 20 × 20 across a keyed slot); Q3 merged into Q2 — ⛔ "a lid on a tray's floor" withdrawn (a fault of the goal check) | F3: L53, L05, L06, Q02 |
 | **P2 ③** first contact is not rest | **amended** | old: *"a piece dropped on one pin touches it and would tip: the gizmo still shows the touch"* → new: the same for EVERY partial support — a footprint partly over nothing (past an edge, beside a hole) lands where it first touches; no stability test, no "centre over the support" test | F9: 198 cells (80 edge, 62 corner), L41 |
 | **P2 ⑤** the drop from the piece close in | confirmed — built | reproduces today's footprint support in 1398 of 1596 cells; the rest is P2 ③ | F9 |
 | **P2** on slopes and profiles | confirmed | exact on ramps, V, countersinks, gables; the 20° merge no longer decides what is a floor (WS22 answered) | F11: L26, L27, L30, L31, L45, L46 |
-| **P1** two regimes | **amended** (wording) — built | old: *"Far and medium, no singularity of the surface changes the path of the piece and the camera"* → new: *far and medium, the path of the piece and the camera is a function of the placed parts' BOX (the shell) and the CONTOUR (the layout) only: no feature under them changes it; a part that grows the box or changes the contour changes it everywhere at once, at the seat that places it (S19's event), never along a travel* | F7: 612 / 760 protrusion cells (1 : 1 with the box), 9 / 836 voids; L24, L48, L50 (contour) |
+| **P1** two regimes | **amended** (a mechanism, the owner's words kept) — NOT built | his words kept: *far and medium, no singularity under the gizmo changes the path of the piece and the camera*; stated: a part that grows the box or changes the contour changes it at its seat (S19's event), never along a travel; the mechanism, for every depth step: far and medium the shell fed the gizmo's point on its CONTOUR facet (its depth left out), the real gizmo within the offset (`gizmoShare`). ⛔ The consolidation's "a function of the box and the contour — built, no bump along one assembly" withdrawn: false off a face's middle (F17) | F7 (between assemblies): 612 / 760 protrusion cells 1 : 1 with the box, 9 / 836 voids, L24, L48, L50; F17 (along one): 684 / 673 cells at 20° |
 | **P3** each real face in the frame that faces it | **amended** (its condition) — still to measure | "where a facet's direction finds nothing to land on" is NOT the mouth's class: a channel closed far behind its mouth finds a far wall (L07: P2 would glide the gizmo 340 mm into it at the lip). P3 stays unbuilt; its condition is to be found by the measurement (Q4) on Q02, L07, L10, L11 and `Scene_1` | F5: L07, Q02 |
 | the mouth's **hold** (S10's mechanism, S18) | **conflict** → owner (Q4) | its trigger ("closed across, open up the facet, no floor") is wider than its purpose (the tilt's hand-over at a side's lip) and narrower too (L07). Proposed domain, a stated fallback for the class: *the hold acts only where it hands over to the automatic tilt — on a side facet, toward a cap's edge, over a void that P2 leaves open for the held piece; never on a cap* | F5: 32 cells, 479 mm; L10, L11, L24, L27, L29, L48, L50 |
-| **P4** a function of the place | confirmed for P2 | 0 path-dependent places in every shape and cell under P2; today only the hold (F5) and the plane's first-face level (F6) break it | F15, F5 |
-| **P5** blocked, not jumped | confirmed — built | the traps at protrusions are walls as his Q1 (b) intends; out by the approach | F8: 565 / 532 cells |
+| **P4** a function of the place | confirmed for P2 (by construction) | 0 path-dependent places in every shape and cell under P2 — P2's reading holds no state; today only the hold (F5) and the plane's first-face level (F6) break it | F15, F5 |
+| **P5** blocked, not jumped | confirmed — built (in a contact model) | the traps at protrusions are walls as his Q1 (b) intends (ruled on a 41 mm proud part); out by the approach. ⚠ 99 / 76 of them are 1 mm steps: whether a seat 1 mm proud is a wall close in is asked (Q6, with S26) | F8: 565 / 532 cells (40 mm 228, 6 mm 228, 1 mm 99 / 76) |
 | **S5** the piece does not dive by itself | **conflict** → owner (Q10) | close in the contact drops the piece into every slot it fits, then traps it at the far wall. Proposed order: S5's *"the piece shall not go in"* binds far and medium (the shell keeps it there by construction), close in P2 ⑤ + P5 — P1 in his words (*"At close in, this rule is overruled by collision rule"*) | F8: 367 / 432 drops; 190 / 215 traps after a drop; L03 54 % |
 | **S6, S7, S8** holes, voids, the piece-fit | confirmed — consequences of P2 | the same outcomes from one operation on every void width and profile | L01, L02, L04, L08, L09, L29 |
 | **S9 / S23** protrusions, one ruler | confirmed — consequences of P2 + P5 | pins, ribs, plateaus, a mushroom, studs: the marker on their top where the piece touches first; close in a wall | L34 – L37, L39, Q06, Q09 |
 | **S22** exposed = reachable from outside | confirmed | today counts sealed (L19: 2397 cm²) and buried (L20) faces | F12 |
 | **S24 / B5** nothing unreachable silently | confirmed | the no-place classes are the same in both readings; B5's coverage is the measure C40 lacked (L48 43 %, L50 32 %) | F12 |
-| **S21 / B4** every goal reachable | confirmed | the blocked goal found offline | F13: Q07 |
-| **S28** a goal's entry | **added** [PROPOSED] | *every goal's entry is stated; only a set-down along its host facet's normal is a landing (P2, B4 checks its first contact is its seat); any other entry — slid, plunged, hooked — is a guarded move along the entry direction from the pre-insertion pose B4 computes (S13's (3) + (4) for every such entry)* | F13: L05 (−100 against 120), L19 (P2 = seat) |
-| the noise family (§2.6 (2)) → **S27** | **added** [PROPOSED] — not built | *tolerances join, never erase*: (a) a face joins a plane when its OWN level is within the tolerance of the plane's level, a level stated independently of order (the area-weighted mean); (b) a face, or part of one, is removed only where another part's material covers it (S22) — never by pairing with an opposite face on either side; (c) a part thinner than, or an overlap shallower than, the noise tolerance is refused at authoring (B1) — OUT of the surface's reach otherwise | F6: 76 + 32 cells; F15: L42 |
+| **S21 / B4** every goal reachable | confirmed | the blocked goal found offline; the landings read on the map without the goal part (fixed after the critic: unchanged but L19, today 120 = its seat) | F13: Q07 |
+| **S28** a goal's entry | **added** [PROPOSED] | *every goal's entry is stated; only a set-down along its host facet's normal is a landing (P2, B4 checks its first contact is its seat); any other entry — slid, plunged, hooked — is a guarded move along the entry direction from the pre-insertion pose B4 computes, ended by the goal capture (the goal margins), since alone it would end at first contact past the seat (S13's (3) + (4) for every such entry)* | F13: L05 (−100 against 120, today and P2) |
+| the noise family (§2.6 (2)) → **S27** | **added** [PROPOSED] — not built | *tolerances join, never erase*: (a) the planes found independently of order — the faces' OWN levels clustered as connected components at the tolerance (single linkage), each plane at its component's area-weighted mean (a greedy join against a running mean would still depend on order); (b) a face, or part of one, is removed only where another part's material covers it (S22) — never by pairing with an opposite face on either side; (c) a part thinner than, or an overlap shallower than, the noise tolerance is refused at authoring (B1) — OUT of the surface's reach otherwise | F6: 76 + 32 cells; F15: L42 |
 | depth steps → **S26** | **added** [PROPOSED] — not built | *no unnamed depth step*: one depth tolerance (the noise family's "flush", 0.5 mm today) splits every depth change — under it the same face, at or above it the named depth event (glided far and medium, P5 close in); the glide's own 5 mm goes | F10: 238 cells, up to 3 mm; L43 |
 | the empty placed set → **S29** | **added** [PROPOSED] — built in effect | *an empty placed set is out of the surface's reach*: every level boots with a placed part (W1 states it, B4 checks it); with none (only `lockPlacedPieces` 0, a debug setting) the gizmo holds, as today. One part smaller than the piece needs no rule: P2 ① | F16: L51, L52 |
 | **OS15 / B6** rulers and margins | confirmed — B6 completed | B6's rulers include the held piece's sizes AS HELD, in each orientation the level allows (the bar's 100 mm flips only under P2) | F14: L03, L30, L53 |

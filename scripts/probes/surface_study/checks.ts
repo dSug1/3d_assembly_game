@@ -2,7 +2,7 @@
 // regime (S17 / P1), exposure (S22) and coverage (S24), the goal reachable (S21), determinism, sensitivity.
 import type { Facet } from "../../../src/input/face_map";
 import { type Part, type V, add, castRay, dot, faceSamples, floodOutside, inside, isOutside, mul, sub } from "./geom";
-import { type Ctx, type Piece, type TodayAt, GLIDE_MM, M, NOISE_MM, PIECE_A, buildCtx, closeTravel, contourOf, facetFor, farFeet, heldFoot, landing, propFar, todayAt, todayTravel } from "./readings";
+import { type Ctx, type Piece, type TodayAt, GLIDE_MM, M, NOISE_MM, PIECE_A, buildCtx, closeTravel, contourOf, facetFor, farFeet, farFootAlong, heldFoot, landing, propFar, todayAt, todayTravel } from "./readings";
 import type { Line } from "./shapes";
 
 export const r1 = (x: number) => Math.round(x * 10) / 10;
@@ -33,9 +33,10 @@ export function continuity(levels: number[], marks?: boolean[]): Cont {
   return c;
 }
 
+export interface FarBump { b20: { max: number; n: number }; b45: { max: number; n: number } }
 export interface LineResult {
-  T: { land: { enter: number; enterMax: number; air: number; airMax: number }; cont: Cont; path: number; held: number; kinds: Record<string, number>; close: { reach: number; path: number; trapped: number; drops: number; by: string } };
-  P: { land: { enter: number; enterMax: number; air: number; airMax: number; nothing: number }; cont: Cont; path: number; close: { reach: number; path: number; trapped: number; drops: number; by: string } };
+  T: { land: { enter: number; enterMax: number; air: number; airMax: number }; cont: Cont; path: number; held: number; kinds: Record<string, number>; close: { reach: number; path: number; trapped: number; drops: number; by: string }; far?: FarBump };
+  P: { land: { enter: number; enterMax: number; air: number; airMax: number; nothing: number }; cont: Cont; path: number; close: { reach: number; path: number; trapped: number; drops: number; by: string }; far?: FarBump };
   n: number;
   prof?: { T: number[]; P: number[] };
 }
@@ -76,6 +77,28 @@ export function readLine(ctx: Ctx, f: Facet, pts: [number, number][], pc: Piece,
   // memoryless by construction: the backward travel gives the same targets (computed, not assumed)
   const pB = [...pts].reverse().map(([L, s]) => propFar(ctx, f, L, s, pc).level).reverse();
   P.path = pl.filter((x, i) => Math.abs(x - pB[i]!) > NOISE_MM).length;
+  // FAR, ALONG ONE ASSEMBLY (the critic's B1): the far foot (d = 0.3 m) along the travel with the direction OBLIQUE — tilted 20° and 45° off the facet's
+  // normal toward the travel's way (the calm leaves the orbit's direction oblique toward a face's edges; the whole orbit angle there). A bump = a 1 mm step
+  // of the place that moves the foot by more than the step + the noise. With u along the normal it is zero by construction (the shell flat over the face).
+  const n = f.n as V, dv = (dir === "dy" ? f.b : f.t) as V;
+  const sgn = Math.sign(dir === "dy" ? pts[nP - 1]![1] - pts[0]![1] : pts[nP - 1]![0] - pts[0]![0]) || 1;
+  const placeAt = (L: number, s: number, lvl: number): V => add(add(mul(n, lvl), mul(f.t as V, L)), mul(f.b as V, s));
+  const gT = pts.map((_, i) => { const t = tF[i]!; const [Lg, sg] = pts[t.idx]!; return placeAt(Lg, sg, t.level); });
+  const gP = pts.map(([L, s], i) => placeAt(L, s, pl[i]!));
+  const bumpOf = (gs: V[], deg: number) => {
+    const th = (deg * Math.PI) / 180;
+    const u = add(mul(n, Math.cos(th)), mul(dv, sgn * Math.sin(th)));
+    const ft = gs.map((g) => farFootAlong(ctx, g, u));
+    let mx = 0, cnt = 0;
+    for (let i = 1; i < ft.length; i++) {
+      const step = Math.hypot(pts[i]![0] - pts[i - 1]![0], pts[i]![1] - pts[i - 1]![1]);
+      const ex = Math.hypot(...sub(ft[i]!, ft[i - 1]!)) - step;
+      if (ex > NOISE_MM) cnt++;
+      mx = Math.max(mx, ex);
+    }
+    return { max: r1(Math.max(0, mx)), n: cnt };
+  };
+  const farT: FarBump = { b20: bumpOf(gT, 20), b45: bumpOf(gT, 45) }, farP: FarBump = { b20: bumpOf(gP, 20), b45: bumpOf(gP, 45) };
   for (const [R, o] of [["T", T], ["P", P]] as const) {
     // CLOSE IN (the piece in contact, d = 0): each way the travel stops at its first wall (the gizmo read at the solved angles)
     const fw = closeTravel(ctx, f, pts, pc, R);
@@ -90,7 +113,7 @@ export function readLine(ctx: Ctx, f: Facet, pts: [number, number][], pc: Piece,
     const drop = (xs: typeof fw) => { let k = 0, prev: number | null = null; for (const x of xs) { if (x.bottom !== null) { if (prev !== null && prev - x.bottom >= GLIDE_MM) k++; prev = x.bottom; } } return k; };
     o.close.drops = drop(fw) + drop(bw);
   }
-  return { T, P, n: pts.length, ...(keepProf ? { prof: { T: tF.map((x) => r1(x.level)), P: pl.map(r1) } } : {}) };
+  return { T: { ...T, far: farT }, P: { ...P, far: farP }, n: pts.length, ...(keepProf ? { prof: { T: tF.map((x) => r1(x.level)), P: pl.map(r1) } } : {}) };
 }
 
 /** S17 / P1: the feature against its twin, far / medium (d = 0.3 m), on a grid of angles — the piece's foot, the facet's normal; the contour; the box */
@@ -198,16 +221,20 @@ export function goalCheck(ctx: Ctx, goal: { part: Part; entry: V }) {
     // the distance to clear every part along e
     for (let k = 0; k < 3; k++) if (Math.abs(e[k]!) > 1e-9) clear = Math.max(clear, e[k]! > 0 ? p.hi[k]! - g.lo[k]! : g.hi[k]! - p.lo[k]!);
   }
-  const fi = facetFor(ctx.map, e);
+  // ⛔ (the critic's B2, 2026-11-16) the landing is read on the map of the placed set WITHOUT the goal part — what the game has before it is placed. The
+  // first version filtered `parts` only and kept the map built with the goal in it: today's reading took the goal's own top as the facet (L19's lid "on
+  // the tray's floor" was that artifact; with the tray alone today's gizmo bridges the opening and the lid lands on its seat)
+  const others = buildCtx(ctx.parts.filter((p) => p.id !== g.id));
+  const fi = facetFor(others.map, e);
   let landP: number | null = null, landT: number | null = null, seat = NaN;
   if (fi >= 0) {
-    const f = ctx.map!.facets[fi]!;
+    const f = others.map!.facets[fi]!;
     const c: V = mul(add(g.lo, g.hi), 0.5);
     const ext = sub(g.hi, g.lo);
     const ab = (u: readonly number[]) => Math.abs(u[0]!) * ext[0] + Math.abs(u[1]!) * ext[1] + Math.abs(u[2]!) * ext[2];
     const pc: Piece = { name: "goal", a: ab(f.t) / 2, c: ab(f.b) / 2, H: ab(f.n), box: ext };
     seat = Math.min(...g.verts.map((v) => dot(v, f.n)));
-    const others: Ctx = { ...ctx, parts: ctx.parts.filter((p) => p.id !== g.id) };
+    // the goal's own centre (mm) on the facet: the facet's t / b are unit vectors, the goal's coordinates mm
     landP = propFar(others, f, dot(c, f.t), dot(c, f.b), pc).level;
     landT = todayAt(others, f, dot(c, f.t), dot(c, f.b), heldFoot(pc)).level;
   }

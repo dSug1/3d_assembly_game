@@ -33,7 +33,7 @@ for (const c of combos) {
     { label: "t", a: [Math.max(-239.5, cx - hx - 60), y, cz] as V, b: [Math.min(239.5, cx + hx + 60), y, cz] as V },
     { label: "b", a: [cx, y, Math.max(-239.5, cz - hz - 60)] as V, b: [cx, y, Math.min(239.5, cz + hz + 60)] as V },
   ];
-  const agg = { T: { e: 0, em: 0, a: 0, am: 0, u: 0, um: 0, g: 0, gm: 0, p: 0, h: 0, cr: 0, ct: 0, cd: 0, n: 0 }, P: { e: 0, em: 0, a: 0, am: 0, u: 0, um: 0, g: 0, gm: 0, p: 0, h: 0, cr: 0, ct: 0, cd: 0, n: 0 } };
+  const agg = { T: { e: 0, em: 0, a: 0, am: 0, u: 0, um: 0, g: 0, gm: 0, p: 0, h: 0, cr: 0, ct: 0, cd: 0, n: 0, fb20: 0, fn20: 0, fb45: 0, fn45: 0 }, P: { e: 0, em: 0, a: 0, am: 0, u: 0, um: 0, g: 0, gm: 0, p: 0, h: 0, cr: 0, ct: 0, cd: 0, n: 0, fb20: 0, fn20: 0, fb45: 0, fn45: 0 } };
   let samples = 0;
   for (const ln of lines) {
     const r = readLine(ctx, f, placesOf(f, { label: ln.label, a: ln.a, b: ln.b }, 1), PIECE_A);
@@ -44,6 +44,8 @@ for (const c of combos) {
       a.u += x.cont.unnamed; a.um = Math.max(a.um, x.cont.unnamedMax); a.g += x.cont.glides; a.gm = Math.max(a.gm, x.cont.glideMax); a.p += x.path;
       a.cr += x.close.reach / lines.length; a.ct += x.close.trapped; a.cd += x.close.drops;
       if (R === "T") a.h += r.T.held; else a.n += r.P.land.nothing;
+      // far, along one assembly (the critic's B1): the far foot's bump with the direction 20° / 45° off the normal
+      const fb = x.far!; a.fb20 = Math.max(a.fb20, fb.b20.max); a.fn20 += fb.b20.n; a.fb45 = Math.max(a.fb45, fb.b45.max); a.fn45 += fb.b45.n;
     }
   }
   for (const R of ["T", "P"] as const) for (const kk of ["em", "am", "um", "gm"] as const) agg[R][kk] = r1(agg[R][kk]);

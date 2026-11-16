@@ -23,11 +23,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
   piece B:
     landing (far)        T AIR 41/562 (no part under it)  |  P holds (+41 nothing to land on, marked)
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (9901 cm²)
     coverage (S24, A)    T 90% · P 90% (no facet 0%, hidden 10%, closed T 0% / P 0%)
@@ -43,11 +45,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
   piece B:
     landing (far)        T holds  |  P holds
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (9539 cm²)
     coverage (S24, A)    T 97% · P 97% (no facet 0%, hidden 3%, closed T 0% / P 0%)
@@ -64,11 +68,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 54%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm  |  P reach 54%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 4 steps (max 14.6 mm) · u 45° 4 (max 40 mm)  |  P BUMPS: u 20° 4 steps (max 14.6 mm) · u 45° 4 (max 40 mm)
   piece B:
     landing (far)        T holds  |  P holds
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (9306 cm²)
     coverage (S24, A)    T 99% · P 99% (no facet 0%, hidden 1%, closed T 0% / P 0%)
@@ -85,11 +91,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
   piece B:
     landing (far)        T holds  |  P holds
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (9287 cm²)
     coverage (S24, A)    T 99% · P 99% (no facet 0%, hidden 0%, closed T 0% / P 0%)
@@ -106,11 +114,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (2 glided steps)  |  P holds (3 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 52%, 4 travel-ends trapped (P5), 2 drops ≥ 5 mm  |  P reach 77%, 3 travel-ends trapped (P5), 3 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 2 steps (max 10.9 mm) · u 45° 2 (max 30 mm)  |  P BUMPS: u 20° 3 steps (max 10.9 mm) · u 45° 3 (max 30 mm)
   piece B:
     landing (far)        T ENTERS 381/622 (max 30 mm)  |  P holds
     continuity           T holds (2 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 50%, 2 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 2 steps (max 10.9 mm) · u 45° 2 (max 30 mm)  |  P holds (no bump)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (9388 cm²)
     coverage (S24, A)    T 98% · P 98% (no facet 0%, hidden 2%, closed T 0% / P 0%)
@@ -126,11 +136,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (2 glided steps)  |  P holds (2 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 77%, 2 travel-ends trapped (P5), 2 drops ≥ 5 mm  |  P reach 77%, 2 travel-ends trapped (P5), 2 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 2 steps (max 10.9 mm) · u 45° 2 (max 30 mm)  |  P BUMPS: u 20° 2 steps (max 10.9 mm) · u 45° 2 (max 30 mm)
   piece B:
     landing (far)        T ENTERS 381/622 (max 30 mm)  |  P holds
     continuity           T holds (2 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 50%, 2 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 2 steps (max 10.9 mm) · u 45° 2 (max 30 mm)  |  P holds (no bump)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (9487 cm²)
     coverage (S24, A)    T 97% · P 97% (no facet 0%, hidden 3%, closed T 0% / P 0%)
@@ -147,11 +159,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (0 glided steps)  |  P holds (1 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 84%, 1 travel-ends trapped (P5), 1 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P BUMPS: u 20° 1 steps (max 118 mm) · u 45° 1 (max 264.4 mm)
   piece B:
     landing (far)        T holds  |  P holds
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (9388 cm²)
     coverage (S24, A)    T 98% · P 98% (no facet 0%, hidden 2%, closed T 0% / P 0%)
@@ -168,11 +182,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
   piece B:
     landing (far)        T holds  |  P holds
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (9292 cm²)
     coverage (S24, A)    T 99% · P 99% (no facet 0%, hidden 1%, closed T 0% / P 0%)
@@ -190,11 +206,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
   piece B:
     landing (far)        T holds  |  P holds
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       today 11520 vs S22 9216 cm² (sealed 2304, buried 0)
     coverage (S24, A)    T 100% · P 100% (no facet 0%, hidden 0%, closed T 0% / P 0%)
@@ -211,11 +229,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T BROKEN: 422 places depend on the way in (420 held by the mouth's hold)  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
   piece B:
     landing (far)        T holds  |  P holds
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T BROKEN: 422 places depend on the way in (420 held by the mouth's hold)  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (11059 cm²)
     coverage (S24, A)    T 79% · P 79% (no facet 0%, hidden 21%, closed T 0% / P 0%)
@@ -232,11 +252,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T BROKEN: 422 places depend on the way in (420 held by the mouth's hold)  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
   piece B:
     landing (far)        T holds  |  P holds
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T BROKEN: 422 places depend on the way in (420 held by the mouth's hold)  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (10598 cm²)
     coverage (S24, A)    T 78% · P 78% (no facet 0%, hidden 22%, closed T 0% / P 0%)
@@ -253,11 +275,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (2 glided steps)  |  P holds (2 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 86%, 2 travel-ends trapped (P5), 2 drops ≥ 5 mm  |  P reach 86%, 2 travel-ends trapped (P5), 2 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 2 steps (max 82.1 mm) · u 45° 2 (max 171.3 mm)  |  P BUMPS: u 20° 2 steps (max 82 mm) · u 45° 2 (max 173 mm)
   piece B:
     landing (far)        T ENTERS 380/1585 (max 40 mm)  |  P holds
     continuity           T holds (2 glided steps)  |  P holds (2 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 65%, 4 travel-ends trapped (P5), 2 drops ≥ 5 mm  |  P reach 85%, 2 travel-ends trapped (P5), 2 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 2 steps (max 82.1 mm) · u 45° 2 (max 171.3 mm)  |  P BUMPS: u 20° 2 steps (max 82.3 mm) · u 45° 2 (max 174.8 mm)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (8794 cm²)
     coverage (S24, A)    T 100% · P 100% (no facet 0%, hidden 0%, closed T 0% / P 0%)
@@ -273,11 +297,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (8 glided steps)  |  P holds (8 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 41%, 6 travel-ends trapped (P5), 8 drops ≥ 5 mm  |  P reach 81%, 2 travel-ends trapped (P5), 8 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 8 steps (max 21.8 mm) · u 45° 8 (max 46.7 mm)  |  P BUMPS: u 20° 8 steps (max 21.3 mm) · u 45° 8 (max 48.1 mm)
   piece B:
     landing (far)        T ENTERS 882/1565 (max 40 mm)  |  P holds
     continuity           T holds (8 glided steps)  |  P holds (7 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 41%, 6 travel-ends trapped (P5), 7 drops ≥ 5 mm  |  P reach 82%, 2 travel-ends trapped (P5), 7 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 8 steps (max 21.8 mm) · u 45° 8 (max 46.7 mm)  |  P BUMPS: u 20° 7 steps (max 21 mm) · u 45° 7 (max 44.3 mm)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (8904 cm²)
     coverage (S24, A)    T 100% · P 100% (no facet 0%, hidden 0%, closed T 0% / P 0%)
@@ -294,11 +320,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (1 glided steps)  |  P holds (1 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 98%, 1 travel-ends trapped (P5), 1 drops ≥ 5 mm  |  P reach 98%, 1 travel-ends trapped (P5), 1 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 1 steps (max 85.4 mm) · u 45° 1 (max 176 mm)  |  P BUMPS: u 20° 1 steps (max 85.4 mm) · u 45° 1 (max 179.2 mm)
   piece B:
     landing (far)        T ENTERS 40/1094 (max 40 mm); AIR 400/1094 (no part under it)  |  P holds (+400 nothing to land on, marked)
     continuity           T holds (1 glided steps)  |  P holds (1 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 97%, 1 travel-ends trapped (P5), 1 drops ≥ 5 mm  |  P reach 97%, 1 travel-ends trapped (P5), 1 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 1 steps (max 85.4 mm) · u 45° 1 (max 176 mm)  |  P BUMPS: u 20° 1 steps (max 85.4 mm) · u 45° 1 (max 183.1 mm)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (8064 cm²)
     coverage (S24, A)    T 100% · P 100% (no facet 0%, hidden 0%, closed T 0% / P 0%)
@@ -315,11 +343,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (6 glided steps)  |  P holds (6 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 56%, 6 travel-ends trapped (P5), 6 drops ≥ 5 mm  |  P reach 56%, 6 travel-ends trapped (P5), 6 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 6 steps (max 21.8 mm) · u 45° 6 (max 50.7 mm)  |  P BUMPS: u 20° 6 steps (max 21.8 mm) · u 45° 6 (max 48.9 mm)
   piece B:
     landing (far)        T holds  |  P holds
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (9116 cm²)
     coverage (S24, A)    T 99% · P 99% (no facet 0%, hidden 1%, closed T 0% / P 0%)
@@ -335,11 +365,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 72%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm  |  P reach 72%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 4 steps (max 35.4 mm) · u 45° 4 (max 97.4 mm)  |  P BUMPS: u 20° 4 steps (max 34.8 mm) · u 45° 4 (max 98 mm)
   piece B:
     landing (far)        T ENTERS 160/724 (max 40 mm)  |  P holds
     continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 67%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm  |  P reach 67%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 4 steps (max 35.4 mm) · u 45° 4 (max 97.4 mm)  |  P BUMPS: u 20° 4 steps (max 34.4 mm) · u 45° 4 (max 98 mm)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (8993 cm²)
     coverage (S24, A)    T 100% · P 100% (no facet 0%, hidden 0%, closed T 0% / P 0%)
@@ -355,11 +387,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (3 glided steps)  |  P holds (5 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 52%, 7 travel-ends trapped (P5), 1 drops ≥ 5 mm  |  P reach 69%, 5 travel-ends trapped (P5), 3 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 3 steps (max 10.6 mm) · u 45° 3 (max 28 mm)  |  P BUMPS: u 20° 5 steps (max 82.5 mm) · u 45° 5 (max 170.4 mm)
   piece B:
     landing (far)        T ENTERS 489/1986 (max 40 mm); AIR 51/1986 (max 240 mm)  |  P holds
     continuity           T holds (3 glided steps)  |  P holds (5 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 50%, 7 travel-ends trapped (P5), 1 drops ≥ 5 mm  |  P reach 67%, 5 travel-ends trapped (P5), 3 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 3 steps (max 10.6 mm) · u 45° 3 (max 28 mm)  |  P BUMPS: u 20° 5 steps (max 82.1 mm) · u 45° 5 (max 171.3 mm)
     far regime (S17/P1)  T BROKEN: the foot moves 100 mm (SIDE yaw 60 pitch -40; box 100 mm, contour Δ 0 mm)  |  P BROKEN: the foot moves 100 mm (SIDE yaw 60 pitch 40; box 100 mm, contour Δ 0 mm)
     exposure (S22)       holds (10140 cm²)
     coverage (S24, A)    T 91% · P 91% (no facet 0%, hidden 9%, closed T 0% / P 0%)
@@ -376,11 +410,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 88%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm  |  P reach 88%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 4 steps (max 36.4 mm) · u 45° 4 (max 84.3 mm)  |  P BUMPS: u 20° 4 steps (max 36.4 mm) · u 45° 4 (max 81.4 mm)
   piece B:
     landing (far)        T ENTERS 156/582 (max 40 mm)  |  P holds
     continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 81%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm  |  P reach 81%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 4 steps (max 36.4 mm) · u 45° 4 (max 84.3 mm)  |  P BUMPS: u 20° 4 steps (max 36.4 mm) · u 45° 4 (max 79.1 mm)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (4030 cm²)
     coverage (S24, A)    T 75% · P 74% (no facet 0%, hidden 25%, closed T 0% / P 1%)
@@ -397,15 +433,17 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
   piece B:
     landing (far)        T holds  |  P holds
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       today 5650 vs S22 3252 cm² (sealed 2397, buried 0)
     coverage (S24, A)    T 100% · P 100% (no facet 0%, hidden 0%, closed T 0% / P 0%)
-    goal (S21)           withdrawal clear; landing T 20 · P 120 vs seat 120
+    goal (S21)           withdrawal clear; landing T 120 · P 120 vs seat 120
     determinism          holds
     stages (C46)         stage 1: gizmo at the top's centre T 20 · P 20; exposed today 4061 / S22 4030 (sealed 31); top-stack groups below the top 1 → stage 2: gizmo at the top's centre T 140 · P 140; exposed today 5650 / S22 3252 (sealed 2397); top-stack groups below the top 1
 
@@ -418,11 +456,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 25%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 25%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 4 steps (max 25.5 mm) · u 45° 4 (max 60.3 mm)  |  P BUMPS: u 20° 4 steps (max 25.5 mm) · u 45° 4 (max 63.6 mm)
   piece B:
     landing (far)        T ENTERS 156/562 (max 40 mm)  |  P holds
     continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 18%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 18%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 4 steps (max 25.5 mm) · u 45° 4 (max 60.3 mm)  |  P BUMPS: u 20° 4 steps (max 25.5 mm) · u 45° 4 (max 65.7 mm)
     far regime (S17/P1)  T BROKEN: the foot moves 70 mm (TOP yaw 0 pitch 60; box 70 mm, contour Δ 0 mm)  |  P BROKEN: the foot moves 70 mm (TOP yaw 0 pitch 60; box 70 mm, contour Δ 0 mm)
     exposure (S22)       today 9769 vs S22 9462 cm² (sealed 0, buried 307)
     coverage (S24, A)    T 97% · P 97% (no facet 0%, hidden 3%, closed T 0% / P 0%)
@@ -438,11 +478,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 12%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 12%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 4 steps (max 36.4 mm) · u 45° 4 (max 93.2 mm)  |  P BUMPS: u 20° 4 steps (max 36 mm) · u 45° 4 (max 96 mm)
   piece B:
     landing (far)        T ENTERS 156/642 (max 40 mm)  |  P holds
     continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 7%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 7%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 4 steps (max 36.4 mm) · u 45° 4 (max 93.2 mm)  |  P BUMPS: u 20° 4 steps (max 35.4 mm) · u 45° 4 (max 97.4 mm)
     far regime (S17/P1)  T BROKEN: the foot moves 100 mm (TOP yaw 0 pitch 60; box 100 mm, contour Δ 0 mm)  |  P BROKEN: the foot moves 100 mm (TOP yaw 0 pitch 60; box 100 mm, contour Δ 0 mm)
     exposure (S22)       holds (9937 cm²)
     coverage (S24, A)    T 92% · P 92% (no facet 0%, hidden 8%, closed T 0% / P 0%)
@@ -458,11 +500,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (6 glided steps)  |  P holds (6 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 56%, 2 travel-ends trapped (P5), 4 drops ≥ 5 mm  |  P reach 28%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 6 steps (max 71.8 mm) · u 45° 6 (max 141.8 mm)  |  P BUMPS: u 20° 6 steps (max 70.8 mm) · u 45° 6 (max 141.3 mm)
   piece B:
     landing (far)        T ENTERS 156/642 (max 40 mm)  |  P holds
     continuity           T holds (6 glided steps)  |  P holds (6 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 53%, 2 travel-ends trapped (P5), 4 drops ≥ 5 mm  |  P reach 22%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 6 steps (max 71.8 mm) · u 45° 6 (max 141.8 mm)  |  P BUMPS: u 20° 6 steps (max 69.8 mm) · u 45° 6 (max 141.1 mm)
     far regime (S17/P1)  T BROKEN: the foot moves 100 mm (TOP yaw 0 pitch 80; box 100 mm, contour Δ 0 mm)  |  P BROKEN: the foot moves 100 mm (TOP yaw 0 pitch 80; box 100 mm, contour Δ 0 mm)
     exposure (S22)       holds (10138 cm²)
     coverage (S24, A)    T 91% · P 90% (no facet 0%, hidden 9%, closed T 0% / P 0%)
@@ -478,11 +522,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (14 glided steps)  |  P holds (9 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 78%, 2 travel-ends trapped (P5), 12 drops ≥ 5 mm  |  P reach 78%, 2 travel-ends trapped (P5), 5 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 14 steps (max 76.4 mm) · u 45° 14 (max 201.4 mm)  |  P BUMPS: u 20° 9 steps (max 76.4 mm) · u 45° 9 (max 192.9 mm)
   piece B:
     landing (far)        T ENTERS 78/1504 (max 40 mm); AIR 331/1504 (no part under it)  |  P holds (+163 nothing to land on, marked)
     continuity           T holds (14 glided steps)  |  P holds (9 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 77%, 2 travel-ends trapped (P5), 12 drops ≥ 5 mm  |  P reach 77%, 2 travel-ends trapped (P5), 5 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 14 steps (max 76.4 mm) · u 45° 14 (max 201.4 mm)  |  P BUMPS: u 20° 9 steps (max 76.4 mm) · u 45° 9 (max 197.3 mm)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (10156 cm²)
     coverage (S24, A)    T 91% · P 90% (no facet 0%, hidden 9%, closed T 0% / P 0%)
@@ -498,11 +544,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T BROKEN: 189 places depend on the way in (0 held by the mouth's hold)  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
   piece B:
     landing (far)        T AIR 412/1785 (no part under it)  |  P holds (+412 nothing to land on, marked)
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T BROKEN: 189 places depend on the way in (0 held by the mouth's hold)  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
     far regime (S17/P1)  T BROKEN: the foot moves 188.9 mm (SIDE yaw 0 pitch -40; box 0 mm, contour Δ 200 mm)  |  P BROKEN: the foot moves 188.9 mm (SIDE yaw 0 pitch -40; box 0 mm, contour Δ 200 mm)
     exposure (S22)       holds (4736 cm²)
     coverage (S24, A)    T 78% · P 78% (no facet 0%, hidden 22%, closed T 0% / P 0%)
@@ -517,11 +565,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (8 glided steps)  |  P holds (8 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 65%, 6 travel-ends trapped (P5), 8 drops ≥ 5 mm  |  P reach 65%, 6 travel-ends trapped (P5), 8 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 8 steps (max 98.3 mm) · u 45° 8 (max 202.5 mm)  |  P BUMPS: u 20° 8 steps (max 98.3 mm) · u 45° 8 (max 199 mm)
   piece B:
     landing (far)        T holds  |  P holds
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (9927 cm²)
     coverage (S24, A)    T 93% · P 92% (no facet 0%, hidden 7%, closed T 0% / P 0%)
@@ -537,11 +587,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (6 glided steps)  |  P holds (2 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 66%, 4 travel-ends trapped (P5), 2 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 6 steps (max 21.8 mm) · u 45° 7 (max 59.3 mm)  |  P BUMPS: u 20° 2 steps (max 5.2 mm) · u 45° 16 (max 14.4 mm)
   piece B:
     landing (far)        T ENTERS 232/482 (max 40 mm)  |  P holds
     continuity           T holds (6 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 6 steps (max 21.8 mm) · u 45° 7 (max 59.3 mm)  |  P holds (no bump)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (9336 cm²)
     coverage (S24, A)    T 97% · P 96% (no facet 1%, hidden 2%, closed T 0% / P 1%)
@@ -557,11 +609,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T BROKEN: 241 places depend on the way in (240 held by the mouth's hold)  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 75%, 2 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P BUMPS: u 20° 0 steps (max 0.4 mm) · u 45° 9 (max 0.7 mm)
   piece B:
     landing (far)        T holds  |  P holds
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T BROKEN: 241 places depend on the way in (240 held by the mouth's hold)  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (9277 cm²)
     coverage (S24, A)    T 96% · P 96% (no facet 4%, hidden 0%, closed T 0% / P 0%)
@@ -577,11 +631,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (8 glided steps)  |  P holds (4 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 58%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm  |  P reach 58%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 8 steps (max 16.4 mm) · u 45° 8 (max 45 mm)  |  P BUMPS: u 20° 4 steps (max 5.5 mm) · u 45° 4 (max 15 mm)
   piece B:
     landing (far)        T ENTERS 158/482 (max 40 mm)  |  P holds
     continuity           T holds (8 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 50%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm  |  P reach 50%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 8 steps (max 16.4 mm) · u 45° 8 (max 45 mm)  |  P BUMPS: u 20° 4 steps (max 5.5 mm) · u 45° 4 (max 15 mm)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (9275 cm²)
     coverage (S24, A)    T 98% · P 98% (no facet 0%, hidden 2%, closed T 0% / P 0%)
@@ -597,11 +653,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T BROKEN: 23 places depend on the way in (23 held by the mouth's hold)  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
   piece B:
     landing (far)        T holds  |  P holds
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T BROKEN: 23 places depend on the way in (23 held by the mouth's hold)  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (9504 cm²)
     coverage (S24, A)    T 95% · P 95% (no facet 2%, hidden 1%, closed T 2% / P 2%)
@@ -617,11 +675,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (3 glided steps)  |  P holds (3 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 68%, 3 travel-ends trapped (P5), 3 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 3 steps (max 12.1 mm) · u 45° 3 (max 27.8 mm)  |  P BUMPS: u 20° 3 steps (max 7.3 mm) · u 45° 3 (max 18.3 mm)
   piece B:
     landing (far)        T ENTERS 178/482 (max 38.7 mm)  |  P holds
     continuity           T holds (3 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 3 steps (max 12.1 mm) · u 45° 3 (max 27.8 mm)  |  P holds (no bump)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (9096 cm²)
     coverage (S24, A)    T 99% · P 99% (no facet 0%, hidden 1%, closed T 0% / P 0%)
@@ -638,11 +698,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (0 glided steps)  |  P holds (3 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 68%, 3 travel-ends trapped (P5), 38 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P BUMPS: u 20° 3 steps (max 18 mm) · u 45° 18 (max 40.7 mm)
   piece B:
     landing (far)        T holds  |  P holds
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (9252 cm²)
     coverage (S24, A)    T 98% · P 98% (no facet 1%, hidden 2%, closed T 0% / P 0%)
@@ -658,11 +720,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (8 glided steps)  |  P holds (8 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 34%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm  |  P reach 34%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 8 steps (max 14.6 mm) · u 45° 8 (max 40 mm)  |  P BUMPS: u 20° 8 steps (max 14.6 mm) · u 45° 8 (max 40 mm)
   piece B:
     landing (far)        T ENTERS 198/562 (max 40 mm)  |  P holds
     continuity           T holds (8 glided steps)  |  P holds (4 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 63%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm  |  P reach 63%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 8 steps (max 14.6 mm) · u 45° 8 (max 40 mm)  |  P BUMPS: u 20° 4 steps (max 7.3 mm) · u 45° 4 (max 20 mm)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (9482 cm²)
     coverage (S24, A)    T 97% · P 97% (no facet 0%, hidden 3%, closed T 0% / P 0%)
@@ -677,11 +741,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (8 glided steps)  |  P holds (8 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 25%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 25%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 8 steps (max 21.8 mm) · u 45° 8 (max 60 mm)  |  P BUMPS: u 20° 8 steps (max 21.8 mm) · u 45° 8 (max 59.6 mm)
   piece B:
     landing (far)        T ENTERS 254/482 (max 40 mm)  |  P holds
     continuity           T holds (8 glided steps)  |  P holds (4 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 17%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 17%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 8 steps (max 21.8 mm) · u 45° 8 (max 60 mm)  |  P BUMPS: u 20° 4 steps (max 21.8 mm) · u 45° 4 (max 58 mm)
     far regime (S17/P1)  T BROKEN: the foot moves 60 mm (TOP yaw 0 pitch 60; box 60 mm, contour Δ 0 mm)  |  P BROKEN: the foot moves 60 mm (TOP yaw 0 pitch 60; box 60 mm, contour Δ 0 mm)
     exposure (S22)       holds (9507 cm²)
     coverage (S24, A)    T 97% · P 97% (no facet 0%, hidden 3%, closed T 0% / P 0%)
@@ -696,11 +762,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 21%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 21%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 4 steps (max 7.3 mm) · u 45° 4 (max 18.3 mm)  |  P BUMPS: u 20° 4 steps (max 7.3 mm) · u 45° 4 (max 18 mm)
   piece B:
     landing (far)        T ENTERS 158/562 (max 20 mm)  |  P holds
     continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 15%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 15%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 4 steps (max 7.3 mm) · u 45° 4 (max 18.3 mm)  |  P BUMPS: u 20° 4 steps (max 7.3 mm) · u 45° 4 (max 18 mm)
     far regime (S17/P1)  T BROKEN: the foot moves 20 mm (TOP yaw 180 pitch 60; box 20 mm, contour Δ 0 mm)  |  P BROKEN: the foot moves 20 mm (TOP yaw 165 pitch 80; box 20 mm, contour Δ 0 mm)
     exposure (S22)       holds (9293 cm²)
     coverage (S24, A)    T 99% · P 99% (no facet 0%, hidden 1%, closed T 0% / P 0%)
@@ -716,11 +784,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 37%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 37%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 4 steps (max 14.6 mm) · u 45° 4 (max 39.9 mm)  |  P BUMPS: u 20° 4 steps (max 14.6 mm) · u 45° 4 (max 39 mm)
   piece B:
     landing (far)        T ENTERS 156/402 (max 40 mm)  |  P holds
     continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 28%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 28%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 4 steps (max 14.6 mm) · u 45° 4 (max 39.9 mm)  |  P BUMPS: u 20° 4 steps (max 14.6 mm) · u 45° 4 (max 38 mm)
     far regime (S17/P1)  T BROKEN: the foot moves 40 mm (TOP yaw 0 pitch 60; box 40 mm, contour Δ 0 mm)  |  P BROKEN: the foot moves 40 mm (TOP yaw 0 pitch 60; box 40 mm, contour Δ 0 mm)
     exposure (S22)       holds (9229 cm²)
     coverage (S24, A)    T 100% · P 100% (no facet 0%, hidden 0%, closed T 0% / P 0%)
@@ -735,11 +805,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (2 glided steps)  |  P holds (2 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 69%, 2 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 69%, 2 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 2 steps (max 5.5 mm) · u 45° 2 (max 15 mm)  |  P BUMPS: u 20° 2 steps (max 5.5 mm) · u 45° 2 (max 15 mm)
   piece B:
     landing (far)        T ENTERS 78/402 (max 15 mm)  |  P holds
     continuity           T holds (2 glided steps)  |  P holds (2 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 64%, 2 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 64%, 2 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 2 steps (max 5.5 mm) · u 45° 2 (max 15 mm)  |  P BUMPS: u 20° 2 steps (max 5.5 mm) · u 45° 2 (max 14.4 mm)
     far regime (S17/P1)  T BROKEN: the foot moves 15 mm (TOP yaw 0 pitch 60; box 15 mm, contour Δ 0 mm)  |  P BROKEN: the foot moves 15 mm (TOP yaw 0 pitch 60; box 15 mm, contour Δ 0 mm)
     exposure (S22)       holds (9313 cm²)
     coverage (S24, A)    T 99% · P 98% (no facet 0%, hidden 1%, closed T 0% / P 1%)
@@ -754,11 +826,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 27%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 27%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 4 steps (max 14.6 mm) · u 45° 4 (max 38.6 mm)  |  P BUMPS: u 20° 4 steps (max 14.6 mm) · u 45° 4 (max 38 mm)
   piece B:
     landing (far)        T ENTERS 156/442 (max 30 mm)  |  P holds
     continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 19%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 19%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 4 steps (max 14.6 mm) · u 45° 4 (max 38.6 mm)  |  P BUMPS: u 20° 4 steps (max 14.6 mm) · u 45° 4 (max 38 mm)
     far regime (S17/P1)  T BROKEN: the foot moves 40 mm (TOP yaw 0 pitch 60; box 40 mm, contour Δ 0 mm)  |  P BROKEN: the foot moves 40 mm (TOP yaw 195 pitch 80; box 40 mm, contour Δ 0 mm)
     exposure (S22)       holds (9306 cm²)
     coverage (S24, A)    T 99% · P 99% (no facet 0%, hidden 1%, closed T 0% / P 0%)
@@ -774,11 +848,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
   piece B:
     landing (far)        T holds  |  P holds
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (14657 cm²)
     coverage (S24, A)    T 59% · P 59% (no facet 0%, hidden 41%, closed T 0% / P 0%)
@@ -794,11 +870,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (0 glided steps)  |  P holds (4 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 17%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 17%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P BUMPS: u 20° 4 steps (max 2.9 mm) · u 45° 4 (max 6.9 mm)
   piece B:
     landing (far)        T ENTERS 422/522 (max 8 mm)  |  P holds
     continuity           T holds (0 glided steps)  |  P holds (4 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 10%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 10%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P BUMPS: u 20° 4 steps (max 2.9 mm) · u 45° 4 (max 6.6 mm)
     far regime (S17/P1)  T BROKEN: the foot moves 8 mm (TOP yaw 0 pitch 60; box 8 mm, contour Δ 0 mm)  |  P BROKEN: the foot moves 8 mm (TOP yaw 0 pitch 60; box 8 mm, contour Δ 0 mm)
     exposure (S22)       holds (9226 cm²)
     coverage (S24, A)    T 100% · P 98% (no facet 0%, hidden 0%, closed T 0% / P 2%)
@@ -814,11 +892,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 87%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm  |  P reach 87%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 4 steps (max 7.3 mm) · u 45° 4 (max 20 mm)  |  P BUMPS: u 20° 4 steps (max 7.3 mm) · u 45° 4 (max 20 mm)
   piece B:
     landing (far)        T ENTERS 156/958 (max 20 mm)  |  P holds
     continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 84%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm  |  P reach 84%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 4 steps (max 7.3 mm) · u 45° 4 (max 20 mm)  |  P BUMPS: u 20° 4 steps (max 7.3 mm) · u 45° 4 (max 20 mm)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (9318 cm²)
     coverage (S24, A)    T 97% · P 97% (no facet 0%, hidden 3%, closed T 0% / P 1%)
@@ -833,11 +913,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (1 glided steps)  |  P holds (2 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 91%, 1 travel-ends trapped (P5), 1 drops ≥ 5 mm  |  P reach 79%, 2 travel-ends trapped (P5), 2 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 1 steps (max 10.4 mm) · u 45° 1 (max 21 mm)  |  P BUMPS: u 20° 2 steps (max 20.5 mm) · u 45° 2 (max 42.2 mm)
   piece B:
     landing (far)        T ENTERS 40/844 (max 30 mm)  |  P holds
     continuity           T holds (1 glided steps)  |  P holds (1 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 89%, 1 travel-ends trapped (P5), 1 drops ≥ 5 mm  |  P reach 89%, 1 travel-ends trapped (P5), 1 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 1 steps (max 10.4 mm) · u 45° 1 (max 21 mm)  |  P BUMPS: u 20° 1 steps (max 10.2 mm) · u 45° 1 (max 20.9 mm)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (9137 cm²)
     coverage (S24, A)    T 98% · P 100% (no facet 0%, hidden 0%, closed T 2% / P 0%)
@@ -853,11 +935,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
   piece B:
     landing (far)        T ENTERS 39/602 (max 0.3 mm)  |  P holds
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (9216 cm²)
     coverage (S24, A)    T 100% · P 100% (no facet 0%, hidden 0%, closed T 0% / P 0%)
@@ -873,11 +957,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T BROKEN: 1 jumps 0.5–5 mm with no event (max 1 mm); 0 glided  |  P BROKEN: 1 jumps 0.5–5 mm with no event (max 1 mm); 0 glided
     function of place    T holds  |  P holds
     close in (P5)        T reach 86%, 1 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 86%, 1 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 0 steps (max 0.4 mm) · u 45° 1 (max 0.7 mm)  |  P BUMPS: u 20° 0 steps (max 0.4 mm) · u 45° 1 (max 0.6 mm)
   piece B:
     landing (far)        T ENTERS 39/602 (max 1 mm)  |  P holds
     continuity           T BROKEN: 1 jumps 0.5–5 mm with no event (max 1 mm); 0 glided  |  P BROKEN: 1 jumps 0.5–5 mm with no event (max 1 mm); 0 glided
     function of place    T holds  |  P holds
     close in (P5)        T reach 84%, 1 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 84%, 1 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 0 steps (max 0.4 mm) · u 45° 1 (max 0.7 mm)  |  P BUMPS: u 20° 0 steps (max 0.4 mm) · u 45° 1 (max 0.6 mm)
     far regime (S17/P1)  T BROKEN: the foot moves 1 mm (TOP yaw 195 pitch 60; box 1 mm, contour Δ 1 mm)  |  P BROKEN: the foot moves 1 mm (TOP yaw 0 pitch 60; box 1 mm, contour Δ 1 mm)
     exposure (S22)       holds (9216 cm²)
     coverage (S24, A)    T 100% · P 100% (no facet 0%, hidden 0%, closed T 0% / P 0%)
@@ -894,11 +980,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (1 glided steps)  |  P holds (1 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 86%, 1 travel-ends trapped (P5), 1 drops ≥ 5 mm  |  P reach 86%, 1 travel-ends trapped (P5), 1 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 1 steps (max 2.2 mm) · u 45° 1 (max 5 mm)  |  P BUMPS: u 20° 1 steps (max 2.2 mm) · u 45° 1 (max 4.7 mm)
   piece B:
     landing (far)        T ENTERS 39/602 (max 6 mm)  |  P holds
     continuity           T holds (1 glided steps)  |  P holds (1 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 84%, 1 travel-ends trapped (P5), 1 drops ≥ 5 mm  |  P reach 84%, 1 travel-ends trapped (P5), 1 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 1 steps (max 2.2 mm) · u 45° 1 (max 5 mm)  |  P BUMPS: u 20° 1 steps (max 2.2 mm) · u 45° 1 (max 4.6 mm)
     far regime (S17/P1)  T BROKEN: the foot moves 6 mm (TOP yaw 195 pitch 60; box 6 mm, contour Δ 6 mm)  |  P BROKEN: the foot moves 6 mm (TOP yaw 0 pitch 60; box 6 mm, contour Δ 6 mm)
     exposure (S22)       holds (9331 cm²)
     coverage (S24, A)    T 100% · P 100% (no facet 0%, hidden 0%, closed T 0% / P 0%)
@@ -914,11 +1002,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 50%, 2 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
   piece B:
     landing (far)        T ENTERS 396/802 (max 5.6 mm)  |  P holds
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 50%, 2 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
     far regime (S17/P1)  T BROKEN: the foot moves 33.7 mm (TOP yaw 60 pitch 60; box 33.7 mm, contour Δ 16.9 mm)  |  P BROKEN: the foot moves 33.7 mm (TOP yaw 60 pitch 80; box 33.7 mm, contour Δ 16.9 mm)
     exposure (S22)       holds (9034 cm²)
     coverage (S24, A)    T 78% · P 78% (no facet 0%, hidden 22%, closed T 0% / P 0%)
@@ -934,11 +1024,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (4 glided steps)  |  P holds (3 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 84%, 2 travel-ends trapped (P5), 4 drops ≥ 5 mm  |  P reach 74%, 3 travel-ends trapped (P5), 3 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 19 steps (max 32.8 mm) · u 45° 34 (max 78.9 mm)  |  P BUMPS: u 20° 19 steps (max 32.8 mm) · u 45° 34 (max 75.5 mm)
   piece B:
     landing (far)        T ENTERS 108/1049 (max 40 mm); AIR 270/1049 (no part under it)  |  P holds (+192 nothing to land on, marked)
     continuity           T holds (4 glided steps)  |  P holds (3 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 82%, 2 travel-ends trapped (P5), 4 drops ≥ 5 mm  |  P reach 71%, 3 travel-ends trapped (P5), 3 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 19 steps (max 32.8 mm) · u 45° 34 (max 78.9 mm)  |  P BUMPS: u 20° 18 steps (max 32.8 mm) · u 45° 33 (max 78.9 mm)
     far regime (S17/P1)  T BROKEN: the foot moves 85 mm (TOP yaw 0 pitch 60; box 85 mm, contour Δ 0 mm)  |  P BROKEN: the foot moves 85 mm (TOP yaw 60 pitch 80; box 85 mm, contour Δ 0 mm)
     exposure (S22)       holds (9665 cm²)
     coverage (S24, A)    T 94% · P 94% (no facet 0%, hidden 6%, closed T 0% / P 0%)
@@ -954,11 +1046,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (2 glided steps)  |  P holds (2 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 70%, 2 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 70%, 2 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 2 steps (max 29.1 mm) · u 45° 2 (max 77.3 mm)  |  P BUMPS: u 20° 2 steps (max 29.1 mm) · u 45° 2 (max 77.5 mm)
   piece B:
     landing (far)        T ENTERS 79/402 (max 40 mm)  |  P holds
     continuity           T holds (2 glided steps)  |  P holds (2 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 65%, 2 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 65%, 2 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 2 steps (max 29.1 mm) · u 45° 2 (max 77.3 mm)  |  P BUMPS: u 20° 2 steps (max 29.1 mm) · u 45° 2 (max 78 mm)
     far regime (S17/P1)  T BROKEN: the foot moves 80 mm (TOP yaw 0 pitch 60; box 80 mm, contour Δ 0 mm)  |  P BROKEN: the foot moves 80 mm (TOP yaw 0 pitch 60; box 80 mm, contour Δ 0 mm)
     exposure (S22)       holds (9520 cm²)
     coverage (S24, A)    T 97% · P 97% (no facet 0%, hidden 3%, closed T 0% / P 0%)
@@ -974,11 +1068,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (2 glided steps)  |  P holds (2 glided steps)
     function of place    T BROKEN: 359 places depend on the way in (359 held by the mouth's hold)  |  P holds
     close in (P5)        T reach 96%, 2 travel-ends trapped (P5), 2 drops ≥ 5 mm  |  P reach 96%, 2 travel-ends trapped (P5), 2 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 2 steps (max 131 mm) · u 45° 2 (max 285.6 mm)  |  P BUMPS: u 20° 2 steps (max 131 mm) · u 45° 2 (max 279.3 mm)
   piece B:
     landing (far)        T ENTERS 78/1354 (max 40 mm); AIR 161/1354 (no part under it)  |  P holds (+481 nothing to land on, marked)
     continuity           T holds (2 glided steps)  |  P holds (2 glided steps)
     function of place    T BROKEN: 359 places depend on the way in (359 held by the mouth's hold)  |  P holds
     close in (P5)        T reach 94%, 2 travel-ends trapped (P5), 2 drops ≥ 5 mm  |  P reach 94%, 2 travel-ends trapped (P5), 2 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 2 steps (max 131 mm) · u 45° 2 (max 285.6 mm)  |  P BUMPS: u 20° 2 steps (max 131 mm) · u 45° 2 (max 273.7 mm)
     far regime (S17/P1)  T BROKEN: the foot moves 360 mm (SIDE yaw 45 pitch -40; box 0 mm, contour Δ 360 mm)  |  P BROKEN: the foot moves 360 mm (SIDE yaw 45 pitch -40; box 0 mm, contour Δ 360 mm)
     exposure (S22)       holds (9216 cm²)
     coverage (S24, A)    T 44% · P 43% (no facet 0%, hidden 56%, closed T 0% / P 0%)
@@ -994,11 +1090,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
   piece B:
     landing (far)        T AIR 242/802 (no part under it)  |  P holds (+242 nothing to land on, marked)
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (10189 cm²)
     coverage (S24, A)    T 81% · P 81% (no facet 0%, hidden 19%, closed T 0% / P 0%)
@@ -1014,11 +1112,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T BROKEN: 349 places depend on the way in (0 held by the mouth's hold)  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
   piece B:
     landing (far)        T AIR 734/1614 (no part under it)  |  P holds (+734 nothing to land on, marked)
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T BROKEN: 349 places depend on the way in (0 held by the mouth's hold)  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
     far regime (S17/P1)  T BROKEN: the foot moves 340 mm (SIDE yaw 0 pitch -40; box 0 mm, contour Δ 360 mm)  |  P BROKEN: the foot moves 340 mm (SIDE yaw 0 pitch -40; box 0 mm, contour Δ 360 mm)
     exposure (S22)       holds (5088 cm²)
     coverage (S24, A)    T 32% · P 32% (no facet 0%, hidden 68%, closed T 0% / P 0%)
@@ -1038,11 +1138,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
   piece B:
     landing (far)        T AIR 24/242 (no part under it)  |  P holds (+24 nothing to land on, marked)
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
     far regime (S17/P1)  T no rule says (no twin: nothing placed without it)  |  P no rule says (no twin: nothing placed without it)
     exposure (S22)       holds (61 cm²)
     coverage (S24, A)    T 100% · P 100% (no facet 0%, hidden 0%, closed T 0% / P 0%)
@@ -1058,16 +1160,19 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
   piece bar:
     landing (far)        T ENTERS 120/482 (max 20 mm)  |  P holds
     continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 51%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm  |  P reach 51%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 4 steps (max 10.9 mm) · u 45° 4 (max 30 mm)  |  P BUMPS: u 20° 4 steps (max 10.9 mm) · u 45° 4 (max 30 mm)
   piece barT:
     landing (far)        T ENTERS 130/482 (max 20 mm)  |  P holds
     continuity           T holds (4 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 4 steps (max 10.9 mm) · u 45° 4 (max 30 mm)  |  P holds (no bump)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (9298 cm²)
     coverage (S24, A)    T 99% · P 99% (no facet 0%, hidden 1%, closed T 0% / P 0%)
@@ -1084,11 +1189,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
   piece B:
     landing (far)        T AIR 42/562 (no part under it)  |  P holds (+42 nothing to land on, marked)
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (9953 cm²)
     coverage (S24, A)    T 91% · P 91% (no facet 0%, hidden 9%, closed T 0% / P 0%)
@@ -1105,11 +1212,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (2 glided steps)  |  P holds (2 glided steps)
     function of place    T BROKEN: 28 places depend on the way in (28 held by the mouth's hold)  |  P holds
     close in (P5)        T reach 88%, 2 travel-ends trapped (P5), 2 drops ≥ 5 mm  |  P reach 88%, 2 travel-ends trapped (P5), 2 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 2 steps (max 10.9 mm) · u 45° 2 (max 26.4 mm)  |  P BUMPS: u 20° 2 steps (max 10.9 mm) · u 45° 2 (max 25.3 mm)
   piece B:
     landing (far)        T ENTERS 380/1124 (max 30 mm)  |  P holds
     continuity           T holds (2 glided steps)  |  P holds (0 glided steps)
     function of place    T BROKEN: 28 places depend on the way in (28 held by the mouth's hold)  |  P holds
     close in (P5)        T reach 75%, 2 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 2 steps (max 10.9 mm) · u 45° 2 (max 26.4 mm)  |  P holds (no bump)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (9482 cm²)
     coverage (S24, A)    T 97% · P 96% (no facet 0%, hidden 3%, closed T 0% / P 1%)
@@ -1125,11 +1234,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (6 glided steps)  |  P holds (6 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 45%, 4 travel-ends trapped (P5), 3 drops ≥ 5 mm  |  P reach 45%, 4 travel-ends trapped (P5), 3 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 6 steps (max 14.6 mm) · u 45° 6 (max 40 mm)  |  P BUMPS: u 20° 6 steps (max 14.6 mm) · u 45° 6 (max 39.3 mm)
   piece B:
     landing (far)        T ENTERS 78/482 (max 30 mm)  |  P holds
     continuity           T holds (2 glided steps)  |  P holds (2 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 66%, 2 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 66%, 2 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 2 steps (max 10.9 mm) · u 45° 2 (max 27.4 mm)  |  P BUMPS: u 20° 2 steps (max 10.9 mm) · u 45° 2 (max 28 mm)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (9316 cm²)
     coverage (S24, A)    T 99% · P 99% (no facet 0%, hidden 1%, closed T 0% / P 0%)
@@ -1144,11 +1255,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (3 glided steps)  |  P holds (3 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 66%, 3 travel-ends trapped (P5), 3 drops ≥ 5 mm  |  P reach 66%, 3 travel-ends trapped (P5), 3 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 3 steps (max 14.6 mm) · u 45° 3 (max 40 mm)  |  P BUMPS: u 20° 3 steps (max 14.6 mm) · u 45° 3 (max 40 mm)
   piece B:
     landing (far)        T ENTERS 119/622 (max 40 mm)  |  P holds
     continuity           T holds (3 glided steps)  |  P holds (3 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 61%, 3 travel-ends trapped (P5), 3 drops ≥ 5 mm  |  P reach 61%, 3 travel-ends trapped (P5), 3 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 3 steps (max 14.6 mm) · u 45° 3 (max 40 mm)  |  P BUMPS: u 20° 3 steps (max 14.6 mm) · u 45° 3 (max 40 mm)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (9440 cm²)
     coverage (S24, A)    T 95% · P 94% (no facet 0%, hidden 5%, closed T 0% / P 1%)
@@ -1163,11 +1276,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
   piece B:
     landing (far)        T holds  |  P holds
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (9330 cm²)
     coverage (S24, A)    T 99% · P 99% (no facet 0%, hidden 1%, closed T 0% / P 0%)
@@ -1183,11 +1298,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (3 glided steps)  |  P holds (3 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 73%, 3 travel-ends trapped (P5), 1 drops ≥ 5 mm  |  P reach 73%, 3 travel-ends trapped (P5), 1 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 3 steps (max 14.6 mm) · u 45° 3 (max 33.2 mm)  |  P BUMPS: u 20° 3 steps (max 14.6 mm) · u 45° 3 (max 34.8 mm)
   piece B:
     landing (far)        T ENTERS 118/814 (max 40 mm)  |  P holds
     continuity           T holds (3 glided steps)  |  P holds (3 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 69%, 3 travel-ends trapped (P5), 1 drops ≥ 5 mm  |  P reach 69%, 3 travel-ends trapped (P5), 1 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 3 steps (max 14.6 mm) · u 45° 3 (max 33.2 mm)  |  P BUMPS: u 20° 3 steps (max 14.6 mm) · u 45° 3 (max 36.7 mm)
     far regime (S17/P1)  T BROKEN: the foot moves 40 mm (TOP yaw 0 pitch 60; box 40 mm, contour Δ 0 mm)  |  P BROKEN: the foot moves 40 mm (TOP yaw 90 pitch 60; box 40 mm, contour Δ 0 mm)
     exposure (S22)       holds (9301 cm²)
     coverage (S24, A)    T 99% · P 99% (no facet 0%, hidden 1%, closed T 0% / P 0%)
@@ -1203,11 +1320,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (1 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 1 steps (max 27.1 mm) · u 45° 1 (max 56.5 mm)  |  P holds (no bump)
   piece B:
     landing (far)        T holds  |  P holds
     continuity           T holds (1 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 1 steps (max 27.1 mm) · u 45° 1 (max 56.5 mm)  |  P holds (no bump)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (10070 cm²)
     coverage (S24, A)    T 91% · P 91% (no facet 0%, hidden 9%, closed T 0% / P 0%)
@@ -1223,11 +1342,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
   piece B:
     landing (far)        T holds  |  P holds
     continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T holds (no bump)  |  P holds (no bump)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (14856 cm²)
     coverage (S24, A)    T 58% · P 58% (no facet 0%, hidden 42%, closed T 0% / P 0%)
@@ -1243,11 +1364,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (8 glided steps)  |  P holds (4 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 37%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 37%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 8 steps (max 18.2 mm) · u 45° 8 (max 49.3 mm)  |  P BUMPS: u 20° 4 steps (max 3.6 mm) · u 45° 4 (max 10 mm)
   piece B:
     landing (far)        T ENTERS 156/482 (max 40 mm)  |  P holds
     continuity           T holds (8 glided steps)  |  P holds (4 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 29%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 29%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 8 steps (max 18.2 mm) · u 45° 8 (max 49.3 mm)  |  P BUMPS: u 20° 4 steps (max 3.6 mm) · u 45° 4 (max 9.5 mm)
     far regime (S17/P1)  T BROKEN: the foot moves 10 mm (TOP yaw 0 pitch 80; box 10 mm, contour Δ 0 mm)  |  P BROKEN: the foot moves 10 mm (TOP yaw 0 pitch 80; box 10 mm, contour Δ 0 mm)
     exposure (S22)       holds (9297 cm²)
     coverage (S24, A)    T 98% · P 98% (no facet 0%, hidden 2%, closed T 0% / P 0%)
@@ -1262,11 +1385,13 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 70%, 2 travel-ends trapped (P5), 1 drops ≥ 5 mm  |  P reach 70%, 2 travel-ends trapped (P5), 1 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 4 steps (max 21.8 mm) · u 45° 4 (max 60 mm)  |  P BUMPS: u 20° 4 steps (max 21.8 mm) · u 45° 4 (max 59.9 mm)
   piece B:
     landing (far)        T ENTERS 341/482 (max 40 mm)  |  P holds
     continuity           T holds (4 glided steps)  |  P holds (2 glided steps)
     function of place    T holds  |  P holds
     close in (P5)        T reach 17%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 67%, 2 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far, one assembly    T BUMPS: u 20° 4 steps (max 21.8 mm) · u 45° 4 (max 60 mm)  |  P BUMPS: u 20° 2 steps (max 21.8 mm) · u 45° 2 (max 58.8 mm)
     far regime (S17/P1)  T holds  |  P holds
     exposure (S22)       holds (9695 cm²)
     coverage (S24, A)    T 95% · P 95% (no facet 0%, hidden 5%, closed T 0% / P 0%)
@@ -1274,45 +1399,46 @@ regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at conta
     determinism          holds
 
 ═══ 2. THE PARAMETRIC SWEEP: 1596 cells (piece A; two 1 mm travels through each feature) — cells BROKEN per check, T / P ═══
-  group                            cells        enter        air       jump       path        far       trap       drop
-  void island straight                64         40/0        0/0        8/8        0/0        0/0      24/24      16/16
-  void island stepped                 64         32/0        0/0        8/8        0/0      16/16      16/16        8/8
-  void island widening                32         16/0        0/0        0/0        0/0        0/0      16/16      16/16
-  void island through                 16          0/0        8/0        0/0        4/0        0/0        0/0        0/0
-  void strip1 straight                64         40/0        6/0       8/10        0/0        0/0      24/30      16/20
-  void strip1 stepped                 64         32/0        4/0       8/10        0/0      16/16      16/20       8/10
-  void strip1 widening                32         16/0        4/0        0/0        0/0        0/0      16/20      16/20
-  void strip1 through                 16          0/0       10/0        0/0        8/0        0/0        0/0        0/0
-  void strip2 straight                48         30/0        3/0        6/7        0/0        0/0      18/21      12/14
-  void strip2 stepped                 48         24/0        2/0        6/7        0/0      12/12      12/14        6/7
-  void strip2 widening                24         12/0        2/0        0/0        0/0        0/0      12/14      12/14
-  void strip2 through                 12          0/0        7/0        0/0        8/0        4/4        0/0        0/0
-  void ring straight                  64         40/0        6/0       8/10        0/0        0/0      28/30      16/20
-  void ring stepped                   64         32/0        4/0       8/10        0/0      16/16      20/20       8/10
-  void ring widening                  32         16/0        4/0        0/0        0/0        0/0      16/20      16/20
-  void ring through                   16          0/0        9/0        0/0        4/0        0/0        0/0        0/0
-  void array straight                 64         40/0        0/0        8/8        0/0        0/0      29/24      16/16
-  void array stepped                  64         32/0        0/0        8/8        1/0      16/16      21/16        8/8
-  void array widening                 32         16/0        0/0        0/0        0/0        2/2      16/16      16/16
-  void array through                  16          0/0        8/0        0/0        9/0        3/3        0/0        0/0
-  protrusion island straight          64         64/0        0/0      16/16        0/0      48/48      48/48      16/16
-  protrusion island stepped           64         48/0        0/0      16/16        4/0      48/48      35/32        0/8
-  protrusion island widening          32         32/0        0/0        0/0        0/0      32/32      32/32      16/16
-  protrusion strip1 straight          64         64/0        0/0      16/16        0/0      48/48      48/48      32/32
-  protrusion strip1 stepped           64         48/0        0/0      16/16        8/0      48/48      34/32        0/8
-  protrusion strip1 widening          32         32/0        0/0        0/0        0/0      32/32      32/32      32/32
-  protrusion strip2 straight          48         48/0        0/0      12/12        0/0      36/36      36/36        8/8
-  protrusion strip2 stepped           48         36/0        0/0      12/12        8/0      36/36      25/24        0/4
-  protrusion strip2 widening          24         24/0        0/0        0/0        0/0      24/24      24/24        8/8
-  protrusion ring straight            64         64/0        0/0      16/16        0/0      48/48      52/48      16/16
-  protrusion ring stepped             64         48/0        0/0      16/16        4/0      48/48      41/32        0/8
-  protrusion ring widening            32         32/0        0/0        0/0        0/0      32/32      32/32      16/16
-  protrusion array straight           64         64/0        0/0      16/16        0/0      50/50      54/48      16/18
-  protrusion array stepped            64         48/0        0/0      16/16        9/0      50/50      40/32        1/9
-  protrusion array widening           32         32/0        0/0        0/0        0/0      32/32      32/32      16/18
-  ALL                               1596       1102/0       77/0    228/238       67/0    697/697    849/833    367/432
+  group                            cells        enter        air       jump       path        far       bump       trap       drop
+  void island straight                64         40/0        0/0        8/8        0/0        0/0      16/16      24/24      16/16
+  void island stepped                 64         32/0        0/0        8/8        0/0      16/16      16/16      16/16        8/8
+  void island widening                32         16/0        0/0        0/0        0/0        0/0      16/16      16/16      16/16
+  void island through                 16          0/0        8/0        0/0        4/0        0/0        0/0        0/0        0/0
+  void strip1 straight                64         40/0        6/0       8/10        0/0        0/0      16/20      24/30      16/20
+  void strip1 stepped                 64         32/0        4/0       8/10        0/0      16/16      16/20      16/20       8/10
+  void strip1 widening                32         16/0        4/0        0/0        0/0        0/0      16/20      16/20      16/20
+  void strip1 through                 16          0/0       10/0        0/0        8/0        0/0        0/0        0/0        0/0
+  void strip2 straight                48         30/0        3/0        6/7        0/0        0/0      12/14      18/21      12/14
+  void strip2 stepped                 48         24/0        2/0        6/7        0/0      12/12      12/14      12/14        6/7
+  void strip2 widening                24         12/0        2/0        0/0        0/0        0/0      12/14      12/14      12/14
+  void strip2 through                 12          0/0        7/0        0/0        8/0        4/4        0/0        0/0        0/0
+  void ring straight                  64         40/0        6/0       8/10        0/0        0/0      16/20      28/30      16/20
+  void ring stepped                   64         32/0        4/0       8/10        0/0      16/16      16/20      20/20       8/10
+  void ring widening                  32         16/0        4/0        0/0        0/0        0/0      16/20      16/20      16/20
+  void ring through                   16          0/0        9/0        0/0        4/0        0/0        0/0        0/0        0/0
+  void array straight                 64         40/0        0/0        8/8        0/0        0/0      16/16      29/24      16/16
+  void array stepped                  64         32/0        0/0        8/8        1/0      16/16      16/16      21/16        8/8
+  void array widening                 32         16/0        0/0        0/0        0/0        2/2      16/16      16/16      16/16
+  void array through                  16          0/0        8/0        0/0        9/0        3/3        0/0        0/0        0/0
+  protrusion island straight          64         64/0        0/0      16/16        0/0      48/48      28/28      48/48      16/16
+  protrusion island stepped           64         48/0        0/0      16/16        4/0      48/48      36/28      35/32        0/8
+  protrusion island widening          32         32/0        0/0        0/0        0/0      32/32      28/28      32/32      16/16
+  protrusion strip1 straight          64         64/0        0/0      16/16        0/0      48/48      24/24      48/48      32/32
+  protrusion strip1 stepped           64         48/0        0/0      16/16        8/0      48/48      40/32      34/32        0/8
+  protrusion strip1 widening          32         32/0        0/0        0/0        0/0      32/32      24/24      32/32      32/32
+  protrusion strip2 straight          48         48/0        0/0      12/12        0/0      36/36      20/20      36/36        8/8
+  protrusion strip2 stepped           48         36/0        0/0      12/12        8/0      36/36      32/24      25/24        0/4
+  protrusion strip2 widening          24         24/0        0/0        0/0        0/0      24/24      20/20      24/24        8/8
+  protrusion ring straight            64         64/0        0/0      16/16        0/0      48/48      32/32      52/48      16/16
+  protrusion ring stepped             64         48/0        0/0      16/16        4/0      48/48      36/32      41/32        0/8
+  protrusion ring widening            32         32/0        0/0        0/0        0/0      32/32      32/32      32/32      16/16
+  protrusion array straight           64         64/0        0/0      16/16        0/0      50/50      32/30      54/48      16/18
+  protrusion array stepped            64         48/0        0/0      16/16        9/0      50/50      40/31      40/32        1/9
+  protrusion array widening           32         32/0        0/0        0/0        0/0      32/32      32/30      32/32      16/18
+  ALL                               1596       1102/0       77/0    228/238       67/0    697/697    684/673    849/833    367/432
   (enter: the piece set at the gizmo enters a part; air: under it nothing within 0.5 mm, unmarked; jump: a 0.5–5 mm depth step with no event; path: a target
-   that depends on the way in; far: the far foot moves > 0.5 mm against the bare block; trap: a close-in travel that ends at a wall; drop: close in the piece
+   that depends on the way in; far: the far foot moves > 0.5 mm against the bare block (u along the normal: BETWEEN two assemblies); bump: along ONE
+   travel the far foot (u 20° off the normal) jumps > 0.5 mm beyond the place's 1 mm step; trap: a close-in travel that ends at a wall; drop: close in the piece
    goes down ≥ 5 mm into something)
 
 ═══ 3. THE FINDINGS, GROUPED BY CAUSE (evidence only — no rule change proposed) ═══
@@ -1322,7 +1448,7 @@ Kinds: (i) a principle confirmed · (ii) a principle that breaks one of the owne
 F1 (v) + (i) — TODAY THE GIZMO IS A POINT: the piece set at it, centred, enters the part beside every wall, rim and protrusion; P2 never does
    rule / principle: the landing rule (ORBIT_CHARTS §1 rule 1); P2; OS14 / C43
    shapes: L03, L05, L06, L12, L13, L14, L15, L16, L17, L18, L20, L21, L22, L23, L25, L26, L28, L30, L32, L33, L34, L35, L36, L37, L39, L40, L41, L42, L43, L44, L45, L46, L47, L48, L53, Q02, Q03, Q04, Q06, Q09, Q10
-   numbers: today: 41 of 62 library shapes, 1102 of 1596 sweep cells; up to 48 mm into a part (the full height of the wall or the protrusion). P2: 0 library shapes and 0 cells with an entry or an unmarked air gap — none.
+   numbers: today: 41 of 62 library shapes, 1102 of 1596 sweep cells; up to 48 mm into a part (the metric is capped at the piece's own height: 48 for A, 40 for B — "at least the piece's height", not a wall's). P2: 0 library shapes and 0 cells with an entry or an unmarked air gap — none.
    note: Far and medium this is the MARKER only (the piece rides the shell); close in the footprint support covers it (F9). The point-vs-body gap is half a piece wide along every wall.
 
 F2 (i) — P2 MOVES EVERY DEPTH STEP HALF A PIECE OFF THE WALL, it does not remove it
@@ -1333,8 +1459,8 @@ F2 (i) — P2 MOVES EVERY DEPTH STEP HALF A PIECE OFF THE WALL, it does not remo
 
 F3 (v) — TODAY THE PIECE'S RULER IS ITS TWO SMALLEST SIZES, NOT ITS FOOTPRINT: a flat piece is judged by its thickness, an oblong one fits either way
    rule / principle: WS10 (heldFoot: the two smallest sizes of the piece's own box); P2 ② / Q3
-   shapes: L05, L06, L12, L13, L14, L16, L17, L18, L20, L21, L22, L23, L26, L28, L30, L32, L33, L34, L35, L36, L37, L39, L40, L41, L44, L45, L46, L47, L48, Q02, Q03, Q04, Q06, Q09, Q10, L53, L19
-   numbers: piece B (80 x 80, 40 tall) is judged 40 x 80: today its gizmo goes to the floor of every void 40 – 80 wide (channels 60 wide: L05, L06, Q02) and the piece set there enters the rims by up to 30 mm along the whole travel (35 library shapes). The bar (20 x 100) is judged 20 x 20: turned across the 25 x 105 keyed slot today ENTERS 130 places (max 20 mm); P2 as held: 0. The lid of L19 (300 x 20 x 300) is judged 20 x 300: today its landing is the TRAY'S FLOOR (20) instead of its seat on the walls (120); P2: 120.
+   shapes: L05, L06, L12, L13, L14, L16, L17, L18, L20, L21, L22, L23, L26, L28, L30, L32, L33, L34, L35, L36, L37, L39, L40, L41, L44, L45, L46, L47, L48, Q02, Q03, Q04, Q06, Q09, Q10, L53
+   numbers: piece B (80 x 80, 40 tall) is judged 40 x 80: today its gizmo goes to the floor of every void 40 – 80 wide (channels 60 wide: L05, L06, Q02) and the piece set there enters the rims by up to 30 mm along the whole travel (35 library shapes). The bar (20 x 100) is judged 20 x 20: turned across the 25 x 105 keyed slot today ENTERS 130 places (max 20 mm); P2 as held: 0. The lid of L19 (300 x 20 x 300), read on the map of the tray alone (the lid not yet placed): today 120, P2 120, its seat 120 — today lands it on its seat too (its 300 mm footprint does not enter the 260 mm opening: bridged).
    note: The difference is visible far out (the marker) and decides the goal's landing; close in the footprint support corrects the PIECE (not the gizmo).
 
 F4 (i) + (v) — 'NOTHING TO LAND ON' IS ONE CLASS: through holes wider than the piece, gaps between islands, the inside of an L, a U, a ring, under a table, a bridge, round a small part
@@ -1359,7 +1485,7 @@ F7 (ii) — EVERY PROTRUSION MOVES THE PIECE AND THE CAMERA FAR OUT BY ITS HEIGH
    rule / principle: P1 / S17 ('far or medium, a singularity at the surface does not impact the orbit of the piece - camera')
    shapes: L17, L20, L21, L22, L33, L34, L35, L36, L37, L39, L43, L44, L45, L46, L47, Q06, Q09
    numbers: 612 of 760 protrusion cells move the far foot (both readings identical); the foot's move / the box's growth: 1 – 1 (the remaining 148: 0.3 mm, under the noise). Library: a 0.3 mm step moves it 0.3 mm, a pin 10 x 10 x 40 moves it 40 mm, the knife 85, the overhang slab 100. Voids: 9 cells move it (a void at an edge or corner that removes the box's extreme, or a corner through-void).
-   note: P1 as worded holds for voids and never for a protrusion that rises above the box; the voids hold it by construction.
+   note: BETWEEN two assemblies (a shape against its bare twin, u along the facet's normal). Along ONE assembly the far foot is a different measure: F17.
 
 F8 (iii) — CLOSE IN, THE PIECE IN CONTACT DROPS INTO EVERY SLOT IT FITS, THEN A DX ACROSS IT IS TRAPPED AT THE FAR WALL — in both readings
    rule / principle: S5 ('the piece shall not go in (it shall continue its orbit)') against the close-in contact (the footprint support today, P2 ⑤) and P5 / S14
@@ -1393,7 +1519,7 @@ F12 (i) + (iv) — TODAY COUNTS SEALED AND BURIED FACES AS SURFACE; THE FACES TH
 F13 (i) + (iv) — THE WITHDRAWAL TEST FINDS THE BLOCKED GOAL; A GOAL ENTERED SIDEWAYS IS NO LANDING OF ANY PRINCIPLE
    rule / principle: S21 (every goal reachable), B4 (withdrawal along the entry), C45 (how a piece enters), S13
    shapes: L03, L05, L18, L19, L53, Q03, Q07
-   numbers: L03: withdrawal clear; landing T 200 · P 200 vs seat 200; L05: withdrawal clear; landing T -100 · P -100 vs seat 120; L18: withdrawal clear; landing T 20 · P 20 vs seat 20; L19: withdrawal clear; landing T 20 · P 120 vs seat 120; L53: withdrawal clear; landing T 210 · P 210 vs seat 210; Q03: withdrawal clear; landing T 200 · P 200 vs seat 200; Q07: BLOCKED by slab@40.3; landing T 320 · P 320 vs seat 200
+   numbers: L03: withdrawal clear; landing T 200 · P 200 vs seat 200; L05: withdrawal clear; landing T -100 · P -100 vs seat 120; L18: withdrawal clear; landing T 20 · P 20 vs seat 20; L19: withdrawal clear; landing T 120 · P 120 vs seat 120; L53: withdrawal clear; landing T 210 · P 210 vs seat 210; Q03: withdrawal clear; landing T 200 · P 200 vs seat 200; Q07: BLOCKED by slab@40.3; landing T 320 · P 320 vs seat 200
    note: Q07: the peg under the slab is blocked along +y (S21/B4 confirmed: found at the build, not by the player). L05: the block slid in from the channel's open end (+z) — P2 along the front's normal lands at the channel's back wall (−100), 220 mm from the seat (120): a slid entry has no landing; only the approach along +z reaches it, and no rule names that entry.
 
 F14 (i) — A CLASS FLIP AT A RULER MOVES THE GIZMO BY THE FEATURE'S WHOLE DEPTH FOR A MILLIMETRE OF WIDTH, in both readings
@@ -1412,3 +1538,9 @@ F16 (iv) — NOTHING PLACED AND ONE SMALL PART HAVE NO RULE: no box, no map; rou
    rule / principle: C42 / WS25; C24
    shapes: L51, L52
    numbers: L51: no map at all (the gizmo held or at the boot centre). L52 (a 30 mm cube, piece A): P2 marks 96 of 242 places nothing to land on; today the gizmo sits on the facets' planes with no part under the piece at 96 places.
+
+F17 (ii) — ALONG ONE ASSEMBLY THE FAR FOOT BUMPS AT EVERY DEPTH STEP WHEN THE ORBIT'S DIRECTION IS OBLIQUE: by the step's depth × tan(the direction's angle off the normal)
+   rule / principle: P1 / S17 along a travel ('a singularity at the surface does not impact the orbit of the piece - camera'); the shell (orbit_shell.ts)
+   shapes: L03, L05, L06, L07, L12, L13, L14, L15, L16, L17, L18, L20, L21, L22, L23, L25, L26, L28, L30, L31, L32, L33, L34, L35, L36, L37, L39, L40, L41, L44, L46, L47, L48, Q02, Q03, Q04, Q06, Q07, Q09, Q10
+   numbers: the far foot (d = 0.3 m, shellAnchor as the game calls it) along the 1 mm travels with u tilted 20° / 45° off the facet's normal toward the travel. Sweep (piece A): cells with a bump > 0.5 mm at 20° — today 684 (voids 228, protrusions 456), P2 673 (voids 258, protrusions 415); by depth (max at 20° / 45°, cells bumping at 20°, T · P): 0.3 mm: T 0.1 / 0.3 (0) · P 0.1 / 0.3 (0); 1 mm: T 116.8 / 116.5 (32) · P 0.4 / 1 (0); 6 mm: T 2.2 / 6 (310) · P 2.2 / 6 (316); 40 mm: T 14.6 / 40 (342) · P 14.6 / 40 (357) — depth × tan 20° = 0.36 h, × tan 45° = h; today's 1 mm outliers (116.8 mm) are F6's false-mouth cells: the HELD place released, not a depth step. Library, piece A, max bump at 20° / 45° (mm): L03 T 14.6 / 40 · P 14.6 / 40; L12 T 82.1 / 171.3 · P 82 / 173; L35 T 14.6 / 39.9 · P 14.6 / 39; L42 T 0.1 / 0.1 · P 0.1 / 0.1; L43 T 0.4 / 0.7 · P 0.4 / 0.6; L44 T 2.2 / 5 · P 2.2 / 4.7. 40 library shapes bump at 20°.
+   note: With u along the normal (the calm's full share, a face's middle) the bump is zero by construction; the calm leaves u oblique toward a face's edges, where the shell no longer absorbs a depth step: the foot slides along u by depth × tan(angle). The study's earlier claim 'no bump along one assembly' rested on u = the normal only.

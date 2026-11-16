@@ -19,8 +19,8 @@ const f1 = (x: number) => (Number.isFinite(x) ? (Math.round(x * 10) / 10).toStri
 const pct = (a: number, b: number) => (b > 0 ? `${Math.round((100 * a) / b)}%` : "—");
 
 // ───────────────────── per shape: the aggregates over its travels and pieces ─────────────────────
-interface Agg { e: number; em: number; a: number; am: number; u: number; um: number; g: number; p: number; h: number; n: number; nothing: number; reach: number[]; trap: number; drops: number; samples: number }
-const z = (): Agg => ({ e: 0, em: 0, a: 0, am: 0, u: 0, um: 0, g: 0, p: 0, h: 0, n: 0, nothing: 0, reach: [], trap: 0, drops: 0, samples: 0 });
+interface Agg { e: number; em: number; a: number; am: number; u: number; um: number; g: number; p: number; h: number; n: number; nothing: number; reach: number[]; trap: number; drops: number; samples: number; fb20: number; fn20: number; fb45: number; fn45: number }
+const z = (): Agg => ({ e: 0, em: 0, a: 0, am: 0, u: 0, um: 0, g: 0, p: 0, h: 0, n: 0, nothing: 0, reach: [], trap: 0, drops: 0, samples: 0, fb20: 0, fn20: 0, fb45: 0, fn45: 0 });
 function aggOf(d: A, piece?: string): { T: Agg; P: Agg } {
   const r = { T: z(), P: z() };
   for (const v of Object.values(d.lines ?? {}) as A[]) for (const [pk, x] of Object.entries(v) as [string, A][]) {
@@ -31,6 +31,7 @@ function aggOf(d: A, piece?: string): { T: Agg; P: Agg } {
       a.u += y.cont.unnamed; a.um = Math.max(a.um, y.cont.unnamedMax); a.g += y.cont.glides; a.p += y.path; a.samples += x.n;
       if (R === "T") a.h += y.held; else a.nothing += y.land.nothing;
       a.reach.push(y.close.reach); a.trap += y.close.trapped; a.drops += y.close.drops;
+      if (y.far) { a.fb20 = Math.max(a.fb20, y.far.b20.max); a.fn20 += y.far.b20.n; a.fb45 = Math.max(a.fb45, y.far.b45.max); a.fn45 += y.far.b45.n; }
     }
   }
   return r;
@@ -38,6 +39,7 @@ function aggOf(d: A, piece?: string): { T: Agg; P: Agg } {
 const landV = (a: Agg, R: "T" | "P") => (a.e === 0 && a.a === 0 ? (R === "P" && a.nothing > 0 ? `holds (+${a.nothing} nothing to land on, marked)` : "holds") : [a.e ? `ENTERS ${a.e}/${a.samples} (max ${f1(a.em)} mm)` : "", a.a ? `AIR ${a.a}/${a.samples} (${a.am >= 9999 ? "no part under it" : `max ${f1(a.am)} mm`})` : ""].filter(Boolean).join("; "));
 const contV = (a: Agg) => (a.u === 0 ? `holds (${a.g} glided steps)` : `BROKEN: ${a.u} jumps 0.5–5 mm with no event (max ${f1(a.um)} mm); ${a.g} glided`);
 const placeV = (a: Agg) => (a.p === 0 ? "holds" : `BROKEN: ${a.p} places depend on the way in (${a.h} held by the mouth's hold)`);
+const bumpV = (a: Agg) => (a.fn20 === 0 && a.fn45 === 0 ? "holds (no bump)" : `BUMPS: u 20° ${a.fn20} steps (max ${f1(a.fb20)} mm) · u 45° ${a.fn45} (max ${f1(a.fb45)} mm)`);
 const closeV = (a: Agg) => `reach ${Math.round(a.reach.reduce((s, x) => s + x, 0) / Math.max(1, a.reach.length))}%, ${a.trap} travel-ends trapped (P5), ${a.drops} drops ≥ 5 mm`;
 function farV(d: A, R: "T" | "P"): string {
   if (!d.far || d.far.note) return "no rule says (no twin: nothing placed without it)";
@@ -77,6 +79,7 @@ for (const d of LIB) {
     w(`    continuity           T ${contV(g.T)}  |  P ${contV(g.P)}`);
     w(`    function of place    T ${placeV(g.T)}  |  P ${placeV(g.P)}`);
     w(`    close in (P5)        T ${closeV(g.T)}  |  P ${closeV(g.P)}`);
+    w(`    far, one assembly    T ${bumpV(g.T)}  |  P ${bumpV(g.P)}`);
   }
   w(`    far regime (S17/P1)  T ${farV(d, "T")}  |  P ${farV(d, "P")}`);
   w(`    exposure (S22)       ${expoV(d)}`);
@@ -90,8 +93,8 @@ for (const d of LIB) {
 // ───────────────────── the sweep ─────────────────────
 w();
 w(`═══ 2. THE PARAMETRIC SWEEP: ${SW.length} cells (piece A; two 1 mm travels through each feature) — cells BROKEN per check, T / P ═══`);
-const keys = ["enter", "air", "jump", "path", "far", "trap", "drop"] as const;
-const brk = (x: A, R: "T" | "P") => ({ enter: x[R].e > 0, air: x[R].a > 0, jump: x[R].u > 0, path: x[R].p > 0, far: (R === "T" ? x.far.T : x.far.P) > 0.5, trap: x[R].ct > 0, drop: x[R].cd > 0 });
+const keys = ["enter", "air", "jump", "path", "far", "bump", "trap", "drop"] as const;
+const brk = (x: A, R: "T" | "P") => ({ enter: x[R].e > 0, air: x[R].a > 0, jump: x[R].u > 0, path: x[R].p > 0, far: (R === "T" ? x.far.T : x.far.P) > 0.5, bump: x[R].fn20 > 0, trap: x[R].ct > 0, drop: x[R].cd > 0 });
 const rowsBy = (key: (x: A) => string) => { const m = new Map<string, A[]>(); for (const x of SW) { const k = key(x); m.set(k, [...(m.get(k) ?? []), x]); } return m; };
 w(`  ${"group".padEnd(32)} cells  ${keys.map((k) => k.padStart(11)).join("")}`);
 for (const [k, xs] of rowsBy((x) => `${x.sign} ${x.foot} ${x.prof}`)) {
@@ -101,7 +104,8 @@ for (const [k, xs] of rowsBy((x) => `${x.sign} ${x.foot} ${x.prof}`)) {
 const tot = (R: "T" | "P", kk: (typeof keys)[number]) => SW.filter((x) => brk(x, R)[kk]).length;
 w(`  ${"ALL".padEnd(32)} ${String(SW.length).padStart(5)}  ${keys.map((kk) => `${tot("T", kk)}/${tot("P", kk)}`.padStart(11)).join("")}`);
 w("  (enter: the piece set at the gizmo enters a part; air: under it nothing within 0.5 mm, unmarked; jump: a 0.5–5 mm depth step with no event; path: a target");
-w("   that depends on the way in; far: the far foot moves > 0.5 mm against the bare block; trap: a close-in travel that ends at a wall; drop: close in the piece");
+w("   that depends on the way in; far: the far foot moves > 0.5 mm against the bare block (u along the normal: BETWEEN two assemblies); bump: along ONE");
+w("   travel the far foot (u 20° off the normal) jumps > 0.5 mm beyond the place's 1 mm step; trap: a close-in travel that ends at a wall; drop: close in the piece");
 w("   goes down ≥ 5 mm into something)");
 
 // ───────────────────── THE FINDINGS ─────────────────────
@@ -115,7 +119,7 @@ const libAgg = (d: A, pk?: string) => aggOf(d, pk);
   const cells = SW.filter((x) => x.T.e > 0).length, cellsP = SW.filter((x) => x.P.e > 0 || x.P.a > 0).length;
   const libP = lib((d) => libAgg(d).P.e > 0 || libAgg(d).P.a > 0).length;
   F.push({ id: "F1", kind: "(v) + (i)", rule: "the landing rule (ORBIT_CHARTS §1 rule 1); P2; OS14 / C43", title: "TODAY THE GIZMO IS A POINT: the piece set at it, centred, enters the part beside every wall, rim and protrusion; P2 never does",
-    shapes: sh, numbers: `today: ${sh.length} of ${LIB.filter((d) => !d.empty).length} library shapes, ${cells} of ${SW.length} sweep cells; up to ${f1(em)} mm into a part (the full height of the wall or the protrusion). P2: ${libP} library shapes and ${cellsP} cells with an entry or an unmarked air gap — none.`,
+    shapes: sh, numbers: `today: ${sh.length} of ${LIB.filter((d) => !d.empty).length} library shapes, ${cells} of ${SW.length} sweep cells; up to ${f1(em)} mm into a part (the metric is capped at the piece's own height: 48 for A, 40 for B — "at least the piece's height", not a wall's). P2: ${libP} library shapes and ${cellsP} cells with an entry or an unmarked air gap — none.`,
     note: "Far and medium this is the MARKER only (the piece rides the shell); close in the footprint support covers it (F9). The point-vs-body gap is half a piece wide along every wall." });
 }
 // F2 — the steps move half a piece out
@@ -134,7 +138,7 @@ const libAgg = (d: A, pk?: string) => aggOf(d, pk);
   const L53 = LIB.find((d) => d.name.startsWith("L53")), L19 = LIB.find((d) => d.name.startsWith("L19"));
   const bt = L53 ? libAgg(L53, "barT") : null;
   F.push({ id: "F3", kind: "(v)", rule: "WS10 (heldFoot: the two smallest sizes of the piece's own box); P2 ② / Q3", title: "TODAY THE PIECE'S RULER IS ITS TWO SMALLEST SIZES, NOT ITS FOOTPRINT: a flat piece is judged by its thickness, an oblong one fits either way",
-    shapes: [...shB, "L53", "L19"], numbers: `piece B (80 x 80, 40 tall) is judged 40 x 80: today its gizmo goes to the floor of every void 40 – 80 wide (channels 60 wide: L05, L06, Q02) and the piece set there enters the rims by up to 30 mm along the whole travel (${shB.length} library shapes). The bar (20 x 100) is judged 20 x 20: turned across the 25 x 105 keyed slot today ENTERS ${bt ? `${bt.T.e} places (max ${f1(bt.T.em)} mm)` : "—"}; P2 as held: ${bt ? bt.P.e : "—"}. The lid of L19 (300 x 20 x 300) is judged 20 x 300: today its landing is the TRAY'S FLOOR (${L19?.goal?.landT}) instead of its seat on the walls (${L19?.goal?.seat}); P2: ${L19?.goal?.landP}.`,
+    shapes: [...shB, "L53"], numbers: `piece B (80 x 80, 40 tall) is judged 40 x 80: today its gizmo goes to the floor of every void 40 – 80 wide (channels 60 wide: L05, L06, Q02) and the piece set there enters the rims by up to 30 mm along the whole travel (${shB.length} library shapes). The bar (20 x 100) is judged 20 x 20: turned across the 25 x 105 keyed slot today ENTERS ${bt ? `${bt.T.e} places (max ${f1(bt.T.em)} mm)` : "—"}; P2 as held: ${bt ? bt.P.e : "—"}. The lid of L19 (300 x 20 x 300), read on the map of the tray alone (the lid not yet placed): today ${L19?.goal?.landT}, P2 ${L19?.goal?.landP}, its seat ${L19?.goal?.seat} — ${L19?.goal && L19.goal.landT === L19.goal.seat ? 'today lands it on its seat too (its 300 mm footprint does not enter the 260 mm opening: bridged)' : 'today misses its seat'}.`,
     note: "The difference is visible far out (the marker) and decides the goal's landing; close in the footprint support corrects the PIECE (not the gizmo)." });
 }
 // F4 — nothing to land on
@@ -174,7 +178,18 @@ const libAgg = (d: A, pk?: string) => aggOf(d, pk);
   const vMoved = SW.filter((x) => x.sign === "void" && x.far.T > 0.5 && x.cap !== false);
   F.push({ id: "F7", kind: "(ii)", rule: "P1 / S17 ('far or medium, a singularity at the surface does not impact the orbit of the piece - camera')", title: "EVERY PROTRUSION MOVES THE PIECE AND THE CAMERA FAR OUT BY ITS HEIGHT: the shell is built on the parts' BOX, and a protrusion grows the box",
     shapes: lib((d) => d.far && d.far.T && d.far.T.footMax > 0.5 && d.far.boxMm > 0.5), numbers: `${moved.length} of ${pro.length} protrusion cells move the far foot (both readings identical); the foot's move / the box's growth: ${f1(Math.min(...ratio))} – ${f1(Math.max(...ratio))} (the remaining ${pro.length - moved.length}: 0.3 mm, under the noise). Library: a 0.3 mm step moves it 0.3 mm, a pin 10 x 10 x 40 moves it 40 mm, the knife 85, the overhang slab 100. Voids: ${vMoved.length} cells move it (a void at an edge or corner that removes the box's extreme, or a corner through-void).`,
-    note: "P1 as worded holds for voids and never for a protrusion that rises above the box; the voids hold it by construction." });
+    note: "BETWEEN two assemblies (a shape against its bare twin, u along the facet's normal). Along ONE assembly the far foot is a different measure: F17." });
+}
+// F17 — the far foot along ONE assembly, the direction oblique (the critic's B1)
+{
+  const anyB = (R: "T" | "P") => SW.filter((x) => x[R].fn20 > 0);
+  const vB = (R: "T" | "P") => anyB(R).filter((x) => x.sign === "void").length, pB = (R: "T" | "P") => anyB(R).filter((x) => x.sign === "protrusion").length;
+  const mx = (k: "fb20" | "fb45") => f1(Math.max(0, ...SW.map((x) => Math.max(x.T[k], x.P[k]))));
+  const lb = LIB.filter((d) => !d.empty).map((d) => ({ n: d.name.split(" ")[0], g: libAgg(d, "A") })).filter((x) => x.g.T.fn20 > 0 || x.g.P.fn20 > 0);
+  const ex = ["L03", "L12", "L35", "L42", "L43", "L44"].map((k) => { const d = LIB.find((y) => y.name.startsWith(k)); if (!d) return ""; const g = libAgg(d, "A"); return `${k} T ${f1(g.T.fb20)} / ${f1(g.T.fb45)} · P ${f1(g.P.fb20)} / ${f1(g.P.fb45)}`; }).filter(Boolean).join("; ");
+  F.push({ id: "F17", kind: "(ii)", rule: "P1 / S17 along a travel ('a singularity at the surface does not impact the orbit of the piece - camera'); the shell (orbit_shell.ts)", title: "ALONG ONE ASSEMBLY THE FAR FOOT BUMPS AT EVERY DEPTH STEP WHEN THE ORBIT'S DIRECTION IS OBLIQUE: by the step's depth × tan(the direction's angle off the normal)",
+    shapes: lb.map((x) => x.n), numbers: `the far foot (d = 0.3 m, shellAnchor as the game calls it) along the 1 mm travels with u tilted 20° / 45° off the facet's normal toward the travel. Sweep (piece A): cells with a bump > 0.5 mm at 20° — today ${anyB("T").length} (voids ${vB("T")}, protrusions ${pB("T")}), P2 ${anyB("P").length} (voids ${vB("P")}, protrusions ${pB("P")}); by depth (max at 20° / 45°, cells bumping at 20°, T · P): ${[0.3, 1, 6, 40].map((h) => { const xs = SW.filter((x) => x.dh === h); const m = (R: "T" | "P", k: "fb20" | "fb45") => f1(Math.max(0, ...xs.map((x) => x[R][k]))); return `${h} mm: T ${m("T", "fb20")} / ${m("T", "fb45")} (${xs.filter((x) => x.T.fn20 > 0).length}) · P ${m("P", "fb20")} / ${m("P", "fb45")} (${xs.filter((x) => x.P.fn20 > 0).length})`; }).join("; ")} — depth × tan 20° = 0.36 h, × tan 45° = h; today's 1 mm outliers (${mx("fb20")} mm) are F6's false-mouth cells: the HELD place released, not a depth step. Library, piece A, max bump at 20° / 45° (mm): ${ex}. ${lb.length} library shapes bump at 20°.`,
+    note: "With u along the normal (the calm's full share, a face's middle) the bump is zero by construction; the calm leaves u oblique toward a face's edges, where the shell no longer absorbs a depth step: the foot slides along u by depth × tan(angle). The study's earlier claim 'no bump along one assembly' rested on u = the normal only." });
 }
 // F8 — close in: drops and traps
 {
@@ -256,6 +271,7 @@ F.push({ id: "F16", kind: "(iv)", rule: "C42 / WS25; C24", title: "NOTHING PLACE
   shapes: ["L51", "L52"], numbers: (() => { const d = LIB.find((x) => x.name.startsWith("L52")); const g = d ? libAgg(d, "A") : null; return `L51: no map at all (the gizmo held or at the boot centre). L52 (a 30 mm cube, piece A): P2 marks ${g?.P.nothing} of ${g?.P.samples} places nothing to land on; today the gizmo sits on the facets' planes with no part under the piece at ${g?.T.a} places.`; })(),
   note: "" });
 
+F.sort((x, y) => Number(x.id.slice(1)) - Number(y.id.slice(1)));
 w();
 w("═══ 3. THE FINDINGS, GROUPED BY CAUSE (evidence only — no rule change proposed) ═══");
 w("Kinds: (i) a principle confirmed · (ii) a principle that breaks one of the owner's rules · (iii) two rules in conflict · (iv) a case no rule covers ·");
@@ -272,8 +288,8 @@ const txt = out.join("\n") + "\n";
 writeFileSync(join(here, "results.txt"), txt);
 
 // ───────────────────── results.json: compact ─────────────────────
-const SKT = ["e", "em", "a", "am", "u", "um", "g", "p", "h", "cr", "ct", "cd"];
-const SKP = ["e", "a", "u", "um", "g", "p", "n", "cr", "ct", "cd"];
+const SKT = ["e", "em", "a", "am", "u", "um", "g", "p", "h", "cr", "ct", "cd", "fn20", "fb20", "fb45"];
+const SKP = ["e", "a", "u", "um", "g", "p", "n", "cr", "ct", "cd", "fn20", "fb20", "fb45"];
 const code = (x: A) => [x.sign[0], x.foot, x.prof.slice(0, 2), x.wf, x.dh, x.pos.slice(0, 2)].join(".");
 const compactLib = LIB.map((d) => {
   if (d.empty) return { name: d.name, classes: d.classes, empty: true };
@@ -281,7 +297,7 @@ const compactLib = LIB.map((d) => {
   const lines: Record<string, A> = {};
   for (const pk of [...new Set(Object.values(d.lines).flatMap((v: A) => Object.keys(v)))] as string[]) {
     const g = aggOf(d, pk);
-    const c = (x: Agg, R: string) => ({ enter: x.e, enterMax: x.em, air: x.a, airMax: Math.min(x.am, 9999), jumps: x.u, jumpMax: x.um, glides: x.g, path: x.p, ...(R === "T" ? { held: x.h } : { nothing: x.nothing }), reach: Math.round(x.reach.reduce((t, y) => t + y, 0) / Math.max(1, x.reach.length)), trapped: x.trap, drops: x.drops, samples: x.samples });
+    const c = (x: Agg, R: string) => ({ enter: x.e, enterMax: x.em, air: x.a, airMax: Math.min(x.am, 9999), jumps: x.u, jumpMax: x.um, glides: x.g, path: x.p, ...(R === "T" ? { held: x.h } : { nothing: x.nothing }), reach: Math.round(x.reach.reduce((t, y) => t + y, 0) / Math.max(1, x.reach.length)), trapped: x.trap, drops: x.drops, samples: x.samples, farBump20: x.fb20, farBump45: x.fb45, farBumpSteps20: x.fn20 });
     lines[pk] = { T: c(g.T, "T"), P: c(g.P, "P") };
   }
   return { name: d.name, classes: d.classes, sketch: d.sketch, expect: d.expect, parts: d.parts, travels: Object.keys(d.lines), pieces: lines, far: d.far, exposure: d.exposure, coverage: d.coverage, goal: d.goal, stages: d.stages, det: d.det, detTie: d.detTie, sens: d.sens, capReal: d.capReal };
@@ -289,7 +305,7 @@ const compactLib = LIB.map((d) => {
 const json = {
   study: "ORBIT_SURFACE.md — the surface study (2026-11-16)", pieces: { A: "41.3x45x48", B: "80x80x40", bar: "20x100x20" }, thresholds: { noise: 0.5, glide: 5, skin: 0.3, shell: 60 },
   library: compactLib,
-  sweep: { legend: "id = sign.footprint.profile(2).widthFactor.depth.position(2); T.e/em enter count/max, a/am air, u/um jumps 0.5-5 mm, g glides, p path-dependent places, h held by the mouth's hold, cr close-in reach %, ct trapped ends, cd drops; P.n nothing to land on; centre.Tk: c cast, b bridged, m mouth, p plane, s beside, n none; centre.Pk: 1 contact, 0 nothing", keys: ["id", "cap", "parts", "samples", ...SKT.map((k) => `T.${k}`), ...SKP.map((k) => `P.${k}`), "far.T", "far.P", "far.nT", "far.box", "far.cu", "far.cd", "centre.T", "centre.Tk", "centre.P", "centre.Pk"],
+  sweep: { legend: "id = sign.footprint.profile(2).widthFactor.depth.position(2); T.e/em enter count/max, a/am air, u/um jumps 0.5-5 mm, g glides, p path-dependent places, h held by the mouth's hold, fn20 / fb20 / fb45 far-foot bumps along one travel (steps at 20°, max mm at 20° / 45°), cr close-in reach %, ct trapped ends, cd drops; P.n nothing to land on; centre.Tk: c cast, b bridged, m mouth, p plane, s beside, n none; centre.Pk: 1 contact, 0 nothing", keys: ["id", "cap", "parts", "samples", ...SKT.map((k) => `T.${k}`), ...SKP.map((k) => `P.${k}`), "far.T", "far.P", "far.nT", "far.box", "far.cu", "far.cd", "centre.T", "centre.Tk", "centre.P", "centre.Pk"],
     rows: SW.map((x) => [code(x), x.cap ? 1 : 0, x.parts, x.samples, ...SKT.map((k) => (k === "cr" ? Math.round(x.T[k]) : x.T[k])), ...SKP.map((k) => (k === "cr" ? Math.round(x.P[k]) : x.P[k])), x.far.T, x.far.P, x.far.nT, x.far.box, x.far.cu, x.far.cd, x.centre.T, ({ cast: "c", bridged: "b", mouth: "m", plane: "p", beside: "s", none: "n" } as Record<string, string>)[x.centre.Tk] ?? "?", x.centre.P, x.centre.Pk === "nothing" ? 0 : 1]) },
   findings: F,
 };
