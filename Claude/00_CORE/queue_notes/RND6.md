@@ -21,9 +21,9 @@ on."* A build of a recovery was started on 2026-11-16 and STOPPED at once on his
 4. ✅ CERTAIN (measured) — `Scene_2` allocates NO MORE WebGL memory than `Scene_0`, and keeps nothing alive after a reload that `Scene_0` does not.
 5. 🔶 PROBABLE, NOT verified — the trigger is `Scene_2`'s GPU WORK per frame (245 meshes, PCSS soft shadows, PBR, the boot animation redrawing the shadow map every frame, at 3×) — iOS aborting GPU work that runs too long, and Safari then refusing WebGL until restarted.
 
-**What to do next** (in this order — no fix before step 2 says which feature): (1) the phone bisect below (`## How to make it certain`), the owner
-filling the empty results table; (2) if possible, Safari's Web Inspector from a Mac on the black page; (3) only then choose among the fix candidates
-(`## The fix candidates`), with the owner.
+**What to do next** (in this order — no fix before step 1 says which feature): (1) ⭐ **THE TEST ON THE PHONE** — the section of that
+name below, a procedure with its addresses and an empty results table (no deploy, no slider needed); (2) if possible, Safari's Web Inspector from
+a Mac on the black page; (3) only then choose among the fix candidates (`## The fix candidates`), with the owner.
 
 ## The owner's reports and checks (verbatim, dated)
 
@@ -128,27 +128,96 @@ filling the empty results table; (2) if possible, Safari's Web Inspector from a 
 * **A stale bundle**: the black page printed the live build.
 * **Our storage, the URL, the build gate's loop**: above.
 
+## THE TEST ON THE PHONE (no deploy, no slider)
+
+**What it decides.** Which feature of `Scene_2` makes Safari lose WebGL: each run switches ONE feature off and counts the loads until the black
+screen. A run that never goes black names the feature; the fix is then chosen with the owner (`## The fix candidates`).
+
+**No deploy and no slider are needed.** The owner (2026-11-16): *"Add the test in the md file. I will test later on. I need to modify the deploy
+for each test because each reload uses default slider setting which i need to change for each test."* — the sliders are indeed lost at every
+reload (nothing saves them), but the same settings can be written in the ADDRESS, and the address is read again at EVERY load. Verified at `c7ac510`:
+* `src/render/scene.ts:116` — every boot builds the settings from `window.location.search` (`parseConfigOverrides`, `src/input/config_override.ts`);
+  every NUMERIC setting of `src/input/gestureConfig.ts`'s defaults may be given there (`NUMERIC_KEYS`). `shadowsOn` accepts 0 (off), 1 (on),
+  2 (auto, the default); `bootAnimOn` 0 or 1 (default 1); `modelStage` 0 (boot, the default) or 1 (final) — `validateGestureConfig`,
+  `gestureConfig.ts:1139/1159/1165`. A wrong value is refused and SAID on the HUD (`⛔ name=value: …`), never applied silently.
+* **The HUD's `tuning` line shows what is in force**, e.g. `tuning sceneIndex=3 shadowsOn=0` (`hud_paint.ts:122`). Check it at EVERY load. (The
+  line `⛔ v: not an overridable tunable` under it is harmless: the build check's marker — a side finding below.) If the HUD is folded, tap `HUD`.
+* **Safari's reload button reloads the same address**, settings included. The build check's own reload (`main.ts`, `location.replace`) keeps them
+  and adds `v=…`. The pause menu's *Restart* / *Quit*, the results' *Retry* / *Next* / *Level select* and the level menu also keep them
+  (`core/game_route.ts`: `playHref` / `shellHref`, *"every other parameter kept"*) — ⚠ but for the test use **Safari's reload button only**: a
+  level change is another kind of load (it keeps the old page in Safari's history) and would not be the same experiment.
+* **Open the address in Safari itself**, typed, pasted or tapped from this file. A bookmark is fine if it holds the WHOLE address (check the
+  `tuning` line). ⚠ Not a home-screen icon: it may open as a separate web app, outside Safari's state, which is not what is tested here.
+
+**The steps** (one run = one address):
+1. **Force-quit Safari** (swipe it away in the app switcher), then open it again — every run starts from a fresh Safari.
+2. Open the run's address (below), in one tab, with no other tab of the game open.
+3. Check the HUD's `tuning` line: the run's settings must be listed, none refused. Note the `build` line.
+4. Wait until the scene has appeared (and, on `Scene_2`, the parts have fallen), then tap **Safari's reload button**. That is load 2.
+5. Repeat step 4, counting the loads, until the screen is black (the HUD over a black view, or the message *"The render loop produced no frames"*).
+6. If black: note the count, the HUD's `draw` and `frame` lines (a photo is enough). **Stop rule**: 15 loads without black = *"none in 15"*.
+7. Force-quit Safari again before the next run.
+
+**The runs, in this order** (each address on its own line):
+
+Run A — the baseline (expected: black at about the 4th load):
+```
+https://dsug1.github.io/3d_assembly_game/?sceneIndex=3
+```
+Run A2 — the baseline again (is the count constant?):
+```
+https://dsug1.github.io/3d_assembly_game/?sceneIndex=3
+```
+Run B — no shadow casters but the orbited piece (⚠ the soft-shadow shader still runs on the receivers):
+```
+https://dsug1.github.io/3d_assembly_game/?sceneIndex=3&shadowsOn=0
+```
+Run C — no boot animation (no part moves at boot: the shadow map drawn once):
+```
+https://dsug1.github.io/3d_assembly_game/?sceneIndex=3&bootAnimOn=0
+```
+Run D — both:
+```
+https://dsug1.github.io/3d_assembly_game/?sceneIndex=3&shadowsOn=0&bootAnimOn=0
+```
+Run E — the final stage at boot (no heaps, no fall) — only if B – D leave a doubt:
+```
+https://dsug1.github.io/3d_assembly_game/?sceneIndex=3&modelStage=1
+```
+Run F — the control, `Scene_0`, 20 loads (expected: never black):
+```
+https://dsug1.github.io/3d_assembly_game/?sceneIndex=0
+```
+
+**The results** (the owner fills it):
+
+| Run | Address | Loads until black (or "none in 15") | `draw` and `frame` lines if black | Date | `build` |
+|---|---|---|---|---|---|
+| A | `?sceneIndex=3` | | | | |
+| A2 | `?sceneIndex=3` | | | | |
+| B | `?sceneIndex=3&shadowsOn=0` | | | | |
+| C | `?sceneIndex=3&bootAnimOn=0` | | | | |
+| D | `?sceneIndex=3&shadowsOn=0&bootAnimOn=0` | | | | |
+| E | `?sceneIndex=3&modelStage=1` | | | | |
+| F | `?sceneIndex=0` (20 loads) | | | | |
+
+**How to read it.**
+* A and A2 about equal (≈ 4) — the damage builds up load after load; A and A2 very different, or black at the 1st load — one frame too heavy.
+* B "none in 15" — the shadow casters (the shadow pass of the ≈ 245 meshes) are the trigger.
+* C "none in 15" — the boot animation (the shadow map redrawn every frame while the parts fall) is the trigger.
+* D "none in 15" but neither B nor C — the two together.
+* B, C or D with a HIGHER count than A but still black — that feature adds to the load, the rest of `Scene_2` too.
+* B, C, D all black at about A's count — the trigger is in what NO address can switch off (below).
+* F black — not `Scene_2` alone: back to the analysis (`## What is CERTAIN, PROBABLE, OPEN, RULED OUT`).
+
+**What no address can switch off** — a test of these WOULD need a build (a setting added), to be decided with the owner then: the soft shadows'
+shader itself (PCSS, `lighting.ts:70`), the HDR environment and its prefilter (`envIntensity=0` only dims it), the glass and the PBR materials, the
+tone mapping, the device ratio (the 3× screen's full resolution), antialiasing (MSAA), the stencil. (`aoOn` does nothing on `Scene_2`: its contact
+shadows are baked, no SSAO is built.)
+
 ## How to make it certain
 
-**The bisect on the phone** (the owner's method works): **force-quit Safari first**, open the URL, reload with Safari's button, waiting for the
-scene each time, and COUNT the loads until black. The baseline: black at the **4th** load of `?sceneIndex=3`. Then one feature off at a time:
-
-| # | URL | What it switches off | Loads until black (owner) |
-|---|---|---|---|
-| 0 | `https://dsug1.github.io/3d_assembly_game/?sceneIndex=3` | nothing — the baseline (expected ≈ 4) | |
-| 0b | the same, again | is the count constant? | |
-| 1 | `https://dsug1.github.io/3d_assembly_game/?sceneIndex=3&bootAnimOn=0` | the boot animation (no part moves at boot: the shadow map drawn once) | |
-| 2 | `https://dsug1.github.io/3d_assembly_game/?sceneIndex=3&shadowsOn=0` | every shadow caster but the orbited piece (⚠ PCSS still sampled on the receivers) | |
-| 3 | `https://dsug1.github.io/3d_assembly_game/?sceneIndex=3&shadowsOn=0&bootAnimOn=0` | both | |
-| 4 | `https://dsug1.github.io/3d_assembly_game/?sceneIndex=3&modelStage=1` | the heaps (the final stage at boot) | |
-| 5 | `https://dsug1.github.io/3d_assembly_game/?sceneIndex=0` | `Scene_0` (expected: never black) | |
-
-**Reading it.** A row that never goes black (say 20 loads) names its feature as the trigger. A roughly constant count that an override RAISES =
-an accumulation per load (that feature's cost per load). Black at the first load or at random counts = a single over-budget frame. ⚠ **No URL
-override exists** for: PCSS itself, the HDR environment and its prefilter (`envIntensity=0` only dims it — the cube is still built), the PBR / glass
-materials, tone mapping, the device ratio, MSAA, the stencil. `aoOn` does nothing on `Scene_2` (no SSAO is built). Optional rows in the same
-minutes: a 30 s pause between reloads (a higher count = a teardown that lags); the level changed by the pause menu instead of Safari's reload button
-(a lower count = back/forward-cached pages holding their context).
+**The bisect on the phone** → `## THE TEST ON THE PHONE` below (the procedure, the addresses, the results table).
 
 **Safari's Web Inspector** (a Mac, the phone by cable, Safari › Develop › the phone › the page): the console's message at the loss (a GPU timeout,
 or memory), the Timelines' graphics and memory, and whether a NEW context is created already lost.
