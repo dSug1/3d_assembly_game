@@ -327,7 +327,7 @@ owner's go. A step that changes the screen is closed by the owner's look on a de
 | **2.1** ✅ | done (§7.3) — the `asm…` inventory (§4.2) and the specificities' paths (§4.4), written down; the replay's BASELINE recorded on today's code for `Scene_1`, `Scene_0`, `Scene_0bis` | the inventory read against the code by the auditor; the baseline replayed twice, identical |
 | **2.2** 🔧 | built `9e38e78` + `7463174`, audited, replayed (§7.3); the owner's look: *"everything ok with charts switched on"* (2026-11-15; ⚠ the device not stated) — step A behind a switch, off by default (the map's `layout` "chart" and `scale` "normals", the world's and the frames') (§5.2) | `Scene_1` unchanged; walks; the owner's look on `Scene_0` |
 | **2.3** 🔧 | built `fcfa8bd`, audited, replayed (§7.3); ⛔ the owner's look owed — the calm on every face (§5.1) behind a second switch, `chartCalm` (off by default; acts only with `chartLayout` 1) | `Scene_1` unchanged ✅; the owner's look on `Scene_0bis` |
-| **2.4** 🔧 | built 2026-11-15 as P, 2.4a, 2.4b, 2.4c, 2.4e (§12, §12.1), each audited, deployed (main `902ae88`), the owner's look 2026-11-16: *"looks on pc and mobile look good"* (§12.3); 2.4d (the band) built 2026-11-16, local (§12.1); ⛔ the rings not wired — the atlas computed with the face map and the charts taking over the changes of frame (§4) | replays ✅ (§12.1); walks, the owner's look |
+| **2.4** 🔧 | built 2026-11-15 as P, 2.4a, 2.4b, 2.4c, 2.4e (§12, §12.1), each audited, deployed (main `902ae88`), the owner's look 2026-11-16: *"looks on pc and mobile look good"* (§12.3); 2.4d (the band) built and deployed 2026-11-16 (main `f1e03d3`, §12.1), its look owed; ⛔ the rings not wired — the atlas computed with the face map and the charts taking over the changes of frame (§4) | replays ✅ (§12.1); walks, the owner's look |
 | **2.5** | the old detectors and their state deleted | a replay proving nothing changed |
 | **3** | Fable's audit of the whole diff; the docs; then step B's offline round (§5.3) | the owner's look |
 | **C** (later) | the tilted pole close in on every kind of face (§10.1) — ⭐ its study, PROPOSED 2026-11-16: [`TILTED_POLE_CLOSE_IN.md`](TILTED_POLE_CLOSE_IN.md) (the rules, the obstacles, one design, the audit; the owner's decisions D-T1 – D-T7); then an offline round and the build | the owner's look |
@@ -546,9 +546,9 @@ build (`2cae564`, a headless run, the switch off and on): within `tiltAutoM` the
 | the cap of a frame that is not gravity's (a tilted body's top, an upright zone's cap) | its layouts are computed; the wiring cannot use them |
 | a BENT cell (`Scene_0`'s two ends), a face left to RINGS | no change of frame; the square camera alone |
 
-**Step C** (after 2.5 — the tilt's trigger must be the one transition first): an offline round on the 35 shapes and the test scenes — per kind
-of face, whether close in changes the frame, which layout, each exit's turn and the camera's path through it; the owner's decisions (D-C2, D-C4,
-the rows above); then the build, closed by the owner's look. Until then close in is today's, on the three scenes.
+**Step C** → its study, [`TILTED_POLE_CLOSE_IN.md`](TILTED_POLE_CLOSE_IN.md) (2026-11-16): the carried heading; the owner's decisions D-T1 – D-T7
+(the tilted pole for close in only — *"for fine placement of the piece, not for scene view"*; D-C2, D-C4, D-C6 kept; a spit's level faces on
+the same rule); its offline round run; built so far: the free faces' geometry (C2); a spit's level faces (C4) in build.
 
 ### 10.2 A band against input noise at every trigger of a camera movement
 
@@ -786,4 +786,4 @@ straight finger and NO noise, in the game before the charts too: the spit's fing
 structural, not a missing band (the side's own band is ≈ 8 mm there): NOT patched at 2.4d →
 [`TILTED_POLE_CLOSE_IN.md`](TILTED_POLE_CLOSE_IN.md) §4.1. **2.** The tilted-pole orbit close in: *"do the same as what we have done so far"* — its
 rules, the obstacles and their fallbacks, one design from what others solved, the audit → that study (PROPOSED: seven decisions are the owner's,
-nothing built). ⛔ 2.4d is local (`42a408a`), not deployed.
+nothing built). ✅ 2.4d deployed 2026-11-16 (the owner: *"Deploy"*): main `f1e03d3`; its look owed.

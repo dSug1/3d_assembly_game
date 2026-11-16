@@ -96,6 +96,10 @@ const PENDING: Record<string, string> = {
   buildRingChart: "ORBIT_CHARTS step 2.1 — the rings chart of the world face map, built at each seat from the assignment's contour; read by `ring_chart.test.ts`",
   ringTarget: "ORBIT_CHARTS step 2.1 — the rings place for the orbit's angles (the gizmo, both sections) on the faces the assignment homes on the rings; read by `ring_chart.test.ts`",
   ringAngles: "ORBIT_CHARTS step 2.1 — the rings angles of the gizmo's place, at a seam onto the rings chart; read by `ring_chart.test.ts`",
+  // ⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §3, step C2 — the pure part) the geometry of a FREE face, built and vectored ahead of its wiring.
+  // ⭐ (2026-11-16, step C4) `freeEdges`, `entryHeading`, `nearestHeading`, `exitTurnRad`, `turnHolds` LEFT this list: wired in a spit zone under
+  // `chartLayout` 1 (`freeFaceFrame`, `render/assembly_wiring.ts`).
+  freeFaces: "TILTED_POLE_CLOSE_IN step C2/C3 — the free faces under the holding up, at each seat with the atlas; read by `free_face.test.ts`",
   // ⭐ (2026-11-04, Step 4c-bis) the carrier's by-distance fallback (`loopStep`, `greenPace`, `greenFaces`) DELETED with the carrier — the face map
   // (`input/face_map.ts`); it stands at `da020af` (TILTED_ORBIT_REBUILD_SCOPE.md §13, §15).
   // ⭐ prototype (green box), 2026-10-02: the green piece is Piece17's pyramid now (`bodyNamed`, `greenPyramidSizeM`).

@@ -430,6 +430,9 @@ export interface GestureConfig {
   zoneWholeShare: number;
   /** ⭐⭐⭐ (D-Z7) the gizmo leaves a zone this far past its rim (mm) */
   zoneExitMm: number;
+  /** ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §3.4, step C4 — with `chartLayout` 1) A SPIT'S LEVEL FACE (a free face, the heading carried): 0 — N2,
+   * the camera's direction as built (the calm); 1 — N1, the camera square to the face at every distance (the square camera whole there) (0 or 1) */
+  freeFaceSquare: number;
   /** ⭐⭐⭐ (2026-11-12, CLOSE_IN_CONTACT.md step 3) THE CLOSE-IN GAIN (`closeInGain`): the orbit's full gain from this distance of the piece to the gizmo out (m),
    * falling linearly to the contact's */
   orbitGainFullM: number;
@@ -871,6 +874,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   zoneSpitMinDeg: 60, // ⭐⭐⭐ (D-Z6)
   zoneWholeShare: 0.5, // ⭐⭐⭐ (D-Z5)
   zoneExitMm: 10, // ⭐⭐⭐ (D-Z7) a guess with a slider
+  freeFaceSquare: 0, // ⭐⭐⭐ (2026-11-16, step C4) N2, the calm kept, until the owner judges the two on the device
   edgeHoldMm: 30, // ⭐⭐⭐ (2026-11-12, §8, the owner's hysteresis: *"until a certain band is reached in the face beyond"*) a guess with a slider
   orbitGainFullM: 0.6, // ⭐⭐⭐ (2026-11-12, step 3) a guess with a slider: the automatic tilt's distance (`tiltAutoM`)
   orbitContactMmPerMm: 4, // ⭐⭐⭐ (2026-11-12, step 3; the owner on the device: "set ... to 4 mm" — 1 was the slide's 1 : 1)
@@ -1038,6 +1042,7 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.zoneUprightMaxDeg >= 0 && cfg.zoneUprightMaxDeg <= cfg.zoneSpitMinDeg && cfg.zoneSpitMinDeg <= 90)) throw new Error(`zoneUprightMaxDeg (${cfg.zoneUprightMaxDeg}) ≤ zoneSpitMinDeg (${cfg.zoneSpitMinDeg}) ≤ 90 deg.`);
   if (!(cfg.zoneWholeShare >= 0 && cfg.zoneWholeShare <= 1.01)) throw new Error(`zoneWholeShare (${cfg.zoneWholeShare}) must be in [0, 1.01].`);
   if (!(cfg.zoneExitMm >= 0 && cfg.zoneExitMm <= 200)) throw new Error(`zoneExitMm (${cfg.zoneExitMm}) must be in [0, 200] mm.`);
+  if (cfg.freeFaceSquare !== 0 && cfg.freeFaceSquare !== 1) throw new Error(`freeFaceSquare (${cfg.freeFaceSquare}) must be 0 or 1.`);
   if (!(cfg.edgeHoldMm >= 0 && cfg.edgeHoldMm <= 200)) throw new Error(`edgeHoldMm (${cfg.edgeHoldMm}) must be in [0, 200] mm.`);
   if (!(cfg.approachPinchGain > 0 && cfg.approachPinchGain <= 10)) throw new Error(`approachPinchGain (${cfg.approachPinchGain}) must be in (0, 10].`);
   if (!(cfg.orbitGainFullM > 0 && cfg.orbitGainFullM <= 6)) throw new Error(`orbitGainFullM (${cfg.orbitGainFullM}) must be in (0, 6] m.`);

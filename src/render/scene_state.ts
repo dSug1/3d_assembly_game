@@ -357,6 +357,11 @@ export interface SceneState {
    *  index and the face map it indexes (the world's, a tilted frame's, a zone's — another map's reading is none), read once a frame where `asmShown` is set;
    *  `null`: none — taken afresh at the place's facet (cleared with `asmShown` at every change of frame) */
   asmFaceBand: { readonly map: import("../input/face_map").FaceMap; readonly facet: number } | null;
+  /** ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §3.4, step C4 — `chartLayout` 1 only, in a SPIT zone only; `null` everywhere else) THE FREE FACE the
+   *  gizmo is on: the face map it indexes and the facet's index in it (another map's entry is none — a seat), the face's position `ci` in the atlas's contour
+   *  (the WORLD's coordinates), and the HEADING carried (a unit vector in the world, in the face's plane — the camera's up there): set IN AT THE EDGE, kept
+   *  until the place is one band past the face (`freeFaceFrame`) */
+  asmFree: { readonly map: import("../input/face_map").FaceMap; readonly facet: number; readonly ci: number; readonly heading: import("../core/vec").Vec3 } | null;
   /** ⭐⭐⭐ (Step 4c-bis) the face map's angles — the orbit's, but after the slide (put where it left the gizmo, closing on the orbit's: `syncAngle`); `null`: the orbit's */
   asmMapQ: { readonly yaw: number; readonly pitch: number } | null;
   /**

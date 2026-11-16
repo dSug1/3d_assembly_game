@@ -1,6 +1,6 @@
 # RND5 — The orbit on charts
 
-> **STATUS** · ✅ spec APPROVED 2026-11-15; ✅ steps 1.1 – 2.1; 🔧 2.2, 2.3 and **step 2.4 (P, 2.4a – 2.4c, 2.4e) built, DEPLOYED** (main `902ae88`), the owner's look 2026-11-16: *"looks on pc and mobile look good. OK with two comments"*; 🔧 **2.4d (the band against noise) built 2026-11-16, LOCAL** (`42a408a`, **1960 vectors**) — not deployed; ⭐ **the tilted-pole orbit's STUDY written, PROPOSED** (`TILTED_POLE_CLOSE_IN.md`: the owner's decisions D-T1 – D-T7 before any build); ⛔ 2.5 (the old detectors deleted) after it → the spec's §12.3
+> **STATUS** · ✅ spec APPROVED 2026-11-15; ✅ steps 1.1 – 2.1; 🔧 2.2, 2.3 and **step 2.4 (P, 2.4a – 2.4c, 2.4e) built, DEPLOYED** (main `902ae88`), the owner's look 2026-11-16: *"looks on pc and mobile look good. OK with two comments"*; 🔧 **2.4d (the band against noise) built and DEPLOYED 2026-11-16** (`42a408a`, **1960 vectors**; the owner: *"Deploy"* — main `f1e03d3`), its look owed; ⭐ **the tilted-pole orbit's STUDY written, PROPOSED** (`TILTED_POLE_CLOSE_IN.md`: the owner's decisions D-T1 – D-T7 before any build); ⛔ 2.5 (the old detectors deleted) after it → the spec's §12.3
 > **LAST VERIFIED** · 2026-11-16
 
 ## 2026-11-15 — queued (the owner: *"I want to implement your systematic approach"*)
@@ -133,7 +133,7 @@ runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press
   tilting)"*; 2. the tilted pole close in: *"do the same as what we have done so far"* (rules, obstacles and fallbacks, a systematic design from what
   Blender or others solved, an audit of the scripts and code).
 * ✅ **2.4d built and audited** (`42a408a`, an Opus agent): the spec's §12.1 — the tilt made / left 21 → 0 and the view 1 188° → 0° for a place
-  wobbling ±2.5 mm across the cube's top edge; the square camera's target 20 → 0 flips across a vertical edge. LOCAL: a deploy is the owner's word.
+  wobbling ±2.5 mm across the cube's top edge; the square camera's target 20 → 0 flips across a vertical edge. ✅ Deployed 2026-11-16 (the owner: *"Deploy"*): `ab5968c` merged as main `f1e03d3`, live.
 * ⭐ **Comment 1 measured, NOT patched**: with a straight finger and no noise the gizmo veers across the middle of `Scene_0bis`'s bottom face, the
   half turn runs and the dy hold blocks the rest of the drag (3 of 3 runs, the game before the charts too). Cause: the spit swaps the finger's axes
   and turns its heading in the middle of that face — a band cannot fix it (the study's §4.1).
@@ -143,3 +143,31 @@ runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press
   D-T7); the build's steps C0 – C5. ⛔ PROPOSED — nothing of it is built.
 * **The probes written for this** (the session's scratchpad, to move into `scripts/probes/` with the walks' rules): `mid_check.mjs` (the arrival on
   `Scene_0bis`'s bottom face from a tip), `edge_noise.mjs` (a place wobbling across an edge, close in).
+* ✅ **D-T2 agreed** (the owner, 2026-11-16: *"D-T2: agreed"*, after the plain-words account of comment 1): a spit's level faces on the carried
+  heading — no turn in the middle of `Scene_0bis`'s bottom face, the half turn at its far edge, the picture kept when coming in from a tip; N1 / N2
+  far out still to judge. D-T1, D-T3 – D-T7 open. Next: the study's C0 (the offline round, the two variants drawn).
+* ✅ **C0 run** (the study's §7; `scripts/probes/free_face_study.ts`): 41 free faces on the 35 shapes, their exits' turns pure polygon geometry
+  (a rectangle 0 / 90 / 180°; a wedge's triangle 100° — W6's gap); `Scene_0bis`'s bottom face modelled far out — today 89° and 180° of picture turn
+  with no edge under the gizmo and 10 samples against the finger; the carried heading 0 – 1° and none, the half turn at the far edge.
+* ✅ **C2, the pure part, built and audited** (`c5538db`, an Opus agent): `src/input/free_face.ts` — the free faces under a holding "up", one layout
+  per side (the neighbour's up unfolded), the layout at an entry (by the edge, or the nearest with no edge), an exit's turn, the hold's test (its
+  threshold the caller's: D-T4 open). Equal to the offline round's reference on the 35 shapes; a concave edge and a zone held by its axis vectored;
+  53 vectors, red on 16 mutants; **2013 vectors**. ⛔ Not wired — nothing changes in the game. ⛔ C4 (the spit on this rule) waits for D-T7.
+* ✅ **D-T7 answered** (the owner, 2026-11-16, his reading of US 7,782,319 B2's independent claims — verbatim in the study's §3.5): the claims are
+  about a 3D representation of the coordinate system (a cube) manipulated to select a viewpoint; the local-up / global-up rule on its own is not
+  claimed → **the carried heading stands**; ⛔ the game never shows a clickable / draggable 3D orientation widget. ⚠ US 8,044,953 (HoverCam) is
+  not covered by that reading. C4 (the spit on the carried heading) is unblocked.
+* ✅ **The owner's decisions on the study** (2026-11-16): **D-T1 NO** — *"no, I would prefer to return to the orbit when the distance is crossed back (0.65m currently), so the tilted pole orbit is reserved for close in. I don't like to see the top of the scene square at far distance. The close in square is for fine placement of the piece, not for scene view. Find a way to blend properly the camera movement on the way out."* → the distance switch stays;
+  the way out gets a proper blend (the study's §8: the way out mirrors the way in — the camera follows the approach's travel outward, never a timed
+  turn, the gizmo free; to MEASURE first, then step C3); **D-T2 to D-T7** — *"agree with your recommendations"*: D-T3 keep D-C6 (far out polar,
+  a limit), D-T4 the dy hold from any turn over 90°, D-T5 keep D-C2 (a level face that is not a rectangle stays polar), D-T6 keep (one crossing
+  per gesture), D-T7 as answered. C4 in build.
+* ✅ **D-T4 left to the builder** (the owner, 2026-11-16: *"i have no particular opinion. Weigh the pros and the cons and build what is best"*) →
+  the study's §10: the dy hold when the turn is over 90° AND the finger's dy was the one pushing the gizmo out over that edge (never a dy that
+  crossed nothing — the gap of the 120° rule closed without the 90° rule's wrongly blocked direction); nothing changes on a rectangle.
+* ✅ **C4 built and audited** (`0125445`, an Opus agent, + the auditor's completion `28df70c`: the hold by `exitHoldSign`, D-T4): a spit's level
+  faces on the carried heading — the study's §9.1. `Scene_0bis`, the arrival from a tip that reproduced the owner's comment: the gizmo no longer veers
+  (2 – 5 mm off the middle against +79 mm), the middle reached, no side change, no hold, 76° of view against 334°; across the face: nothing at its
+  middle, the half turn one band past the far edge, then the hold. **2038 vectors**; off: the three scenes bit for bit; on: `Scene_1`, `Scene_0` bit
+  for bit, `Scene_0bis` another play, no worse. A new slider `freeFaceSquare` (POLAR ZONES: 0 the calm kept / 1 the camera square to a spit's level
+  face) — the owner's to judge. LOCAL: not deployed. ⛔ Next, on the owner's word only: §8 (the way out blended), to measure first.
