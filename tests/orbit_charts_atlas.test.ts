@@ -209,7 +209,8 @@ describe("⭐⭐⭐ the wiring: the atlas decides only under the switch (`render
   it("`tiltOn`: the atlas's test and heading under `chartLayout` 1, `holdsPole` / `tiltHeading` otherwise", () => {
     const f = fn("function tiltOn(");
     expect(f).toContain("if (st.cfg.chartLayout === 1) { ");
-    expect(f).toContain("const h = capTiltHeading(at.assign, at.contour, capStack, f.n, q.yaw); if (h === null) return;");
+    // ⭐⭐⭐ (2026-11-16, C2W, W5) the heading carried in by the entry edge (`free_face_caps.test.ts`)
+    expect(f).toContain("const h = capTiltHeading(at.assign, at.contour, capStack, f.n, q.yaw, en?.heading ?? null); if (h === null) return;");
     expect(f).toContain("} else { ");
     expect(f).toContain("const pole = holdsPole(wm, capStack); if (pole === null) return; top = pole === \"TOP\";");
     expect(f).toContain("hs = tiltHeading(cap.n, q.yaw);");
@@ -241,6 +242,7 @@ describe("⭐⭐⭐ the wiring: the atlas decides only under the switch (`render
     expect(raw.match(/chartContour\(/g)?.length).toBe(1);
     // its four readers, each inside its function's `chartLayout === 1` branch (⭐ step 2.4b: the pole's crossing in `assemblyFrame`)
     // ⭐ (2026-11-16, step C4) the fifth: a spit's free face (`freeFaceFrame`), whose one call is under the switch
+    // ⭐ (2026-11-16, C2W) `freeEntry` takes the atlas from its callers (`freeFaceFrame`, `tiltOn`): still five
     expect(raw.match(/atlasOf\(st\)/g)?.length).toBe(5);
     for (const sig of ["function tiltOn(", "function nextTiltHeading(", "function zonesOf(", "export function assemblyFrame("]) {
       const g = fn(sig);
@@ -248,7 +250,7 @@ describe("⭐⭐⭐ the wiring: the atlas decides only under the switch (`render
     }
     expect(fn("function freeFaceFrame(")).toContain("atlasOf(st)");
     expect(raw.match(/freeFaceFrame\(st, /g)?.length).toBe(1);
-    expect(fn("export function assemblyFrame(")).toContain("if (st.cfg.chartLayout === 1) freeFaceFrame(st, ");
+    expect(fn("export function assemblyFrame(")).toContain("if (st.cfg.chartLayout === 1) { st.asmPlaceWas = placeWas; freeFaceFrame(st, "); // ⭐ (C2W)
     // the old detectors: in the wiring only on the switch's other path
     expect(raw.match(/holdsPole\(/g)?.length).toBe(2);
     expect(raw.match(/polarZones\(/g)?.length).toBe(1);

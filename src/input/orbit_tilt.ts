@@ -213,6 +213,39 @@ export function tiltBox(b: ShellBox, R: Mat3): ShellBox {
   return { lo, hi };
 }
 
+/**
+ * ⭐ (C2W, W7) `frameBox`: a bound of the parts' own box in F within this (m) of the turned world box's is the same bound — float noise of the turn (a
+ * 90° tilt's cosine is 6e-17, not 0), kept at the turned box's number so an axis-aligned shape's map is built bit for bit as before.
+ */
+export const FRAME_BOX_NOISE_M = 1e-9;
+
+/**
+ * ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §16 — package C2W, W7) THE BOX A FRAME'S MAP IS BUILT IN: the placed parts' own box READ IN F — the world
+ * map's rule (the parts' box, `shellBox`) in the frame's own axes: the bounds of every part's vertex turned by `Rᵀ`; a bound within `FRAME_BOX_NOISE_M`
+ * of the turned world box's (`tiltBox`) that number exactly. ⛔ `tiltBox` alone (the world box's eight corners turned): for a frame off the world's
+ * axes (a cap turned 30°, 45°) a box looser than the shape — the map's share test read its faces against planes the shape does not reach. ⚠ The parts'
+ * vertices, never the contour's corners: the contour is the main planes' polytope and leaves a proud part outside. No vertex: `tiltBox`.
+ */
+export function frameBox(b: ShellBox, R: Mat3, parts: readonly (readonly Vec3[])[]): ShellBox {
+  const t = tiltBox(b, R);
+  const lo: [number, number, number] = [Infinity, Infinity, Infinity];
+  const hi: [number, number, number] = [-Infinity, -Infinity, -Infinity];
+  for (const vs of parts)
+    for (const v of vs) {
+      const p = mulT(R, v);
+      for (const k of [0, 1, 2] as const) {
+        lo[k] = Math.min(lo[k], p[k]);
+        hi[k] = Math.max(hi[k], p[k]);
+      }
+    }
+  if (!(lo[0] <= hi[0])) return t;
+  for (const k of [0, 1, 2] as const) {
+    if (lo[k] - t.lo[k] <= FRAME_BOX_NOISE_M) lo[k] = t.lo[k];
+    if (t.hi[k] - hi[k] <= FRAME_BOX_NOISE_M) hi[k] = t.hi[k];
+  }
+  return { lo, hi };
+}
+
 
 /**
  * ⭐⭐⭐ THE CALM WHOLE TOWARD THE TILTED FACET'S EDGES (its every edge is a frame change: off it the world's frame): the shares (0 … 1) over the calm's own

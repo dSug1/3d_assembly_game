@@ -730,3 +730,26 @@ not called); its cap's rays on the cap's own outline; the seams to gravity's cha
 "before step B" (`RND5.md`), not C2. F2 is C2's W5 as designed (`entryHeading`). F3, F4, F6 are D-T5's loophole measured: a cap that is not a
 rectangle has neither a layout nor a target. ⚠ Outside the orbit: a 4-sided `BodySpec.prismSides` comes out a DIAMOND (`render/bodies.ts` turns a
 vertex to the top), so "one edge flat at the bottom" holds for odd sides only.
+
+## 16. PACKAGE C2W — C2's WIRING ON GRAVITY'S CAPS: W5 AND W7, as briefed (2026-11-16, an Opus agent; under `chartLayout` 1)
+
+* **The contract**: on a FREE face reached under gravity's layout (a pole zone's cap — the cube's top) the heading shown is the one CARRIED IN by the
+  entry edge, by the same pure functions C4 uses in a spit zone; and a tilted frame's face map is built in the shape's own box, so that a cap that is
+  not an axis-aligned rectangle (the turned box, the L, the triangle) has its facets where its faces are. ONE rule for a free face whatever the kind
+  of its zone: where the spit's and the pole's wiring can share one function, they do.
+* **W5 — the design**: the tilt (`tiltOn`) keeps its test (the atlas's: a CAP with square layouts, `capTiltHeading`), but its heading is the layout
+  whose up is the heading carried in — `freeEntryHeading(freeEdges(…), from, …)`, the function C4's spit entry calls, `from` the face of the place
+  the frame BEFORE the gizmo stood on the cap (the tilt is made one frame after: it reads last frame's place) — and only the nearest to the up
+  shown when there is no edge (the approach arriving with the gizmo already on the cap, §3.3's fourth row). ⛔ Today: the layout nearest the orbit's
+  yaw SNAPPED to the world's axes (`tiltHeading` → `snapHeading`): on the box turned 30° a yaw over its side lands 30° off that side's own heading,
+  and the nearest candidate can be the neighbour's (§15 F2: 90° off, the view turning 120° over the entry). The entry's own facet found on the
+  contour as C4 finds it (`contourOfFacet`): one wiring function serves both entries. A pole held at a void's mouth (W9, the gizmo not on the cap)
+  keeps today's heading — the study before step B.
+* **W7 — the design**: the frame's map is built in the box of the placed parts' own vertices READ IN THAT FRAME — the rule of the world's map (the
+  parts' box, `shellBox`) in the frame's axes — ⛔ today the world box's eight corners turned (`tiltBox`), loose for any frame off the world's
+  axes. ⚠ Not the contour's corners: the contour is the main planes' polytope and leaves a proud part outside it — its faces would be clipped. A
+  bound equal to the turned world box's within float noise keeps the turned box's number (an axis-aligned shape: bit for bit). One function for
+  every frame the map is built in (a tilt's, a zone's).
+* **Expected**: `Scene_0`, `Scene_0bis`, `Scene_1` — nothing the gates see changes (on a box over a side the snapped yaw already gives that side's
+  layout); the switch off bit for bit. The gain on the test scenes (merged INTO their throwaway branch): T_e's entries on the entry edge's layout.
+* **Not here**: W8 (the square camera's target on a cap with no layout) and RINGS — unless a direct consequence of W5 / W7.

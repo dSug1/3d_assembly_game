@@ -34,6 +34,7 @@ const RESET: Record<string, unknown> = {
   asmShown: null,
   asmFaceBand: null,
   asmFree: null,
+  asmPlaceWas: null,
   asmMapQ: null,
   asmEdgeHold: null,
   asmZone: null,
@@ -71,9 +72,9 @@ const KEPT = [
 ];
 
 describe("⭐⭐⭐ the orbit's starting state (`orbitStateStart`, `resetOrbitState`)", () => {
-  it("every `asm…` / `pieceHold…` field of the scene's state is decided: reset or kept (57)", () => {
+  it("every `asm…` / `pieceHold…` field of the scene's state is decided: reset or kept (58)", () => {
     const decl = [...raw("render/scene_state.ts").matchAll(/^ {2}((?:asm|pieceHold)\w*)\??:/gm)].map((m) => m[1]!);
-    expect(decl.length).toBe(57);
+    expect(decl.length).toBe(58); // ⭐ (2026-11-16, C2W) + `asmPlaceWas`
     expect([...Object.keys(RESET), ...KEPT].sort()).toEqual([...decl].sort());
   });
 

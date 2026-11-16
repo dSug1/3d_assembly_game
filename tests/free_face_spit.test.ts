@@ -359,7 +359,9 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): the carried headin
   it("⭐ read once a frame in `assemblyFrame`, after the place and its band, under the switch — the previous place with the map it indexed", () => {
     const a = fnCode(W, "export function assemblyFrame(");
     expect(a).toContain("const sh0 = st.asmShown; const fbWas = st.asmFaceBand;");
-    const g = "if (st.cfg.chartLayout === 1) freeFaceFrame(st, m.t, sh0 !== null && fbWas !== null ? { map: fbWas.map, stack: sh0.t.stack } : null);";
+    // ⭐ (2026-11-16, C2W) the previous place named (`placeWas`) and kept for the tilt's entry (`asmPlaceWas`)
+    expect(a).toContain("const placeWas = sh0 !== null && fbWas !== null ? { map: fbWas.map, stack: sh0.t.stack } : null;");
+    const g = "if (st.cfg.chartLayout === 1) { st.asmPlaceWas = placeWas; freeFaceFrame(st, m.t, placeWas); }";
     expect(a).toContain(g);
     before(a, "faceBandRead(st, m.t);", g);
     before(a, "tiltFrame(st, dtMs, m.t.stack, m.t.surface);", g);
@@ -375,7 +377,9 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): the carried headin
     expect(f).toContain("if (onTiltedFacet(t.stack, fr.facet, d, edgeMarginM(st))) return;");
     expect(f).toContain("const d = t.stack === fr.facet ? 0 : distanceToFacets(map, [fr.facet], t.surface);");
     expect(f).toContain("if (f === undefined || !isFreeFace(mulM(B, f.n), WORLD_UP)) return;");
-    expect(f).toContain("const heading = freeEntryHeading(freeEdges(at.contour, ci, WORLD_UP), from, st.asmCamLast?.up ?? F.n, F.n);");
+    // ⭐ (2026-11-16, C2W) the entry through the one function a free face's entry calls whatever its zone (`freeEntry`; its body: `free_face_caps.test.ts`)
+    expect(f).toContain("const en = freeEntry(st, map, B, at, t.stack, prev); if (en === null) return; const { ci, from, heading } = en;");
+    expect(fnCode(W, "function freeEntry(")).toContain("const heading = freeEntryHeading(freeEdges(at.contour, ci, WORLD_UP), from, st.asmCamLast?.up ?? F.n, F.n);");
     expect(f).toContain("st.asmFree = { map, facet: t.stack, ci, heading };");
     before(f, "st.asmFree = { map, facet: t.stack, ci, heading };", turn);
     expect(f).not.toContain("asmEdgeHold"); // no dy hold at an entry

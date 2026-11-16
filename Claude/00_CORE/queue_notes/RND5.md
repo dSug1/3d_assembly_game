@@ -234,3 +234,10 @@ runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press
   bipyramid's caps); **F4** those caps a stall close in; **F5** RINGS not wired (the bipyramid's place stalls on one triangle 494 frames); **F6** the
   way out from a cap with no tilt not paced (9.6°/frame, once 55.6° in one frame); **F7** timed turns of 11.8 – 18.9°/frame at a bottom's side
   exit → [`TILTED_POLE_CLOSE_IN.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) §15, each row with its command. Nothing fixed.
+
+## 2026-11-16 — C2W, C2's wiring on gravity's caps: W5 and W7 (an Opus agent)
+
+* **The brief**: under `chartLayout` 1 a free face reached under gravity's layout (the cube's top) shows the heading carried in by its entry edge —
+  the pure functions C4 calls in a spit zone (W5); a tilted frame's face map built in the shape's own box, not the world box's turned corners (W7);
+  one wiring function for a free face's entry whatever its zone. `Scene_0`, `Scene_0bis`, `Scene_1` unchanged; the gain on the test scenes. W8 and
+  RINGS not built → [`TILTED_POLE_CLOSE_IN.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) §16.

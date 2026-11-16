@@ -466,7 +466,8 @@ describe("⭐⭐ wired", () => {
   it("⭐⭐⭐ (⛔ 2026-11-15 no press tilts: the block above) the frame's every direction through `dirFrame`, the map built in F, the exit back to the world (`tiltOff`), the camera's roll by the exit's share", () => {
     // ⛔ (2026-11-15, the owner: *"cancel my rule and remove the press action on the orbit"*) the press's call (`tiltOnPress`) removed — pinned absent above
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("buildFaceMap(tiltFaces(placedFaces(st), R), tiltBox(box, R),");
+    expect(a).toContain("buildFaceMap(tiltFaces(placedFaces(st), R), fb,"); // ⭐ (C2W, W7) `fb`: `frameBox` under the charts, `tiltBox` otherwise
+    expect(a).toContain(": tiltBox(box, R);");
     expect(a).toContain("turnAngles(st, (d) => mulT(D0, d));");
     // ⭐⭐⭐ (2026-11-15) the exit hands the heading SHOWN for a pole of the world (`shownHeading`; none drawn: the tilt's own) — ⛔ none: yaw 0 there
     expect(a).toContain("const hP = shownHeading(st, mulM(D, orbitDir(st.orbit.yaw, st.orbit.elevation))) ?? tl.heading;");

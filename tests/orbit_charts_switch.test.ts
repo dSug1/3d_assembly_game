@@ -22,7 +22,9 @@ describe("⭐⭐⭐ the charts' switch (`chartLayout`, step 2.2)", () => {
 
   it("both `buildFaceMap` calls carry the options (the frame's, the world's — one path each)", () => {
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("const map = buildFaceMap(tiltFaces(placedFaces(st), R), tiltBox(box, R), { mergeDeg: st.cfg.facetMergeDeg, minShare: st.cfg.facetMinShare, ...chartOpts(st) });");
+    // ⭐ (2026-11-16, C2W, W7) the frame's box under the switch (`frameBox`), the turned world box otherwise
+    expect(a).toContain("const fb = st.cfg.chartLayout === 1 ? frameBox(box, R, parts.parts) : tiltBox(box, R);");
+    expect(a).toContain("const map = buildFaceMap(tiltFaces(placedFaces(st), R), fb, { mergeDeg: st.cfg.facetMergeDeg, minShare: st.cfg.facetMinShare, ...chartOpts(st) });");
     expect(a).toContain("const map = buildFaceMap(placedFaces(st), box, { mergeDeg: st.cfg.facetMergeDeg, minShare: st.cfg.facetMinShare, ...chartOpts(st) });");
     // every call in the wiring is one of the two above
     expect(a.match(/buildFaceMap\(/g)?.length).toBe(2);
