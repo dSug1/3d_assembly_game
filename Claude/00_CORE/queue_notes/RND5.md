@@ -226,14 +226,14 @@ runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press
 * **The brief**: six test shapes as scenes in a throwaway worktree (`1.0.146t-Orbit-charts-test-scenes`, never merged) — an upright prism with a
   top that is not a rectangle, a shape the charts leave to RINGS, a step, an L-shaped top, a box turned 30°, a thin lying bar with pointed ends —
   each walked far out and close in, headless; the findings tied to W5, W7, W8, RINGS (W12) or new →
-  [`TILTED_POLE_CLOSE_IN.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) §14 – §15. Nothing in the game changes.
+  [`TILTED_POLE_TEST_SCENES.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_TEST_SCENES.md) §14 – §15. Nothing in the game changes.
 * **Measured** (the scenes and the probe on the throwaway branch, `a828c92`; `Scene_1` the control): ⛔ **F1** a step and an L are not on the face
   map at all (the faces contour is the polytope of each direction's main plane: the step's map a box neither part is, the L's its bounding square;
   the gizmo on no face for stretches, flickering at the L's pole, a hold with no turn); **F2** W5 confirmed on the box turned 30° (4 of 10 entries
   off the entry edge, 36° and 90°); **F3** W8 confirmed (the square camera's target the face left, 70 – 90° off, on the pentagon's and the
   bipyramid's caps); **F4** those caps a stall close in; **F5** RINGS not wired (the bipyramid's place stalls on one triangle 494 frames); **F6** the
   way out from a cap with no tilt not paced (9.6°/frame, once 55.6° in one frame); **F7** timed turns of 11.8 – 18.9°/frame at a bottom's side
-  exit → [`TILTED_POLE_CLOSE_IN.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) §15, each row with its command. Nothing fixed.
+  exit → [`TILTED_POLE_TEST_SCENES.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_TEST_SCENES.md) §15, each row with its command. Nothing fixed.
 
 ## 2026-11-16 — C2W, C2's wiring on gravity's caps: W5 and W7 (an Opus agent)
 
@@ -250,7 +250,7 @@ runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press
 ## 2026-11-16 — T2, the test scenes again after C2W (an Opus agent; measured, nothing built)
 
 * **The brief**: the rebuild branch merged INTO the throwaway (`1.0.146t-`), every measurement of the T1 findings re-run, the column AFTER and WHAT
-  REMAINS (W8, RINGS) → [`TILTED_POLE_CLOSE_IN.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) §15.
+  REMAINS (W8, RINGS) → [`TILTED_POLE_TEST_SCENES.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_TEST_SCENES.md) §15.
 * **Measured**: F2 (W5) fixed but one (4 of 10 entries off the edge → 1, the first after the approach); F1, F3 – F8 unchanged (T_a – T_d, T_f
   identical line for line); ⭐ F9 WITHDRAWN — the probe's own count (a zone's missing normal read as `null`; corrected on the throwaway, T_f 0
   frames). ⛔ Open, the owner's: W8 (reopen D-T5: a layout square to the entry edge on any polygon cap, or polar with the cap's normal as the
@@ -342,3 +342,24 @@ runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press
   cannot tell a stuck probe from a slow one before it.
 * ⛔ Not done here: step 3 (the owner holds it); `ORBIT_STATE_INVENTORY.md` still names the deleted `asmTilt` fields and `asmZoneFacetsF` (the
   inventory of step 2.1, a record — to update at step 3's docs); `scripts/probes/calm_study.ts` (step 0's study) no longer runs on this tree (noted in it).
+
+## 2026-11-16 (evening) — THE OWNER'S DECISIONS on what step C left open; branch `1.0.147-` (docs only)
+
+* **His words, in full**: *"1- A / 2- R1 / 3- I don't want to change what is currently built: it looks good on the screen. Record and do nothing. We
+  may reopen if we need when we build game scenes later on. / 4- Maintain D-T5. This kind of geometry probably means that the piece has a rotation
+  symetry axis around the gravity axis so D-T5 makes sense. Just record as we may reopen if we need when we build game scenes later on. / 5- Record
+  and do nothing. We may reopen if we need when we build game scenes later on. / 6- I don't understand what is this box, and what is the question.
+  ... Explain in layman's term what this is about or withdraw the question. / Build that in a branch 1.0.147- so I can reverse to branch 1.0.146- if
+  I don't like the results."* And: *"Progress as much as you can without asking me questions. I wish to finish the orbit charts work tonight."*
+* **So**: **1** W11's option **A** (the one turn truly one) — to BUILD; **2** the spit's half turn **R1** (at the gizmo's edge) — to BUILD; **3**
+  `Scene_0bis`'s top ridge reached from a tip — KEPT AS BUILT; **4** a level top that is not a rectangle (W8) — **D-T5 MAINTAINED**, his reason: such
+  a geometry probably means a piece with a rotation symmetry axis about gravity; **5** RINGS — NOTHING BUILT; 3, 4 and 5 may be reopened when game
+  scenes are built; **6** the frame box's scope — the question WITHDRAWN after it was explained to him in plain words (when the camera goes square to
+  a face the game redraws its map of the faces from that direction and first measures a box round the placed parts along it; C2's wiring measures
+  that box from the parts' corners so that it fits a part set at an angle, uses it for every redrawn map, and no game scene shows a difference): kept
+  as built, a matter for the later surface work.
+* **Done** (docs only): branch `1.0.147-` created from `1.0.146-Orbit-charts` (`c5aa295`), which is not touched again; `TILTED_POLE_CLOSE_IN.md`
+  §14 – §15 (the test scenes) moved word for word to make room →
+  [`TILTED_POLE_TEST_SCENES.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_TEST_SCENES.md); the decisions →
+  [`TILTED_POLE_CLOSE_IN.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) §17, and the rows they settle (§5 D-T5, §12.4, §13.4, §16.1).
+  Next on `1.0.147-`: A, then R1. Not in this chain: step B; anything on 3, 4, 5; any push or deploy.
