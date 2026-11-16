@@ -162,3 +162,6 @@ runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press
   turn, the gizmo free; to MEASURE first, then step C3); **D-T2 to D-T7** — *"agree with your recommendations"*: D-T3 keep D-C6 (far out polar,
   a limit), D-T4 the dy hold from any turn over 90°, D-T5 keep D-C2 (a level face that is not a rectangle stays polar), D-T6 keep (one crossing
   per gesture), D-T7 as answered. C4 in build.
+* ✅ **D-T4 left to the builder** (the owner, 2026-11-16: *"i have no particular opinion. Weigh the pros and the cons and build what is best"*) →
+  the study's §10: the dy hold when the turn is over 90° AND the finger's dy was the one pushing the gizmo out over that edge (never a dy that
+  crossed nothing — the gap of the 120° rule closed without the 90° rule's wrongly blocked direction); nothing changes on a rectangle.

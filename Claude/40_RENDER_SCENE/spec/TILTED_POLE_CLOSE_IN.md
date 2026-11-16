@@ -128,7 +128,7 @@ the bottom"), WHICH layout (the one that continues the view the gizmo came in wi
 |---|---|---|
 | a bound face → a FREE face, over an edge | the layout of THAT edge whose heading is the bound face's own "up" UNFOLDED across the edge (over a side's top edge onto a top face: away from that side; down onto a bottom face: back toward the face just left) | none on the glass (the square camera pitches over the edge, as at any edge) |
 | a FREE face → a bound face, over an edge | the bound face's own | the angle between the heading carried and that face's "up" unfolded across the edge: **0°** back over the edge the gizmo came in by, **90°** at a side, **180°** at the far edge — any angle on another polygon. ⭐ A wall RISING from a level floor (a concave edge) unfolds the other way: the far wall costs 0° |
-| the turn is over 90° | — | **the dy hold** (the dy that crossed would bring the gizmo back): the finger must reverse. ⛔ Today the hold is set from 120° (§4 W6) |
+| the turn is over 90° and the finger's dy was pushing the gizmo out over that edge (§10) | — | **the dy hold** on that dy (it would bring the gizmo straight back): the finger must reverse. ⛔ Today the hold is set from 120°, on the finger's last dy sign whatever it was (§4 W6) |
 | an entry with no edge (O4) | the layout nearest the heading shown | at most half the angle between two layouts (45° on a rectangle); the camera waits, then blends by the finger (T10) |
 | bound → bound | each its own | the square camera's turn about the edge — as built |
 
@@ -283,7 +283,7 @@ tilt's close in. Later scenes with shafts, pins or cones lying on their side get
 | **D-T1** ⛔ | Is a free face's layout kept until an EDGE — also when the piece backs out past the close-in distance (your rule of 2026-11-10 turns it off there)? | ~~Yes~~ — ⛔ **NO**, the owner, 2026-11-16: *"no, I would prefer to return to the orbit when the distance is crossed back (0.65m currently), so the tilted pole orbit is reserved for close in. I don't like to see the top of the scene square at far distance. The close in square is for fine placement of the piece, not for scene view. Find a way to blend properly the camera movement on the way out."* | the turn on the way out cannot be removed (the polar layout's pole is in the middle of the face): it is PACED — §8 |
 | **D-T2** ✅ | Do a spit's level faces follow the same rule — no turn in the middle of `Scene_0bis`'s bottom face, the half turn at its far edge, the picture unchanged when coming in from a tip? | **Yes** — ✅ the owner, 2026-11-16: *"D-T2: agreed"* | the spit's side, bias and swap are replaced, not tuned; N1 or N2 far out (§3.4) is yours to judge on the device |
 | **D-T3** ✅ | Far out on gravity's top and bottom faces: polar and a limit (D-C6, today), or the same rule far out too (a top face crossable by dy again)? | **keep D-C6** — ✅ the owner, 2026-11-16 (*"D-T2 to D-T7: agree with your recommendations"*) | far out stays as you accepted it (*"polar orbit far out: the sections are ok"*) |
-| **D-T4** ✅ | The dy hold from any turn over 90° (not 120°)? | **Yes** — ✅ the owner, 2026-11-16 | none on a rectangle (its exits are 0, 90, 180°) |
+| **D-T4** ✅ | The dy hold from any turn over 90° (not 120°)? | ✅ the owner, 2026-11-16: *"i have no particular opinion. Weigh the pros and the cons and build what is best"* → **decided by the builder (§10): the hold is set when the turn is over 90° AND the finger's dy was the one pushing the gizmo out over that edge — never on a dy that did not** | none on a rectangle (the far edge, crossed by its dy, as today) |
 | **D-T5** ✅ | A level face that is not a rectangle: the layout square to its entry edge (a tilt), or polar at every distance (D-C2, today)? | **keep D-C2** until a scene has such a face; the design covers it — ✅ the owner, 2026-11-16 | W8's loophole is closed either way |
 | **D-T6** ✅ | A new gesture pushing the same way crosses a far edge again (your rule of 2026-11-14). Keep? | **keep** — ✅ the owner, 2026-11-16 | one crossing per gesture |
 | **D-T7** ✅ | The patents of §3.5 | ✅ the owner, 2026-11-16: the local-up / global-up rule on its own is not what US 7,782,319 claims (§3.5) — **the carried heading stands** | ⛔ never a clickable / draggable 3D orientation widget in the game; ⚠ US 8,044,953 not covered by that reading |
@@ -378,3 +378,21 @@ The record of what the build is asked to do (its as-built entry follows the audi
 * **The gates**: `mid_check.mjs` (the arrival from a tip: no veer, no turn, no hold, the drag reaches the body's middle); `across_check.mjs` (one drag
   across the face: nothing at its middle, ONE half turn one band past the far edge, then the hold); the replays (off: unchanged; on: `Scene_1` and
   `Scene_0` unchanged, `Scene_0bis` another play, its view's turns no worse).
+
+## 10. D-T4 — WHEN A TURN SETS THE DY HOLD (weighed by the builder at the owner's word, 2026-11-16)
+
+**What the hold is for.** After an exit's turn the face beyond is upright on the glass, and for a face hanging under a top face "up" on the glass
+points straight back at the edge just crossed (under a bottom face: "down"). So the ONE finger direction that undoes the crossing is known from the
+geometry. It matters only if the finger is still pushing that way — which is the case exactly when that dy is what carried the gizmo over the edge.
+
+| | from 90° (the first proposal) | from 120° (as built) | **from 90°, and only the dy that pushed over the edge (built)** |
+|---|---|---|---|
+| a rectangle's far edge, crossed by its dy | held | held | held — the same |
+| a rectangle's side edge (a quarter turn, crossed by dx) | not held | not held | not held — the same |
+| an edge slanted 10 – 30° off the finger's way (a triangle's, a heptagon's: turns of 100 – 120°), crossed by pushing dy at it | held | ⛔ not held: the same dy brings the gizmo back over the edge at once, the layout re-anchors on that edge — a bounce and a turn | held |
+| the same edge crossed sideways by a dx, the finger's last dy an old or opposite one | ⛔ held on a dy that crossed nothing — a direction blocked for no reason (the owner's *"there are times I cannot reverse"*, 2026-11-14) | not held | **not held** |
+
+**The rule** (pure, `src/input/free_face.ts`): at an exit over an edge whose outward direction in the face is `e`, with the heading carried `h` —
+the turn is over 90° exactly when one dy sign moves the gizmo out through that edge (up on a top face, down on a bottom one); the hold is set on
+the finger's dy sign only if it IS that sign. On every face that carries a layout today (rectangles) nothing changes; the difference appears only
+on faces D-T5 keeps polar for now. Gravity's tilt keeps its own test (`edgeHoldAt`, 120°) until the half turns become one event (step C5).
