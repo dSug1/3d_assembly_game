@@ -220,3 +220,24 @@ runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press
   side and a free face's exit call it; the hold by the rule at the tilt's exit and the ridge; the spit keeps the finger's last sign (the mirror rule
   built, measured — a second half turn arriving from a tip — and withdrawn); `EdgeHold.g0` / `.d` deleted. Every gate equal to the baseline, the
   default replays bit for bit. ⛔ Not built: the spit's turn at the gizmo's edge (R1, the owner's) — far out it lands 55 – 60 mm past the ridge (§13.4).
+
+## 2026-11-16 — T1, the test scenes (an Opus agent; before C2's wiring)
+
+* **The brief**: six test shapes as scenes in a throwaway worktree (`1.0.146t-Orbit-charts-test-scenes`, never merged) — an upright prism with a
+  top that is not a rectangle, a shape the charts leave to RINGS, a step, an L-shaped top, a box turned 30°, a thin lying bar with pointed ends —
+  each walked far out and close in, headless; the findings tied to W5, W7, W8, RINGS (W12) or new →
+  [`TILTED_POLE_CLOSE_IN.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) §14 – §15. Nothing in the game changes.
+* **Measured** (the scenes and the probe on the throwaway branch, `a828c92`; `Scene_1` the control): ⛔ **F1** a step and an L are not on the face
+  map at all (the faces contour is the polytope of each direction's main plane: the step's map a box neither part is, the L's its bounding square;
+  the gizmo on no face for stretches, flickering at the L's pole, a hold with no turn); **F2** W5 confirmed on the box turned 30° (4 of 10 entries
+  off the entry edge, 36° and 90°); **F3** W8 confirmed (the square camera's target the face left, 70 – 90° off, on the pentagon's and the
+  bipyramid's caps); **F4** those caps a stall close in; **F5** RINGS not wired (the bipyramid's place stalls on one triangle 494 frames); **F6** the
+  way out from a cap with no tilt not paced (9.6°/frame, once 55.6° in one frame); **F7** timed turns of 11.8 – 18.9°/frame at a bottom's side
+  exit → [`TILTED_POLE_CLOSE_IN.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) §15, each row with its command. Nothing fixed.
+
+## 2026-11-16 — C2W, C2's wiring on gravity's caps: W5 and W7 (an Opus agent)
+
+* **The brief**: under `chartLayout` 1 a free face reached under gravity's layout (the cube's top) shows the heading carried in by its entry edge —
+  the pure functions C4 calls in a spit zone (W5); a tilted frame's face map built in the shape's own box, not the world box's turned corners (W7);
+  one wiring function for a free face's entry whatever its zone. `Scene_0`, `Scene_0bis`, `Scene_1` unchanged; the gain on the test scenes. W8 and
+  RINGS not built → [`TILTED_POLE_CLOSE_IN.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) §16.

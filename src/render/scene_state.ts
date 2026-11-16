@@ -362,6 +362,10 @@ export interface SceneState {
    *  (the WORLD's coordinates), and the HEADING carried (a unit vector in the world, in the face's plane — the camera's up there): set IN AT THE EDGE, kept
    *  until the place is one band past the face (`freeFaceFrame`) */
   asmFree: { readonly map: import("../input/face_map").FaceMap; readonly facet: number; readonly ci: number; readonly heading: import("../core/vec").Vec3 } | null;
+  /** ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §16 — package C2W, `chartLayout` 1 only) THE PLACE BEFORE THE ONE SHOWN: the facet of the frame before
+   *  `asmShown`'s, with the map it indexed — the tilt, made one frame after the gizmo reached a cap (`tiltOn` reads the place shown), takes its entry edge
+   *  from it (`freeEntry`); `null`: none (the start, the switch off) */
+  asmPlaceWas: { readonly map: import("../input/face_map").FaceMap; readonly stack: number } | null;
   /** ⭐⭐⭐ (Step 4c-bis) the face map's angles — the orbit's, but after the slide (put where it left the gizmo, closing on the orbit's: `syncAngle`); `null`: the orbit's */
   asmMapQ: { readonly yaw: number; readonly pitch: number } | null;
   /**
