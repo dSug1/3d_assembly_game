@@ -220,3 +220,10 @@ runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press
   side and a free face's exit call it; the hold by the rule at the tilt's exit and the ridge; the spit keeps the finger's last sign (the mirror rule
   built, measured — a second half turn arriving from a tip — and withdrawn); `EdgeHold.g0` / `.d` deleted. Every gate equal to the baseline, the
   default replays bit for bit. ⛔ Not built: the spit's turn at the gizmo's edge (R1, the owner's) — far out it lands 55 – 60 mm past the ridge (§13.4).
+
+## 2026-11-16 — T1, the test scenes (an Opus agent; before C2's wiring)
+
+* **The brief**: six test shapes as scenes in a throwaway worktree (`1.0.146t-Orbit-charts-test-scenes`, never merged) — an upright prism with a
+  top that is not a rectangle, a shape the charts leave to RINGS, a step, an L-shaped top, a box turned 30°, a thin lying bar with pointed ends —
+  each walked far out and close in, headless; the findings tied to W5, W7, W8, RINGS (W12) or new →
+  [`TILTED_POLE_CLOSE_IN.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) §14 – §15. Nothing in the game changes.

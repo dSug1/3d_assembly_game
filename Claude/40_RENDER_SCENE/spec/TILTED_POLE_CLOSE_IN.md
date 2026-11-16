@@ -662,3 +662,18 @@ no swap under the finger.
   event, the hold by §13.2's rule with the face beyond's own up (known at an edge). Removes the far-out lag; the spit then the fourth site in full.
   A rebuild of the spit's camera heading on bound faces (W3's second half).
 * **R2** — keep (the turn within the calm's lag far out).
+
+## 14. PACKAGE T1 — THE TEST SCENES, as briefed (2026-11-16, an Opus agent; before C2's wiring)
+
+* **What**: six test shapes as scenes, in a THROWAWAY worktree (`../orbit_charts_test_scenes`, branch `1.0.146t-Orbit-charts-test-scenes`, from
+  `ef14420`) — nothing of it enters the game; only the findings come back here (§15). Each: one placed body (or a few glued ones), the green piece, a
+  goal, added as data the way `Scene_0bis` was (`src/content`, `BodySpec`): (a) an upright prism whose level top is NOT a rectangle; (b) a shape on
+  which the charts choose RINGS (the simplest of [`ORBIT_CHARTS.md`](ORBIT_CHARTS.md) §6's); (c) a step — a low box against a high one; (d) an
+  L-shaped level top (two boxes of one height); (e) a box turned 30° about the vertical; (f) a lying bar with pointed ends, thinner and longer than
+  `Scene_0bis`'s.
+* **What is run on each, headless, one run at a time**: the atlas (its zones, kinds, poles, caps, free and bound faces); far out a walk round (dx)
+  and over the top and the bottom (dy); close in on each level face the tilt's entry, the layout shown against the entry edge, the exit over each side
+  (the turn, the hold), the way out by distance; the square camera's target on the caps that are not rectangles; per frame the view's turn.
+* **What is flagged**: a one-frame turn over the one speed's step (6.0°); a hold blocking a direction; a layout not carried from the entry edge
+  (**W5**); a tilted frame whose map sits in the wrong box — the gizmo off the face, a wrong facet under it (**W7**); the square camera's target on a
+  non-rectangular cap (**W8**); what RINGS needs that is not wired (**W12**). Nothing is fixed in this package.
