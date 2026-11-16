@@ -295,7 +295,7 @@ tilt's close in. Later scenes with shafts, pins or cones lying on their side get
 | **C0** ✅ | run 2026-11-16 (§7) — **an offline round**, as for the charts: the free faces, their layouts and every exit's turn on the 35 shapes and on test scenes (a cube, a heptagon's end, an L-shaped top, a step, a spit body); a walker crossing every edge both ways — no turn without an edge, the turns round every corner adding up; N1 against N2 drawn for the owner | the tables; the owner's look at the drawings |
 | **C1** | W11: the entry's first frame measured and its cause named — before anything is built on it | the probe |
 | **C2** 🔧 | the pure part built 2026-11-16 (`c5538db`, an Opus agent, audited: `src/input/free_face.ts` — `freeFaces`, `freeEdges`, `entryHeading`, `nearestHeading`, `exitTurnRad`, `turnHolds`; equal to §7's reference on the 35 shapes; 53 vectors, **2013**; NOT wired) — free faces and their layouts in the atlas (pure, `src/input`); the entry by the edge; the exit's turn and the hold computed (W5, W6); the frame's map in the contour's box (W7) | vectors; the three scenes replay unchanged |
-| **C3** 🔧 | ✅ the owner's go, 2026-11-16 (*"Continue next step"*) — THE WAY OUT BLENDED (D-T1, W4, §8) — measured first; the square camera's target on every face (W8) | the way-out run (§8); the close-in runs; the edge-noise run |
+| **C3** 🔧 | built 2026-11-16 (`86f2cbe` + the auditor's completion; §8.1), audited, LOCAL — THE WAY OUT BLENDED (D-T1, W4, §8): the camera's turn after the threshold follows the approach finger (`tiltOutBlendMm`), smooth, never over the one speed, the gizmo free; ⛔ the owner's look owed. W8 (the square camera's target on a cap with no tilt) NOT in this step: with a test scene | the way-out run ✅, the replays ✅ (§8.1) |
 | **C4** 🔧 | built 2026-11-16 (`0125445`, an Opus agent, + the auditor's `28df70c`; §9.1), audited, DEPLOYED 2026-11-16 (the owner: *"Deploy"* — main `6685f8f`) — the spit on the same rule (D-T2, W2, W3): on a spit's level face the heading carried, the finger read off the picture, nothing in the face's middle, the half turn at the far edge; N1 / N2 behind `freeFaceSquare`; ✅✅ **the owner's look, 2026-11-16: *"This is good."*** | `mid_check.mjs`, `across_check.mjs` ✅; the replays ✅ (§9.1); the owner's records of 2026-11-14 not replayed |
 | **C5** | One half-turn event (W1), its hold from any turn over 90° (D-T4, W6); the mouth as a concave edge (W9) | the ridge and far-edge runs |
 | then | step 2.5 of the charts (the old detectors and the switch deleted) | — |
@@ -361,10 +361,31 @@ finger's own travel can.
 | the gizmo | free | **free** — ⛔ today held while the turn runs |
 | turning back | — | the share never rewinds (no approach jitter into the camera, T11); back within the close-in distance the way in takes over, from the picture shown |
 
-The square camera's share (square to the face → the orbit's own direction) goes on the same share, so the direction and the up arrive together.
+What is shown is ONE mix from the picture frozen at the threshold to the live polar camera, so the direction and the up arrive together (the square
+camera's own ease runs under it).
 ⚠ **What to expect**: on the far half of a top face the picture still turns half round — that cannot be removed (D-T1). Under a slow, deliberate
 finger it now follows the finger; at a normal speed it still takes about half a second (the one-speed rule), with a smooth start and end and the
 gizmo free. The slider stretches it.
+
+### 8.1 As built (2026-11-16: `86f2cbe`, an Opus agent; audited by Fable, one completion — the one speed on the PICTURE)
+
+`tiltOutBlendMm` (12 mm; its slider after `tiltBlendMm`, TILTED POLE; 0: today's timed, held turn); pure, in `src/input/seam_turn.ts`: `seamOutPaced`
+(the tilt left by distance — its latch off — under the charts' layout, the slider over 0), `seamOutTarget` (the larger of the two finger travels over
+their spans; whole once no finger is down), `seamOutStep` (toward the target, never back, the SHARE SHOWN never faster than `tiltRollDegS` — ⛔ as
+first built the step was taken on the progress under its smooth ends: 540°/s in the middle), `seamOutShare` (the smooth start and end),
+`turnHoldsGizmo`. The turn's progress and its two travels live on the turn itself (`asmZoneMix.out`); the approach's outward millimetres are fed from
+`approachInput`, the orbit's from the drag's step. **2058 vectors** (21 for this step). **The gates** (`Scene_1`, the gizmo on the far half of the
+top, one approach drag out):
+
+| the finger | before | C3 |
+|---|---|---|
+| slow (1 px a frame) | 180° in 0.52 s at a constant 6° a frame, abrupt at both ends, the gizmo held | the turn follows the finger: 180° over its 12 mm (0.77 s here), from 2.7° a frame up to **6.0°** in the middle and down to 1.4° — never over the one speed |
+| faster (4 px a frame) | the same 0.52 s, trailing the zoom | at the one speed with smooth ends: 0.6 s, at most 6.0° a frame |
+
+The replays: the slider at 0 — the three scenes bit for bit what they were; forced off — unchanged; the defaults — `Scene_1` and `Scene_0bis`
+unchanged, `Scene_0` another 63 frames round one approach out, its largest turns the same. ⚠ Not measured in the app (vectored only): a finger held
+still mid-turn (the camera waits), an orbit begun during the turn (the gizmo free, the turn finished over the orbit's first millimetres), coming back
+in mid-turn. ⚠ As §8 says: at a normal finger speed the half turn still takes about 0.6 s — it is the one-speed rule's.
 
 ## 9. STEP C4 — A SPIT'S LEVEL FACES, as briefed (2026-11-16; D-T2; under `chartLayout` 1, in a spit zone only)
 

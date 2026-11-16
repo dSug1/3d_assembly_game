@@ -173,3 +173,8 @@ runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press
   face) — the owner's to judge. ✅ Deployed 2026-11-16 (the owner: *"Deploy"*): `301ada6` merged as main `6685f8f`, live; the owner's look owed. ⛔ Next, on the owner's word only: §8 (the way out blended), to measure first.
 * ✅✅ **The owner's look on C4** (main `6685f8f`, 2026-11-16): *"This is good. Commit. For the next deploys always toggle on the two switches by default in all the scenes. Continue next step"* → C4 closed; **both switches ON by default
   from the next deploy, in every scene** (the study's §11); the next step: §8, the way out of close in blended (C3) — measured first.
+* ✅ **Both switches ON by default** (`cb55778`): forced to 0 the three scenes replay bit for bit as before, with no parameter as the switch-on build.
+* ✅ **C3 built and audited** (`86f2cbe`, an Opus agent, + the auditor's completion: the one speed on the picture): the way out of close in blended —
+  the study's §8.1. Today measured first (180° in 0.52 s whatever the finger, the gizmo held, trailing the zoom); now the turn follows the approach
+  finger over `tiltOutBlendMm` (12 mm; 0: today's), smooth at both ends, never over the one speed (6.0° a frame at most), the gizmo free, finished by
+  time only once the finger has lifted. **2058 vectors**; the slider at 0: bit for bit. LOCAL — the owner's look owed.
