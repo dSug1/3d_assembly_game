@@ -546,9 +546,9 @@ build (`2cae564`, a headless run, the switch off and on): within `tiltAutoM` the
 | the cap of a frame that is not gravity's (a tilted body's top, an upright zone's cap) | its layouts are computed; the wiring cannot use them |
 | a BENT cell (`Scene_0`'s two ends), a face left to RINGS | no change of frame; the square camera alone |
 
-**Step C** (after 2.5 — the tilt's trigger must be the one transition first): an offline round on the 35 shapes and the test scenes — per kind
-of face, whether close in changes the frame, which layout, each exit's turn and the camera's path through it; the owner's decisions (D-C2, D-C4,
-the rows above); then the build, closed by the owner's look. Until then close in is today's, on the three scenes.
+**Step C** → its study, [`TILTED_POLE_CLOSE_IN.md`](TILTED_POLE_CLOSE_IN.md) (2026-11-16): the carried heading; the owner's decisions D-T1 – D-T7
+(the tilted pole for close in only — *"for fine placement of the piece, not for scene view"*; D-C2, D-C4, D-C6 kept; a spit's level faces on
+the same rule); its offline round run; built so far: the free faces' geometry (C2); a spit's level faces (C4) in build.
 
 ### 10.2 A band against input noise at every trigger of a camera movement
 

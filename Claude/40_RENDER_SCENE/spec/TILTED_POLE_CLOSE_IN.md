@@ -176,6 +176,31 @@ to pick a view. ⚠ This reading is about US 7,782,319 alone; US 8,044,953 (Hove
 a surface is approached, blended in a layer near it) is not covered by it — the design uses no closest-point surface following, but the close-in
 square camera (live since 2026-11-10) is the nearest thing the game has to that description: the owner's to judge if he wishes.
 
+### 3.6 The two ways of choosing a free face's layout, compared (for D-T7 — drawn in the artifact page)
+
+On the cube's top face, its four edges named after the side faces they border:
+
+| | **Autodesk's ViewCube — keep the way up you arrive with** (the carried heading, §3.1) | **Blender's Top view — always the same way up** (a fixed layout) |
+|---|---|---|
+| what the glass shows | the edge the gizmo came over is at the BOTTOM of the glass: up the front, the front edge is down; up the right side, the right edge is down | the same side at the bottom whatever the way in (say the front) |
+| on arrival | never a turn | none from the home side; a quarter turn from either neighbour side; a half turn (and the hold) from the opposite side |
+| on leaving | 0° back over the edge it came in by, 90° by a side, 180° and the hold by the far edge | 0° over the home edge, 90° over its neighbours, 180° and the hold over the opposite one — whatever the way in |
+
+| the trip | Autodesk's way | Blender's way |
+|---|---|---|
+| up the front, across the top, down the back | no turn in · a half turn out, then the hold | the same |
+| up the right, back down the right | no turn at all | a quarter turn in · a quarter turn out |
+| up the right, across the top, down the left | no turn in · a half turn out, then the hold | a quarter turn in · a quarter turn out |
+| up the back, back down the back | no turn at all | a half turn in, then the hold · a half turn out, then the hold |
+
+* **The same in both**: every turn happens at an edge, never in the middle of a face; both remove the turn in the middle of `Scene_0bis`'s bottom face.
+* **The difference**: the first never turns the picture on arrival, and going onto a face and back off the same way costs nothing; the second always
+  shows a face the same way round (predictable), but arriving from three sides out of four turns the picture. On `Scene_0bis`'s bottom face the
+  second would turn the picture a quarter at the rim edge when coming in from a tip.
+* **What the game does today**: the tilted pole on the cube's top, close in, already behaves the first way (built 2026-11-10: the layout follows the
+  side the gizmo came up, the exits cost 0°, 90° or 180°).
+* ✅ **Chosen** (D-T7, the owner, 2026-11-16): the first way, on his reading of the patent's claims — above.
+
 ## 4. THE AUDIT — the code and the scripts against §2 and §3
 
 ### 4.1 Measured first: the owner's comment on `Scene_0bis`'s bottom face is structural, not noise
@@ -196,6 +221,33 @@ the glass: the dy now goes ROUND the axis, sideways) with a sign read off an ang
 picture a quarter toward the side the gizmo is on. The gizmo is pushed across the middle, the side flips (`spitSide`), and that is a crossing: the half
 turn and the hold. ⭐ The side's own band (2° of the camera's direction ≈ 8 mm on that face) is already wider than the band of the quads — **a band is
 not what is missing**: the heading rule itself changes in the middle of a face (T4), and the finger's mapping with it (T1).
+
+**In plain words** (the owner asked, 2026-11-16: *"Explain your answer in layman's terms. What is the root cause? Which of our rules specifies that
+behavior? Which other geometries are subject to the same?"*). Under the body the camera looks straight up at a flat face: there "upright" means
+nothing, the picture could be held any way round. The game picks by which side of the body's centre line the camera is on; cross that line and it
+spins the picture half a turn, then holds the finger's direction until it reverses. On `Scene_0bis` that line runs down the middle of the bottom
+face, where nothing marks it. Coming in from a tip is worse: the picture arrives with the body's length UP the glass, the game wants it ACROSS,
+starts turning the picture a quarter, and at the same moment switches what the finger's two directions mean as if the picture had already turned —
+for a few frames "up" pushes the gizmo sideways, over the line. **The root cause in one sentence**: the place where the camera must turn round was
+put on an invisible line through the middle of a flat face instead of at an edge, and the picture's orientation and the finger's mapping are both
+switched by the camera's ANGLE (60°) instead of by an edge crossing.
+
+**No rule of the owner's asks for a turn in the middle of that face** — it comes from how three of his rules were built together (the builder's
+choices):
+
+| the owner's rule | as built | the problem |
+|---|---|---|
+| in a spit the camera is never upside down (R4 KEPT, D-Z3, 2026-11-13) | the orbit runs all the way round the body, so the camera must flip each time it passes under or over it; the flip was put where the camera is exactly under / over the axis | on top that is the ridge — an edge; underneath it is the middle of a flat face |
+| *"replicate the behavior of scene 0 when crossing the zenith edge"* (2026-11-13) | the half turn, the gizmo held, then the dy hold | right at the ridge; applied the same way at the bottom, where there is no edge |
+| dx and dy swap in a spit (2026-11-13) | a hard switch above 60° of pitch, written for the body's axis lying ACROSS the glass | wrong when the gizmo arrives from a tip, the axis UP the glass |
+
+It also breaks the owner's older rule (Q6, 2026-11-04): the roll at the limit edge, *"not in the middle of the face travel"*.
+
+**Which other shapes**: spit zones only — a long body lying on its side whose ends taper to tips — and in them any level face straight under or
+over the axis: a flat bottom or a flat top (the heptagon's bottom; a square or hexagonal bar with pointed ends has both; any even-sided faceted
+shaft). A ridge there is an edge: the half turn is in the right place; ⚠ arriving along it from a tip probably veers the same way (not measured).
+`Scene_1` and `Scene_0` are not spit zones: their top and bottom faces are the polar orbit's (the middle a point where the orbit stops) or the
+tilt's close in. Later scenes with shafts, pins or cones lying on their side get it if the zones class them as spits.
 
 ### 4.2 Weaknesses — where the code does not address the obstacle, or patches it
 
@@ -243,7 +295,7 @@ not what is missing**: the heading rule itself changes in the middle of a face (
 | **C0** ✅ | run 2026-11-16 (§7) — **an offline round**, as for the charts: the free faces, their layouts and every exit's turn on the 35 shapes and on test scenes (a cube, a heptagon's end, an L-shaped top, a step, a spit body); a walker crossing every edge both ways — no turn without an edge, the turns round every corner adding up; N1 against N2 drawn for the owner | the tables; the owner's look at the drawings |
 | **C1** | W11: the entry's first frame measured and its cause named — before anything is built on it | the probe |
 | **C2** 🔧 | the pure part built 2026-11-16 (`c5538db`, an Opus agent, audited: `src/input/free_face.ts` — `freeFaces`, `freeEdges`, `entryHeading`, `nearestHeading`, `exitTurnRad`, `turnHolds`; equal to §7's reference on the 35 shapes; 53 vectors, **2013**; NOT wired) — free faces and their layouts in the atlas (pure, `src/input`); the entry by the edge; the exit's turn and the hold computed (W5, W6); the frame's map in the contour's box (W7) | vectors; the three scenes replay unchanged |
-| **C3** | THE WAY OUT BLENDED (D-T1, W4, §8) — measured first; the square camera's target on every face (W8) | the way-out run (§8); the close-in runs; the edge-noise run |
+| **C3** | THE WAY OUT BLENDED (D-T1, W4, §8) — measured first; the square camera's target on every face (W8) | the way-out run (§8); the close-in runs; the edge-noise run — ⛔ §8 is a PROPOSAL: the owner's word before it is built |
 | **C4** 🔧 | in build 2026-11-16 (an Opus agent) — the spit on the same rule (D-T2, W2, W3): on a spit's level face the heading carried, the finger read off the picture, nothing in the face's middle, the half turn at the far edge; N1 / N2 behind `freeFaceSquare` | `mid_check.mjs`: the arrival from a tip turns nothing; one drag across the face; the owner's records of 2026-11-14 replayed |
 | **C5** | One half-turn event (W1), its hold from any turn over 90° (D-T4, W6); the mouth as a concave edge (W9) | the ridge and far-edge runs |
 | then | step 2.5 of the charts (the old detectors and the switch deleted) | — |
@@ -302,3 +354,27 @@ piece backed out): the turn's degrees a frame and its length against the approac
 
 The square camera's share (square to the face → the orbit's own direction, eased by the calm) goes on the same pace, so the direction and the up
 arrive together. ⚠ Its cost: on the far half of a top face the picture still turns half round — over the band's metres instead of half a second.
+
+## 9. STEP C4 — A SPIT'S LEVEL FACES, as briefed (2026-11-16; D-T2; under `chartLayout` 1, in a spit zone only)
+
+The record of what the build is asked to do (its as-built entry follows the audit):
+
+* **The state — one field**, `asmFree`: the free face the gizmo is on (the map it indexes, the facet, its place in the atlas's contour) and the
+  HEADING carried, a direction in the face's plane. None everywhere else, with the switch off, outside a spit, under a tilt.
+* **The entry — in at the edge** (the form of the tilt's entry, step 2.4d): the frame the place's own facet is a level face. The heading is the
+  entry edge's (`entryHeading`: the neighbour's up unfolded — from a tip's triangle: along the body's axis; from a long side: across it); with no
+  edge to read (the first frame, a pick-up with the gizmo already there) the layout nearest the picture's own up (`nearestHeading`). One camera turn
+  from the pose shown starts there (by the rule, next to nothing); no hold.
+* **On the face**: the camera's up IS the heading (`freeHeadingAngle` → `offsetFrame`) — ⛔ the side's (`spitCameraHeading`); the finger is read off
+  the picture at every pitch (`fingerInFrame`) — ⛔ the swap above 60° (`fingerSwapped`); the spit's side is frozen: no side change, no crossing, no
+  hold in the middle of the face (`spitStep` returns).
+* **The exit — out one band past the edge** (`gizmoEdgeMarginMm`, the tilt's exit's own distance): the turn `exitTurnRad(heading, …)`; ONE camera
+  turn from the pose shown to the upright camera of the face beyond, the gizmo held; the spit's side read afresh there; the dy hold when the turn is
+  over 90° (D-T4) — on this rectangle the half turn alone.
+* **Far out, the two variants behind one slider**, `freeFaceSquare`: 0 (N2, the default) the calm kept; 1 (N1) the camera square to the level face at
+  every distance (the square camera's share whole there). The owner judges on the device.
+* **Not touched**: gravity's tilt, the upright zones, the ridge's crossing, the calm's rules, `Scene_1` and `Scene_0` (no zone: their replays with
+  the switch ON stay bit for bit). `spitSide`, `spitCameraHeading`, `fingerSwapped` stay for the bound faces and the switch-off path.
+* **The gates**: `mid_check.mjs` (the arrival from a tip: no veer, no turn, no hold, the drag reaches the body's middle); `across_check.mjs` (one drag
+  across the face: nothing at its middle, ONE half turn one band past the far edge, then the hold); the replays (off: unchanged; on: `Scene_1` and
+  `Scene_0` unchanged, `Scene_0bis` another play, its view's turns no worse).
