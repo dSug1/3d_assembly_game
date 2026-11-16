@@ -203,16 +203,24 @@ describe("⭐⭐⭐ W7 — a frame's map in the parts' own box read in that fram
     const R = capTilt(0.4, UP);
     expect(frameBox(s.box, R, [])).toEqual(tiltBox(s.box, R));
   });
-  it("⭐ a box turned 45° tilted on its own layout: the map in F has its six faces real, the tilted cap a side there", () => {
-    const polys = boxPolys(0.5, 0.3, 0.3).map((q) => q.map(turnY(45 * D)));
-    const { C, A } = atlasOf(polys);
-    const s = solid(polys);
-    const top = caps(C).find(({ f }) => f.n[1] > 0)!;
-    const e = freeEdges(C, top.ci, UP)[0]!;
-    const R = capTilt(capTiltHeading(A, C, top.f.index, top.f.n, 0, e.heading)!, top.f.n);
-    const mF = buildFaceMap(tiltFaces(s.faces, R), frameBox(s.box, R, pts(polys)), CHART);
-    expect(mF.facets.filter((f) => f.real).length).toBe(6);
-    expect(mF.facets.some((f) => f.real && Math.abs(dot(f.n, mulT(R, UP)) - 1) < 1e-9)).toBe(true);
+  it("⭐ (§16, measured) a long flat box (0.8 × 0.2 × 0.3 m) turned 30° and 45°, tilted on each of its top's four layouts: the map in F has its six faces REAL in every one — ⛔ in the turned world box two of the four were ALL virtual", () => {
+    for (const deg of [30, 45]) {
+      const polys = boxPolys(0.8, 0.2, 0.3).map((q) => q.map(turnY(deg * D)));
+      const { C, A } = atlasOf(polys);
+      const s = solid(polys);
+      const top = caps(C).find(({ f }) => f.n[1] > 0)!;
+      let virtualBefore = 0;
+      for (const e of freeEdges(C, top.ci, UP)) {
+        const R = capTilt(capTiltHeading(A, C, top.f.index, top.f.n, 0, e.heading)!, top.f.n);
+        const mF = buildFaceMap(tiltFaces(s.faces, R), frameBox(s.box, R, pts(polys)), CHART);
+        expect(mF.facets.filter((f) => f.real).length).toBe(6);
+        // the cap a side in F, real
+        expect(mF.facets.some((f) => f.real && Math.abs(dot(f.n, mulT(R, UP)) - 1) < 1e-9)).toBe(true);
+        const mW = buildFaceMap(tiltFaces(s.faces, R), tiltBox(s.box, R), CHART);
+        if (mW.facets.every((f) => !f.real)) virtualBefore++;
+      }
+      expect(virtualBefore).toBe(2);
+    }
   });
 });
 
