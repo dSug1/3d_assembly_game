@@ -16,9 +16,9 @@ const between = (s: string, from: string, to: string): string => {
 };
 
 describe("⭐⭐⭐ the calm on every side face (`chartCalm`, step 2.3)", () => {
-  it("off by default; 0 or 1, nothing else; its slider right after the charts' layout", () => {
-    expect(DEFAULT_CONFIG.chartCalm).toBe(0);
-    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, chartCalm: 1 })).not.toThrow();
+  it("ON by default (the owner, 2026-11-16: both switches on in every scene); 0 or 1, nothing else; its slider right after the charts' layout", () => {
+    expect(DEFAULT_CONFIG.chartCalm).toBe(1);
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, chartCalm: 0 })).not.toThrow();
     for (const v of [0.5, 2, -1, Number.NaN]) expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, chartCalm: v })).toThrow();
     const m = code("render/tuning_menu.ts");
     const i = m.indexOf('"chartLayout", 0, 1, 1)');

@@ -464,7 +464,7 @@ describe("⭐⭐⭐ (ORBIT_CHARTS step 2.3) the calm on every side face (calmRul
   it("⭐⭐ the rules on only when BOTH switches are 1 (the charts' layout and the calm's); else all three off", () => {
     expect(calmRules(1, 1)).toEqual({ smooth: true, everyFacet: true, noPitchFade: true, ownRun: true });
     for (const [l, c] of [[0, 0], [0, 1], [1, 0]] as const) expect(calmRules(l, c)).toEqual({ smooth: false, everyFacet: false, noPitchFade: false, ownRun: false });
-    expect(calmRules(DEFAULT_CONFIG.chartLayout, DEFAULT_CONFIG.chartCalm)).toEqual({ smooth: false, everyFacet: false, noPitchFade: false, ownRun: false }); // the defaults: today's
+    expect(calmRules(DEFAULT_CONFIG.chartLayout, DEFAULT_CONFIG.chartCalm)).toEqual({ smooth: true, everyFacet: true, noPitchFade: true, ownRun: true }); // the defaults: both switches ON (the owner, 2026-11-16)
   });
 
   it("⭐⭐⭐ `poleFade` absent or true: calmShown EXACTLY as before step 2.3 on a grid of directions, normals and shares", () => {
@@ -712,7 +712,7 @@ describe("⭐⭐⭐ (ORBIT_CHARTS step 2.4e) the calm on one reference (CalmKnob
   it("⭐⭐ `calmRules`: `ownRun` on only with BOTH switches 1", () => {
     expect(calmRules(1, 1).ownRun).toBe(true);
     for (const [l, c] of [[0, 0], [0, 1], [1, 0], [2, 1], [1, 2]] as const) expect(calmRules(l, c).ownRun).toBe(false);
-    expect(calmRules(DEFAULT_CONFIG.chartLayout, DEFAULT_CONFIG.chartCalm).ownRun).toBe(false);
+    expect(calmRules(DEFAULT_CONFIG.chartLayout, DEFAULT_CONFIG.chartCalm).ownRun).toBe(true); // the defaults: both switches ON (the owner, 2026-11-16)
   });
 });
 

@@ -9,9 +9,9 @@ import { DEFAULT_CONFIG, validateGestureConfig } from "../src/input/gestureConfi
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8").replace(/\s+/g, " ");
 
 describe("⭐⭐⭐ the charts' switch (`chartLayout`, step 2.2)", () => {
-  it("off by default; 0 or 1, nothing else", () => {
-    expect(DEFAULT_CONFIG.chartLayout).toBe(0);
-    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, chartLayout: 1 })).not.toThrow();
+  it("ON by default (the owner, 2026-11-16: both switches on in every scene); 0 or 1, nothing else", () => {
+    expect(DEFAULT_CONFIG.chartLayout).toBe(1);
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, chartLayout: 0 })).not.toThrow();
     for (const v of [0.5, 2, -1, Number.NaN]) expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, chartLayout: v })).toThrow();
   });
 
