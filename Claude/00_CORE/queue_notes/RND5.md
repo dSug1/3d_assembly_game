@@ -1,6 +1,6 @@
 # RND5 — The orbit on charts
 
-> **STATUS** · ✅ spec APPROVED 2026-11-15; ✅ steps 1.1 – 2.1; 🔧 2.2, 2.3 and **step 2.4 (P, 2.4a – 2.4c, 2.4e) built, DEPLOYED** (main `902ae88`), the owner's look 2026-11-16: *"looks on pc and mobile look good. OK with two comments"*; 🔧 **2.4d (the band against noise) built 2026-11-16, LOCAL** (`42a408a`, **1960 vectors**) — not deployed; ⭐ **the tilted-pole orbit's STUDY written, PROPOSED** (`TILTED_POLE_CLOSE_IN.md`: the owner's decisions D-T1 – D-T7 before any build); ⛔ 2.5 (the old detectors deleted) after it → the spec's §12.3
+> **STATUS** · ✅ spec APPROVED 2026-11-15; ✅ steps 1.1 – 2.1; 🔧 2.2, 2.3 and **step 2.4 (P, 2.4a – 2.4c, 2.4e) built, DEPLOYED** (main `902ae88`), the owner's look 2026-11-16: *"looks on pc and mobile look good. OK with two comments"*; 🔧 **2.4d (the band against noise) built and DEPLOYED 2026-11-16** (`42a408a`, **1960 vectors**; the owner: *"Deploy"* — main `f1e03d3`), its look owed; ⭐ **the tilted-pole orbit's STUDY written, PROPOSED** (`TILTED_POLE_CLOSE_IN.md`: the owner's decisions D-T1 – D-T7 before any build); ⛔ 2.5 (the old detectors deleted) after it → the spec's §12.3
 > **LAST VERIFIED** · 2026-11-16
 
 ## 2026-11-15 — queued (the owner: *"I want to implement your systematic approach"*)
@@ -133,7 +133,7 @@ runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press
   tilting)"*; 2. the tilted pole close in: *"do the same as what we have done so far"* (rules, obstacles and fallbacks, a systematic design from what
   Blender or others solved, an audit of the scripts and code).
 * ✅ **2.4d built and audited** (`42a408a`, an Opus agent): the spec's §12.1 — the tilt made / left 21 → 0 and the view 1 188° → 0° for a place
-  wobbling ±2.5 mm across the cube's top edge; the square camera's target 20 → 0 flips across a vertical edge. LOCAL: a deploy is the owner's word.
+  wobbling ±2.5 mm across the cube's top edge; the square camera's target 20 → 0 flips across a vertical edge. ✅ Deployed 2026-11-16 (the owner: *"Deploy"*): `ab5968c` merged as main `f1e03d3`, live.
 * ⭐ **Comment 1 measured, NOT patched**: with a straight finger and no noise the gizmo veers across the middle of `Scene_0bis`'s bottom face, the
   half turn runs and the dy hold blocks the rest of the drag (3 of 3 runs, the game before the charts too). Cause: the spit swaps the finger's axes
   and turns its heading in the middle of that face — a band cannot fix it (the study's §4.1).
