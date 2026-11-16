@@ -169,6 +169,13 @@ view's angle off the vertical — 0.43 on the heptagon). Two variants, to protot
 "keep the view's up when moving to a top view" is an old practice of every CAD viewer — but I am not able to say what those claims cover. If in doubt:
 the Blender row (a fixed layout per free face, the turn on the way in) is free of the question, at the cost of T7.
 
+✅ **The owner's reading of US 7,782,319 B2 (2026-11-16, D-T7)**: *"Scope of Protection: The independent claims of US7782319B2 are drafted broadly around displaying a 3D representation of a scene's coordinate system (such as a cube with faces, edges, and corners), manipulating that representation to select a viewpoint, and reorienting the 3D scene accordingly. If a widget already infringes the broader claims of US7782319B2 (by using a clickable/draggable 3D cube controller), using this local-up/global-up transition falls within that infringing system. Conversely, if a navigation tool avoids the claimed 3D cube widget structure altogether (e.g., using a simple 2D axis tripod or standard viewport hotkeys), using a local-up/global-up camera interpolation rule on its own is standard 3D graphics math disclosed in the specification rather than a standalone claimed monopoly."* → **the carried heading stands** (the game has no such widget: the
+gizmo is a mark on the assembly's own surface, the view is never chosen by touching a picture of the coordinate system). ⛔ **The condition that goes
+with it: the game never shows a clickable or draggable 3D orientation widget** — a cube, or any representation of the scene's coordinate system used
+to pick a view. ⚠ This reading is about US 7,782,319 alone; US 8,044,953 (HoverCam: a camera that changes from free motion to surface following as
+a surface is approached, blended in a layer near it) is not covered by it — the design uses no closest-point surface following, but the close-in
+square camera (live since 2026-11-10) is the nearest thing the game has to that description: the owner's to judge if he wishes.
+
 ## 4. THE AUDIT — the code and the scripts against §2 and §3
 
 ### 4.1 Measured first: the owner's comment on `Scene_0bis`'s bottom face is structural, not noise
@@ -227,7 +234,7 @@ not what is missing**: the heading rule itself changes in the middle of a face (
 | **D-T4** | The dy hold from any turn over 90° (not 120°)? | **Yes** | none on a rectangle (its exits are 0, 90, 180°) |
 | **D-T5** | A level face that is not a rectangle: the layout square to its entry edge (a tilt), or polar at every distance (D-C2, today)? | **keep D-C2** until a scene has such a face; the design covers it | W8's loophole is closed either way |
 | **D-T6** | A new gesture pushing the same way crosses a far edge again (your rule of 2026-11-14). Keep? | **keep** — the alternative is a hold that outlives the gesture, which you removed | one crossing per gesture |
-| **D-T7** | The patents of §3.5 | yours | the Blender row is the way round |
+| **D-T7** ✅ | The patents of §3.5 | ✅ the owner, 2026-11-16: the local-up / global-up rule on its own is not what US 7,782,319 claims (§3.5) — **the carried heading stands** | ⛔ never a clickable / draggable 3D orientation widget in the game; ⚠ US 8,044,953 not covered by that reading |
 
 ## 6. THE BUILD, IF APPROVED — steps and gates (each one agent run, audited; a look on the device closes it)
 

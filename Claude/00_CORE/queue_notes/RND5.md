@@ -153,3 +153,7 @@ runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press
   per side (the neighbour's up unfolded), the layout at an entry (by the edge, or the nearest with no edge), an exit's turn, the hold's test (its
   threshold the caller's: D-T4 open). Equal to the offline round's reference on the 35 shapes; a concave edge and a zone held by its axis vectored;
   53 vectors, red on 16 mutants; **2013 vectors**. ⛔ Not wired — nothing changes in the game. ⛔ C4 (the spit on this rule) waits for D-T7.
+* ✅ **D-T7 answered** (the owner, 2026-11-16, his reading of US 7,782,319 B2's independent claims — verbatim in the study's §3.5): the claims are
+  about a 3D representation of the coordinate system (a cube) manipulated to select a viewpoint; the local-up / global-up rule on its own is not
+  claimed → **the carried heading stands**; ⛔ the game never shows a clickable / draggable 3D orientation widget. ⚠ US 8,044,953 (HoverCam) is
+  not covered by that reading. C4 (the spit on the carried heading) is unblocked.
