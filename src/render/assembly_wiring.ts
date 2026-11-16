@@ -42,6 +42,7 @@ import { poseAboutPiece, poseFramingTwo, type CamPose } from "../input/orbit_til
 import { poleCrossingDue, poleSeam } from "../input/pole_crossing";
 import { dirGap, easedDir, easeRest, poleYawKept, seamTurnHolds, seamTurnPace, seamTurnStep, seamWholeRad, tiltLeavesNow } from "../input/seam_turn";
 import { bandedFacet } from "../input/face_band";
+import { contourFaceAt, exitTurnRad, FREE_EXIT_HOLD_FROM_RAD, freeEdges, freeEntryHeading, freeHeadingAngle, isFreeFace, turnHolds } from "../input/free_face";
 import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, tiltHeading, edgeHoldAt, capTilt, frameMix, headingFrom, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, onTiltedFacet, type Mat3 } from "../input/orbit_tilt";
 
 /** ⭐ The look point's ease (ms). */
@@ -106,7 +107,7 @@ export function ensureAssembly(st: SceneState): void {
 /** ⭐ The orbit's state a held part starts from (`orbitStateStart`). */
 type OrbitStateStart = Pick<
   SceneState,
-  | "asmGizmo" | "asmSupport" | "asmSupportLevel" | "pieceHold" | "pieceHoldPrev" | "asmLook" | "asmFacePoint" | "asmG" | "asmPrevQ" | "asmShown" | "asmFaceBand" | "asmMapQ"
+  | "asmGizmo" | "asmSupport" | "asmSupportLevel" | "pieceHold" | "pieceHoldPrev" | "asmLook" | "asmFacePoint" | "asmG" | "asmPrevQ" | "asmShown" | "asmFaceBand" | "asmFree" | "asmMapQ"
   | "asmEdgeHold" | "asmZone" | "asmZoneMix" | "asmPieceDrawn" | "asmDirEase" | "asmCamLast" | "asmSpitSide" | "asmSpitU" | "asmZoneAlpha" | "asmDySign" | "asmHeadO"
   | "asmHeadW" | "asmHeadYaw" | "asmTilt" | "asmGOff" | "asmTiltAuto" | "asmTiltPending" | "asmOrbitMm" | "asmBlend" | "asmCalmWhole" | "asmCalmWholeV"
   | "asmSquare" | "asmCalm" | "asmMouth" | "asmRawPrev" | "asmGizmoAt" | "asmGizmoLag"
@@ -132,6 +133,7 @@ export function orbitStateStart(): OrbitStateStart {
     asmPrevQ: null,
     asmShown: null,
     asmFaceBand: null,
+    asmFree: null,
     asmMapQ: null,
     asmEdgeHold: null,
     asmZone: null,
@@ -396,6 +398,9 @@ function squareFrame(st: SceneState, dtMs: number): void {
   const sq = st.asmSquare;
   const sh = st.asmShown;
   const tl = st.asmTilt;
+  // ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §3.4, step C4 — N1, `freeFaceSquare` 1) ON A SPIT'S FREE FACE THE CAMERA SQUARE TO IT at every distance:
+  // the target the face's normal (the map's frame), the share whole by its own ease; off it, back. ⛔ With the switch 0 (N2) or the charts' layout off: none
+  const freeSq = st.cfg.chartLayout === 1 && st.cfg.freeFaceSquare === 1 && st.asmFree !== null ? st.asmFree.map.facets[st.asmFree.facet] : undefined;
   if (st.cfg.chartLayout === 1) {
     // ⭐⭐⭐ (2026-11-16, `ORBIT_CHARTS.md` §10.2, §12 2.4d) UNDER THE CHARTS' LAYOUT THE BANDED FACET (`asmFaceBand`, read once a frame in `assemblyFrame`):
     // the target its normal in the map's frame, its band (SIDE / cap) its `kind` — what `sh.t` gives on that facet (a place's band IS its facet's kind) —
@@ -405,6 +410,7 @@ function squareFrame(st: SceneState, dtMs: number): void {
     const bf = fb === null ? undefined : fb.map.facets[fb.facet];
     const onCapB = fb !== null && bf !== undefined && bf.kind !== "SIDE" && (tl === null || fb.facet !== tl.facet);
     sq.target = bf === undefined || onCapB ? sq.target : bf.n;
+    if (freeSq !== undefined) sq.target = freeSq.n;
   } else {
     const onCap = sh !== null && sh.t.band !== "SIDE" && (tl === null || sh.t.stack !== tl.facet);
     sq.target = sh === null || onCap ? sq.target : sh.t.normal;
@@ -417,7 +423,7 @@ function squareFrame(st: SceneState, dtMs: number): void {
   // ⭐⭐⭐ (2026-11-11) pending: held (the camera keeps its orientation while the approach goes on); then by the finger's travel (`blendShare`), never by time
   if (st.asmTiltPending) return;
   if (st.asmTiltAuto && st.asmBlend !== null) sq.q = Math.max(sq.q, blendShare(st.asmBlend.mm, st.cfg.tiltBlendMm));
-  else sq.q = wholeShareStep(sq.q, st.asmTiltAuto ? 1 : 0, dtMs, rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS));
+  else sq.q = wholeShareStep(sq.q, st.asmTiltAuto || freeSq !== undefined ? 1 : 0, dtMs, rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS));
 }
 
 /**
@@ -1159,6 +1165,8 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
       // a dy toward its open end HOLDS the gizmo where it last was — the void's floor edge, the red's end there (`mouthHold`) — and hands over: the automatic
       // tilt from there (close in), the next facet's first place once the angles reach it (far out); a dx lets it go onto the plane's bridge (§8.3)
       const sh0 = st.asmShown;
+      // ⭐⭐⭐ (2026-11-16, step C4) the band read last frame — the map the previous place (`sh0`) indexes (a free face's entry reads where the place was)
+      const fbWas = st.asmFaceBand;
       const dP = sh0 === null ? 0 : mq.pitch - sh0.pitch;
       const dY = sh0 === null ? 0 : Math.atan2(Math.sin(mq.yaw - sh0.yaw), Math.cos(mq.yaw - sh0.yaw));
       const wasHeld = st.asmMouth !== null;
@@ -1183,6 +1191,8 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
       if (st.cfg.chartLayout === 1) faceBandRead(st, m.t);
       // ⭐⭐⭐ (2026-11-10, §9.4) the tilted pole's frame this frame: the press's swing, the share of the way off the facet (the roll back), the exit
       tiltFrame(st, dtMs, m.t.stack, m.t.surface);
+      // ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §3.4, step C4) a spit's level face: the heading carried — in at the edge, out one band past it
+      if (st.cfg.chartLayout === 1) freeFaceFrame(st, m.t, sh0 !== null && fbWas !== null ? { map: fbWas.map, stack: sh0.t.stack } : null);
       // ⭐⭐⭐ (§9.4) a frame change that moves the gizmo: its relocation, eased (`asmGOff`)
       gOffStep(st, dtMs);
       hit = { ...hit, point: withGOff(st, hit.point) };
@@ -1508,6 +1518,9 @@ function assemblyCameraFrameRaw(st: SceneState, cam: OrbitAt, off?: CameraAngleO
       return { dir: mulM(B, fF.dir), up: mulM(B, fF.up) };
     }
     const uW = mulM(B, sF);
+    // ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §3.4, step C4) ON A FREE FACE (a level face of the spit): the camera's up the heading CARRIED in at the entry
+    // (`freeHeadingAngle`) — ⛔ the side's heading (`spitCameraHeading`): it turned the picture in the middle of the face
+    if (st.cfg.chartLayout === 1 && st.asmFree !== null) return offsetFrame(uW, freeHeadingAngle(st.asmFree.heading, uW), o.yawRad, o.pitchRad);
     const side = st.asmSpitSide !== 0 ? st.asmSpitSide : spitSide(uW, st.asmZone!.zone.axis, 0);
     return offsetFrame(uW, spitCameraHeading(uW, st.asmZone!.zone.axis, side), o.yawRad, o.pitchRad);
   }
@@ -1837,6 +1850,7 @@ function tiltOn(st: SceneState, mouthHi: boolean | null = null): void {
   if (st.asmCalm !== null && tf >= 0 && map.facets[tf] !== undefined) st.asmCalm = { n: map.facets[tf]!.n, sH: st.asmCalm.sH, sV: 1, wA: 1 };
   st.asmShown = null;
   st.asmFaceBand = null; // ⭐⭐⭐ (2026-11-16, §12 2.4d) a change of frame: the banded facet read afresh at the place's facet in the new map (never held by the band)
+  st.asmFree = null; // ⭐⭐⭐ (2026-11-16, step C4) a tilt: no free face carried (never in a zone — `tiltOn` refuses one), no turn of its own
   // ⭐⭐⭐ (§12 2.4c) 4. the picture carried from the pose SHOWN by ONE camera turn, paced as the swing was (made pending: `byMm` — held, then by the finger,
   // then by time; else by time, the gizmo held), and the piece's shown direction eased on the same clock
   if (uWas !== null) {
@@ -2188,6 +2202,7 @@ function zoneSwitch(st: SceneState, next: PolarZone | null): void {
   st.asmSpitU = null;
   st.asmShown = null;
   st.asmFaceBand = null; // ⭐⭐⭐ (2026-11-16, §12 2.4d) a change of frame: the banded facet read afresh at the place's facet in the new map (never held by the band)
+  st.asmFree = null; // ⭐⭐⭐ (2026-11-16, step C4) a zone's switch: no free face carried, no turn of its own (the switch's is the one)
   st.asmGOff = null;
   const map = faceMapOf(st);
   if (map !== null && g !== null) {
@@ -2222,6 +2237,104 @@ function spitZone(st: SceneState): PolarZone | null {
   return z !== null && z.zone.orientation === "SPIT" && st.asmTilt === null && baseFrame(st) !== null ? z.zone : null;
 }
 
+/** ⭐ (step C4) a spit's holding up: the WORLD's vertical — the camera upright in the world (`TILTED_POLE_CLOSE_IN.md` §3.2) */
+const WORLD_UP: Vec3 = [0, 1, 0];
+
+/**
+ * ⭐⭐⭐ (2026-11-16, step C4) A FACE MAP'S FACET ON THE ATLAS'S CONTOUR: the facet `fi` of `map` (built in the zone's frame, `B` F → world) — its normal and
+ * its polygon's centroid turned into the world, found on the contour (`contourFaceAt`; the MODEL's coordinates, never a drawn mesh). −1: none (no such
+ * facet, not a real one).
+ */
+function contourOfFacet(map: FaceMap, B: Mat3, contour: readonly ChartFace[], fi: number): number {
+  const f = map.facets[fi];
+  if (f === undefined || !f.real || f.poly.length < 3) return -1;
+  let c: Vec3 = [0, 0, 0];
+  for (const p of f.poly) c = [c[0] + p[0], c[1] + p[1], c[2] + p[2]];
+  const k = 1 / f.poly.length;
+  return contourFaceAt(contour, mulM(B, f.n), mulM(B, [c[0] * k, c[1] * k, c[2] * k]));
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §3.4 — the owner's D-T2: *"a spit's level faces follow the same rule — no turn in the middle of the bottom
+ * face, the half turn at its far edge, the picture unchanged when coming in from a tip"*; step C4, `chartLayout` 1 only) ONE FRAME OF A SPIT'S FREE FACE,
+ * at the map's place `t` just set (`assemblyFrame`, after the band's reading), `prev` the place of the frame before with the map it indexed:
+ * * no spit zone (none, upright, a tilt): none carried;
+ * * a map of another identity (a seat): none, no turn of its own;
+ * * ON the free face (its place on it, or within `edgeMarginM` of it — `distanceToFacets`, `onTiltedFacet`'s band, as the tilt's exit): kept — the heading
+ *   carried, nothing else;
+ * * OFF it — OUT ONE BAND PAST THE EDGE: the exit (`freeFaceExit`);
+ * * none carried and the place's own facet FREE (`isFreeFace`, its normal in the world along the vertical) — IN AT THE EDGE: the heading of the side shared
+ *   with the previous place's face (`freeEntryHeading` → `entryHeading`: the picture does not turn), else the layout nearest the up SHOWN (the camera drawn
+ *   last — the ONE place the camera is read: to continue the picture); ONE camera turn from the pose shown, as `spitStep` starts its own (by the rule close
+ *   to nothing; it carries whatever the side's heading had already turned), the gizmo held meanwhile (`tiltClampStep`). No dy hold at an entry. No layout
+ *   at all: no entry.
+ * ⭐ Everything decided in the MODEL's coordinates — the zone's map (the facets, `t.surface`) turned into the world by `baseFrame`, the atlas's contour.
+ */
+function freeFaceFrame(st: SceneState, t: MapTarget, prev: { readonly map: FaceMap; readonly stack: number } | null): void {
+  const z = spitZone(st);
+  const map = z === null ? null : faceMapOf(st);
+  const B = baseFrame(st);
+  const at = map === null ? null : atlasOf(st);
+  if (z === null || map === null || B === null || at === null) {
+    st.asmFree = null;
+    return;
+  }
+  if (st.asmFree !== null && st.asmFree.map !== map) {
+    // a seat (another map): none carried, no turn of its own — the side read afresh (as at the exit), never a "crossing" against the side before the entry
+    st.asmFree = null;
+    st.asmSpitSide = 0;
+    st.asmSpitU = null;
+  }
+  const fr = st.asmFree;
+  if (fr !== null) {
+    const d = t.stack === fr.facet ? 0 : distanceToFacets(map, [fr.facet], t.surface);
+    if (onTiltedFacet(t.stack, fr.facet, d, edgeMarginM(st))) return;
+    freeFaceExit(st, z, fr, at.contour, contourOfFacet(map, B, at.contour, t.stack));
+    return;
+  }
+  const f = map.facets[t.stack];
+  if (f === undefined || !isFreeFace(mulM(B, f.n), WORLD_UP)) return;
+  const ci = contourOfFacet(map, B, at.contour, t.stack);
+  const F = at.contour[ci];
+  if (F === undefined) return;
+  const from = prev !== null && prev.map === map ? contourOfFacet(map, B, at.contour, prev.stack) : -1;
+  const heading = freeEntryHeading(freeEdges(at.contour, ci, WORLD_UP), from, st.asmCamLast?.up ?? F.n, F.n);
+  if (heading === null) return;
+  st.asmFree = { map, facet: t.stack, ci, heading };
+  const mixWas = st.asmZoneMix;
+  if (st.asmCamLast !== null) st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0 };
+  easeCarry(st, mixWas);
+  st.lastVerdict = `orbit: onto the spit's level face — the heading carried in ${from >= 0 && from !== ci ? "over its edge" : "from the picture shown"}`;
+  st.hudDirty = true;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-16, step C4) OFF A SPIT'S FREE FACE onto the contour's face `to` (−1: not found): the turn (`exitTurnRad`: the heading carried against
+ * that side's layout — 0 back over the entry side, a quarter at a side, a half at the far side; null — not a neighbour: no turn known, it still leaves);
+ * ONE camera turn from the pose shown (`asmZoneMix`, at `tiltRollDegS`, the gizmo held meanwhile by `tiltClampStep`) to the spit's own upright camera
+ * beyond, the coast stopped; the spit's side read AFRESH there (`asmSpitSide` 0, `asmSpitU` none: `spitStep` reads the camera's side as with `prev` 0 —
+ * never a "crossing" on the next frame); the dy that crossed held when the turn is over `FREE_EXIT_HOLD_FROM_RAD` (`turnHolds`, `crossingHold` — as
+ * `spitStep` sets it, its side the face beyond's); none carried.
+ */
+function freeFaceExit(st: SceneState, z: PolarZone, fr: NonNullable<SceneState["asmFree"]>, contour: readonly ChartFace[], to: number): void {
+  const turn = exitTurnRad(fr.heading, freeEdges(contour, fr.ci, WORLD_UP), to);
+  st.asmFree = null;
+  st.asmSpitSide = 0;
+  st.asmSpitU = null;
+  const mixWas = st.asmZoneMix;
+  if (st.asmCamLast !== null) st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0 };
+  easeCarry(st, mixWas);
+  st.orbitInertia.stop();
+  const nTo = contour[to]?.n ?? null;
+  const g = st.asmG;
+  if (turn !== null && turnHolds(turn, FREE_EXIT_HOLD_FROM_RAD) && nTo !== null && g !== null) {
+    const hold = crossingHold(g, nTo, z.axis, spitSide(nTo, z.axis, 0), st.asmDySign);
+    if (hold !== null) st.asmEdgeHold = hold;
+  }
+  st.lastVerdict = `orbit: off the spit's level face — the camera turned ${turn === null ? "(no layout known)" : `${Math.round((turn * 180) / Math.PI)}°`} (the gizmo held until it completes)`;
+  st.hudDirty = true;
+}
+
 /**
  * ⭐⭐⭐ (§3.5) THE FINGER IN A SPIT (the pointer's `dx`, `fdy` in px — `fdy` up positive; the §8 hold after a crossing already applied): the move read in
  * F's upright screen (`fingerInFrame`: a dx pole to pole, a dy round the axis — the way it goes on the glass). Elsewhere as it is.
@@ -2241,6 +2354,9 @@ export function zoneFinger(st: SceneState, dx: number, fdy: number): { readonly 
   // ⭐ the camera's view: toward the centre (`dir` is the centre → camera direction) — the glass's right `up × view` (Babylon's left-handed axes)
   const r = fingerInFrame(dx, dy, [-cf.dir[0], -cf.dir[1], -cf.dir[2]], cf.up, fUp, st.asmZoneAlpha);
   st.asmZoneAlpha = r.alpha;
+  // ⭐⭐⭐ (2026-11-16, step C4) on a free face the carried heading puts the axis exactly up or across the glass: `fingerInFrame`'s own answer at every pitch
+  // — ⛔ the swap (`fingerSwapped`, written for the axis ACROSS the glass): coming in from a tip it sent the dy sideways, across the face's middle
+  if (st.cfg.chartLayout === 1 && st.asmFree !== null) return { dx: r.dx, fdy: r.dy };
   // ⭐⭐⭐ looking down (from `SPIT_CROSSING_PITCH_RAD`): the swap itself, one finger axis to one of F's (`fingerSwapped`) — a dx never back over the edge
   const uC = cf.dir;
   if (Math.asin(Math.min(1, Math.abs(uC[1]) / Math.max(1e-12, Math.hypot(uC[0], uC[1], uC[2])))) >= SPIT_CROSSING_PITCH_RAD) {
@@ -2265,6 +2381,9 @@ export function spitStep(st: SceneState, cp: OrbitAt): void {
     st.asmSpitU = null;
     return;
   }
+  // ⭐⭐⭐ (2026-11-16, step C4) on a free face no side: no side change, no crossing, no hold in the middle of the face — its exit is the turn
+  // (`freeFaceFrame`, which reads the side afresh there)
+  if (st.cfg.chartLayout === 1 && st.asmFree !== null) return;
   // ⭐⭐⭐ (2026-11-14, the owner: *"dy or dx when the gizmo hit the zenith edge or the middle of the bottom face create hard-to-control movements"*) the
   // side of the axis the camera's direction is on — the SHOWN rule (`dirAt`: the calm's, the square camera's — the camera's heading and the finger's
   // mapping are read off it) at the ORBIT's own angles, the finger's: ⛔ at the piece's (`pieceQ`, its spring): a frame late, the gizmo 14 – 30 mm past the

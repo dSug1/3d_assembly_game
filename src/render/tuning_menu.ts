@@ -236,6 +236,8 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "polar zones: spit from this angle from the vertical (deg)", "zoneSpitMinDeg", 0, 90, 5),
             tunable(st, "polar zones: the zone's frame for the whole assembly over this share of its area", "zoneWholeShare", 0, 1.01, 0.05),
             tunable(st, "polar zones: leave a zone this far past its rim (mm)", "zoneExitMm", 0, 100, 1),
+            // ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §3.4, step C4) the two far-out variants of a spit's level face, for the owner's look
+            tunable(st, "a spit's level face: the calm kept (0) / the camera square to it (1)", "freeFaceSquare", 0, 1, 1),
           ],
         },
       ],

@@ -165,3 +165,108 @@ export function exitTurnRad(heading: Vec3, edges: readonly FreeEdge[], to: numbe
 export function turnHolds(turnRad: number, fromRad: number): boolean {
   return turnRad > fromRad + FREE_TURN_TOL_RAD;
 }
+
+/* ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §3.4 — step C4: a spit zone's level faces on the carried heading, wired under `chartLayout` 1) ------------ */
+
+/**
+ * ⭐⭐ (§3.3 the third row, §4 W6) THE DY HOLD AT A FREE FACE'S EXIT is set from this turn (rad): today's — the hold of a tilt's far edge (`edgeHoldAt`:
+ * the exit face's heading more than 120° from the tilt's) and of the spit's crossing. ⛔ The owner has not decided between it and 90° (D-T4): ONE constant,
+ * so the choice is one line.
+ */
+export const FREE_EXIT_HOLD_FROM_RAD = (120 * Math.PI) / 180;
+
+/**
+ * ⭐ `contourFaceAt`: a face's normal within this of the contour face's (deg). The contour's normals ARE the face map's (`chartContour`), here turned into a
+ * zone's frame and back — rounding only; well under the cap's 1° (`CHART_CAP_DEG`), so a face 2° off is another face.
+ */
+export const FREE_CONTOUR_DEG = 0.5;
+
+/** the distance from `p` to the polygon `P` (normal `n`): in its plane inside it the distance to the plane, else to its nearest side */
+function polyDistance(P: readonly Vec3[], n: Vec3, p: Vec3): number {
+  const h = dot(sub(p, P[0]!), n);
+  const q = sub(p, mul(n, h));
+  let sg = 0;
+  let inside = true;
+  for (let k = 0; k < P.length; k++) {
+    const s = dot(cross(sub(P[(k + 1) % P.length]!, P[k]!), sub(q, P[k]!)), n);
+    if (Math.abs(s) < 1e-15) continue;
+    if (sg === 0) sg = Math.sign(s);
+    else if (Math.sign(s) !== sg) {
+      inside = false;
+      break;
+    }
+  }
+  if (inside) return Math.abs(h);
+  let best = Infinity;
+  for (let k = 0; k < P.length; k++) {
+    const a = P[k]!;
+    const e = sub(P[(k + 1) % P.length]!, a);
+    const t = Math.max(0, Math.min(1, dot(sub(p, a), e) / Math.max(1e-18, dot(e, e))));
+    best = Math.min(best, dist(p, add(a, mul(e, t))));
+  }
+  return best;
+}
+
+/**
+ * ⭐⭐⭐ (step C4) A FACE MAP'S FACET ON THE CONTOUR: the position in `faces` (the atlas's contour, the WORLD's coordinates) of the face whose normal is
+ * `nWorld` (within `deg`) and whose plane holds `pWorld` (within `planeM` — the contour's corner tolerance); several (coplanar faces sharing a normal): the
+ * one whose polygon is nearest `pWorld`, the first on a tie. −1: none. The caller turns a map's facet (a zone's map is built in the zone's frame F: its
+ * indices are not the contour's) into the world — its normal and one of its points; never a drawn mesh.
+ */
+export function contourFaceAt(faces: readonly ChartFace[], nWorld: Vec3, pWorld: Vec3, deg: number = FREE_CONTOUR_DEG, planeM: number = CORNER_TOL_M): number {
+  const n = unit(nWorld);
+  const c = Math.cos(deg * D);
+  let best = -1;
+  let bestD = Infinity;
+  faces.forEach((f, i) => {
+    if (dot(n, f.n) < c) return;
+    if (Math.abs(dot(f.n, sub(pWorld, f.c))) > planeM) return;
+    const d = f.pts.length >= 3 ? polyDistance(f.pts, f.n, pWorld) : dist(pWorld, f.c);
+    if (d < bestD) {
+      best = i;
+      bestD = d;
+    }
+  });
+  return best;
+}
+
+/**
+ * ⭐⭐⭐ (step C4, §3.3 the first and fourth rows) THE HEADING TAKEN AT AN ENTRY onto a free face: over the side shared with the face the place was on
+ * before (`from`, the contour's position — `entryHeading`: the picture does not turn); else — no previous place, not a neighbour, a pick-up with the gizmo
+ * already on the face — the layout nearest the up SHOWN (`nearestHeading`, `shown` the up of the camera drawn last; `n` the face's normal). null: the face
+ * has no layout at all (no entry).
+ */
+export function freeEntryHeading(edges: readonly FreeEdge[], from: number, shown: Vec3, n: Vec3): Vec3 | null {
+  return entryHeading(edges, from) ?? nearestHeading(edges, shown, n);
+}
+
+/**
+ * ⭐⭐⭐ (step C4) THE CAMERA'S HEADING ON A FREE FACE for `assembly_orbit.ts`'s `offsetFrame(u, h, …)`: the `h` whose up is the carried `heading` laid
+ * square to the camera's direction `u` (centre → camera), EXACTLY — not only straight above or below. `offsetFrame`'s up is `raw` = [−sin e·cos h, cos e,
+ * −sin e·sin h] (e the view's elevation) laid square to `u`: straight below (`u[1]` < 0) +[cos h, 0, sin h], straight above its opposite; off the vertical
+ * `raw` also leans on the world's vertical, so the `h` is solved: `raw` in the plane of `u` and the heading (`raw · (u × heading)` = 0), its side the
+ * heading's. A view too near level for an exact answer (`|cos e·m_y| > |sin e|·|m_xz|`, under 45° of elevation for a level heading): the nearest. The
+ * heading along `u` (nothing square to it): the heading's own, read from below.
+ */
+export function freeHeadingAngle(heading: Vec3, u: Vec3): number {
+  const uu = unit(u);
+  const T = heading;
+  const se = Math.max(-1, Math.min(1, uu[1]));
+  const ce = Math.sqrt(Math.max(0, 1 - se * se));
+  const M = cross(uu, T);
+  const A = Math.hypot(M[0], M[2]);
+  const own = Math.atan2(T[2], T[0]);
+  if (!(A > 1e-12) || !(Math.abs(se) > 1e-12)) return se > 0 ? Math.atan2(-T[2], -T[0]) : own;
+  // −sin e·(cos h·m_x + sin h·m_z) + cos e·m_y = 0  ⇔  cos(h − φ) = cos e·m_y / (sin e·A)
+  const phi = Math.atan2(M[2], M[0]);
+  const r = Math.max(-1, Math.min(1, (ce * M[1]) / (se * A)));
+  const w = Math.acos(r);
+  const Tp = sub(T, mul(uu, dot(T, uu)));
+  const side = (h: number): number => {
+    const raw: Vec3 = [-se * Math.cos(h), ce, -se * Math.sin(h)];
+    return dot(raw, Tp);
+  };
+  const h1 = phi + w;
+  const h2 = phi - w;
+  return side(h1) >= side(h2) ? h1 : h2;
+}
