@@ -37,6 +37,8 @@ export interface FarBump { b20: { max: number; n: number }; b45: { max: number; 
 export interface LineResult {
   T: { land: { enter: number; enterMax: number; air: number; airMax: number }; cont: Cont; path: number; held: number; kinds: Record<string, number>; close: { reach: number; path: number; trapped: number; drops: number; by: string }; far?: FarBump };
   P: { land: { enter: number; enterMax: number; air: number; airMax: number; nothing: number }; cont: Cont; path: number; close: { reach: number; path: number; trapped: number; drops: number; by: string }; far?: FarBump };
+  /** ⭐ (the owner, 2026-11-16, Q10) the DECIDED contact: the piece shall not drop — close in only (readings.ts `closeTravel` "N") */
+  N: { close: { reach: number; path: number; trapped: number; drops: number; by: string } };
   n: number;
   prof?: { T: number[]; P: number[] };
 }
@@ -50,6 +52,7 @@ export function readLine(ctx: Ctx, f: Facet, pts: [number, number][], pc: Piece,
   const tB = todayTravel(ctx, f, [...pts].reverse(), foot, dir).reverse().map((x) => ({ ...x, idx: nP - 1 - x.idx })); // its places back in this order
   const T = { land: { enter: 0, enterMax: 0, air: 0, airMax: 0 }, cont: continuity(tF.map((x) => x.level)), path: 0, held: 0, kinds: {} as Record<string, number>, close: { reach: 0, path: 0, trapped: 0, drops: 0, by: "" } };
   const P = { land: { enter: 0, enterMax: 0, air: 0, airMax: 0, nothing: 0 }, cont: continuity([]), path: 0, close: { reach: 0, path: 0, trapped: 0, drops: 0, by: "" } };
+  const N = { close: { reach: 0, path: 0, trapped: 0, drops: 0, by: "" } };
   const pl: number[] = [];
   const marks: boolean[] = [];
   pts.forEach(([L, s], i) => {
@@ -99,7 +102,7 @@ export function readLine(ctx: Ctx, f: Facet, pts: [number, number][], pc: Piece,
     return { max: r1(Math.max(0, mx)), n: cnt };
   };
   const farT: FarBump = { b20: bumpOf(gT, 20), b45: bumpOf(gT, 45) }, farP: FarBump = { b20: bumpOf(gP, 20), b45: bumpOf(gP, 45) };
-  for (const [R, o] of [["T", T], ["P", P]] as const) {
+  for (const [R, o] of [["T", T], ["P", P], ["N", N]] as const) {
     // CLOSE IN (the piece in contact, d = 0): each way the travel stops at its first wall (the gizmo read at the solved angles)
     const fw = closeTravel(ctx, f, pts, pc, R);
     const bw = closeTravel(ctx, f, [...pts].reverse(), pc, R);
@@ -113,7 +116,7 @@ export function readLine(ctx: Ctx, f: Facet, pts: [number, number][], pc: Piece,
     const drop = (xs: typeof fw) => { let k = 0, prev: number | null = null; for (const x of xs) { if (x.bottom !== null) { if (prev !== null && prev - x.bottom >= GLIDE_MM) k++; prev = x.bottom; } } return k; };
     o.close.drops = drop(fw) + drop(bw);
   }
-  return { T: { ...T, far: farT }, P: { ...P, far: farP }, n: pts.length, ...(keepProf ? { prof: { T: tF.map((x) => r1(x.level)), P: pl.map(r1) } } : {}) };
+  return { T: { ...T, far: farT }, P: { ...P, far: farP }, N, n: pts.length, ...(keepProf ? { prof: { T: tF.map((x) => r1(x.level)), P: pl.map(r1) } } : {}) };
 }
 
 /** S17 / P1: the feature against its twin, far / medium (d = 0.3 m), on a grid of angles — the piece's foot, the facet's normal; the contour; the box */
@@ -203,12 +206,10 @@ export function coverage(ctx: Ctx, samples: { x: V; n: V }[], grid = 5) {
   return res;
 }
 
-/** S21: the goal part withdrawn along its entry until it clears the placed set (boxes, exact); its landing (P2, today) against its seat */
-export function goalCheck(ctx: Ctx, goal: { part: Part; entry: V }) {
-  const g = goal.part, e = goal.entry;
+/** the placed BOX parts the goal part `g` meets when withdrawn from its seated pose along `e` to infinity (boxes, exact; contact within the skin allowed) */
+function blockersAlong(parts: readonly Part[], g: Part, e: readonly number[]): string[] {
   const blockers: string[] = [];
-  let clear = 0;
-  for (const p of ctx.parts) {
+  for (const p of parts) {
     if (!p.isBox || p.id === g.id) continue;
     let lo = 0, hi = Infinity; // the t > 0 where they overlap by more than the skin on every axis
     for (let k = 0; k < 3; k++) {
@@ -218,27 +219,63 @@ export function goalCheck(ctx: Ctx, goal: { part: Part; entry: V }) {
       lo = Math.max(lo, Math.min(a, b)); hi = Math.min(hi, Math.max(a, b));
     }
     if (lo < hi && hi > 0) blockers.push(`${p.id}@${r1(Math.max(0, lo))}`);
-    // the distance to clear every part along e
+  }
+  return blockers;
+}
+
+/**
+ * ⭐⭐ (the owner, 2026-11-16, Q5 and its clarification: *"any clear path towards the goal (=no collision in-between the piece and the piece as seated in
+ * the goal) can be travelled by the piece from any orbit angle"*) THE ENTRY SET: the directions along which the goal part, withdrawn from its seated pose,
+ * touches no placed part — the sphere sampled at ENTRY_SPHERE_N directions (a golden spiral, ≈ 8.9° apart at 642), plus the six axis directions (a
+ * tight slot's set is a single direction each way: a sampling of the sphere alone would miss it). Reported: the share of the sphere's samples that is
+ * free, the free axis directions, and per free axis direction the first-contact landing (P2, today) on the facet facing it against the seat.
+ */
+export const ENTRY_SPHERE_N = 642;
+const AXES: [string, V][] = [["+x", [1, 0, 0]], ["-x", [-1, 0, 0]], ["+y", [0, 1, 0]], ["-y", [0, -1, 0]], ["+z", [0, 0, 1]], ["-z", [0, 0, -1]]];
+function sphere(n: number): V[] {
+  const out: V[] = [];
+  const ga = Math.PI * (3 - Math.sqrt(5));
+  for (let i = 0; i < n; i++) { const y = 1 - (2 * (i + 0.5)) / n, r = Math.sqrt(1 - y * y), th = ga * i; out.push([r * Math.cos(th), y, r * Math.sin(th)]); }
+  return out;
+}
+
+/** S21 / B4 (as decided 2026-11-16): the goal's ENTRY SET at its stage, its landing per free axis direction; and the authored direction (kept for the record) */
+export function goalCheck(ctx: Ctx, goal: { part: Part; entry: V }) {
+  const g = goal.part, e = goal.entry;
+  const blockers = blockersAlong(ctx.parts, g, e);
+  let clear = 0;
+  for (const p of ctx.parts) {
+    if (!p.isBox || p.id === g.id) continue;
     for (let k = 0; k < 3; k++) if (Math.abs(e[k]!) > 1e-9) clear = Math.max(clear, e[k]! > 0 ? p.hi[k]! - g.lo[k]! : g.hi[k]! - p.lo[k]!);
   }
   // ⛔ (the critic's B2, 2026-11-16) the landing is read on the map of the placed set WITHOUT the goal part — what the game has before it is placed. The
   // first version filtered `parts` only and kept the map built with the goal in it: today's reading took the goal's own top as the facet (L19's lid "on
   // the tray's floor" was that artifact; with the tray alone today's gizmo bridges the opening and the lid lands on its seat)
   const others = buildCtx(ctx.parts.filter((p) => p.id !== g.id));
-  const fi = facetFor(others.map, e);
-  let landP: number | null = null, landT: number | null = null, seat = NaN;
-  if (fi >= 0) {
+  const landAlong = (d: V) => {
+    const fi = facetFor(others.map, d);
+    if (fi < 0) return { landP: null as number | null, landT: null as number | null, seat: NaN };
     const f = others.map!.facets[fi]!;
     const c: V = mul(add(g.lo, g.hi), 0.5);
     const ext = sub(g.hi, g.lo);
     const ab = (u: readonly number[]) => Math.abs(u[0]!) * ext[0] + Math.abs(u[1]!) * ext[1] + Math.abs(u[2]!) * ext[2];
     const pc: Piece = { name: "goal", a: ab(f.t) / 2, c: ab(f.b) / 2, H: ab(f.n), box: ext };
-    seat = Math.min(...g.verts.map((v) => dot(v, f.n)));
+    const seat = Math.min(...g.verts.map((v) => dot(v, f.n)));
     // the goal's own centre (mm) on the facet: the facet's t / b are unit vectors, the goal's coordinates mm
-    landP = propFar(others, f, dot(c, f.t), dot(c, f.b), pc).level;
-    landT = todayAt(others, f, dot(c, f.t), dot(c, f.b), heldFoot(pc)).level;
-  }
-  return { blockers, clearMm: r1(clear), seat: r1(seat), landP: landP === null ? null : r1(landP), landT: landT === null ? null : r1(landT) };
+    const landP = propFar(others, f, dot(c, f.t), dot(c, f.b), pc).level;
+    const landT = todayAt(others, f, dot(c, f.t), dot(c, f.b), heldFoot(pc)).level;
+    return { landP: r1(landP), landT: r1(landT), seat: r1(seat) };
+  };
+  const a = landAlong(e);
+  // the entry set
+  const sph = sphere(ENTRY_SPHERE_N);
+  const freeS = sph.filter((d) => blockersAlong(ctx.parts, g, d).length === 0);
+  const axes = AXES.filter(([, d]) => blockersAlong(ctx.parts, g, d).length === 0).map(([nm, d]) => {
+    const l = landAlong(d);
+    return { dir: nm, landP: l.landP, seat: l.seat, onSeat: l.landP !== null && Math.abs(l.landP - l.seat) <= 0.5 };
+  });
+  const entrySet = { sampled: ENTRY_SPHERE_N, freeShare: r1((100 * freeS.length) / ENTRY_SPHERE_N), freeAxes: axes, empty: freeS.length === 0 && axes.length === 0 };
+  return { blockers, clearMm: r1(clear), seat: a.seat, landP: a.landP, landT: a.landT, entrySet };
 }
 
 /** DETERMINISM: the same parts in the reverse order; the shape turned a quarter about y and moved — the levels along the lines, the contour */

@@ -34,10 +34,12 @@ for (const c of combos) {
     { label: "b", a: [cx, y, Math.max(-239.5, cz - hz - 60)] as V, b: [cx, y, Math.min(239.5, cz + hz + 60)] as V },
   ];
   const agg = { T: { e: 0, em: 0, a: 0, am: 0, u: 0, um: 0, g: 0, gm: 0, p: 0, h: 0, cr: 0, ct: 0, cd: 0, n: 0, fb20: 0, fn20: 0, fb45: 0, fn45: 0 }, P: { e: 0, em: 0, a: 0, am: 0, u: 0, um: 0, g: 0, gm: 0, p: 0, h: 0, cr: 0, ct: 0, cd: 0, n: 0, fb20: 0, fn20: 0, fb45: 0, fn45: 0 } };
+  const aN = { cr: 0, ct: 0, cd: 0 }; // ⭐ (the owner, 2026-11-16, Q10) the decided contact: the piece shall not drop
   let samples = 0;
   for (const ln of lines) {
     const r = readLine(ctx, f, placesOf(f, { label: ln.label, a: ln.a, b: ln.b }, 1), PIECE_A);
     samples += r.n;
+    aN.cr += r.N.close.reach / lines.length; aN.ct += r.N.close.trapped; aN.cd += r.N.close.drops;
     for (const R of ["T", "P"] as const) {
       const x = r[R], a = agg[R];
       a.e += x.land.enter; a.em = Math.max(a.em, x.land.enterMax); a.a += x.land.air; a.am = Math.max(a.am, x.land.airMax);
@@ -54,7 +56,7 @@ for (const c of combos) {
   const tc = todayAt(ctx, f, L, s, heldFoot(PIECE_A)), pc = propFar(ctx, f, L, s, PIECE_A);
   out.push({
     id: c.id, sign: c.sign, foot: c.foot, prof: c.prof, wf: c.wf, w: c.w, dh: c.dh, pos: c.pos, parts: ctx.parts.length, samples,
-    T: agg.T, P: agg.P, far: { T: far.T.footMax, P: far.P.footMax, nT: far.T.nDeg, box: far.boxMm, cu: far.contour.unmatched, cd: far.contour.dMax, top: r1(y - TOP) },
+    T: agg.T, P: agg.P, N: aN, far: { T: far.T.footMax, P: far.P.footMax, nT: far.T.nDeg, box: far.boxMm, cu: far.contour.unmatched, cd: far.contour.dMax, top: r1(y - TOP) },
     centre: { T: r1(tc.level), Tk: tc.kind, P: r1(pc.level), Pk: pc.nothing ? "nothing" : "contact" },
     cap: ctx.map!.facets[ctx.map!.top]!.real, // the top cap a REAL facet (D5 kept it), or a virtual one at the box
   });

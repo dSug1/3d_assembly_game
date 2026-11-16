@@ -1544,3 +1544,50 @@ F17 (ii) — ALONG ONE ASSEMBLY THE FAR FOOT BUMPS AT EVERY DEPTH STEP WHEN THE 
    shapes: L03, L05, L06, L07, L12, L13, L14, L15, L16, L17, L18, L20, L21, L22, L23, L25, L26, L28, L30, L31, L32, L33, L34, L35, L36, L37, L39, L40, L41, L44, L46, L47, L48, Q02, Q03, Q04, Q06, Q07, Q09, Q10
    numbers: the far foot (d = 0.3 m, shellAnchor as the game calls it) along the 1 mm travels with u tilted 20° / 45° off the facet's normal toward the travel. Sweep (piece A): cells with a bump > 0.5 mm at 20° — today 684 (voids 228, protrusions 456), P2 673 (voids 258, protrusions 415); by depth (max at 20° / 45°, cells bumping at 20°, T · P): 0.3 mm: T 0.1 / 0.3 (0) · P 0.1 / 0.3 (0); 1 mm: T 116.8 / 116.5 (32) · P 0.4 / 1 (0); 6 mm: T 2.2 / 6 (310) · P 2.2 / 6 (316); 40 mm: T 14.6 / 40 (342) · P 14.6 / 40 (357) — depth × tan 20° = 0.36 h, × tan 45° = h; today's 1 mm outliers (116.8 mm) are F6's false-mouth cells: the HELD place released, not a depth step. Library, piece A, max bump at 20° / 45° (mm): L03 T 14.6 / 40 · P 14.6 / 40; L12 T 82.1 / 171.3 · P 82 / 173; L35 T 14.6 / 39.9 · P 14.6 / 39; L42 T 0.1 / 0.1 · P 0.1 / 0.1; L43 T 0.4 / 0.7 · P 0.4 / 0.6; L44 T 2.2 / 5 · P 2.2 / 4.7. 40 library shapes bump at 20°.
    note: With u along the normal (the calm's full share, a face's middle) the bump is zero by construction; the calm leaves u oblique toward a face's edges, where the shell no longer absorbs a depth step: the foot slides along u by depth × tan(angle). The study's earlier claim 'no bump along one assembly' rested on u = the normal only.
+
+═══ 4. THE OWNER'S DECISIONS OF 2026-11-16, MEASURED ═══
+Q10 — "the piece shall not drop … the piece would enter the recess only following a A + dy approach": reading N = P with the orbit never lowering the piece.
+  sweep T: drops ≥ 5 mm in 367 cells; travels ending at a wall in 849 cells (voids 284, protrusions 565); mean close-in reach 69%
+  sweep P: drops ≥ 5 mm in 432 cells; travels ending at a wall in 833 cells (voids 301, protrusions 532); mean close-in reach 71%
+  sweep N: drops ≥ 5 mm in 0 cells; travels ending at a wall in 728 cells (voids 196, protrusions 532); mean close-in reach 77%
+  N's protrusion traps by height (mm): {"1":76,"6":228,"40":228}
+  L03 (A): P reach 54% · 4 trapped · 4 drops  →  N reach 100% · 0 trapped · 0 drops
+  L05 (A): P reach 77% · 3 trapped · 3 drops  →  N reach 100% · 1 trapped · 0 drops
+  L06 (A): P reach 77% · 2 trapped · 2 drops  →  N reach 100% · 0 trapped · 0 drops
+  L07 (A): P reach 84% · 1 trapped · 1 drops  →  N reach 84% · 1 trapped · 0 drops
+  L12 (A): P reach 86% · 2 trapped · 2 drops  →  N reach 86% · 2 trapped · 0 drops
+  L13 (A): P reach 81% · 2 trapped · 8 drops  →  N reach 81% · 2 trapped · 0 drops
+  L14 (A): P reach 98% · 1 trapped · 1 drops  →  N reach 98% · 1 trapped · 0 drops
+  L15 (A): P reach 56% · 6 trapped · 6 drops  →  N reach 80% · 2 trapped · 0 drops
+  L16 (A): P reach 72% · 4 trapped · 4 drops  →  N reach 72% · 4 trapped · 0 drops
+  L17 (A): P reach 69% · 5 trapped · 3 drops  →  N reach 69% · 5 trapped · 0 drops
+  L18 (A): P reach 88% · 4 trapped · 4 drops  →  N reach 100% · 0 trapped · 0 drops
+  L23 (A): P reach 78% · 2 trapped · 5 drops  →  N reach 78% · 2 trapped · 0 drops
+  L25 (A): P reach 65% · 6 trapped · 8 drops  →  N reach 100% · 0 trapped · 0 drops
+  L26 (A): P reach 66% · 4 trapped · 2 drops  →  N reach 100% · 0 trapped · 0 drops
+  L27 (A): P reach 75% · 2 trapped · 0 drops  →  N reach 100% · 0 trapped · 0 drops
+  L28 (A): P reach 58% · 4 trapped · 4 drops  →  N reach 100% · 0 trapped · 0 drops
+  L30 (A): P reach 68% · 3 trapped · 3 drops  →  N reach 100% · 0 trapped · 0 drops
+  L31 (A): P reach 68% · 3 trapped · 38 drops  →  N reach 100% · 0 trapped · 0 drops
+  L32 (A): P reach 34% · 4 trapped · 4 drops  →  N reach 100% · 0 trapped · 0 drops
+  L40 (A): P reach 87% · 4 trapped · 4 drops  →  N reach 100% · 0 trapped · 0 drops
+  L41 (A): P reach 79% · 2 trapped · 2 drops  →  N reach 79% · 2 trapped · 0 drops
+  L44 (A): P reach 86% · 1 trapped · 1 drops  →  N reach 86% · 1 trapped · 0 drops
+  L46 (A): P reach 74% · 3 trapped · 3 drops  →  N reach 74% · 3 trapped · 0 drops
+  L48 (A): P reach 96% · 2 trapped · 2 drops  →  N reach 100% · 0 trapped · 0 drops
+  Q02 (A): P reach 88% · 2 trapped · 2 drops  →  N reach 100% · 0 trapped · 0 drops
+  Q03 (A): P reach 45% · 4 trapped · 3 drops  →  N reach 70% · 2 trapped · 0 drops
+  Q04 (A): P reach 66% · 3 trapped · 3 drops  →  N reach 86% · 1 trapped · 0 drops
+  Q06 (A): P reach 73% · 3 trapped · 1 drops  →  N reach 73% · 3 trapped · 0 drops
+  Q10 (A): P reach 70% · 2 trapped · 1 drops  →  N reach 71% · 2 trapped · 0 drops
+
+Q5 (+ the clarification: "any clear path towards the goal (=no collision in-between the piece and the piece as seated in the goal) can be travelled by
+   the piece from any orbit angle") — the ENTRY SET: the directions along which the goal part, withdrawn from its seated pose, touches no placed part;
+   the sphere sampled (a golden spiral) plus the six axis directions; per free axis direction the P2 landing on the facet facing it against the seat.
+  L03  free share 0% of 642; free axes +y (lands 200 vs seat 200, on its seat)
+  L05  free share 0.8% of 642; free axes +y (lands 210 vs seat 210, on its seat), +z (lands -100 vs seat 120)
+  L18  free share 14.6% of 642; free axes +y (lands 20 vs seat 20, on its seat)
+  L19  free share 50% of 642; free axes +x (lands 150 vs seat -150), -x (lands 150 vs seat -150), +y (lands 120 vs seat 120, on its seat), +z (lands 150 vs seat -150), -z (lands 150 vs seat -150)
+  L53  free share 0.3% of 642; free axes +y (lands 210 vs seat 210, on its seat)
+  Q03  free share 0% of 642; free axes +y (lands 200 vs seat 200, on its seat)
+  Q07  free share 0% of 642; free axes none — EMPTY: unreachable at this stage

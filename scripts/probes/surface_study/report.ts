@@ -284,6 +284,41 @@ for (const f of F) {
   w(`   numbers: ${f.numbers}`);
   if (f.note) w(`   note: ${f.note}`);
 }
+// ───────────────────── 4. THE OWNER'S DECISIONS OF 2026-11-16, MEASURED (Q10: the piece shall not drop; Q5: a goal's entry SET) ─────────────────────
+w();
+w("═══ 4. THE OWNER'S DECISIONS OF 2026-11-16, MEASURED ═══");
+w('Q10 — "the piece shall not drop … the piece would enter the recess only following a A + dy approach": reading N = P with the orbit never lowering the piece.');
+{
+  const sw = SW.filter((x) => x.N !== undefined);
+  const sel = (x: A, R: "T" | "P" | "N") => (R === "N" ? x.N : x[R]);
+  for (const R of ["T", "P", "N"] as const) {
+    const tv = sw.filter((x) => x.sign === "void" && sel(x, R).ct > 0).length, tp = sw.filter((x) => x.sign === "protrusion" && sel(x, R).ct > 0).length;
+    const mr = Math.round(sw.reduce((t, x) => t + sel(x, R).cr, 0) / Math.max(1, sw.length));
+    w(`  sweep ${R}: drops ≥ 5 mm in ${sw.filter((x) => sel(x, R).cd > 0).length} cells; travels ending at a wall in ${sw.filter((x) => sel(x, R).ct > 0).length} cells (voids ${tv}, protrusions ${tp}); mean close-in reach ${mr}%`);
+  }
+  const byH: Record<string, number> = {};
+  for (const x of sw) if (x.sign === "protrusion" && x.N.ct > 0) byH[String(x.dh)] = (byH[String(x.dh)] ?? 0) + 1;
+  w(`  N's protrusion traps by height (mm): ${JSON.stringify(byH)}`);
+  for (const d of LIB) {
+    if (d.empty) continue;
+    const nl: A[] = Object.values(d.lines).flatMap((v: A) => (v.A?.N ? [v.A.N] : []));
+    if (nl.length === 0) continue;
+    const reach = Math.round(nl.reduce((t, y) => t + y.close.reach, 0) / nl.length), trap = nl.reduce((t, y) => t + y.close.trapped, 0), drops = nl.reduce((t, y) => t + y.close.drops, 0);
+    const g = aggOf(d, "A");
+    const pr = Math.round(g.P.reach.reduce((t: number, y: number) => t + y, 0) / Math.max(1, g.P.reach.length));
+    if (reach !== pr || trap !== g.P.trap || drops !== g.P.drops) w(`  ${d.name.split(" ")[0]} (A): P reach ${pr}% · ${g.P.trap} trapped · ${g.P.drops} drops  →  N reach ${reach}% · ${trap} trapped · ${drops} drops`);
+  }
+}
+w();
+w('Q5 (+ the clarification: "any clear path towards the goal (=no collision in-between the piece and the piece as seated in the goal) can be travelled by');
+w('   the piece from any orbit angle") — the ENTRY SET: the directions along which the goal part, withdrawn from its seated pose, touches no placed part;');
+w("   the sphere sampled (a golden spiral) plus the six axis directions; per free axis direction the P2 landing on the facet facing it against the seat.");
+for (const d of LIB) {
+  const es = d.goal?.entrySet;
+  if (!es) continue;
+  w(`  ${d.name.split(" ")[0].padEnd(4)} free share ${f1(es.freeShare)}% of ${es.sampled}; free axes ${es.freeAxes.map((x: A) => `${x.dir} (lands ${x.landP ?? "—"} vs seat ${f1(x.seat)}${x.onSeat ? ", on its seat" : ""})`).join(", ") || "none"}${es.empty ? " — EMPTY: unreachable at this stage" : ""}`);
+}
+
 const txt = out.join("\n") + "\n";
 writeFileSync(join(here, "results.txt"), txt);
 

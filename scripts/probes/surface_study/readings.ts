@@ -115,7 +115,10 @@ export function landing(ctx: Ctx, f: Facet, L: number, s: number, pc: Piece, lev
 
 /** CLOSE IN, a travel: the piece hangs at the gizmo, its bottom chosen each step from where it IS; blocked = a part over its footprint above its bottom */
 export interface CloseStep { bottom: number | null; blocked: boolean; part: string | null }
-export function closeTravel(ctx: Ctx, f: Facet, pts: [number, number][], pc: Piece, reading: "T" | "P"): CloseStep[] {
+// ⭐ (the owner, 2026-11-16, Q10 — reading "N", the DECIDED contact): *"the piece shall not drop … the piece would enter the recess only following a
+// A + dy approach"* — as P (the drop started at the piece, a part above its bottom a WALL), but the orbit never LOWERS the piece: its bottom is kept
+// across a slot it fits (and off a step down); only the approach would lower it (not modelled: a travel is an orbit).
+export function closeTravel(ctx: Ctx, f: Facet, pts: [number, number][], pc: Piece, reading: "T" | "P" | "N"): CloseStep[] {
   const n = f.n as V, t = f.t as V, b = f.b as V;
   const foot = heldFoot(pc);
   const out: CloseStep[] = [];
@@ -140,6 +143,7 @@ export function closeTravel(ctx: Ctx, f: Facet, pts: [number, number][], pc: Pie
       let best = -Infinity;
       for (const x of ls) if (x.hi <= from + SLACK_MM && x.hi > best) { best = x.hi; part = x.id; }
       next = best === -Infinity ? f.e / M : best;
+      if (reading === "N" && hb !== null && next < hb) next = hb; // Q10: the piece keeps its level — it does not drop
     }
     // the collision (the solver's refusal, P5): any part over the footprint overlapping the piece at that bottom, or at the higher of its two
     // bottoms (the move goes over, never through: a drop after the footprint has cleared, a rise before it moves on)
