@@ -143,3 +143,6 @@ runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press
   D-T7); the build's steps C0 – C5. ⛔ PROPOSED — nothing of it is built.
 * **The probes written for this** (the session's scratchpad, to move into `scripts/probes/` with the walks' rules): `mid_check.mjs` (the arrival on
   `Scene_0bis`'s bottom face from a tip), `edge_noise.mjs` (a place wobbling across an edge, close in).
+* ✅ **D-T2 agreed** (the owner, 2026-11-16: *"D-T2: agreed"*, after the plain-words account of comment 1): a spit's level faces on the carried
+  heading — no turn in the middle of `Scene_0bis`'s bottom face, the half turn at its far edge, the picture kept when coming in from a tip; N1 / N2
+  far out still to judge. D-T1, D-T3 – D-T7 open. Next: the study's C0 (the offline round, the two variants drawn).
