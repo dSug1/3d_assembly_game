@@ -243,8 +243,8 @@ describe("⭐⭐⭐ THE RULE on `Scene_0bis`'s bottom face — the heading carri
       }
     }
   });
-  it("⭐ the exits: 0 back over the entry side, π/2 at a side, π at the far side — the dy hold from 120° (today's) at the far side only", () => {
-    expect(FREE_EXIT_HOLD_FROM_RAD).toBeCloseTo(120 * D, 15);
+  it("⭐ the exits: 0 back over the entry side, π/2 at a side, π at the far side — the dy hold from any turn over a quarter (D-T4): at the far side only on this rectangle", () => {
+    expect(FREE_EXIT_HOLD_FROM_RAD).toBeCloseTo(90 * D, 15);
     for (const g of [...tips, ...longs]) {
       const h = entryHeading(E, g)!;
       const turns = E.map((e) => exitTurnRad(h, E, e.to)!);
@@ -366,7 +366,7 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): the carried headin
     before(a, g, "calmFrame(st, dtMs);");
     expect(raw(W).match(/freeFaceFrame\(st, /g)?.length).toBe(1);
   });
-  it("⭐ the entry and the exit: each ONE camera turn from the pose shown (`asmZoneMix` from `poseShown`, as `spitStep`'s); the exit the side afresh, the coast stopped, the hold over 120°", () => {
+  it("⭐ the entry and the exit: each ONE camera turn from the pose shown (`asmZoneMix` from `poseShown`, as `spitStep`'s); the exit the side afresh, the coast stopped, the hold on the dy that pushed over the side (`exitHoldSign`, D-T4)", () => {
     const turn = "const mixWas = st.asmZoneMix; if (st.asmCamLast !== null) st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0 }; easeCarry(st, mixWas);";
     const f = fnCode(W, "function freeFaceFrame(");
     expect(f).toContain("const z = spitZone(st);");
@@ -380,11 +380,13 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): the carried headin
     before(f, "st.asmFree = { map, facet: t.stack, ci, heading };", turn);
     expect(f).not.toContain("asmEdgeHold"); // no dy hold at an entry
     const x = fnCode(W, "function freeFaceExit(");
-    expect(x).toContain("const turn = exitTurnRad(fr.heading, freeEdges(contour, fr.ci, WORLD_UP), to);");
+    expect(x).toContain("const turn = exitTurnRad(fr.heading, edges, to);");
     expect(x).toContain("st.asmFree = null; st.asmSpitSide = 0; st.asmSpitU = null;");
     expect(x).toContain(turn + " st.orbitInertia.stop();");
-    expect(x).toContain("if (turn !== null && turnHolds(turn, FREE_EXIT_HOLD_FROM_RAD) && nTo !== null && g !== null) {");
-    expect(x).toContain("const hold = crossingHold(g, nTo, z.axis, spitSide(nTo, z.axis, 0), st.asmDySign); if (hold !== null) st.asmEdgeHold = hold; }");
+    expect(x).toContain("const held = exitHoldSign(fr.heading, edges, to, contour[fr.ci]?.c ?? [0, 0, 0], st.asmDySign);");
+    expect(x).toContain("if (held !== 0 && nTo !== null && g !== null) {");
+    expect(x).toContain("crossingHold(g, nTo, z.axis, spitSide(nTo, z.axis, 0), held)");
+    expect(x).toContain("const hold = crossingHold(g, nTo, z.axis, spitSide(nTo, z.axis, 0), held); if (hold !== null) st.asmEdgeHold = hold; }");
     // ⛔ the sway: nothing drawn, picked or seen by the camera decides — the pose shown and the up shown only continue the picture
     for (const s of [f, x]) expect(s).not.toMatch(/getBoundingInfo|pickWithRay|absolutePosition|computeWorldMatrix|cameraPrev|modelCast|gizmoNormal/);
     const cf = fnCode(W, "function contourOfFacet(");

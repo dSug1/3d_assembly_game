@@ -169,11 +169,33 @@ export function turnHolds(turnRad: number, fromRad: number): boolean {
 /* ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §3.4 — step C4: a spit zone's level faces on the carried heading, wired under `chartLayout` 1) ------------ */
 
 /**
- * ⭐⭐ (§3.3 the third row, §4 W6) THE DY HOLD AT A FREE FACE'S EXIT is set from this turn (rad): today's — the hold of a tilt's far edge (`edgeHoldAt`:
- * the exit face's heading more than 120° from the tilt's) and of the spit's crossing. ⛔ The owner has not decided between it and 90° (D-T4): ONE constant,
- * so the choice is one line.
+ * ⭐⭐⭐ (`TILTED_POLE_CLOSE_IN.md` §10 — D-T4, the owner 2026-11-16: *"i have no particular opinion. Weigh the pros and the cons and build what is best"*)
+ * THE DY HOLD AT A FREE FACE'S EXIT is set from this turn (rad): any turn OVER a quarter — past it the face beyond stands upright on the glass with the
+ * edge just crossed in the finger's way. ⛔ 120° (the tilt's far edge, `edgeHoldAt`; C4 as first built): an edge 10 – 30° off the finger's way (a
+ * triangle's, a heptagon's) was crossed by a dy that then brought the gizmo straight back over it.
  */
-export const FREE_EXIT_HOLD_FROM_RAD = (120 * Math.PI) / 180;
+export const FREE_EXIT_HOLD_FROM_RAD = Math.PI / 2;
+
+/**
+ * ⭐⭐⭐ (§10, D-T4) THE DY AN EXIT'S TURN HOLDS — the sign held (`dySign`'s), or 0 for none. After the exit's turn ONE finger direction undoes the
+ * crossing (up the face hanging under a top face, down the one standing over a bottom face); it is held only when the finger was pushing THAT way —
+ * when the dy at the crossing is the one that carried the gizmo out over the side:
+ * * the turn over `FREE_EXIT_HOLD_FROM_RAD` (`turnHolds`), and
+ * * the finger's dy moving the gizmo OUT through that side: on a free face "up" on the glass is the heading carried, so a dy of sign `s` moves the gizmo
+ *   along `s × heading` — out through the side when that has a part along the side's outward direction (from the face's centre `centre`).
+ * ⛔ The finger's last dy sign whatever it was (as built first): a side crossed sideways by a dx held a dy that had crossed nothing — a direction blocked
+ * for no reason. On a rectangle: its far side crossed by its dy, as before. 0: no such side, a level neighbour, no dy.
+ */
+export function exitHoldSign(heading: Vec3, edges: readonly FreeEdge[], to: number, centre: Vec3, dySign: number): 1 | -1 | 0 {
+  const e = edges.find((x) => x.to === to);
+  if (e === undefined || e.heading === null || !(dySign > 0 || dySign < 0)) return 0;
+  if (!turnHolds(Math.atan2(len(cross(heading, e.heading)), dot(heading, e.heading)), FREE_EXIT_HOLD_FROM_RAD)) return 0;
+  const d = unit(sub(e.b, e.a));
+  const m = sub(mul(add(e.a, e.b), 0.5), centre);
+  const out = sub(m, mul(d, dot(m, d)));
+  const s = dySign > 0 ? 1 : -1;
+  return s * dot(heading, out) > 0 ? s : 0;
+}
 
 /**
  * ⭐ `contourFaceAt`: a face's normal within this of the contour face's (deg). The contour's normals ARE the face map's (`chartContour`), here turned into a

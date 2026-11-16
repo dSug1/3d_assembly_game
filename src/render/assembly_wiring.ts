@@ -42,7 +42,7 @@ import { poseAboutPiece, poseFramingTwo, type CamPose } from "../input/orbit_til
 import { poleCrossingDue, poleSeam } from "../input/pole_crossing";
 import { dirGap, easedDir, easeRest, poleYawKept, seamTurnHolds, seamTurnPace, seamTurnStep, seamWholeRad, tiltLeavesNow } from "../input/seam_turn";
 import { bandedFacet } from "../input/face_band";
-import { contourFaceAt, exitTurnRad, FREE_EXIT_HOLD_FROM_RAD, freeEdges, freeEntryHeading, freeHeadingAngle, isFreeFace, turnHolds } from "../input/free_face";
+import { contourFaceAt, exitHoldSign, exitTurnRad, freeEdges, freeEntryHeading, freeHeadingAngle, isFreeFace } from "../input/free_face";
 import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, tiltHeading, edgeHoldAt, capTilt, frameMix, headingFrom, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, onTiltedFacet, type Mat3 } from "../input/orbit_tilt";
 
 /** ⭐ The look point's ease (ms). */
@@ -2313,11 +2313,14 @@ function freeFaceFrame(st: SceneState, t: MapTarget, prev: { readonly map: FaceM
  * that side's layout — 0 back over the entry side, a quarter at a side, a half at the far side; null — not a neighbour: no turn known, it still leaves);
  * ONE camera turn from the pose shown (`asmZoneMix`, at `tiltRollDegS`, the gizmo held meanwhile by `tiltClampStep`) to the spit's own upright camera
  * beyond, the coast stopped; the spit's side read AFRESH there (`asmSpitSide` 0, `asmSpitU` none: `spitStep` reads the camera's side as with `prev` 0 —
- * never a "crossing" on the next frame); the dy that crossed held when the turn is over `FREE_EXIT_HOLD_FROM_RAD` (`turnHolds`, `crossingHold` — as
- * `spitStep` sets it, its side the face beyond's); none carried.
+ * never a "crossing" on the next frame); the dy held when the turn is over a quarter AND the finger's dy is the one that pushed the gizmo out over that
+ * side (`exitHoldSign`, §10 — D-T4; `crossingHold`, its side the face beyond's); none carried.
  */
 function freeFaceExit(st: SceneState, z: PolarZone, fr: NonNullable<SceneState["asmFree"]>, contour: readonly ChartFace[], to: number): void {
-  const turn = exitTurnRad(fr.heading, freeEdges(contour, fr.ci, WORLD_UP), to);
+  const edges = freeEdges(contour, fr.ci, WORLD_UP);
+  const turn = exitTurnRad(fr.heading, edges, to);
+  // ⭐⭐⭐ (`TILTED_POLE_CLOSE_IN.md` §10, D-T4) the dy held: the finger's, only if it is the one that pushed the gizmo out over this side (`exitHoldSign`)
+  const held = exitHoldSign(fr.heading, edges, to, contour[fr.ci]?.c ?? [0, 0, 0], st.asmDySign);
   st.asmFree = null;
   st.asmSpitSide = 0;
   st.asmSpitU = null;
@@ -2327,8 +2330,8 @@ function freeFaceExit(st: SceneState, z: PolarZone, fr: NonNullable<SceneState["
   st.orbitInertia.stop();
   const nTo = contour[to]?.n ?? null;
   const g = st.asmG;
-  if (turn !== null && turnHolds(turn, FREE_EXIT_HOLD_FROM_RAD) && nTo !== null && g !== null) {
-    const hold = crossingHold(g, nTo, z.axis, spitSide(nTo, z.axis, 0), st.asmDySign);
+  if (held !== 0 && nTo !== null && g !== null) {
+    const hold = crossingHold(g, nTo, z.axis, spitSide(nTo, z.axis, 0), held);
     if (hold !== null) st.asmEdgeHold = hold;
   }
   st.lastVerdict = `orbit: off the spit's level face — the camera turned ${turn === null ? "(no layout known)" : `${Math.round((turn * 180) / Math.PI)}°`} (the gizmo held until it completes)`;
