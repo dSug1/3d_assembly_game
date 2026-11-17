@@ -144,6 +144,7 @@ The probes (not in the repo — absolute paths): `C:/Users/sugit/AppData/Local/T
   tests` is empty); `npm run verify`: 164 files, **2058 vectors**. The probes' options A added (`WORSTF`, `TURNONLY`, `TRACE`) went with it;
   `mid_check`'s mended setup (`c67bb67`) stays. W11 (the two clocks in one transition, `TILTED_POLE_CLOSE_IN.md` §12) stands as before A: measured, not
   reported by the owner.
+* **The deploy** (the same word of his): live `main` `6c0a165` = branch `1.0.147-` at `3de1256` (pushed), served 2026-11-17 06:33Z. ⛔ His look on it is owed.
 * **His correction on `Scene_0bis`, verbatim** (after the analysis, before the revert): *"Sorry: this is exit or enter from or into the bottom face with dx
   or with dy in scene 0bis at all distance: this creates a shake of the camera at the entrance or exit"*. ⛔ NOT ANALYSED: the two agents walked dy
   only, and found nothing far out. A check (dx and dy, every distance, before and after A, against `c7ac510`) was started and stopped for the revert:

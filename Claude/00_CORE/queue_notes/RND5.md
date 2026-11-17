@@ -424,7 +424,7 @@ built, decision 3 relaxed far out from a tip; (c) R2, as today (the turn 55 – 
 ## 2026-11-17 — the deploy, the owner's look, the bottom face's circle ANALYSED (two Opus agents) — ✅ DECIDED: PACKAGE A REVERTED `6e56dfc`
 
 ✅✅ **The owner, 2026-11-17: *"Revert and then deploy"*** — package A (`fe06c2c`, `c53f54a`) is REVERTED by `6e56dfc`: `src` and `tests` byte-equal to
-`c5aa295`, 164 files, **2058 vectors**. Open: his corrected report on `Scene_0bis` (a SHAKE at the bottom face's entry and exit, by dx or dy, at every
+`c5aa295`, 164 files, **2058 vectors**; DEPLOYED: live `main` `6c0a165` = `1.0.147-` at `3de1256` (his look owed). Open: his corrected report on `Scene_0bis` (a SHAKE at the bottom face's entry and exit, by dx or dy, at every
 distance — not analysed, to be judged on the reverted build first); the top ridge 50 % faster (not built; (a) its own speed for the half turns or (b)
 every turn — not answered yet); step 3 once on the final code → `BOTTOM_FACE_CIRCLE_REGRESSION.md` §9.
 
