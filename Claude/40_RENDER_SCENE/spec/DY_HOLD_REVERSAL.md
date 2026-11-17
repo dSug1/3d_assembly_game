@@ -66,3 +66,73 @@ said *"nothing feels blocked"*) — does the report reproduce there, and what di
 | No ping-pong | a finger still pushing the way it crossed never takes the gizmo back over the edge — the walk of 2026-11-14 ([`ORBIT_ANY_SHAPE.md`](ORBIT_ANY_SHAPE.md) §8.1: the crossing's overshoot, a small reverse, forward again) and the walks above with N under the band: no second crossing; `ridge_check`, `tilt_check` (`MODE=ridge`), `mid_check`, `across_check`: the crossings and their turns as at the base |
 | Elsewhere | `Scene_0` and `Scene_1` not worse; the three replays: every difference traced to a hold that ends sooner, the health clean, the worst frame not over the base's + 1° |
 | The rest | `npm run verify` green, each new vector red on a mutant; the docs as built and their two tests; the tree clean; nothing left running |
+
+## 5. THE ROOT CAUSE — measured (2026-11-18, before any change under `src`)
+
+**Result first.** The report reproduces at every distance, both crossings, both ways. Three causes, all in how the hold ENDS or is SET — none in
+which turn fires or how it is drawn. They were all already there at `c7ac510`, `ef14420^` (`49f9754`) and `a1a52f0` (below): *"It was not here before"*
+is not reproduced by the walks.
+
+**How measured.** `scripts/probes/hold_walk_check.mjs` (real mouse events, the finger kept down, the probes' virtual clock; the runbook
+`scripts/probes/ORBIT_GATES.md` §10) on `Scene_0bis`: cross the zenith ridge or the bottom face's far edge with a pure finger dy (2 px a frame),
+push 8 frames more, go N mm of finger the other way (N = 3, 6, 12, 20, 30, 45), then ask to come back 60 mm. Code: `3013992` (its `src` = `892b6a3`'s,
+the live game). One heptagon face is **221 mm** wide.
+
+### 5.1 Cause 1 — the band is 30 mm of FINGER, and far out a finger mm is 13 – 21 mm of surface
+
+| distance | surface per finger mm (no turn) | N under 30 mm: the come-back | N = 30: honoured after | N = 45 |
+|---|---|---|---|---|
+| far (1.0) | 20 – 21 | **BLOCKED for its whole 60 mm** (99 – 112 frames), every N from 3 to 20 | 400 mm of surface (zenith), 394 mm (bottom) | 700 mm |
+| 0.736 | 21 | the same | 402 / 394 mm | 698 / 538 mm |
+| close (0.651, the latch on) | 19 – 21 | the same | 285 mm | 508 mm |
+| 0.515 | 5.5 | the same | 99 / 102 mm | 181 / 186 mm |
+
+The hold ends only after 30 mm of finger the other way (§1's reading — CONFIRMED). The full gain runs down to `orbitGainFullM` (0.6 m), so at 1.0,
+0.736 and 0.651 the 30 mm is **1.3 – 1.8 faces**: the gizmo ends 430 – 450 mm from the edge crossed — on the bottom face after the zenith, round
+to the far side after the bottom face. His *"until I reach the opposite zenith edge or level face"*, *"always present at far distance, not always at close in"*
+(only at 0.515 and nearer does it shrink to half a face). The value was chosen as a depth on the surface (2026-11-12) and kept when the release became
+the finger's (2026-11-14).
+
+**And it is a COUNTER, not a hysteresis.** `back` adds every move the other way and forward pushes take nothing off. A finger still pushing the
+crossing way with a ±2.5 mm wobble (0.5 px a frame, period 24 frames): after 144 frames `back` = 21 mm — one more half-minute of wobble releases the
+hold with the finger never reversed (`zW_far`, `zW_close`, `bW_far`: 21.0 – 21.6 mm). So the band could not simply be made shorter.
+
+### 5.2 Cause 2 — a hold SET when no finger is down outlives the gesture
+
+The hold ends at the gesture's end (§8.2). But the spit's crossing is read at the CAMERA's place, which lags the finger: a finger lifted just before
+the camera passes over the axis sets the hold one frame AFTER the release (measured: the steering's release f23, the hold set f24). The coast does
+the same (crossings 2 – 4 frames after the release, `zC_far`). That hold belongs to no gesture: the NEXT press, pushing the way back, is
+**blocked from its first frame** — 19 of its 41 moving frames, the gizmo 0 mm (`zC_far` s0 and s1), and at full length in `z_far` s0 (the probe now ends
+such a hold with a still press before each sub-walk and prints `STALE`). The cause: `asmDySign` (the finger's last dy sign) is never reset, so a crossing
+with no finger down still finds a sign to hold.
+
+### 5.3 Cause 3 — the triangle: a hold set AGAIN by a crossing the finger's dx made, with the last dy's sign
+
+`zT_far` (both ways): after the zenith crossing (held), a pure finger dx along the axis takes the gizmo round a tip. There the spit's side change is
+read as a crossing (`crossingPitch` over the threshold: the camera passes over the axis at the tip), and `crossingHold` takes `asmDySign` — the dy
+of the ZENITH crossing, the finger's dy having been 0 for 90 frames. The hold is set again (f513, `[1, 0]`, a one-frame turn); on the tip's triangle the
+held dy is **BLOCKED 56 of 57 frames** both times, the other way moves (402 – 418 mm). Close in the same walk ended the hold round the tip (the
+silent path, `zT_close`), then a later dx-made crossing set one again (27 blocked frames). `bT_far`: the same (56 blocked). His *"the dy is hold there
+as well"*. D-T4 (`TILTED_POLE_CLOSE_IN.md` §10) already says a crossing made sideways by a dx holds nothing; the spit's site still reads the stale sign.
+And a crossing that holds nothing leaves an older hold on (`crossTurn`: *"a hold already on is left as it is"*): the edge it guarded is no longer the
+last one crossed.
+
+### 5.4 The candidates of §1
+
+| candidate | verdict |
+|---|---|
+| the band's length in finger mm against the surface far out | **CONFIRMED** (5.1) — plus: the band counts, it does not hysterese |
+| a held sign read from a stale `asmDySign` | **CONFIRMED** — the coast and the camera's lag after a lift (5.2), a dx round a tip (5.3) |
+| a hold set again while one is on | **CONFIRMED** (5.3, f513) |
+| a hold the finger's own dy cannot release because the travel comes from its dx | refuted as a cause of its own: the dx is never held; it is 5.3 (the sign set by a dx-made crossing) |
+| a hold that does not end round a tip | **CONFIRMED** far out (5.3); close in the silent path ends it |
+| the lifted finger | works as §8.2 says: honoured after 6 frames (the deadband), every distance (`zL_*`, `bL_*`) |
+
+### 5.5 Since when
+
+The same five walks (`z_far`, `b_far`, `zT_far`, `zC_far`, `z_d515`) on the code of `c7ac510` and `49f9754` (= `ef14420^`): **identical to the base
+frame for frame** (gizmo within 1e-6 m, the hold equal, every frame). On `a1a52f0` (package A in): the walks differ from frame 35 – 419 (A's camera), the
+hold the same — far out 30 mm of finger = 333 – 371 mm of surface, the same blocked come-backs, the same stale hold, the same triangle (56 blocked).
+All three causes date from 2026-11-14 (the finger's band, `edgeHoldFinger`) and before (the spit's last-dy-sign hold, `asmDySign` never reset).
+`Scene_0` (close in, its ridge and its bottom's far edge): the same (30 mm → 296 – 315 mm of surface, N ≤ 12 blocked). `Scene_1`: the probe's steering did
+not reach the cube's top (no crossing measured) — its gate is `tilt_check` `MODE=ridge`.
