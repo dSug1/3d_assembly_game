@@ -278,7 +278,7 @@ parts.*
   beside `Piece44` (6.75 mm gap) shows `Piece44`'s top unless the piece is turned to clear it — out of contact range only: in contact range (⑤)
   the proud part stays a wall, and the piece keeps its level past it (Q10). Cost: one height map per facet
   direction at a pick-up and a turn (≈ 10 – 20 directions; a sample step of 4 mm — ≈ 128² over the 0.5 m assembly —, one constant in
-  `units.ts`; not measured); each frame a lookup; the 24-query budget untouched. ⚠ A turn happens MID-GESTURE: rebuilding 10 – 20 maps in one
+  `units.ts`; ⭐ measured 2026-11-17 by S1: 58 – 270 ms a direction on `Scene_1` on this PC, over the 50 ms line — [ORBIT_SURFACE_LANDING_MAP.md](ORBIT_SURFACE_LANDING_MAP.md) §10.4); each frame a lookup; the 24-query budget untouched. ⚠ A turn happens MID-GESTURE: rebuilding 10 – 20 maps in one
   frame may hitch on an iPhone — build them for the piece's orientations at the pick-up, or spread the rebuild over frames (the old map kept
   meanwhile); to be measured before it drives anything.
 * ⚠ **It reverses an owner's decision — [DECIDED 2026-11-16, Q2]: he accepted it, first as a readout beside today's depth, then driving.** On

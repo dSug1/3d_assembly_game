@@ -65,7 +65,14 @@ like `Scene_1`'s), as a figure for the wiring step. A new file under `src`, a ne
 
 ## 6. Notes for the merges (filled by the packages)
 
-* (none yet)
+* **S1 — the one registration line** (the only existing file this branch's code touches): `tests/unwired_debt.test.ts` gains ONE line in `PENDING`,
+  `buildLandingMap` (an export nothing calls yet — that test demands it). At the merge: keep it; when the map is wired (the readout), DELETE it — the
+  test then fails until it is gone. ⚠ If the charts' branch edited the same list, the merge may conflict on that line only.
+* **S1 — the grid's step**: `LANDING_STEP_MM` (4 mm) lives in `src/core/landing_map.ts` for now; its home becomes `src/core/units.ts` when the map is
+  wired (one constant, one place).
+* **S1 — a copy of the study for the tests**: `tests/helpers/surface_shapes.ts` copies the study's shapes and its brute-force reading
+  (`scripts/probes/surface_study/`) — a test does not import from `scripts/`. `scripts/surface/landing_compare.ts` checks the copy against the study
+  bit for bit: rerun it if either changes.
 
 ## 7. As built (filled by the packages)
 
@@ -77,4 +84,16 @@ like `Scene_1`'s), as a figure for the wiring step. A new file under `src`, a ne
   10 mm, heads 17 mm, crankshaft 2 mm) — a question for the owner.** Nothing wired, no game file changed, no registration line needed (§6 unchanged).
 * **S1 — THE DESIGN, written before the code** (2026-11-17, the builder) → [ORBIT_SURFACE_LANDING_MAP.md](ORBIT_SURFACE_LANDING_MAP.md): the
   signature, the units and frames, the algorithm (the union of the convex pairs' Minkowski sums as half-spaces, cast along the normal) and why it is
-  exact, the tie key, "nothing to land on" a kind with no depth, the lookup and its error. As built: to follow.
+  exact, the tie key, "nothing to land on" a kind with no depth, the lookup and its error.
+* **S1 — BUILT 2026-11-17, NOT WIRED** (the builder; the auditor's verdict to follow) → [ORBIT_SURFACE_LANDING_MAP.md](ORBIT_SURFACE_LANDING_MAP.md)
+  §10. Files ADDED: `src/core/landing_map.ts`, `tests/landing_map.test.ts` (24 vectors, each red on one of 10 mutants), `tests/helpers/surface_shapes.ts`,
+  `scripts/surface/landing_compare.ts`, `scripts/surface/landing_cost.ts`; one line in `tests/unwired_debt.test.ts` (§6). `npm run verify`: 163 files,
+  2082 tests green (the base, `833c981`: 162 / 2058, green).
+  **The comparison with the study's brute force: 1 895 812 places (the library's travels and maps, the 1596-cell sweep), 0 disagreements** — the
+  only differences, 20 292 places on slopes, are the brute force's own footprint shrink (1e-4 mm × the slope, at most 5.67e-4 mm). The lookup between
+  samples: never lower than the exact value at 33 573 places; higher at 607 (a step within one cell).
+  ⚠ **THE COST IS OVER THE BRIEF'S 50 ms LINE**: on `Scene_1`'s 36 placed boxes at 4 mm, one direction takes 58 – 270 ms on this PC (±z the
+  fastest), the 12 maps (2 pieces × 6 directions) hold 110 MB; a lookup 2.4 µs, an exact evaluation 4.3 – 4.8 µs. Not redesigned: the options,
+  measured — no grid (the sums prepared in 7.6 ms a direction, then the exact evaluation at each query); 8 mm (54 – 66 ms) or 16 mm (17 – 20 ms); a
+  100 mm tile round the gizmo (13 – 16 ms); the build spread over frames. **The wiring step chooses** (§10.4 there). Nothing measured speaks against
+  P2's guarantees.

@@ -1,7 +1,8 @@
 # THE LANDING MAP — layer L2 (P2) as a pure function: the design (package S1, 2026-11-17)
 
-> **STATUS** · DESIGN, written before the code (package S1 of [ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md) §5). ⛔ **NOT WIRED**: nothing in the
-> game calls it; no existing game file changes. Its decisions are the specification's, PROVISIONAL (accepted 2026-11-16 / 2026-11-17, to be tested).
+> **STATUS** · ⭐ **BUILT 2026-11-17** (package S1 of [ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md) §5; the design §1 – §9 written and committed
+> before the code, `d35487c`; the code `4758d36`; as built §10 — the auditor's verdict to follow). ⛔ **NOT WIRED**: nothing in the game calls it; no
+> existing game file changes. ⚠ **Its cost is over the 50 ms line** (§10.4): the wiring step chooses among the measured options. Its decisions are the specification's, PROVISIONAL (accepted 2026-11-16 / 2026-11-17, to be tested).
 > **OWNS** · the landing map's contract: its signature, its inputs and outputs, its algorithm and why it is exact, its tie key, its "nothing to land
 > on", its lookup and that lookup's error, what it leaves out. **READ WITH** · [ORBIT_SURFACE.md](ORBIT_SURFACE.md) §2.2 (P2), §5.1 (L2), §5.2, §5.3;
 > [ORBIT_SURFACE_SHAPES.md](ORBIT_SURFACE_SHAPES.md) (the shapes, the brute-force P reading).
@@ -112,8 +113,10 @@ one surface at their tops; a hole right through and wider than the piece leaves 
 
 * Every stretch carries its placed piece's `id`. The ids are sorted once by code-unit order (`<`, never a locale), and each stretch is sorted by
   `(bottom, top, id)` before the merge — the input's ORDER never reaches the result (parts, their pieces, the held pieces).
-* A merged layer's `part` is the id of the stretch whose top is the layer's top; **a tie (two parts with the same top) goes to the smaller id**.
-* A lookup that combines several samples (§6) breaks its ties the same way: the higher depth, then the smaller id.
+* A merged layer's `part` is the id of the stretch whose top is the layer's top; **a tie (two parts whose tops are within 0.1 µm) goes to the smaller
+  id**. ⭐ *(as built)* Within 0.1 µm, not "equal floats": a rigid motion turns an exact tie into a near one, and the first build's part name then
+  changed with the motion (found by the invariance vector, §10.2).
+* A lookup that combines several samples (§6) breaks its ties the same way: the higher depth, then — within 0.1 µm — the smaller id.
 * No randomness, no clock, no cache between calls. `convexHull3` is deterministic (its joggle is a fixed sequence) and only its face normals and
   edges are read; the support values are taken on the ORIGINAL points.
 
@@ -121,8 +124,8 @@ one surface at their tops; a hole right through and wider than the piece leaves 
 
 * **`landing(U, V, from?)` — the lookup.** It reads the samples at the corners of the grid cell holding `(U, V)` (one, two or four: a place on a
   grid line reads only the samples on it, so the lookup AT a sample is that sample). Combined conservatively: `inside` if any corner says so; else
-  the HIGHEST `land` (ties: the smaller id); else `nothing`. Outside the region: `uncovered`.
-* **Its error.** The lookup is never below the exact landing at a corner. Between corners: (a) beside a step of the obstacle's top (a part's edge
+  the HIGHEST `land` (ties within 0.1 µm: the smaller id); else `nothing`. Outside the region: `uncovered`.
+* **Its error.** The lookup is never below the exact landing at a corner (by more than a 0.1 µm tie). Between corners: (a) beside a step of the obstacle's top (a part's edge
   grown by half the piece) the lookup takes the higher side up to one cell (4 mm) early — on the side away from the part, never into it; (b) on a
   sloped top (a slope of gradient g, e.g. a wedge, a frustum's side) the exact value may exceed the corners' highest by at most g × step / √2
   (2.8 mm × g at 4 mm); (c) the corner of an obstacle turned off the grid's axes can lie inside a cell with no sample in it — the lookup may then
@@ -131,8 +134,8 @@ one surface at their tops; a hole right through and wider than the piece leaves 
 * **`landingAt(U, V, from?)` — the exact evaluation.** The same computation as one sample, at any place (one ray through the prepared sums): no
   grid error. It is what a lookup would call where one cell's error matters (the wiring's choice), and what the vectors compare the samples with
   (bit for bit at a sample's place).
-* **`layersNear(U, V)`** — the two layer lists of the NEAREST sample (a tie between two samples: the lower index). Layers cannot be maxed, so they
-  are not combined.
+* **`layersNear(U, V)`** — the two layer lists of the NEAREST sample (a tie between two samples: the lower index); `null` outside the region. Layers
+  cannot be maxed, so they are not combined.
 
 ## 7. What is NOT in it (the brief, and why)
 
@@ -147,7 +150,8 @@ facet directions and their regions (L3, the orbit's); any wiring, readout, or ch
    footprint prism, the highest one taken; [ORBIT_SURFACE_SHAPES.md](ORBIT_SURFACE_SHAPES.md) §1), rebuilt in `tests/helpers/` with the library's
    shapes (a test does not import from `scripts/`), for pieces A (41.3 × 45 × 48 mm) and B (80 × 80 × 40 mm), the bar on L53: the same landing within
    **1e-9 m** (0.000 001 mm), the same "nothing" — on a fixed choice of places in the test; on every place of the library's travels and the 1596-cell
-   sweep in an offline script (`scripts/surface/`), run once.
+   sweep in an offline script (`scripts/surface/`), run once. ⭐ *(as built)* One convention of the BRUTE FORCE differs and is allowed for: it shrinks
+   the footprint by 1e-4 mm, so on a slope of gradient g it reads lower by g × 1e-4 mm (at most 5.67e-4 mm, the knife's 85/15 flank).
 2. **The analytic cases**, each with its known answer: a void narrower than the piece closed; a wider one's floor exactly in the band half a piece
    from each wall; a pin touched first; a field of studs a surface at their tops; a hole right through and wider than the piece "nothing to land
    on"; an asymmetric (two-piece) held piece against a step (the mirror).
@@ -164,6 +168,107 @@ pieces A and B; the memory; one lookup. ⚠ The specification's guess (`ORBIT_SU
 replaced by the figure. If one direction takes more than about 50 ms here (a phone is several times slower), the options are written with their cost,
 not chosen: a coarser grid with `landingAt` at the query; tiles built on demand; the map only round the gizmo.
 
-## 10. As built
+## 10. As built (2026-11-17, the builder — the auditor's verdict to follow)
 
-*(filled when the code lands)*
+### 10.1 What was built
+
+* `src/core/landing_map.ts` — `buildLandingMap` and `LANDING_STEP_MM` as designed (§2 – §6). Two changes from the design, both written above:
+  a tie is two tops within 0.1 µm (§5), and `layersNear` returns `null` outside the region (§6).
+* `tests/landing_map.test.ts` — 24 vectors (§10.2). `tests/helpers/surface_shapes.ts` — the study's shapes and its brute-force P reading, copied
+  (the offline run checks the copy: 63 shapes, 328 parts, identical to the study's bit for bit).
+* `scripts/surface/landing_compare.ts` — the full comparison (§10.3). `scripts/surface/landing_cost.ts` — the cost (§10.4).
+* One line added to an existing file: `tests/unwired_debt.test.ts` declares `buildLandingMap` as pending (nothing calls it yet) —
+  [ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md) §6.
+
+### 10.2 The vectors, and the mutants that turned them red
+
+24 vectors, 2.8 s of test time: the library against the brute force (one vector, 15 000+ places); the analytic cases (a void narrower than
+the piece closed; a wider one's floor exactly in its band; a pin touched first; a field of studs; a hole right through: "nothing", with no depth
+field; the mirror, with a two-piece held piece over a step; an edge on a ridge; an edge on a SLANTED ridge; touching is not overlapping, also
+with the walls turned 30° off the frame; ties; a piece with no volume named); from a depth (Q07); the lookup; invariance (4 shapes × a rigid motion,
+4 shapes × every order bit for bit).
+
+| mutant of `src/core/landing_map.ts` | vectors red |
+|---|---|
+| M1 the held piece not mirrored | 13 |
+| M2 the first contact taken as the last | 2 (from a depth; the library) |
+| M3 one pair skipped (the last placed piece) | 14 |
+| M4 the layers out of order (innermost first) | 3 |
+| M5 "nothing" returned as the plane's depth | 2 (the hole; the library) |
+| M6 a tie broken by array order (the ids not sorted) | 3 (ties; two order vectors) |
+| M7 the edge-against-edge facets left out | 1 (the slanted ridge) |
+| M8 the lookup takes the lower corner | 1 |
+| M9 touching counted as overlap | 1 (the turned flush slot) |
+| M10 a tie on exactly equal floats only (the first build's rule) | 1 (the rigid motion on L26) |
+
+⚠ **Two mutants first SURVIVED, and the vectors were too weak, not the code:** M7 — my first edge vector crossed two HORIZONTAL edges, whose cross
+product is the vertical, already a face normal (the knife's base, negated); the slanted ridge was added. M9 — an axis-aligned flush fit is already
+rejected by the samples' rectangle, so only walls turned off the frame reach the half-space test; the turned slot was added. Each mutant was run
+against the whole test file, the module restored byte for byte after each.
+
+### 10.3 The comparison with the brute force (offline, once, 37.7 s, one process)
+
+| set | places compared | kind differs | depth differs beyond 1e-9 m | the brute's slope shrink (map higher, ≤ 5.67e-4 mm) | "nothing" in both |
+|---|---|---|---|---|---|
+| library, every travel at 1 mm (`landingAt`), 169 maps | 92 594 | 0 | 0 | 1 374 | 6 852 |
+| library, every map sample at 4 mm | 791 249 | 0 | 0 | 18 918 | 49 883 |
+| sweep, 1596 cells, both travels at 1 mm (piece A) | 781 011 | 0 | 0 | 0 | 7 481 |
+| sweep, the map's samples on the travels | 230 958 | 0 | 0 | 0 | 22 899 |
+
+* A sample equals `landingAt` at its place, bit for bit: 791 249 of 791 249.
+* **The lookup against the exact evaluation**, at 33 573 seeded places off the grid (the library's maps): the same 32 915 (98.0 %); higher 607
+  (at most 360 mm — a step within one cell, read on its higher side); a landing where the exact value is "nothing" 51 (a corner touches); LOWER 0.
+  ⚠ The two ways the lookup can read lower (§6 (b), (c): a slope inside a cell, a turned obstacle's corner) were not met at these places: the
+  library has few slopes and no obstacle turned off the grid. Not measured otherwise.
+
+### 10.4 The cost — ⚠ over the 50 ms line
+
+`Scene_1`'s 36 placed boxes (46 bodies less the floor, the five pieces the boot moves out and the four frusta, which are not boxes), each grown by
+its contour; the six directions of its box; pieces A and B; 4 mm. This PC, one process, while the other chain was running (two runs differed by up to
+1.6×):
+
+| figure | measured |
+|---|---|
+| samples per direction | 18 225 – 20 735 (135 – 145 a side: the 0.49 m assembly grown by the piece) |
+| one direction's build, median of 5 | ±z 58 – 104 ms; ±x, ±y 145 – 270 ms (two runs) |
+| the 12 maps held (2 pieces × 6 directions) | 110 MB of heap (`--expose-gc`) |
+| one lookup / one exact evaluation (`landingAt`) | 2.4 µs / 4.3 – 4.8 µs |
+
+**The options, measured (piece B, the slow directions +y and +x), not chosen:**
+
+| option | its cost here | what it gives up |
+|---|---|---|
+| no grid: the sums prepared at the pick-up, `landingAt` at the query | 7.6 – 7.7 ms a direction, then 4.3 – 4.8 µs a query | nothing in exactness; a few queries a frame (the gizmo, the sections' samples) |
+| a coarser grid, `landingAt` where one cell's error matters | 54 – 66 ms at 8 mm; 17 – 20 ms at 16 mm | the lookup's error grows with the cell (§6) |
+| a tile round the gizmo, built on demand | 13 – 16 ms for 100 × 100 mm at 4 mm | a new tile when the gizmo leaves it |
+| the whole map spread over frames (the old one kept meanwhile) | the full figure, split | a stale map for a few frames after a turn |
+
+A phone is several times slower (not measured). The memory is the layers kept as JavaScript objects; a packed layout (typed arrays) is not built
+and not measured.
+
+### 10.5 Where a measurement speaks against the specification
+
+* **The cost of P2 as the specification wrote it** (`ORBIT_SURFACE.md` §2.2 P2: "one height map per facet direction at a pick-up and a turn … not
+  measured"): measured at 58 – 270 ms a direction on this PC, 110 MB for 12 maps — over the brief's 50 ms line. The rule (P2) is not changed; the
+  representation is the wiring step's choice among §10.4's options. ⚠ Its "build them for the piece's orientations at the pick-up" would cost
+  0.8 – 1.1 s per orientation (six directions, one piece) here.
+* **Nothing measured speaks against P2's guarantees**: a void narrower than the piece closed, a wider one's floor half a piece from each wall, a
+  pin touched first, studs a surface, a hole right through "nothing", order and motion invariance — each held, in the vectors and in 1 895 812
+  compared places.
+
+### 10.6 What the wiring step must know
+
+* Pass the held piece's `UCX_` pieces turned AS HELD and relative to its resting face's centre (§3); the placed parts' pieces in the MODEL's
+  coordinates, metres (never the swaying meshes). A piece with no volume is named in `refused`: look at it.
+* "Nothing to land on" is a kind: the wiring puts the gizmo on the facet's plane and marks it (§5.2 of the specification).
+* In contact range, read FROM the piece's depth (P2 ⑤): `inside` there means the piece already overlaps — the collision's matter (P5), not a landing.
+* Rebuild at a pick-up, a turn of the piece, a seat, a frame change: the function keeps no state.
+* The cost (§10.4) decides the representation before anything drives the gizmo; the readout beside today's depth on `Scene_1` comes first
+  (the specification §6).
+* `LANDING_STEP_MM` moves to `src/core/units.ts`, and the `PENDING` line leaves `tests/unwired_debt.test.ts` once something calls the map
+  ([ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md) §6).
+
+### 10.7 Not done, not checked
+
+The map on `Scene_2`'s real `UCX_` pieces (not run); the seated frusta in the cost; any phone measurement; the lookup's two lower cases (§10.3);
+a packed memory layout. Nothing is wired.
