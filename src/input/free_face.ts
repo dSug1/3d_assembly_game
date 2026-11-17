@@ -357,3 +357,81 @@ export function freeHeadingAngle(heading: Vec3, u: Vec3): number {
   const h2 = phi - w;
   return side(h1) >= side(h2) ? h1 : h2;
 }
+
+/* ⭐⭐⭐ (2026-11-17, `LEVEL_FACE_ENTRY.md` §4.2, §9 — package LF1, (iv′); the owner: *"Agreed to every recommendation. Proceed."*) THE PICTURE'S UPRIGHT
+ * CONTINUED ON A FREE FACE ------------------------------------------------------------------------------------------------------------------------ */
+
+/** ⭐ (iv′) the view's elevation (deg) from which the picture's upright starts fading to the layout… */
+export const FREE_ENTRY_FADE_FROM_DEG = 70;
+/** ⭐ …and at which the layout is whole (the view near the face's normal: close in, where the picture's heading IS the layout's). */
+export const FREE_ENTRY_FADE_TO_DEG = 80;
+
+const smooth01 = (x: number): number => {
+  const y = Math.min(1, Math.max(0, x));
+  return y * y * (3 - 2 * y);
+};
+
+/**
+ * ⭐⭐⭐ (iv′) THE HEADING SHOWN ON A FREE FACE entered over an edge — the picture's upright continued near that edge, the entry edge's layout by the
+ * face's middle:
+ * * `viewLevel` the picture's LEVEL direction (whose image on the glass is the picture's vertical, toward its up — `viewLevelTurned`), any length:
+ *   laid level, its SIGN KEPT (⛔ turned to the layout's side, as prototyped: near a tip the calm leans the view toward 90° off the layout, the sign
+ *   flipped there and the heading jumped — 21.6° in one frame, `mid_check`'s climb);
+ * * `layout` the entry edge's layout (`entryHeading`);
+ * * `depth` the gizmo's SIGNED depth into the face from the entry edge (m; ≤ 0 on the edge or the band past it), `centreDepth` the face's centre's depth;
+ * * `viewElevation` how steeply the view looks up or down (rad, 0 level … π/2 along the vertical).
+ * The share of the layout: a smoothstep of `depth / centreDepth` (0 at the edge, whole at the centre's depth) — and whole where the view nears the face's
+ * normal (its elevation from `FREE_ENTRY_FADE_FROM_DEG` to `FREE_ENTRY_FADE_TO_DEG`, a smoothstep). The blend turns about the vertical, the short way.
+ * `upright` 0 (the switch `freeEntryUpright` off): the layout at every depth. A view with no level part, or a share whole: the layout itself.
+ * ⭐ Paced by the gizmo's PLACE only — never by time, never fired at an edge. Pure; the caller's terms in the MODEL's coordinates.
+ */
+export function entryBlendHeading(viewLevel: Vec3, layout: Vec3, depth: number, centreDepth: number, viewElevation: number, upright = 1): Vec3 {
+  if (upright !== 1) return layout;
+  const lv: Vec3 = [viewLevel[0], 0, viewLevel[2]];
+  const l = Math.hypot(lv[0], lv[2]);
+  const w = centreDepth > 1e-9 ? smooth01(depth / centreDepth) : 1;
+  const e = Math.abs(viewElevation) / D;
+  const k = 1 - smooth01((e - FREE_ENTRY_FADE_FROM_DEG) / (FREE_ENTRY_FADE_TO_DEG - FREE_ENTRY_FADE_FROM_DEG));
+  const share = 1 - (1 - w) * k;
+  if (!(l > 1e-9) || share >= 1) return layout;
+  const ha = Math.atan2(lv[2], lv[0]);
+  const hb = Math.atan2(layout[2], layout[0]);
+  const h = ha + Math.atan2(Math.sin(hb - ha), Math.cos(hb - ha)) * share;
+  return [Math.cos(h), 0, Math.sin(h)];
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-17, LF1 (iv′)) THE PICTURE'S LEVEL DIRECTION: the level direction lying in the plane of the view `u` and the camera's `up` — the one
+ * whose image on the glass is the picture's vertical, toward the up (its level side).
+ * Read on the camera the bound face beyond the edge would show (the spit's upright camera, before the owner's offsets), it is the heading that
+ * continues that picture on the free face exactly. A plane with no level line other than … (the up along the view): `u`'s own level part.
+ */
+export function pictureLevel(u: Vec3, up: Vec3): Vec3 {
+  const t = cross(cross(u, up), [0, 1, 0]);
+  const l = Math.hypot(t[0], t[2]);
+  if (!(l > 1e-9)) return [u[0], 0, u[2]];
+  const s = t[0] * up[0] + t[2] * up[2] < 0 ? -1 : 1;
+  return [(s * t[0]) / l, 0, (s * t[2]) / l];
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-17, LF1 (iv′)) THE PICTURE'S OFFSET AT THE ENTRY: the signed angle (rad, about the vertical, the heading's own sense, −π … π) from
+ * the view `u`'s level part to the picture's level direction (`pictureLevel(u, up)`, toward the up) — below a face about 0, above it about π (the up
+ * then points away from the camera's side). Read ONCE, at the entry frame, on the camera
+ * the bound face would show: the few degrees by which that picture stood off upright (the spit's side bias above 60° of view) are continued, never
+ * followed further (⛔ the bound camera's picture read every frame: close in, as the square camera climbed toward the face's normal, the side bias
+ * swung the heading across the axis, 24° in one frame). No level part: 0.
+ */
+export function pictureOffset(u: Vec3, up: Vec3): number {
+  const p = pictureLevel(u, up);
+  const l = Math.hypot(u[0], u[2]);
+  if (!(l > 1e-9)) return 0;
+  const d = Math.atan2(p[2], p[0]) - Math.atan2(u[2], u[0]);
+  return Math.atan2(Math.sin(d), Math.cos(d));
+}
+
+/** ⭐ (LF1 (iv′)) the view `u`'s level part, unit, turned about the vertical by `offset` (rad, the heading's sense) — `entryBlendHeading`'s `viewLevel`. */
+export function viewLevelTurned(u: Vec3, offset: number): Vec3 {
+  const h = Math.atan2(u[2], u[0]) + offset;
+  return Math.hypot(u[0], u[2]) > 1e-9 ? [Math.cos(h), 0, Math.sin(h)] : [u[0], 0, u[2]];
+}
