@@ -400,7 +400,7 @@ runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press
 brief's stop rule forbid — the setup's side −1 → +1, the gizmo's drift over the ridge the other way (−27.6 mm off the middle, +45 before), the turn
 mirrored (the axis on the glass 92° → 6°, against 93° → 169°) and LARGER (79.6 → 96.0°, the view 151 → 166° in all), a 10.3° drag frame (7.4 before).
 The builder had judged that case "as before": wrong. Its cause: the side, and with it the finger's mapping, read off the gizmo's tip triangle instead
-of the camera. **The owner's to decide** (nothing built): (a) R1 with that case's side kept off the camera — a special case beside the rule; (b) R1 as
+of the camera. ✅ **DECIDED by the owner, 2026-11-17: *"Keep as it is right now"* — R1 is DROPPED, option (c): the turn stays as built, nothing to build.** The options put to him (nothing built): (a) R1 with that case's side kept off the camera — a special case beside the rule; (b) R1 as
 built, decision 3 relaxed far out from a tip; (c) R2, as today (the turn 55 – 60 mm into the face beyond, far out). The record below is the build's.
 `mid_check`'s mended setup (below) is kept: it was in the docs commit, not the code's.
 

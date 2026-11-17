@@ -692,7 +692,7 @@ the results."* And that night: *"Progress as much as you can without asking me q
 | # | the question | his answer | what follows |
 |---|---|---|---|
 | 1 | W11, the tilt's entry under a fast dy (§12.4) | *"1- A"* | **BUILD** option A — the one turn truly one — on `1.0.147-` |
-| 2 | the spit's half turn (§13.4) | *"2- R1"* | **BUILD** R1 — the turn at the gizmo's edge — on `1.0.147-`; built `1038a29`, ⛔ REVERTED `21e600d` — it broke decision 3 (§19); open, the owner's |
+| 2 | the spit's half turn (§13.4) | *"2- R1"* | **BUILD** R1 — the turn at the gizmo's edge — on `1.0.147-`; built `1038a29`, ⛔ REVERTED `21e600d` — it broke decision 3 (§19); ✅ the owner, 2026-11-17: *"Keep as it is right now"* — **R1 DROPPED**, the turn stays as built |
 | 3 | `Scene_0bis`'s top ridge reached from a tip (§13.4) | *"I don't want to change what is currently built: it looks good on the screen. Record and do nothing. We may reopen if we need when we build game scenes later on."* | **KEPT AS BUILT**; may be reopened when game scenes are built |
 | 4 | a level top that is not a rectangle (W8; D-T5, §5) | *"Maintain D-T5. This kind of geometry probably means that the piece has a rotation symetry axis around the gravity axis so D-T5 makes sense. Just record as we may reopen if we need when we build game scenes later on."* | **D-T5 MAINTAINED** (polar at every distance on such a cap); nothing built; may be reopened when game scenes are built |
 | 5 | RINGS ([`TILTED_POLE_TEST_SCENES.md`](TILTED_POLE_TEST_SCENES.md) §15, F5) | *"Record and do nothing. We may reopen if we need when we build game scenes later on."* | **NOTHING BUILT**; may be reopened when game scenes are built |
@@ -755,7 +755,7 @@ band past it, as every other crossing — the hold by the one rule (`crossingHol
 second half), so that far out the turn no longer lands 55 – 60 mm into the face beyond the ridge. Bound by decision 3: the top ridge reached from a tip
 keeps its turn's size, the direction held and whether the walk goes on — only WHERE it fires may move. Unchanged: C4's level faces, `Scene_1`, the tilt.
 
-**As built — `1038a29`, ⛔⛔ REVERTED by `21e600d`** (decision 3 broken, below; the code is `a1a52f0`'s again — this is the build's record):
+**As built — `1038a29`, ⛔⛔ REVERTED by `21e600d`** (decision 3 broken, below; the code is `a1a52f0`'s again — this is the build's record; ✅ the owner, 2026-11-17: *"Keep as it is right now"* — R1 is DROPPED):
 * **The side is the gizmo's** (`spitFaceStep`, once a frame after the band's reading and a free face's frame): on a bound face of a spit the side its
   WORLD normal leans to (`faceSide` — none within the side's 2° of square: the triangle under a tip's end). The band (2.4d) keeps the face left until the
   gizmo is one band past the edge, so the change is read there. A side where none was (the zone's switch, a free face's exit — whose own turn is the
