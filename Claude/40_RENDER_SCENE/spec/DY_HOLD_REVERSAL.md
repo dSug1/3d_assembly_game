@@ -11,7 +11,8 @@
 *"one last thing: in scene 0bis, when I cross a level face far edge (with 180 degree camera roll) or when I cross the zenith edge, most of the times I
 cannot revert the dy input (the green section travel) until I reach the opposite zenith edge or level face. It is not always the case: this bug is
 always present at far distance, not always at close in. It was not here before. Make long walks over the rectangle faces at different distance to
-troubleshoot. Fix that before the full audit."*
+troubleshoot. Fix that before the full audit."* — and, completing it: *"my previous post completed: this is also the case if the travel ends up on a
+triangle face: the dy is hold there as well"*.
 
 ## 1. What the code does today (read 2026-11-17 — ⚠ nothing here is measured yet)
 
@@ -44,7 +45,9 @@ troubleshoot. Fix that before the full audit."*
 **The long walks** (headless, a probe in `scripts/probes`): on `Scene_0bis`, round the heptagon over its rectangle faces (the travel round the axis),
 at approach 1.0, 0.736, 0.515 and close in (the latch on), each way round, over the zenith edge and over the bottom face's far edge, **the finger kept
 DOWN**: cross; go on N mm of finger the other way (N = 3, 6, 12, 20, 30, 45); then ask to come back. The same with the finger lifted before coming
-back. Also at two finger paces (2 and 8 px a frame), and once crossing by the coast. On `Scene_0` (its ridge, its bottom's far edge) and `Scene_1` (a
+back. **Ending on a tip's triangle** (his completion): after the crossing, the travel taken sideways off the rectangle faces onto a triangle of each
+tip, the dy asked there both ways — the code says a hold ends round a tip (`spitStep`: the side changes silently there), he sees it held. Also at two
+finger paces (2 and 8 px a frame), and once crossing by the coast. On `Scene_0` (its ridge, its bottom's far edge) and `Scene_1` (a
 top's far edge close in): one walk each.
 
 **Read per walk**: the BLOCKED frames (the finger asks for a dy, the hold is on, nothing moves); the finger's travel and the gizmo's travel on the
@@ -59,7 +62,7 @@ said *"nothing feels blocked"*) — does the report reproduce there, and what di
 
 | gate | what must hold |
 |---|---|
-| The report's case | at every distance, over both crossings, both ways, the finger kept down: once the finger has gone the band the other way, a dy back is honoured — no BLOCKED frame after that; the surface travelled before a dy back is honoured is stated per distance, and far out it is a fraction of one face, never the way round to the opposite edge |
+| The report's case | at every distance, over both crossings, both ways, the finger kept down: once the finger has gone the band the other way, a dy back is honoured — no BLOCKED frame after that; the surface travelled before a dy back is honoured is stated per distance, and far out it is a fraction of one face, never the way round to the opposite edge; on a tip's triangle reached after a crossing, the dy is honoured both ways |
 | No ping-pong | a finger still pushing the way it crossed never takes the gizmo back over the edge — the walk of 2026-11-14 ([`ORBIT_ANY_SHAPE.md`](ORBIT_ANY_SHAPE.md) §8.1: the crossing's overshoot, a small reverse, forward again) and the walks above with N under the band: no second crossing; `ridge_check`, `tilt_check` (`MODE=ridge`), `mid_check`, `across_check`: the crossings and their turns as at the base |
 | Elsewhere | `Scene_0` and `Scene_1` not worse; the three replays: every difference traced to a hold that ends sooner, the health clean, the worst frame not over the base's + 1° |
 | The rest | `npm run verify` green, each new vector red on a mutant; the docs as built and their two tests; the tree clean; nothing left running |

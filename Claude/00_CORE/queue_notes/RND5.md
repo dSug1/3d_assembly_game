@@ -544,3 +544,16 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   undo the build.
 * **Room made**: `LEVEL_FACE_ENTRY.md` §11.1 (LF2 as built, reverted) moved word for word →
   `Claude/40_RENDER_SCENE/history/2026-11-17_lf2_timing_rule_as_built.md`.
+
+## 2026-11-17 (night, 23:10) — the owner's report: after a half turn he cannot revert the dy; to fix before the audit
+
+* **His words** (whole in [`DY_HOLD_REVERSAL.md`](../../40_RENDER_SCENE/spec/DY_HOLD_REVERSAL.md) §0): on `Scene_0bis`, after a level face's far edge
+  (the 180° roll) or the zenith edge, *"most of the times I cannot revert the dy input (the green section travel) until I reach the opposite zenith
+  edge or level face … always present at far distance, not always at close in. It was not here before. Make long walks over the rectangle faces at
+  different distance to troubleshoot. Fix that before the full audit."*
+* **Read in the code, not measured yet** (§1 there): the hold after a half turn ends at `edgeHoldMm` = 30 mm of FINGER travel the other way (since
+  2026-11-14; a depth on the surface before) — far out that can be the way round to the opposite edge. To be confirmed or refuted by the long walks,
+  with the other causes listed there; *"It was not here before"* checked on earlier commits.
+* **The night's order now**: the fast orbit and its deploy → **the dy hold's fix** (root cause first, the decisions D1 – D5, the gates: the report's
+  case at every distance, no ping-pong, nothing worse elsewhere) → the silent entry (tested with these walks too) → the audit → the final documents,
+  the merge prepared. Built and tested, not deployed: his word.

@@ -736,5 +736,6 @@ end and out in the middle 3° at most, the far edge one realignment; close in an
 — the gate (iv′) failed**: outside the timed turns the picture's rotation in one frame never over the one speed's 6° plus that walk's own free roll at
 the base, on every walk of §10.3's table and on the fast walks; the whole walk's worst frame not over the base's + 1°. The no-drift check
 (`FAST_ORBIT.md` §4, G4) with the switch on; the fast orbit's benefit (G6) not worse. Recorded, not gated: the straight dy's curve (§4.3: about 100 mm
-— the price of a silent entry) and the way back over the entry edge near an end (27°, the calm's look, §8). Known, not a failure: a far edge's half
-turn coming out the other way round (`FAST_ORBIT.md` §4, G3's note).
+— the price of a silent entry) and the way back over the entry edge near an end (27°, the calm's look, §8). The dy hold's long walks
+(`DY_HOLD_REVERSAL.md` §3 — built before this, its D1) not worse. Known, not a failure: a far edge's half turn coming out the other way round
+(`FAST_ORBIT.md` §4, G3's note).

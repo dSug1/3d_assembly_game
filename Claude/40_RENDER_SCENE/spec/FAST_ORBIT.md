@@ -21,6 +21,10 @@ branch 1.0.148- or you have reverted to 1.0.147-, insert the build and test of e
 that this can be done after the fast orbit (i.e. the fast orbit does not need the entry silent built beforehand"* — it does not: FO1 and FO2 are built
 and gated on a tree without it (§15's E4).
 
+**And one more, the same night**: a defect he reported — after a level face's far edge or the zenith edge on `Scene_0bis` he often cannot revert the
+dy — *"Fix that before the full audit"* → [`DY_HOLD_REVERSAL.md`](DY_HOLD_REVERSAL.md). **The night's order**: the fast orbit (this file) and its
+deploy → the dy hold's fix → the silent entry → the audit → the final documents, the merge prepared.
+
 ## 1. The decisions taken for him to review (Fable, that night — he asked for no question)
 
 | # | decision | why | to change it |
