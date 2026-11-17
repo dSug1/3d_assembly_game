@@ -1,7 +1,7 @@
 # THE LANDING MAP — layer L2 (P2) as a pure function: the design (package S1, 2026-11-17)
 
 > **STATUS** · ⭐ **BUILT 2026-11-17** (package S1 of [ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md) §5; the design §1 – §9 written and committed
-> before the code, `d35487c`; the code `4758d36`; as built §10 — the auditor's verdict to follow). ⛔ **NOT WIRED**: nothing in the game calls it; no
+> before the code, `d35487c`; the code `4758d36`; as built §10; ✅ **AUDITED 2026-11-17: PASS**, §10.8). ⛔ **NOT WIRED**: nothing in the game calls it; no
 > existing game file changes. ⚠ **Its cost is over the 50 ms line** (§10.4): the wiring step chooses among the measured options. Its decisions are the specification's, PROVISIONAL (accepted 2026-11-16 / 2026-11-17, to be tested).
 > **OWNS** · the landing map's contract: its signature, its inputs and outputs, its algorithm and why it is exact, its tie key, its "nothing to land
 > on", its lookup and that lookup's error, what it leaves out. **READ WITH** · [ORBIT_SURFACE.md](ORBIT_SURFACE.md) §2.2 (P2), §5.1 (L2), §5.2, §5.3;
@@ -118,7 +118,8 @@ one surface at their tops; a hole right through and wider than the piece leaves 
   changed with the motion (found by the invariance vector, §10.2).
 * A lookup that combines several samples (§6) breaks its ties the same way: the higher depth, then — within 0.1 µm — the smaller id.
 * No randomness, no clock, no cache between calls. `convexHull3` is deterministic (its joggle is a fixed sequence) and only its face normals and
-  edges are read; the support values are taken on the ORIGINAL points.
+  edges are read; the support values are taken on the ORIGINAL points. ⚠ *(the audit)* `convexHull3` joggles by 1e-5 × the piece's size: a vertex standing
+  out of its hull by less than about 5 µm on a 0.5 m piece could be dropped, its support value then slightly low — not met in any comparison.
 
 ## 6. Between two samples: the lookups, and the error they carry
 
@@ -168,7 +169,7 @@ pieces A and B; the memory; one lookup. ⚠ The specification's guess (`ORBIT_SU
 replaced by the figure. If one direction takes more than about 50 ms here (a phone is several times slower), the options are written with their cost,
 not chosen: a coarser grid with `landingAt` at the query; tiles built on demand; the map only round the gizmo.
 
-## 10. As built (2026-11-17, the builder — the auditor's verdict to follow)
+## 10. As built (2026-11-17, the builder — ✅ audited: PASS, §10.8)
 
 ### 10.1 What was built
 
@@ -186,7 +187,8 @@ not chosen: a coarser grid with `landingAt` at the query; tiles built on demand;
 the piece closed; a wider one's floor exactly in its band; a pin touched first; a field of studs; a hole right through: "nothing", with no depth
 field; the mirror, with a two-piece held piece over a step; an edge on a ridge; an edge on a SLANTED ridge; touching is not overlapping, also
 with the walls turned 30° off the frame; ties; a piece with no volume named); from a depth (Q07); the lookup; invariance (4 shapes × a rigid motion,
-4 shapes × every order bit for bit).
+4 shapes × two other orders — the reverse and one seeded shuffle, the held pieces reversed — bit for bit; *the audit*: not EVERY order, which
+the full sort key of §5 gives by construction).
 
 | mutant of `src/core/landing_map.ts` | vectors red |
 |---|---|
@@ -234,6 +236,11 @@ its contour; the six directions of its box; pieces A and B; 4 mm. This PC, one p
 | the 12 maps held (2 pieces × 6 directions) | 110 MB of heap (`--expose-gc`) |
 | one lookup / one exact evaluation (`landingAt`) | 2.4 µs / 4.3 – 4.8 µs |
 
+**The auditor's rerun, the PC less loaded** (medians, pieces A and B): ±z 36 – 52 ms; ±x, ±y 83 – 148 ms; 109.6 MB; a lookup 0.84 µs, `landingAt`
+2.71 µs; the options below for B: the sums prepared in 4.2 – 4.9 ms, 8 mm 28 – 31 ms, 16 mm 9 ms, the 100 mm tile 6 – 7 ms. **So every figure here
+moves with the PC's load by a factor of 2 to 3; ±x and ±y are over the 50 ms line in every run, ±z is on it.** ⚠ During the builder's runs a
+leftover headless browser of the other chain was using about four processor cores ([ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md) §7).
+
 **The options, measured (piece B, the slow directions +y and +x), not chosen:**
 
 | option | its cost here | what it gives up |
@@ -249,7 +256,7 @@ and not measured.
 ### 10.5 Where a measurement speaks against the specification
 
 * **The cost of P2 as the specification wrote it** (`ORBIT_SURFACE.md` §2.2 P2: "one height map per facet direction at a pick-up and a turn … not
-  measured"): measured at 58 – 270 ms a direction on this PC, 110 MB for 12 maps — over the brief's 50 ms line. The rule (P2) is not changed; the
+  measured"): measured at 36 – 270 ms a direction on this PC by its load (±x, ±y over the line in every run, §10.4), 110 MB for 12 maps — over the brief's 50 ms line. The rule (P2) is not changed; the
   representation is the wiring step's choice among §10.4's options. ⚠ Its "build them for the piece's orientations at the pick-up" would cost
   0.8 – 1.1 s per orientation (six directions, one piece) here.
 * **Nothing measured speaks against P2's guarantees**: a void narrower than the piece closed, a wider one's floor half a piece from each wall, a
@@ -272,3 +279,27 @@ and not measured.
 
 The map on `Scene_2`'s real `UCX_` pieces (not run); the seated frusta in the cost; any phone measurement; the lookup's two lower cases (§10.3);
 a packed memory layout. Nothing is wired.
+
+### 10.8 The audit (2026-11-17, an independent Opus auditor — PASS, no blocker)
+
+* **Reproduced**: the 24 vectors; the full comparison, figure for figure (1 895 812 places, 0 kind differences, 0 beyond the tolerance); the
+  helper's copy of the brute force, the same text as the study's; `tsc` clean; the docs, boundary, unwired and config tests. `npm run verify` was
+  NOT rerun by the auditor (the builder: 162 files / 2058 at the base, 163 / 2082 after, green).
+* **Checks of its own**: the 51 places where the lookup's kind differs from the exact one are ALL "the lookup: a landing; exact: nothing" — the
+  conservative side, none the other way. ⭐ An INDEPENDENT first contact (a descent and a bisection on the game's own GJK, `gapBetween`), with held
+  pieces TURNED about two skew axes, over the knife (L46), a 35° ramp under a two-piece held body and a peg, a slab over a slot (from outside and
+  from a depth), a hole right through narrower than the turned piece: 61 places, 0 kind differences, the depths within 5.8e-6 mm (the bisection's
+  tolerance) — the first check of the map with a turned held piece against a second implementation (the brute force cannot hold one, §10.7).
+* **Three mutants of its own**, each red (the piece not mirrored: 13 vectors; the `inside` branch removed: 1; a tie on bare floats: 1), each undone.
+* **Its remarks** (none blocks, each written in above): the cost's figures move with the load (§10.4, §10.5); "every order" was two orders (§10.2);
+  the hull's joggle (§5); the 2.8 s of test time is 1.25 s on a quieter PC.
+
+### 10.9 The representation — PROPOSED for the wiring step (Fable's review, 2026-11-17; not built, not decided)
+
+**No grid: the sums prepared once, the exact evaluation at each query** (§10.4's first option). Why: L5 reads the map "at the place" — the gizmo's
+place each frame, and the places of the drawn sections' samples; a few hundred exact evaluations (the count is an estimate) cost about 1 ms on this
+PC (2.7 – 4.8 µs each), the preparation 4 – 8 ms a direction where a whole map costs 36 – 270 ms and about 9 MB; and the answer carries none of the
+lookup's error (§6 (a) – (c) fall away). A tile round the gizmo (the third option) stays the fallback where a rule needs a neighbourhood.
+⚠ To settle at the wiring step, after ONE measurement on a phone (none exists). The specification's sentence "one height map per facet
+direction … each frame a lookup" (§2.2 P2, its cost) is rewritten then; the rule P2 does not change. The grid and `landing` (the lookup) would
+then serve the vectors and the offline comparison only.

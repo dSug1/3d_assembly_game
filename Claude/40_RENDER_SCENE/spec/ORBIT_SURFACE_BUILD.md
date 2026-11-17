@@ -76,7 +76,7 @@ like `Scene_1`'s), as a figure for the wiring step. A new file under `src`, a ne
 
 ## 7. As built (filled by the packages)
 
-* **S0 — MEASURED 2026-11-17** (the builder; the auditor's verdict to follow) → [ORBIT_SURFACE_SCENE2_ENTRIES.md](ORBIT_SURFACE_SCENE2_ENTRIES.md).
+* **S0 — MEASURED 2026-11-17** (the builder; ✅ audited: PASS) → [ORBIT_SURFACE_SCENE2_ENTRIES.md](ORBIT_SURFACE_SCENE2_ENTRIES.md).
   Files ADDED only: `scripts/surface/scene2_entries.ts` (the run), `entry_geom.ts` (exact: a ray against each pair's Minkowski difference, the
   game's contact rule and skin), `entry_selfcheck.ts` (14 known answers, the study's own L05 / L03 / Q07 / L19 among them), and that document.
   **The result: no goal of `Scene_2` is shut; the plan's way in is free for all sixteen; the six pistons are NARROW (1.9° – 2.7° round their bore,
@@ -85,15 +85,31 @@ like `Scene_1`'s), as a figure for the wiring step. A new file under `src`, a ne
 * **S1 — THE DESIGN, written before the code** (2026-11-17, the builder) → [ORBIT_SURFACE_LANDING_MAP.md](ORBIT_SURFACE_LANDING_MAP.md): the
   signature, the units and frames, the algorithm (the union of the convex pairs' Minkowski sums as half-spaces, cast along the normal) and why it is
   exact, the tie key, "nothing to land on" a kind with no depth, the lookup and its error.
-* **S1 — BUILT 2026-11-17, NOT WIRED** (the builder; the auditor's verdict to follow) → [ORBIT_SURFACE_LANDING_MAP.md](ORBIT_SURFACE_LANDING_MAP.md)
+* **S1 — BUILT 2026-11-17, NOT WIRED** (the builder; ✅ audited: PASS) → [ORBIT_SURFACE_LANDING_MAP.md](ORBIT_SURFACE_LANDING_MAP.md)
   §10. Files ADDED: `src/core/landing_map.ts`, `tests/landing_map.test.ts` (24 vectors, each red on one of 10 mutants), `tests/helpers/surface_shapes.ts`,
   `scripts/surface/landing_compare.ts`, `scripts/surface/landing_cost.ts`; one line in `tests/unwired_debt.test.ts` (§6). `npm run verify`: 163 files,
   2082 tests green (the base, `833c981`: 162 / 2058, green).
   **The comparison with the study's brute force: 1 895 812 places (the library's travels and maps, the 1596-cell sweep), 0 disagreements** — the
   only differences, 20 292 places on slopes, are the brute force's own footprint shrink (1e-4 mm × the slope, at most 5.67e-4 mm). The lookup between
   samples: never lower than the exact value at 33 573 places; higher at 607 (a step within one cell).
-  ⚠ **THE COST IS OVER THE BRIEF'S 50 ms LINE**: on `Scene_1`'s 36 placed boxes at 4 mm, one direction takes 58 – 270 ms on this PC (±z the
+  ⚠ **THE COST IS OVER THE BRIEF'S 50 ms LINE**: on `Scene_1`'s 36 placed boxes at 4 mm, one direction takes 36 – 270 ms on this PC by its load (±x, ±y over the line in every run; ±z the
   fastest), the 12 maps (2 pieces × 6 directions) hold 110 MB; a lookup 2.4 µs, an exact evaluation 4.3 – 4.8 µs. Not redesigned: the options,
   measured — no grid (the sums prepared in 7.6 ms a direction, then the exact evaluation at each query); 8 mm (54 – 66 ms) or 16 mm (17 – 20 ms); a
   100 mm tile round the gizmo (13 – 16 ms); the build spread over frames. **The wiring step chooses** (§10.4 there). Nothing measured speaks against
   P2's guarantees.
+* **THE AUDITS — both PASS, no blocker (2026-11-17, independent Opus auditors)** → `ORBIT_SURFACE_SCENE2_ENTRIES.md` §8,
+  `ORBIT_SURFACE_LANDING_MAP.md` §10.8. Each reran its package and wrote a check of its own (S0: a brute force apart, the same shares sample for
+  sample; S1: a first contact on the game's GJK with TURNED held pieces, 61 places of 61). The parallel rule kept: from `f5f5cd3` to `2552f62` the
+  diff is additions, this branch's documents, and the one line of §6. Their remarks are written into the two documents (the cost's range corrected
+  to 36 – 270 ms by the PC's load).
+* **THE REVIEW (Fable, 2026-11-17) — what goes to the owner, what is proposed:** (1) `Scene_2`: no goal shut; the pistons need the ghost and the
+  PLUNGE, as authored. (2) The ghosts and markers against the collision pieces (10, 17, 2 mm), two pistons 1.4 mm off their pin: NOT a blocker for
+  the surface; settled by one measurement against the drawn meshes (B1, or offline from the `.glb`) BEFORE the plunge is built. (3) The thresholds
+  NARROW (10°) and BESIDE (10 mm): his word owed with B4. (4) The map's representation: PROPOSED no grid, the exact evaluation at each query
+  (`ORBIT_SURFACE_LANDING_MAP.md` §10.9) — one phone measurement first, at the wiring step. (5) ⚠ Read in the code, not in the game: the orbited
+  piece's collision exempts every FROZEN body (the owner's choice of 2026-10-13, for the floor); `Scene_2`'s plinth is frozen — to check in the
+  pick-up flow whether a held part passes through it.
+* ⚠ **A leftover of the OTHER chain, found when this one ended**: a headless browser of the charts' gates (its profile
+  `replay_probe_profile_B1_s0_28168`, started 14:26, the processes that owned it dead) stayed 82 minutes and used 18 700 s of processor time —
+  about four cores on average: the TIMES measured by both builders above were taken beside it. Stopped at 15:50, its profile folder removed; the
+  charts' own running gate untouched.

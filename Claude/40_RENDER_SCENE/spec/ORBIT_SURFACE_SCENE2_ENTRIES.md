@@ -1,6 +1,6 @@
 # THE ORBIT'S SURFACE — S0: THE ENTRY SETS OF `Scene_2`'s GOALS, ON THE REAL COLLISION PIECES (2026-11-17)
 
-> **STATUS** · ✅ **MEASURED 2026-11-17** (package S0, an Opus builder; an independent auditor follows) — a study, offline. **NO GAME CODE, NOTHING
+> **STATUS** · ✅ **MEASURED 2026-11-17** (package S0, an Opus builder; ✅ **AUDITED 2026-11-17** by an independent Opus auditor: PASS, §8) — a study, offline. **NO GAME CODE, NOTHING
 > WIRED, NO EXISTING FILE CHANGED** but this branch's own record. **OWNS** · the entry sets of `Scene_2`'s sixteen goals at their stages, how
 > they were computed, what they say against the assembly plan and the authored ghosts. **READ WITH** · [ORBIT_SURFACE.md](ORBIT_SURFACE.md) §2.5
 > (the definition, S28) and §7bis (B4), [ORBIT_SURFACE_SHAPES.md](ORBIT_SURFACE_SHAPES.md) §3.3 (the same check on boxes),
@@ -36,7 +36,8 @@ the main one was run. A part's placed set = every part before it in that order.
 
 **Each direction.** 642 directions spread evenly over the sphere (the study's golden spiral, `ENTRY_SPHERE_N`, about 8° apart), PLUS, exactly,
 every face normal (both senses) of the part's and of the placed parts' collision pieces, the plan's way in, and each ghost's plunge axis: a tight
-slot's set is a single direction each way, which an even sampling misses.
+slot's set is a single direction each way, which an even sampling misses. *(the audit)* **The plan's way in, as a direction** = MINUS the
+part's own seat marker's normal (the marker carries the plan's wording); it is tested exactly, like a face normal.
 
 **Exact, with no time step.** For two convex pieces, the moving one meets the still one exactly when its displacement lies inside one convex
 shape, their Minkowski difference (the textbook configuration-space obstacle: Lozano-Pérez 1983; van den Bergen 2003, ch. 4). Pulling the part out
@@ -47,7 +48,9 @@ none of its pieces against none of the placed pieces is blocked.
 **The touch at the seat** (the first thing a naive test gets wrong: at the seat the parts TOUCH, so every direction looks blocked, or a part
 slides through the face it rests on). The rule used is the game's own (`collision.ts` `poseFree`): contact is allowed, only sinking deeper than
 the SKIN is refused, and a pair already deeper than the skin may only get shallower. So a part resting on a face may slide along it and leave it,
-never push into it. ⭐ **The skin has ONE home**: `collisionSkinMm` in `gestureConfig.ts`, **0.3 mm on the glass**. It becomes a world length only
+never push into it. *(the audit)* The game applies this step by step; this check uses ONE threshold for the whole ray, `max(skin, the depth
+at the seat)` — looser only for a pair deeper than the skin at its seat, and `Scene_2` has none (to re-read before the check runs on another
+scene). ⭐ **The skin has ONE home**: `collisionSkinMm` in `gestureConfig.ts`, **0.3 mm on the glass**. It becomes a world length only
 through a camera (`collision_wiring.ts` `skinM`): with a camera 1 m away, Babylon's 0.8 rad field of view and a phone's 844 px high view it is
 **1.14 mm** in the world — the value used. Run again at 0.3 m (**0.34 mm**) and 3 m (**3.41 mm**): §4.
 
@@ -177,3 +180,29 @@ part's detail). `CAM_M=<metres>` changes the camera the skin is read at. The cod
   (`collision_wiring.ts` `pieceCollisionSetup`), and the plinth E01 is frozen.
 * **Directions between the samples** are read only through the opening's bisection (at most about 4° off); the exact directions are the face
   normals, the plan's and the ghosts' — an edge direction of a slot that is no face normal would be missed.
+
+## 8. The audit (2026-11-17, an independent Opus auditor — PASS, no blocker)
+
+* **Rerun**: the self-checks 14 / 14; the full run's JSON byte-identical to the builder's.
+* **A brute force of its own** (written apart: each obstacle's faces by enumerating triplets of points, its own ray test, its own skin arithmetic —
+  1.136 mm): E02 322 / 642 = 50.16 % and E03 57 / 642 = 8.88 %, sample for sample; the pistons E07 and E08 free at 0 of 642 samples and 0 of 3 000
+  random directions, their bore free, openings 2.67° and 1.87° (above: 2.7°, 1.9°); the markers 10.07, 9.80 and −2.06 mm beyond the `UCX_` pieces
+  (above: 10.1, 9.8, −2.1); the crankshaft's opening at least 22.10° over 72 azimuths (above: 22.2°). A sweep in steps of 0.02 mm to 260 mm along
+  each plan direction never came within the skin of a block.
+* **Three mutants of its own**, each red, each undone. The new-files-only rule kept; no process left.
+* **Its remarks** (none blocks): the two notes marked *(the audit)* in §2; the skin's world length rests on an assumed camera (1 m; no field-of-view
+  override found in `src/render`; the game's camera distance in contact range is not established — §4's three skins change no verdict); nothing in
+  the gate covers `scripts/surface/` (it is outside `tsconfig`: the typecheck and the mutant runner were scratch files); the builder once ran two of
+  its own processes together for about 2 minutes, against the one-process rule.
+
+## 9. The review (Fable, 2026-11-17) — how the findings are handled
+
+* **Findings 1, 2**: the answer to the owner's question — the check passes; the pistons are the goals that need the ghost and the PLUNGE.
+* **Findings 3, 4** (the ghosts and markers against the collision pieces: 10, 17, 2 mm; two pistons 1.4 mm off their pin): NOT a blocker for the
+  surface. ⚠ A reading, NOT measured: the heads' 17 mm follows the plan as quoted in finding 3 (the valve heads below the slab are left out of the
+  collision, the ghost clears them). What settles it is ONE measurement — each marker against the drawn mesh and the `UCX_` pieces along the way in
+  (B1, or offline from the `.glb`'s render meshes) — to make BEFORE the plunge is built (`QUEUE.md`: owed).
+* **Finding 7** (NARROW under 10°, BESIDE 10 mm): the owner's word is owed with B4, not before.
+* ⚠ **§7's last-but-one point, read in the code and not in the game**: the orbited piece's collision exempts every FROZEN body
+  (`collision_wiring.ts` `pieceCollisionSetup` — the owner's choice of 2026-10-13, made for the floor the rings pass under). `Scene_2`'s plinth is
+  frozen: whether a held part passes through it in the pick-up flow is to be checked there.
