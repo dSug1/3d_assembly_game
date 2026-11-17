@@ -510,3 +510,20 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   state-of-the-art literature, propose something."* (whole in §14). Measured from recordings on disk: the same scripted play, 22 transition turns on
   `Scene_0bis` against 4 on `Scene_0` and 4 on `Scene_1`, 14 of the 22 within half a second of the one before. PROPOSED (§14, nothing built): one
   follower — the newest target wins, the gizmo not held for a turn under 90°, the pace eased; it bends T5 (said there). His word before any prototype.
+
+## 2026-11-17 (night) — the owner's GO for the fast orbit, the audit and the merge's preparation; branch `1.0.148-`
+
+* **His words** (whole in [`FAST_ORBIT.md`](../../40_RENDER_SCENE/spec/FAST_ORBIT.md) §0): *"I will go to sleep. Therefore, proceed with the following
+  and do not stop or ask me question until you finish"* — (1) a new branch `1.0.148-`; (2) the fast orbit built and tested, no regression — a failed
+  test fixed and retested, twice at most, *"If the test fails a third time, abort and revert to the branch 1.0.147-. If the test pass, update the md
+  files, deploy"*; (3) *"the full audit of the orbit charts"* on the branch that stands, *"one round of fixes if required, test, make sure no
+  regression. If test fail, report and wait my instruction"*; (4) *"update the md files, prepare for the merge into worktree "3d_assembly_game". I
+  will then authorize the merge"*.
+* **Branch `1.0.148-`** created from `1dac167` in the worktree `../orbit_charts` (`npm run verify` there: 165 files, 2062 vectors). `1.0.147-` stays
+  at `1dac167` — the way back.
+* **The build as briefed** → `FAST_ORBIT.md` §1 – §5: the decisions taken for him to review (F1 – F8: two packages, FO1 the redirect and no hold under
+  the limit, FO2 the eased pace; only outside close in; the limit and the ease two sliders, each at 0 = today's game bit for bit; one deploy), the two
+  contracts, the gates that define "the test passes" (OFF frame for frame, close in turn for turn, the held turns, no drift, the slow walks, the
+  benefit on FAST walks), what is not in it.
+* **Then**: step 3 (the audit of the whole charts' diff from `510bbd8`, one round of fixes), the final documents, the merge's preparation. The merge
+  itself: his word.

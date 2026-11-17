@@ -1,6 +1,6 @@
 # Entering a level face — why the picture shakes there, and what would stop it (2026-11-17)
 
-> **STATUS** · ✅ **APPROVED BY THE OWNER 2026-11-17** (*"Agreed to every recommendation. Proceed."*) — the build as briefed: §9; as built: after it; ⛔ **THE CHAIN STOPPED on his word 2026-11-17** (§13: (A) built and LIVE, (iv′) and the timing rule built then reverted, (v) stopped at its root cause §12); a fast orbit's turns merged: PROPOSED §14. A study with measurements (an Opus agent, 2026-11-17), on the code of
+> **STATUS** · ✅ **APPROVED BY THE OWNER 2026-11-17** (*"Agreed to every recommendation. Proceed."*) — the build as briefed: §9; as built: after it; ⛔ **THE CHAIN STOPPED on his word 2026-11-17** (§13: (A) built and LIVE, (iv′) and the timing rule built then reverted, (v) stopped at its root cause §12); a fast orbit's turns merged: PROPOSED §14 — ✅ the owner's go the same night, the build → [`FAST_ORBIT.md`](FAST_ORBIT.md). A study with measurements (an Opus agent, 2026-11-17), on the code of
 > `e252d0f` (= live `main` `6c0a165`). Every candidate was prototyped in a throwaway worktree and undone; nothing is committed under `src` or `tests`.
 > **OWNS** · the entry and the exit of a level face (the bottom of `Scene_0` / `Scene_0bis`, any level top) and the timing of every camera turn ·
 > **READ WITH** · [`TILTED_POLE_CLOSE_IN.md`](TILTED_POLE_CLOSE_IN.md) §1 – §3 (the rules T1 – T12, the carried heading),
@@ -660,7 +660,7 @@ close to its degenerate case to be trusted, or where its own path would exceed t
 | 4 | The 27° back over the entry edge near an end (the calm's look) | never studied (§8) |
 | 5 | A fast orbit over many edges: the turns merged | PROPOSED §14 |
 
-## 14. A fast orbit over many edges — one follower instead of a train of turns (PROPOSED 2026-11-17; nothing built, nothing prototyped)
+## 14. A fast orbit over many edges — one follower instead of a train of turns (PROPOSED 2026-11-17 — ✅ the owner's go that night: the build as briefed and as built → `FAST_ORBIT.md`)
 
 **The owner** (verbatim): *"when I orbit fast, the gizmo travels fast on the orbit's surface. This is not a problem for large surfaces such as the
 cube of scene 1 but this is an issue on the spit heptagon in scene 0bis because there are a lot of edges and corners and each crossing triggers a
