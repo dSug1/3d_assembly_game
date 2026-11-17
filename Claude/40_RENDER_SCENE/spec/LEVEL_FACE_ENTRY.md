@@ -584,3 +584,48 @@ Close in nothing had changed (the exception of §11.1). So what was left of the 
 4. Close in, unchanged: the rule there needs the square camera's pitch inside the one turn (`TILTED_POLE_CLOSE_IN.md` §12, option A).
 
 No device look (rule 5).
+
+## 12. LF3 — (v), the close-in roll the long way round: the root cause, measured (2026-11-17, an Opus agent — base `892b6a3`, the code of `0ab1f9f`)
+
+**The result first.** It is NOT a branch cut (R-a): the blend is exact and its kept branches never flip. It is the framing's geometry near its
+degenerate case (R-b): close in, at the side exit, the camera is 2° – 13° off the line from the piece to the aim and sees the two only 0.6° – 1.3°
+apart. There the two angles `poseFramingTwo` blends — the camera's place round that line (φ) and the separation's angle on the glass (q) — swing tens
+of degrees for a small move of the turn's end pose. The blend follows them, as it must, past the half turn. And when the two come under 0.5° apart
+mid-turn, the framing gives up (`null`) and `zoneMixPose` draws the other drawing (about the piece) for the turn's last frames: a jump. The one rotation
+about the piece draws the same turns straight (96° – 105° of path).
+
+**The base.** LF2's rule is reverted (`cb89bdd`): the base is the one speed (6° a frame), not the timing rule. Every gate recorded at `892b6a3` into the
+session scratchpad's `lf3/base`: identical to LF2's base (`0ab1f9f`'s code) in every frame and every line (the replays 2794 / 2794 frames, the 27 + 6
+level-entry walks, `tilt_check` every mode, `mid_check`, `across_check`, `ridge_check`).
+
+**How it was measured.** A throwaway probe (never committed) recorded, every frame of every turn drawn by `zoneMixPose`: the start pose, this frame's
+end pose, the piece, the share `k`, the angles kept (`FramingKeep`) before and after, the rule, whether the framing returned `null`, the pose drawn and
+the pose about the piece. A replica of `poseFramingTwo` with its internals exposed reproduced every drawn pose to 0.0000°. The recording itself changed
+nothing (every gate identical to the base).
+
+**The four walks** (`Scene_0bis`, mode b of the gate; "off the line" = the camera's angle off the line piece → aim; "apart" = the piece and the aim seen
+from the camera):
+
+| walk, turn | apart at the start / end pose | off the line | what the frames show | drawn: one rotation / path / largest frame | about the piece |
+|---|---|---|---|---|---|
+| `b_ccw_p_close` f492 | 1.3° / 2.0° | 4° – 6° | φ1 moves 38° → 111° in 9 frames (the kept `dphi` 160° → 233°), q1 nearly still: the end pose's φ crosses the half turn, the blend keeps its way | 112.5° / **278.5°** / 26.6° | 102.0° / 105.0° / 9.3° |
+| `b_ccw_p_d515` f442 | 0.73° / 1.19° | 7° – 12° | `dq` 168° at the first frame (near the cut), then 220° as q1 swings 50°; from frame 12 the two come under 0.5° apart: the framing `null`, the pose about the piece drawn for the 6 last frames | 102.0° / **342.7°** / **128.2°** | 102.0° / 105.0° / 9.3° |
+| `b_cw_m_close` f428 | 1.2° / 1.1° | 3° – 4° | `dphi` 141° → 196° while `dq` 129° → 74° | 112.6° / **270.0°** / 19.2° | 96.0° / 97.7° / 6.7° |
+| `b_cw_m_d515` f584 (and `b_cw_p_d515` f578) | 0.64° / 0.64° | 6° – 7° | the framing `null` from k 0.53 (0.77): the drawing switched inside the running turn | 96.0° / 132.0° (121.4°) / 23.8° (14.1°) | 96.0° / 97.7° / 6.7° |
+
+**Why not R-a.** The kept branches (`nearestTurn`, `FramingKeep`) do exactly their job: each angle continuous from frame to frame. Taking "the short
+way" again mid-turn would jump the picture by k × 360° — the very leap `FramingKeep` was built to stop (112° – 161° in one frame, 2026-11-14). The long
+way is what a continuous blend of φ and q MUST draw once the end pose's φ has crossed the half turn — and it crossed only because φ is ill-conditioned
+there: the end pose's one rotation from the start went 160° → 102° (closer), while its φ went 73° further.
+
+**Why it is the geometry (R-b), and where.** φ is the camera's place round the line piece → aim; q the direction from the piece to the aim on the
+glass. With the camera a few degrees off that line and the two under ~1.5° apart, both are angles of a very small circle: a millimetre of the end
+pose's eye (its square camera turning beside the turn, the piece's spring) is tens of degrees of φ or q. Far out (the two 10° – 20° apart) they are
+well conditioned. The drawing is decided ONCE, at the turn's first frame (`zm.rule`), from "not degenerate yet" (0.5° apart) — and these turns start at
+0.6° – 1.3°, then drift under 0.5°.
+
+**What is NOT this cause.** `b_ccw_m_d515` f446 (90.8° for 70.8°, ⚠ path) and the 4-frame first parts of the close-in side exits (12.1° – 12.2° in a
+frame) are the two clocks of `TILTED_POLE_CLOSE_IN.md` §12 (the square camera's pitch running beside the turn) — not in this chain.
+
+**Where the fix must go (step 2):** the choice of drawing at the turn's first frame, from the two end poses: about the piece where the framing is too
+close to its degenerate case to be trusted, or where its own path would exceed the one rotation. Never switched inside a running turn.
