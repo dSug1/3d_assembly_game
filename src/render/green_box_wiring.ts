@@ -1063,7 +1063,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   let upIn: Vec3 = camFrame.up;
   // ⭐⭐⭐ (2026-11-14) a polar zone's turn (its switch, the spit's crossing): the camera turned ABOUT THE PIECE from the pose on the glass (`zoneMixPose`)
   if (assemblyOn(st)) {
-    const zp = zoneMixPose(st, pp, camAt, lookAt, camFrame.up, dtSec * 1000);
+    const zp = zoneMixPose(st, pp, camAt, lookAt, camFrame.up);
     camAt = [zp.eye[0], zp.eye[1], zp.eye[2]];
     lookAt = [zp.look[0], zp.look[1], zp.look[2]];
     upIn = zp.up;

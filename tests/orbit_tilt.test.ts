@@ -587,7 +587,7 @@ describe("⭐⭐⭐ (2026-11-11) the automatic tilt: the sections at once, the C
     expect(aw).toContain('if (st.asmTiltAuto && st.asmTilt === null) tiltOn(st, st.asmMouth !== null ? st.asmMouth.hi : atPole);');
     expect(aw).toContain("const byMm = st.asmTiltPending;"); // ⛔ (2026-11-15) `why === "auto" &&` gone with the press: every tilt is the automatic one
     expect(aw).toContain("if (st.asmTiltPending) return;");
-    expect(aw).toContain("const want = st.asmTiltAuto && st.asmBlend !== null ? Math.max(sq.q, blendShare(st.asmBlend.mm, st.cfg.tiltBlendMm)) :"); // ⭐ (package A) by the finger, its step then capped at the one speed (`squareShareStep`)
+    expect(aw).toContain("if (st.asmTiltAuto && st.asmBlend !== null) sq.q = Math.max(sq.q, blendShare(st.asmBlend.mm, st.cfg.tiltBlendMm));");
     expect(aw).not.toContain("swingTimed");
     expect(aw).toContain("blendCrossed(bl.tiltId, tid, bl.target, st.asmSquare.target)");
     expect(code("render/pointer_wiring.ts")).toContain("if (asmOn && !shiftApproach) st.asmOrbitMm += Math.hypot(db.dx, db.dy) / mmToPx(1);");

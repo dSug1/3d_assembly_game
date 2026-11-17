@@ -40,7 +40,7 @@ import { crossingHold, crossingPitch, distanceToFacets, fingerInFrame, fingerSwa
 import { assignCharts, capTiltHeading, chartContour, chartZones, DEFAULT_CHART_OPTS, type ChartAssignment, type ChartFace } from "../input/orbit_charts";
 import { poseAboutPiece, poseFramingTwo, type CamPose } from "../input/orbit_tilt";
 import { poleCrossingDue, poleSeam } from "../input/pole_crossing";
-import { dirGap, easedDir, easeRest, poleYawKept, poseTurnRad, seamOutPaced, seamOutShare, seamOutShareInv, seamOutStep, seamOutTarget, seamStepRad, seamTurnPace, seamTurnStep, seamWholeRad, shownShareCap, squareRestarts, squareShareStep, tiltLeavesNow, turnHoldsGizmo } from "../input/seam_turn";
+import { dirGap, easedDir, easeRest, poleYawKept, seamOutPaced, seamOutShare, seamOutStep, seamOutTarget, seamTurnPace, seamTurnStep, seamWholeRad, tiltLeavesNow, turnHoldsGizmo } from "../input/seam_turn";
 import { bandedFacet } from "../input/face_band";
 import { contourFaceAt, crossingEvent, exitHoldSign, exitTurnRad, faceOwnUp, freeEdges, freeEntryHeading, freeHeadingAngle, isFreeFace } from "../input/free_face";
 import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, capTilt, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, swingEase, tiltAutoLatch, frameBox, tiltDir, tiltFaces, onTiltedFacet, type Mat3 } from "../input/orbit_tilt";
@@ -292,61 +292,19 @@ function seamEase(st: SceneState, uWas: Vec3): void {
   st.asmDirEase = null;
   const mix = st.asmZoneMix;
   if (mix === null) return;
-  // ⭐⭐⭐ (2026-11-16 night, `TILTED_POLE_CLOSE_IN.md` §12.1 1., §18 — package A) PROVISIONAL: read here the view is not yet set (this frame's calm and square
-  // camera, `calmFrame`, run after) — the ease READ AGAIN once it is (`seamEaseRead`), the turn's clock waiting for that read. ⛔ Kept as read here: the square
-  // camera's first step came back in that frame, the piece drawn 6.45° off at k = 0 (W11: 6.2°, then 8.0° in a frame)
   const gap = dirGap(uWas, drawnDir(st));
   if (gap !== null) st.asmDirEase = { axis: gap.axis, angle: gap.angle, mix };
-  mix.dirFrom = uWas;
 }
 
 /**
  * ⭐⭐⭐ (2026-11-15, §12 2.4c) A CAMERA TURN RESTARTED with no change of frame (the spit's crossing, from the pose shown): the shown direction's ease, if one
  * runs on the turn replaced (`was`), carried onto the new one by its REST — never back to its whole (a step). None running: nothing.
- * ⭐⭐⭐ (package A) …PROVISIONALLY: `uWas` (the direction drawn before the turn was replaced) kept on the new turn — its ease read once the view is set
- * (`seamEaseRead`), as at every turn start.
  */
-function easeCarry(st: SceneState, was: SceneState["asmZoneMix"], uWas: Vec3): void {
+function easeCarry(st: SceneState, was: SceneState["asmZoneMix"]): void {
   const e = st.asmDirEase;
-  if (st.asmZoneMix !== null && st.asmZoneMix !== was) st.asmZoneMix.dirFrom = uWas;
   if (e === null || was === null || e.mix !== was || st.asmZoneMix === was) return;
   const rest = easeRest(e, was.k);
   st.asmDirEase = st.asmZoneMix === null || rest === null ? null : { axis: rest.axis, angle: rest.angle, mix: st.asmZoneMix };
-}
-
-/**
- * ⭐⭐⭐ (2026-11-16 night, `TILTED_POLE_CLOSE_IN.md` §18, package A — the owner: *"1- A"*) THE EASE READ ONCE THE FRAME'S VIEW IS SET (after `calmFrame`: the
- * calm, the square camera at its target inside the turn): the ONE rotation from the direction drawn before the turn started (`dirFrom`) to the one the new
- * view gives (`drawnDir`, no ease) — at EVERY turn start (the tilt's entry and exit, the ridge, the zone's switch, the spit's side — its turn starts in the
- * camera's stage: read the next frame —, a free face's entry and exit). The turn's clocks wait for it (`zoneStep`, `seamTurnFrame`, `seamOutFrame`), so at
- * the read the share is 0 and the piece is drawn exactly where it was. ⭐ The model's coordinates only (the orbit's angles, the calm, the square normal).
- */
-function seamEaseRead(st: SceneState): void {
-  const zm = st.asmZoneMix;
-  if (zm === null || zm.dirFrom === undefined) return;
-  const from = zm.dirFrom;
-  delete zm.dirFrom;
-  // the turn's axis and framing rule read afresh toward the view just set (the clocks waited: the share is 0, nothing on the glass moves) — ⛔ kept from a
-  // read before it (the spit's turn starts in the camera's stage, before the square camera stands at its target): the turn went round the far way, 285°
-  // of view for a 93° pose (`Scene_0bis`'s top ridge reached from a tip, measured)
-  zm.axis = null;
-  zm.rule = 0;
-  zm.keep = null;
-  st.asmDirEase = null;
-  const gap = dirGap(from, drawnDir(st));
-  if (gap !== null) st.asmDirEase = { axis: gap.axis, angle: gap.angle, mix: zm };
-}
-
-/**
- * ⭐⭐⭐ (package A, `squareRestarts`) A TURN RESTARTED by a change of the square camera's target while it runs: from the pose shown, its pace kept (the
- * entry made pending, `byMm`; the way out paced by the fingers, `out` — its progress anew), the direction drawn now kept for the read (`easeCarry`).
- */
-function turnRestart(st: SceneState): void {
-  const zm = st.asmZoneMix;
-  if (zm === null) return;
-  const uWas = drawnDir(st);
-  st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0, ...(zm.byMm === true ? { byMm: true } : {}), ...(zm.out !== undefined ? { out: { p: 0, outMm: 0, orbitMm: 0 } } : {}) };
-  easeCarry(st, zm, uWas);
 }
 
 /**
@@ -367,12 +325,6 @@ function turnWhole(st: SceneState, zm: NonNullable<SceneState["asmZoneMix"]>): n
   return seamWholeRad(zm.rad, e !== null && e.mix === zm ? e.angle : 0);
 }
 
-/** ⭐ (package A) the piece's direction's gap eased on this turn (rad; none: 0) — `seamStepRad`'s growth of the camera's angle */
-function turnEase(st: SceneState, zm: NonNullable<SceneState["asmZoneMix"]>): number {
-  const e = st.asmDirEase;
-  return e !== null && e.mix === zm ? e.angle : 0;
-}
-
 /**
  * ⭐⭐⭐ (2026-11-15, §12 2.4c) ONE FRAME OF A PACED TURN (the automatic tilt's entry made pending — `byMm`), after the finger's travel is counted
  * (`asmBlend.mm`): held while the camera is pending, by the finger's travel while the blend runs, then by time (`seamTurnPace`, `seamTurnStep`); whole:
@@ -383,10 +335,10 @@ function seamTurnFrame(st: SceneState, dtMs: number): void {
   if (zm === null || zm.byMm !== true) return;
   const bl = st.asmBlend;
   const pace = seamTurnPace(true, st.asmTiltPending, bl !== null);
-  const r = seamTurnStep({ k: zm.k, done: zm.done, rad: turnWhole(st, zm), axisKnown: zm.axis !== null && zm.dirFrom === undefined }, pace, bl === null ? 1 : blendShare(bl.mm, st.cfg.tiltBlendMm), dtMs, st.cfg.tiltRollDegS, turnEase(st, zm));
+  const r = seamTurnStep({ k: zm.k, done: zm.done, rad: turnWhole(st, zm), axisKnown: zm.axis !== null }, pace, bl === null ? 1 : blendShare(bl.mm, st.cfg.tiltBlendMm), dtMs, st.cfg.tiltRollDegS);
   zm.k = r.k;
   zm.done = r.done;
-  // ⭐⭐⭐ (package A, the audit's blocker) whole: ended once drawn (`zoneMixPose`)
+  if (zm.k >= 1) st.asmZoneMix = null;
 }
 
 /**
@@ -420,11 +372,10 @@ function seamOutFrame(st: SceneState, dtMs: number): void {
   const o = zm.out;
   const whole = turnWhole(st, zm);
   const target = seamOutTarget(o.outMm, o.orbitMm, st.cfg.tiltOutBlendMm, st.cfg.tiltBlendMm, st.router.all().length > 0);
-  // ⭐⭐⭐ (package A) …and its ease read (`seamEaseRead`), as every clock
-  o.p = seamOutStep(o.p, target, dtMs, whole, st.cfg.tiltRollDegS, zm.axis !== null && zm.dirFrom === undefined);
+  o.p = seamOutStep(o.p, target, dtMs, whole, st.cfg.tiltRollDegS, zm.axis !== null);
   zm.k = seamOutShare(o.p);
   zm.done = zm.k * whole;
-  // ⭐⭐⭐ (package A, the audit's blocker) whole (`o.p` 1): ended once drawn (`zoneMixPose`)
+  if (o.p >= 1) st.asmZoneMix = null;
 }
 
 /** ⭐⭐⭐ (2026-11-10, §9.4) the orbit's DIRECTIONS' frame (F → world; ⛔ the press's swing deleted at step 2.5: the tilt's `map`) — `null`: the world's. */
@@ -454,15 +405,6 @@ function mapFrame(st: SceneState): Mat3 | null {
  * whole within 3.6 m and none from 5.4 m: an A + dy approach through it turned the piece's direction, the approach curved); faded only toward ±90° of pitch.
  */
 function calmDir(st: SceneState, u: Vec3): Vec3 {
-  const base = calmBase(st, u);
-  // ⭐⭐⭐ (2026-11-10, `1.0.120b-`) THE SQUARE CAMERA close in: the gizmo's face's normal (turned at one speed through every edge), over the calm by `q`
-  const sq = st.asmSquare;
-  if (sq.n === null || !(sq.q > 0)) return base;
-  return squareMix(base, sq.n, sq.q);
-}
-
-/** ⭐ (package A — split from `calmDir`) the calm's own direction for `u`, before the square camera's mix (its share's cap reads it). */
-function calmBase(st: SceneState, u: Vec3): Vec3 {
   // ⭐⭐⭐ (2026-11-09, §8 — F7b) the rule in `input/orbit_calm.ts` (`calmShown`): the eased facet's own frame, faded toward its poles
   const c = st.asmCalm;
   // ⭐⭐⭐ (2026-11-10, the owner's back-and-forth) …and by the calm's whole share by POSITION (`asmCalmWhole`): never eased, so never behind a fast finger
@@ -475,19 +417,12 @@ function calmBase(st: SceneState, u: Vec3): Vec3 {
     c !== null && (kH > 0 || kV > 0)
       ? calmShown(u, { n: c.n, sH: 1 - (1 - c.sH) * (1 - kH), sV: 1 - (1 - c.sV) * (1 - kV), wA: c.wA ?? 0, ...(c.poleFade !== undefined ? { poleFade: c.poleFade } : {}) })
       : calmShown(u, c);
-  return base;
-}
-
-/** ⭐ The square camera's mix: the calm's direction `base` and the square normal `n` at the share `q`, normalised (`nlerpAngle` is its angle). */
-function squareMix(base: Vec3, n: Vec3, q: number): Vec3 {
-  const m: Vec3 = [base[0] * (1 - q) + n[0] * q, base[1] * (1 - q) + n[1] * q, base[2] * (1 - q) + n[2] * q];
+  // ⭐⭐⭐ (2026-11-10, `1.0.120b-`) THE SQUARE CAMERA close in: the gizmo's face's normal (turned at one speed through every edge), over the calm by `q`
+  const sq = st.asmSquare;
+  if (sq.n === null || !(sq.q > 0)) return base;
+  const m: Vec3 = [base[0] * (1 - sq.q) + sq.n[0] * sq.q, base[1] * (1 - sq.q) + sq.n[1] * sq.q, base[2] * (1 - sq.q) + sq.n[2] * sq.q];
   const l = Math.hypot(m[0], m[1], m[2]);
   return l > 1e-9 ? [m[0] / l, m[1] / l, m[2] / l] : base;
-}
-
-/** ⭐ (package A) the angle between two unit directions */
-function angleOf(a: Vec3, b: Vec3): number {
-  return Math.acos(Math.max(-1, Math.min(1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2])));
 }
 
 /**
@@ -513,37 +448,14 @@ function squareFrame(st: SceneState, dtMs: number): void {
   sq.target = bf === undefined || onCapB ? sq.target : bf.n;
   if (freeSq !== undefined) sq.target = freeSq.n;
   if (sq.n === null) sq.n = sq.target;
-  // ⭐⭐⭐ (2026-11-16 night, `TILTED_POLE_CLOSE_IN.md` §12.1 2., §18 — package A, the owner: *"1- A"*) WHILE A TRANSITION'S TURN RUNS (`asmZoneMix`) THE
-  // SQUARE CAMERA STANDS AT ITS TARGET — its normal and its share (held while pending: the owner's rule of 2026-11-11) — so the turn's end pose is the
-  // final one and ONE clock carries both; a change of that target while the turn runs (`squareRestarts`) is a change of frame: the turn restarted from the
-  // pose shown. ⛔ Its own turn (`squareTurn`) and share's ease beside the transition's: two clocks adding on the glass (W11: up to 8.9° a frame)
-  const qT = st.asmTiltPending ? sq.q : st.asmTiltAuto || freeSq !== undefined ? 1 : 0;
-  const zm = st.asmZoneMix;
-  if (zm !== null) {
-    if (squareRestarts(zm.dirFrom === undefined, sq.n, sq.target, sq.q, qT)) turnRestart(st);
-    if (sq.target !== null) sq.n = sq.target;
-    sq.q = qT;
-    return;
-  }
-  const n0 = sq.n;
   if (sq.n !== null) {
     const { t } = facetFrame(sq.n);
     sq.n = squareTurn(sq.n, sq.target, dtMs, st.cfg.tiltRollDegS, t);
   }
   // ⭐⭐⭐ (2026-11-11) pending: held (the camera keeps its orientation while the approach goes on); then by the finger's travel (`blendShare`), never by time
   if (st.asmTiltPending) return;
-  const want = st.asmTiltAuto && st.asmBlend !== null ? Math.max(sq.q, blendShare(st.asmBlend.mm, st.cfg.tiltBlendMm)) : wholeShareStep(sq.q, qT, dtMs, rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS));
-  // ⭐⭐⭐ (package A) ITS OWN SHARE NEVER OVER THE ONE SPEED: the direction it shows turned at most `tiltRollDegS`'s step a frame, less what the normal's own
-  // turn took this frame (`squareShareStep`) — ⛔ the share eased over 125 ms or by the finger's blend, uncapped (11° and more a frame at a quarter turn)
-  const deg = st.cfg.tiltRollDegS;
-  if (n0 === null || sq.n === null || !(deg > 0)) {
-    sq.q = want;
-    return;
-  }
-  const pq = st.boxOrbit ?? st.pieceQ ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
-  const base = calmBase(st, orbitDir(pq.yaw, pq.v));
-  const used = sq.q > 0 ? angleOf(squareMix(base, n0, sq.q), squareMix(base, sq.n, sq.q)) : 0;
-  sq.q = squareShareStep(sq.q, want, angleOf(base, sq.n), Math.max(0, ((deg * Math.PI) / 180) * (Math.max(0, dtMs) / 1000) - used));
+  if (st.asmTiltAuto && st.asmBlend !== null) sq.q = Math.max(sq.q, blendShare(st.asmBlend.mm, st.cfg.tiltBlendMm));
+  else sq.q = wholeShareStep(sq.q, st.asmTiltAuto || freeSq !== undefined ? 1 : 0, dtMs, rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS));
 }
 
 /**
@@ -1267,9 +1179,6 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     }
   }
   calmFrame(st, dtMs);
-  // ⭐⭐⭐ (2026-11-16 night, `TILTED_POLE_CLOSE_IN.md` §18, package A) the ease of a turn started since read NOW, the frame's view set (the calm, the square
-  // camera at its target inside the turn) — ⛔ read at the turn's start only (W11: the square camera's first step undone in that frame, 8.0° in one)
-  seamEaseRead(st);
   const g0 = st.asmG ?? st.asmGizmo ?? a.centre;
   // ⭐ the face by the edge rule (the quads read it)
   if (hit !== null && hit.normal !== null && faceSwitches(st.gizmoNormal ?? null, st.asmFacePoint, hit.normal, hit.point, edgeMarginM(st))) {
@@ -1540,38 +1449,12 @@ export function assemblyCameraFrame(st: SceneState, cam: OrbitAt, off?: CameraAn
  * assembly turns behind it; the turn's angle sets its time (`zoneStep`), its axis kept frame to frame. No turn: the pose as given. Measured (Scene_0bis,
  * the zenith edge, far out): the piece leapt from (−0.27, −0.06) of the half-glass to (0.27, 0.76) — the offsets turned with the heading — then went round.
  */
-export function zoneMixPose(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Vec3, dtMs: number): CamPose {
+export function zoneMixPose(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Vec3): CamPose {
   const zm = st.asmZoneMix;
   const to: CamPose = { eye, look, up };
   st.asmPieceDrawn = [piece[0], piece[1], piece[2]]; // ⭐ where the piece is drawn this frame: a turn starting next frame starts from it
   if (zm === null) return to;
-  // ⭐⭐⭐ (2026-11-17, package A — the audit's blocker; the owner: *"1- A"*, the picture never faster than the tilts' one speed) THE SHARE DRAWN: the
-  // clock's, unless the PICTURE would turn more than the one speed's step from the pose drawn last frame (`shownShareCap`, `poseTurnRad`) — the turn's end
-  // pose (`to`) still moves under the rig's own lags while the turn runs (the camera's leash catching up after a drag, the calm's ease), which the clock,
-  // reading only the angle from `from` to `to`, cannot count. ⛔ The clock's share drawn as it was: 6.66, 6.36, 6.17, 6.06° in the four frames after
-  // `Scene_0bis`'s free-face exit, the gizmo held (across_check). The clocks then carry on from the share drawn (`turnShareDrawn`)
-  const k0 = zm.kShown ?? 0;
-  const degS = st.cfg.tiltRollDegS;
-  let k = zm.k;
-  if (degS > 0 && k > k0) {
-    const was = poseShown(st);
-    const at = (x: number): CamPose => {
-      if (x >= 1) return to;
-      const rr = poseAboutPiece(zm.from, to, piece, x, zm.axis);
-      const tt = zm.rule === 2 ? null : poseFramingTwo(zm.from, to, piece, x, zm.keep);
-      return tt !== null ? tt.pose : rr.pose;
-    };
-    k = shownShareCap(k0, k, (x) => poseTurnRad(was, at(x)), ((degS * Math.PI) / 180) * (Math.max(0, dtMs) / 1000));
-    if (k !== zm.k) turnShareDrawn(st, zm, k);
-  }
-  zm.kShown = k;
-  // ⭐⭐⭐ (package A, the audit's blocker) THE TURN ENDS ONCE ITS WHOLE IS DRAWN — here, the camera's stage (⛔ in its clocks, before: the last frame's
-  // step drawn uncapped, the end pose itself as it was): the end pose itself, exactly
-  if (k >= 1) {
-    st.asmZoneMix = null;
-    return to;
-  }
-  const r = poseAboutPiece(zm.from, to, piece, k, zm.axis);
+  const r = poseAboutPiece(zm.from, to, piece, zm.k, zm.axis);
   zm.axis = r.axis ?? zm.axis ?? [0, 1, 0]; // ⭐ the angle read (a turn of nothing has no axis of its own: done at once — never held for ever)
   zm.rad = r.angle;
   // ⭐⭐⭐ (2026-11-14, the owner: *"Is there a way for the camera to realign without the piece nor the assembly/scene to sometimes fly off the screen view
@@ -1580,7 +1463,7 @@ export function zoneMixPose(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, 
   // piece alone, as above. ⛔ About the piece alone everywhere: far out the assembly swung round the piece (4.5° at 7.7 m — off a narrow glass)
   // ⭐ the rule chosen at the turn's first frame and kept (`zm.rule` 2: about the piece) — never switched mid-turn (a jump between the two poses); the
   // two's angles carried frame to frame (`zm.keep`, `FramingKeep`)
-  const t = zm.rule === 2 ? null : poseFramingTwo(zm.from, to, piece, k, zm.keep);
+  const t = zm.rule === 2 ? null : poseFramingTwo(zm.from, to, piece, zm.k, zm.keep);
   if (t === null && zm.rule === 0) zm.rule = 2;
   const pose = t !== null ? t.pose : r.pose;
   if (t !== null) {
@@ -1589,17 +1472,6 @@ export function zoneMixPose(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, 
   }
   st.asmCamLast = { dir: norm3([pose.eye[0] - pose.look[0], pose.eye[1] - pose.look[1], pose.eye[2] - pose.look[2]]), up: pose.up };
   return pose;
-}
-
-/**
- * ⭐⭐⭐ (package A, the audit's blocker) THE CLOCKS CARRIED ON FROM THE SHARE DRAWN (`k`, held back by `shownShareCap`): the angle turned so far its share of
- * the transition's whole (`zoneStep`, `seamTurnFrame`), the way out's progress the one whose smooth share it is (`seamOutShareInv`) — never ahead of the
- * picture, so the next frame's step is the one speed's from what was shown.
- */
-function turnShareDrawn(st: SceneState, zm: NonNullable<SceneState["asmZoneMix"]>, k: number): void {
-  zm.k = k;
-  zm.done = k * turnWhole(st, zm);
-  if (zm.out !== undefined) zm.out.p = seamOutShareInv(k);
 }
 
 /** ⭐ The pose on the glass now (the camera drawn last frame) — a zone's turn starts from it. */
@@ -2034,8 +1906,6 @@ function seamRebase(st: SceneState, mq: { readonly yaw: number; readonly pitch: 
  * ⭐ Everything in the MODEL's space (the map, `g`); the camera's pose read only to start the turn from the picture on the glass.
  */
 function crossTurn(st: SceneState, c: { readonly at: { readonly mq: { readonly yaw: number; readonly pitch: number }; readonly g: Vec3 } | null; readonly uWas: Vec3 | null; readonly carry: boolean; readonly paced: boolean; readonly hold: 1 | -1 | 0 }): void {
-  // ⭐⭐⭐ (2026-11-16 night, package A) a carried turn's direction drawn BEFORE anything changes — its ease read once the view is set (`seamEaseRead`)
-  const uCarry = c.uWas === null && c.carry ? drawnDir(st) : null;
   if (c.at !== null) {
     const { mq, g } = c.at;
     seamRebase(st, mq);
@@ -2054,7 +1924,7 @@ function crossTurn(st: SceneState, c: { readonly at: { readonly mq: { readonly y
   if (c.paced) seamOutStart(st);
   else if (st.asmCamLast !== null) seamTurnStart(st, false);
   if (c.uWas !== null) seamEase(st, c.uWas);
-  else if (uCarry !== null) easeCarry(st, mixWas, uCarry);
+  else if (c.carry) easeCarry(st, mixWas);
   st.orbitInertia.stop();
   if (c.hold !== 0) st.asmEdgeHold = { sign: c.hold, back: 0 };
 }
@@ -2149,9 +2019,6 @@ function sameZone(a: PolarZone, b: PolarZone): boolean {
  * zone it was in), a change made when no tilt is under way (one under way is turned off first: a zone has none); the camera's turn advanced.
  */
 function zoneStep(st: SceneState, dtMs: number): void {
-  // ⭐⭐⭐ (package A, the audit's blocker) a turn whose clock reached its whole last frame and that no camera stage drew (`zoneMixPose` ends a turn drawn
-  // whole): ended here, as its clock ended it before
-  if (st.asmZoneMix !== null && st.asmZoneMix.k >= 1) st.asmZoneMix = null;
   const zm = st.asmZoneMix;
   // ⭐ (2026-11-14) from the frame its angle is known (`zoneMixPose` read it: its axis) — ⛔ by the placeholder's 90° first: 20° in the first frame, then 8.5°
   // ⭐⭐⭐ (2026-11-14, the owner's play recording: one-frame rolls of 60 – 100° inside the turns, very fast input) THE TURN BY ANGLE at the tilts' one speed:
@@ -2159,16 +2026,14 @@ function zoneStep(st: SceneState, dtMs: number): void {
   // share leapt to 0.49, the next frame the turn was 167° — 80° in one frame. If the whole grows, the camera keeps its speed toward the new whole
   // ⭐⭐⭐ (2026-11-15, §12 2.4c) a PACED turn (the automatic tilt's entry made pending) advances in `seamTurnFrame`, by its own pace
   // ⭐⭐⭐ (2026-11-16, step C3) …and the way out paced by the fingers (`out`) in `seamOutFrame`
-  // ⭐⭐⭐ (2026-11-16 night, package A) …and from the frame its ease is read once the view is set (`seamEaseRead`: `dirFrom` gone) — ONE clock for both
-  if (zm !== null && zm.axis !== null && zm.dirFrom === undefined && zm.byMm !== true && zm.out === undefined) {
+  if (zm !== null && zm.axis !== null && zm.byMm !== true && zm.out === undefined) {
     const degS = st.cfg.tiltRollDegS;
     // ⭐⭐⭐ (2026-11-15, §12 2.4c, the auditor's find) over the transition's WHOLE angle (`turnWhole`: the camera's plus the piece's direction's gap
     // eased on this turn; no ease: the camera's own, as ever)
-    // ⭐⭐⭐ (package A) the step less the camera's angle's growth with the ease in the frame (`seamStepRad`; no ease: the step, as before)
     const whole = turnWhole(st, zm);
-    zm.done = degS > 0 ? Math.min(whole, zm.done + seamStepRad((degS * Math.PI / 180) * (dtMs / 1000), zm.rad, turnEase(st, zm))) : whole;
+    zm.done = degS > 0 ? Math.min(whole, zm.done + (degS * Math.PI / 180) * (dtMs / 1000)) : whole;
     zm.k = whole > 1e-9 ? Math.min(1, zm.done / whole) : 1;
-    // ⭐⭐⭐ (package A, the audit's blocker) whole: ended once DRAWN, in the camera's stage (`zoneMixPose`) — the last step capped there as every other
+    if (zm.k >= 1) st.asmZoneMix = null;
   }
   const zones = zonesOf(st);
   const cur = st.asmZone;
@@ -2346,9 +2211,8 @@ function freeFaceFrame(st: SceneState, t: MapTarget, prev: { readonly map: FaceM
   const { ci, from, heading } = en;
   st.asmFree = { map, facet: t.stack, ci, heading };
   const mixWas = st.asmZoneMix;
-  const uWas = drawnDir(st); // ⭐⭐⭐ (package A) the direction drawn before the turn: its ease read once the view is set (`seamEaseRead`)
   if (st.asmCamLast !== null) st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0 };
-  easeCarry(st, mixWas, uWas);
+  easeCarry(st, mixWas);
   st.lastVerdict = `orbit: onto the spit's level face — the heading carried in ${from >= 0 && from !== ci ? "over its edge" : "from the picture shown"}`;
   st.hudDirty = true;
 }
