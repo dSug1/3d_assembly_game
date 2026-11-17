@@ -1,6 +1,6 @@
 # A fast orbit over many edges — one follower instead of a train of turns (2026-11-17)
 
-> **STATUS** · ✅ **THE OWNER'S GO, the night of 2026-11-17** — the build as briefed: §1 – §5 (branch `1.0.148-`, from `1dac167`); as built: after §5 — ⛔ FO1 NOT BUILT, measured and reverted (§6)
+> **STATUS** · ✅ **THE OWNER'S GO, the night of 2026-11-17** — the build as briefed: §1 – §5 (branch `1.0.148-`, from `1dac167`); as built: after §5 — ⛔ FO1's first build measured and reverted (§6); ⭐ the fix rounds on the contract amended (§7)
 > **OWNS** · how a camera turn behaves when the gizmo crosses edges fast: which turns hold the gizmo, a running turn redirected, the pace of a turn that
 > does not hold · **READ WITH** · [`LEVEL_FACE_ENTRY.md`](LEVEL_FACE_ENTRY.md) §14 (the proposal: the turns counted, the literature, why nothing
 > drifts), [`TILTED_POLE_CLOSE_IN.md`](TILTED_POLE_CLOSE_IN.md) §1 (the rules T1 – T12), `scripts/probes/ORBIT_GATES.md` (the gates). The dossier:
@@ -129,3 +129,32 @@ target's own motion passed through, only the initial difference dissolved — as
 angle grows past the limit while it runs becomes held (the decision made once today: the brief forbade switching it inside a turn); (c) FO2's eased pace
 alone does not cure either (it never exceeds the one speed, and the circle is the fixed start, not the speed); (d) keep today's game (the limit 0).
 The probes stay: the fast walks and their base (§9 of the runbook) are the gate any next attempt is measured on.
+
+## 7. The fix rounds — how the three tests stand, the root cause, the contract amended (the lead, 2026-11-18 00:30 — written BEFORE the build)
+
+**How the three tests stand.** His rule: *"If the test fail, fix it and retest. If the test fail another time, fix and retest. If the test fails a
+third time, abort and revert to the branch 1.0.147-."* The night's chain made ONE real test (§6). Its two fix rounds changed nothing and measured
+nothing (43 and 26 seconds each): the cure lay outside the contract — and that contract (§2, the decisions F1 – F9) is the lead's, written in his
+place; it is not his. To count those two rounds as his second and third failure would be untrue. So: **test 1 failed (§6); the two fix rounds he
+ordered are run now, on the contract amended below; a failed test 3 is the abort — back to `1.0.147-`.**
+
+**The root cause** (read in `zoneStep` and `zoneMixPose` after §6's figures). A turn's picture is a fade between the pose shown when the turn began —
+FIXED — and the target; its share is the angle turned so far over the turn's whole angle, read every frame from that fixed pose to the target. With
+the gizmo held the target stands still. Free, the target moves with the finger: the whole angle grows (58.8° → 267°), the share falls back, and the
+picture swings round its fixed START instead of following the target — the circle. It is not the pace, and it is not the two-target drawing's
+branches.
+
+| # | decision (the lead's, for him to review) | why |
+|---|---|---|
+| F10 | **A turn that does not hold the gizmo: its START is carried with the target.** The pose shown at the turn's first frame is kept in the TARGET's own frame (as it was at that frame) and put back from the target's pose every frame. So the turn's angle stays its first frame's, its clock runs over that angle alone, and the finger's own orbit passes through whole — only the turn's own gap dissolves. A turn that HOLDS the gizmo: today's code, untouched | the root cause. The oldest form of it — a displacement laid over a motion and dissolved: Bruderlin & Williams, *Motion signal processing* (1995); Witkin & Popović, *Motion warping* (1995); the stair step smoothed in Quake's view (1996, source 1999) — all over 20 years old. ⛔ Not inertialization's own curve (2018: patent status not established) |
+| F11 | **Its pace: the one speed is the PICTURE's budget.** In a frame the turn advances by the one speed's step LESS the target's own turn in that frame (never back). The picture never turns faster than the faster of the two — the finger's own orbit, or the one speed; under a very fast finger the turn waits, and dissolves when the finger slows | §6: the finger's turn added to the turn's 6° a frame; his words: *"ignoring the intermediate quaternion"*; the gate G6 stays as written |
+| F12 | The two readers (§2 4.) read the TARGET during EVERY timed turn made outside close in with the limit not 0 — the first build changed them during a free turn only, and a held turn's fade was still read (G4 (ii), two walks) | §2 4. as written |
+| F13 | A free turn still running when the close-in latch comes on is replaced by a held turn from the pose shown (the code's own way to replace a turn) | F3: close in every turn holds |
+| F14 | §2 5.'s fallback (`turnGoesBack`) stays only if the walk along the edge needs it once F10 and F11 are in — measured, said | one rule less if it is not needed |
+| F15 | G6's reversals are compared per walk, as written, where the walk crosses as many edges as at the base (within 20 %); else per crossing, both figures given. G4 (ii) on a walk with no turn at all says nothing: the probe is completed, or the walk is left out and said so | §6: at 30 px a frame the loops' routes wander (the base's holds also slow the steering) — like with like |
+| F16 | FO2 (the eased pace) is NOT run tonight | the proposal put it after his look at parts 1 – 2 ([`LEVEL_FACE_ENTRY.md`](LEVEL_FACE_ENTRY.md) §14); F11 already slows a free turn under a fast finger; the night's list is long |
+
+**Unchanged**: §2 1. (which turn holds: decided once, at the first frame the angle is known — with F10 that angle no longer grows), §2 2. and 3., the
+decisions F1 – F9 but F8 (one deploy, of FO1 alone), the gates G0 – G7 of §4 as written (with F15's reading), the limit at 0 = today's game bit for
+bit. **Measured first**: the `Scene_0bis` replay at the defaults (§6's circle), the 30 px loops, the walk along the edge, the no-drift check — then
+the OFF and close-in gates. As built: §8.

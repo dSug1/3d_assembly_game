@@ -567,3 +567,13 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
 * **What passed**: the limit 0 is today's game bit for bit (replays, level entry a and b, the fast walks); close in untouched (every `tilt_check`
   recording identical); on 20 px loops the turning 18 – 61 % lower and no stop at each edge.
 * **What stays**: the gate (`5401ad7`) — the fast walks, their reading, the no-drift replay, the base table: `scripts/probes/ORBIT_GATES.md` §9.
+
+## 2026-11-18 (00:30) — the fast orbit: one real test failed; the two fix rounds he ordered are run on an amended contract
+
+* **What the night's chain did**: FO1 built, measured, reverted by its builder ([`FAST_ORBIT.md`](../../40_RENDER_SCENE/spec/FAST_ORBIT.md) §6: a free
+  turn's picture circled — 113° drawn over 342° —, more reversals on the 30 px loops, the worst frame over the base's). Its two fix rounds changed
+  nothing (43 and 26 seconds): the cure was outside the contract the lead had written. ONE real test, not three.
+* **The lead's reading** (§7 there): his rule gives two fix rounds; they are run now. The root cause: the turn fades from a FIXED start pose, so a
+  moving target makes the picture swing round its start. The contract amended (F10 – F16, for him to review): the start carried with the target (only
+  the turn's own gap dissolves), the one speed as the picture's budget, the readers on the target in every timed turn, FO2 not run tonight. A failed
+  test 3 = the abort, back to `1.0.147-`.
