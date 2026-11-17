@@ -445,3 +445,13 @@ every turn — not answered yet); step 3 once on the final code → `BOTTOM_FACE
   faces or close in on `Scene_0bis`; the same at `c7ac510`; a consequence nobody decided; options →
   [`BOTTOM_FACE_CIRCLE_REGRESSION.md`](../../40_RENDER_SCENE/spec/BOTTOM_FACE_CIRCLE_REGRESSION.md) §10.
 * **Why a level face, and what would stop the shake — PROPOSED, nothing built** (an Opus agent): the two "up" rules agree on the glass only when the camera looks square to the edge (δ = atan(tan lean / sin elevation)); (A) `Scene_0` close in, the level reading with the square camera's share (`Scene_0bis` and `Scene_1` identical in every frame); (B) four candidates measured round the bottom / rectangle / triangle corner, and close in a roll the long way (262° – 273°, 127° in one frame) found; one rule for every tilt (his word) → [`LEVEL_FACE_ENTRY.md`](../../40_RENDER_SCENE/spec/LEVEL_FACE_ENTRY.md). N1 measured: it does NOT remove the entry turn (44°).
+
+## 2026-11-17 — the level face's entry: ✅ APPROVED by the owner (*"Agreed to every recommendation. Proceed."*) — the build as briefed
+
+The four recommendations he agreed to: (A) `Scene_0` close in built; (iv′) on a free face far out built **behind a switch** (`freeEntryUpright`, the
+default 1; 0 = today) for his comparison on the phone; (v) the close-in roll the long way round built only if its condition passes the gates, else left
+out and reported; the timing rule — 333 ms the longest duration for EVERY half turn (his *"50% faster"*, by one rule), 250 ms the least duration's
+starting value. The rule finalized without §5's cliff at 2° (the least duration grows with the angle up to 30°). Three packages, an Opus builder then an
+Opus auditor each: **LF1** (A) + (iv′) and the study's walks as a gate · **LF2** the timing rule · **LF3** (v), root cause first →
+[`LEVEL_FACE_ENTRY.md`](../../40_RENDER_SCENE/spec/LEVEL_FACE_ENTRY.md) §9. Not in this build: the 27° left back over the entry edge near an end (a
+study of its own). Then: the deploy on his word, his look, step 3 once, the merge.

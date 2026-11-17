@@ -1,6 +1,6 @@
 # Entering a level face — why the picture shakes there, and what would stop it (2026-11-17)
 
-> **STATUS** · ⛔⛔ **PROPOSED — NOTHING BUILT — FOR THE OWNER'S APPROVAL.** A study with measurements (an Opus agent, 2026-11-17), on the code of
+> **STATUS** · ✅ **APPROVED BY THE OWNER 2026-11-17** (*"Agreed to every recommendation. Proceed."*) — the build as briefed: §9; as built: after it. A study with measurements (an Opus agent, 2026-11-17), on the code of
 > `e252d0f` (= live `main` `6c0a165`). Every candidate was prototyped in a throwaway worktree and undone; nothing is committed under `src` or `tests`.
 > **OWNS** · the entry and the exit of a level face (the bottom of `Scene_0` / `Scene_0bis`, any level top) and the timing of every camera turn ·
 > **READ WITH** · [`TILTED_POLE_CLOSE_IN.md`](TILTED_POLE_CLOSE_IN.md) §1 – §3 (the rules T1 – T12, the carried heading),
@@ -334,3 +334,36 @@ turns slower (15 frames) — the two sliders.
 * The probes (not in the repo): `C:/Users/sugit/AppData/Local/Temp/claude/58fcf8122906abb9/b2290347-4989-4dda-a6ab-49506e5270d4/scratchpad/regress_bottom/level_entry/`
   (`walk.mjs`, `walk2.mjs` — the corner loops; `events.mjs`, `loopan.mjs`, `rotang.mjs`; the prototypes `protoA2.diff`, `protoB.py`, `protoIV2.py` (and the signed depth); the recordings in
   `out/` and `rep/`). A scratch folder: it may be cleared.
+
+## 9. The owner's approval, and the build as briefed (2026-11-17)
+
+**What was put to him** (four questions, each with a recommendation): (1) the `Scene_0` fix (A): build it — yes; (2) `Scene_0bis` far out: build (iv′)
+**behind a switch**, so that he compares it with today's entry on the phone (with the switch off, the timing rule alone stretches today's entry turn) — yes;
+(3) the close-in roll the long way round (v): include it **only if its narrowed condition passes the gates**, otherwise leave it out and report — yes;
+(4) the timing: the longest duration 333 ms **for every half turn** confirmed, 250 ms as the starting value of the least duration — yes.
+**His answer:** *"Agreed to every recommendation. Proceed."*
+
+**The timing rule, finalized** (his word: *"You can finalize the rule"*). §5's rule had a cliff: a turn of 1.9° at the speed, a turn of 2.1° held for
+250 ms — and turns of about 2° exist (an exit in the face's middle: 1.4° today, 2.4° under (iv′)), so the same crossing would sometimes hold the gizmo a
+quarter of a second for nothing. The least duration therefore GROWS with the angle up to the angle where a turn starts to read as a shake (30°, §5):
+
+> duration(θ) = max( θ / ω , T_min × min(1, θ / θ_s) ), never over T_max — ω = 360°/s (`tiltRollDegS`), T_min = 250 ms (`tiltMinMs`; 0: none),
+> T_max = 333 ms (`tiltMaxMs`; 0: none), θ_s = 30° (`tiltSmallDeg`).
+
+One continuous function, the same at every crossing: under 30° a slow speed (120°/s, 2° a frame: 2.4° → about 1 frame, 10° → 5, 27° → 13.5); 30° – 90°
+250 ms (15 frames); 90° – 120° the one speed; over 120° 333 ms (a half turn 20 frames, 9° a frame). With both durations at 0 it is today's speed, bit for
+bit. A turn paced by the finger (during the approach) is not timed, as today. Three sliders in the menu's ORBIT section.
+
+**The build — three packages, each an Opus builder then an independent Opus auditor, on `1.0.147-`, local commits, no push:**
+
+| package | what | the switch / the dials | its own gate that nothing else moved |
+|---|---|---|---|
+| **LF1** | (A), then (iv′) — two code commits; the study's walks (the roll before the edge, the corner loops, each timed turn's path against its one rotation) ported into `scripts/probes` as a gate | `freeEntryUpright` 0 = the entry edge's layout at once (today) / **1 = the upright continued (the default)** | (A): `Scene_1` and `Scene_0bis` replay frame for frame; (iv′) at 0: the three replays frame for frame |
+| **LF2** | the timing rule | `tiltMinMs` 250, `tiltMaxMs` 333, `tiltSmallDeg` 30 | both durations at 0: the three replays frame for frame |
+| **LF3** | (v) — FIRST the root cause of the long way in `poseFramingTwo` (a branch cut in a blended angle, or the framing's geometry); the fix at that root, or the narrowed choice of drawing latched at a turn's start | none | every turn it does not touch frame for frame; `tilt_check` and the ridge not worse than its base; ⛔ if no condition passes: NOT built, reported |
+
+**The lesson of package A binds the three** (`BOTTOM_FACE_CIRCLE_REGRESSION.md` §5): a gate on a frame's speed does not see a path's shape — every
+timed turn on the gates' walks is also judged by the path drawn against the one rotation from its first pose to its last. **Not in this build:** the 27°
+left back over the entry edge near an end (the calm's look on the two faces, §4.3 — a study of its own first); the first-frame peaks of
+`TILTED_POLE_CLOSE_IN.md` §12; anything on a level top (no scene has one). **Then:** the deploy only on his word, his look on the phone (§7), step 3
+once on the final code, the merge.
