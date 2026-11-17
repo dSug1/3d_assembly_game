@@ -68,3 +68,10 @@ like `Scene_1`'s), as a figure for the wiring step. A new file under `src`, a ne
 * (none yet)
 
 ## 7. As built (filled by the packages)
+
+* **S0 — MEASURED 2026-11-17** (the builder; the auditor's verdict to follow) → [ORBIT_SURFACE_SCENE2_ENTRIES.md](ORBIT_SURFACE_SCENE2_ENTRIES.md).
+  Files ADDED only: `scripts/surface/scene2_entries.ts` (the run), `entry_geom.ts` (exact: a ray against each pair's Minkowski difference, the
+  game's contact rule and skin), `entry_selfcheck.ts` (14 known answers, the study's own L05 / L03 / Q07 / L19 among them), and that document.
+  **The result: no goal of `Scene_2` is shut; the plan's way in is free for all sixteen; the six pistons are NARROW (1.9° – 2.7° round their bore,
+  as the plan's ONE axis); the ghosts differ from the collision pieces by each part's seat marker's offset from its `UCX_` pieces, to 0.1 mm (pistons
+  10 mm, heads 17 mm, crankshaft 2 mm) — a question for the owner.** Nothing wired, no game file changed, no registration line needed (§6 unchanged).
