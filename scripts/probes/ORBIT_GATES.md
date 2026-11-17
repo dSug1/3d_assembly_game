@@ -174,6 +174,8 @@ player sees may. ⚠ On `Scene_0bis` `EDGE=top` is not meaningful (the spit: the
 
 ## 6. THE BASELINE AT `276a6c2`
 
+⭐ (2026-11-17, LF2) LF2's timing rule was built (`e7ff2ed`) and REVERTED (`cb89bdd`): these rows stand for the current code; §8 records what the rule moved.
+
 The code of `276a6c2` (the runs made on `a794693`, one docs commit after it — no code changed). Both switches at their defaults (1) — ⛔ the rows
 of the switches off moved at step 2.5 to [the history note](../../Claude/40_RENDER_SCENE/history/2026-11-16_orbit_gates_off_baselines.md). ⭐ Step 2.5
 (2026-11-16) recorded every default gate below again at its base and after it: equal to these rows (RND5). "Largest" is the view's largest turn in ONE frame (look and roll, the whole camera frame); "in all" its sum over the run;
@@ -239,3 +241,107 @@ Every recording: 2794 frames, 0 errors, recErr null, no gizmo step over 150 mm, 
 Commands of this table: `PARKTILT=1 bash scripts/probes/edge_batch.sh "1|idleOrbitOn=0|top|2.5|0 0|…|top|2.5|0 4|…|top|2.5|0"`
 (~400 s for three), `bash scripts/probes/edge_batch.sh "1|idleOrbitOn=0|side|10|0 0|idleOrbitOn=0|side|10|0"` (~120 s).
 ⚠ For a side edge use `AMM` ≥ 10: the park by a half-pixel drag stops ~7 mm short, and ±3 mm never reaches the edge.
+
+## 7. Gate (f) — the level face's entry (`level_entry_*`, package LF1 — `LEVEL_FACE_ENTRY.md` §10)
+
+The study's walks (2026-11-17, `LEVEL_FACE_ENTRY.md` §3, §4), ported: `level_entry_check.mjs` (one walk a run, every frame recorded),
+`level_entry_analyse.mjs` (per walk: the crossings into / out of the level face with their timed turn and the roll in the 20 frames before the edge; the
+drift of a straight dy; EVERY timed turn — roll on the glass, frames, largest frame, THE ONE ROTATION from the frame before the turn to its last frame,
+THE PATH summed frame by frame, their ratio, ⚠ PATH when the path is over 1.15 × the one rotation + 5°: package A's lesson,
+`BOTTOM_FACE_CIRCLE_REGRESSION.md` §5; and the FREE ROLL — the largest roll in ONE frame outside every timed turn: a picture turned by the finger's
+place is no timed turn, and LF1's (iv′) was reverted on it, 21° in a frame), `level_entry_table.mjs` (one line per walk, several runs side by side, then the path gate turn by turn:
+"← WORSE" where a later run's ratio is over the first's by more than 0.02).
+
+```bash
+OUT=<folder> EXTRA="" bash scripts/probes/level_entry_batch.sh <tag> a        # Scene_0 close in: 6 walks, ~2 min
+OUT=<folder> EXTRA="" bash scripts/probes/level_entry_batch.sh <tag> b        # Scene_0bis: 27 walks, ~10 min (run it in the background, one at a time)
+OUT=<folder> bash scripts/probes/level_entry_batch.sh <tag> b_ccw_p_far b_dy_x190   # any walks by name
+node scripts/probes/level_entry_table.mjs <base>/<tag>_analysis.txt <new>/<tag2>_analysis.txt
+```
+
+* **Mode a** (`Scene_0`, close in 0.651, 1 px a frame): `a_x190`, `a_xm190`, `a_x0` — down the lower front face near +x, −x, the middle, then across
+  the bottom; `a_top_x190`, `a_top_xm190` — up to a top face near an end, then down off it (the level face there is the top's: `INV=1 NY=0.85`);
+  `a_fast_x190` — the +x walk at 3 px a frame. Read: the entry's `IN` line (`before edge: roll … in 20 fr` and the turn's roll), the `OUT` line's
+  `rollW … -> …` (the picture off upright after the far edge).
+* **Mode b** (`Scene_0bis`, 2 px a frame): `b_<ccw|cw>_<p|m>_<far|d736|d515|close>` — two loops round the corner of the bottom, the lower front
+  rectangle and a tip's two triangles, 45 mm round it, at the +x (`p`) / −x (`m`) tip, far out, at approach 0.736 (`HALFN=7`), 0.515 (`HALFN=20`) and
+  close in (0.651, the latch on); ccw = rectangle → bottom → bottom triangle → front triangle; `b_back_*` in near the end and back out there,
+  `b_backm_*` in near the end and out in the middle, `b_far_*` across to the far edge and back (far out, both tips; `b_back_p_d736`,
+  `b_back_p_close`); `b_ccw_p_far_px4` (4 px a frame); `b_dy_x190`, `b_dy_xm190` — a straight dy down the rectangle at x ±190 mm and across the
+  bottom (the entry's turn, the drift: x after the dy − x at the entry, and − the aimed x, the study's reading).
+* ⚠ `b_ccw_p_far_px4`: at 4 px a frame the probe's steering dithers on the bottom / triangle edge (119 turns of nothing, 2 frames each, roll 0°):
+  a probe artefact, its real turns are read alone (the table counts the others).
+* Deterministic: the study's recordings (`e252d0f`, the same code) and this gate's at `a9b061f` are identical frame for frame.
+
+### 7.1 The baseline at `a9b061f` (the code of the live `6c0a165`)
+
+Turns as roll on the glass / frames, in order; the study's figures (`LEVEL_FACE_ENTRY.md` §3, §4.1, §4.3) all reproduced to the tenth of a degree.
+
+| walk (mode a) | the entry: roll before the edge (20 fr) / the turn's roll | the far edge's turn | the picture after it (off upright) | path ⚠ |
+|---|---|---|---|---|
+| `a_x190` | **−11.1°** / **13.2°** (9 fr) | 189° (29 fr) | −12.3° | the far edge: 208.5° for 172.3° (1.21) |
+| `a_xm190` | 11.8° / −9.4° (9 fr) | 168° (29 fr) | 9.3° | — |
+| `a_x0` | 0.4° / 1.9° | 175° (30 fr) | −1.5° | — |
+| `a_top_x190` / `a_top_xm190` | the roll before the top's edge −13.1° / 14.0° (no timed turn) | — | — | — |
+| `a_fast_x190` | 2.0° / 2.5° | 182° | −8.9° | — |
+
+| walk (mode b) | timed turns (roll / frames) | worst path ratio |
+|---|---|---|
+| `b_ccw_p_far` / `b_ccw_p_d736` | +32/7, −83/15, +25/6, −83/15 (two opposite turns a loop) | 1.10 |
+| `b_cw_p_far` / `b_cw_p_d736` | +69/13 a loop (the entry 0°) | 1.07 |
+| `b_ccw_p_d515` | **+273/18 a loop, 128° in ONE frame** | ⚠ 3.36 |
+| `b_cw_p_d515` | +83/17 a loop | ⚠ 1.26 |
+| `b_ccw_p_close` | −25/4, −61/14, then **+263/18** | ⚠ 2.48 |
+| `b_cw_p_close` | +83/17, +3/11, +83/17 | 1.15 |
+| `b_ccw_m_far` / `b_ccw_m_d736` | −31/7, +83/15, −24/6, +83/15 | 1.10 |
+| `b_cw_m_far` / `b_cw_m_d736` | −62/12 a loop | 1.09 |
+| `b_ccw_m_d515` / `b_ccw_m_close` | +25/4, +60/14 a loop | ⚠ 1.28 / 1.16 |
+| `b_cw_m_d515` | −84/17 a loop | ⚠ 1.38 |
+| `b_cw_m_close` | **+257/17**, +3/11, **+257/17** — the long way round at the −x tip too | ⚠ 2.40 |
+| `b_back_p_far` / `b_back_p_d736` / `b_back_m_far` | +32/7, −32/7 / the same / −31/7, +32/7 | 1.10 |
+| `b_backm_p_far` / `b_backm_m_far` | +32/7, 1.4° / −31/7, −2/2 | 1.10 |
+| `b_far_p_far` / `b_far_m_far` | +32/7, 208/25, −24/6, 143/25 / −31/7, 144/25, +31/7, −136/24 | ⚠ 1.42 (the 208°) / 1.10 |
+| `b_ccw_p_far_px4` | +36/8, −89/17, +43/9, −89/17 | 1.10 |
+| `b_back_p_close` | −2/9 | 1.00 |
+| `b_dy_x190` / `b_dy_xm190` | the entry **+45/9** / −37/8; the far edge 205/25 / 163/28; drift −8 mm (−15 from 190) / +26 mm (+43 from −190) | ⚠ 1.37 (the 205°) / 1.09 |
+
+The other gates at `a9b061f`, for the record: the replays identical frame for frame to the study's (`e252d0f`); `tilt_check` "1 0 4" 8.7° / 8.8° /
+8.9° at most a frame; the ridge "0 4" 8.5° / 8.1°; `mid_check` the middle reached, 1 turn (2 frames), 76°, 6.2° at most a frame (9.3° in the whole
+run); `across_check` 2 turns (31 frames), 241°, 6.6° at most a frame, the half turn past the far edge then the hold.
+
+### 7.2 At `3ef7ba7` ((A), LF1 — `LEVEL_FACE_ENTRY.md` §10.2): the next packages' base
+
+**Mode a** (`Scene_0` close in) — every walk: the roll before the edge 0.0° (before: −11.1° / 11.8° near the ends, 0.4° in the middle, −13.1° / 14.0°
+off a top face; 2.2° at 3 px a frame), the edge's turn 2.3° (9 frames), the far edge's half turn 181° in 31 frames (path 201.5° for 180.0°, 1.12),
+the picture after it −1.9° off upright; the largest free roll 1.2° (before: 1.2° – 5.3°). **Mode b** (`Scene_0bis`): all 27 walks identical frame
+for frame to `a9b061f` (the table of §7.1 stands). The free roll at `a9b061f` = at `3ef7ba7`, mode b: 0.3° (in and back close in) – 4.4° (close in,
+0.515); far out 0.9° – 3.3°. The replays: `Scene_0bis` identical, `Scene_1` 11 frames in the last digits (≤ 4.3e-7), `Scene_0` another play from
+frame 1143 (drag 17; the largest view turn 15.4°, roll 18.2°). `tilt_check` 8.7° / 8.8° / 8.9°, the ridge 8.5° / 8.1°; `mid_check` and
+`across_check` NOT rerun at `3ef7ba7` (`Scene_0bis` is untouched by (A): its replay and its 27 walks identical).
+⛔ (iv′) (`069682a`, reverted `fa72bab`): its runs are recorded in `LEVEL_FACE_ENTRY.md` §10.3 — read the FREE ROLL column first (21.4° there).
+
+## 8. Gate (g) — every timed turn, base against new (`turn_rec.mjs`, `turn_table.mjs`, package LF2 — `LEVEL_FACE_ENTRY.md` §11)
+
+Package A's lesson on every gate: a turn is judged by its path, not only by its speed. `DUMP=<prefix>` on any batch (`tilt_batch.sh`, `mid_batch.sh`,
+`replay_batch.sh`) records every frame of each run besides the probe's own readings (`<prefix>_s<scene>.json`, `<prefix>_<n>.json`,
+`<prefix>_<recording>.json`); `level_entry_check.mjs` records the same fields. Then, the same run at a base and now:
+
+```bash
+OUT=<base> DUMP=<base>/td bash scripts/probes/tilt_batch.sh "1 0 4"      # at the base; then the same with OUT=<new>
+node scripts/probes/turn_table.mjs <base>/td_s1.json <new>/td_s1.json     # pairs: base, new [, base2, new2 …]
+```
+
+Per turn (a transition's turn `mix`, paced `time` / `mm` / `out`; the square camera's own turn `sq`; `mix+sq` both): its whole base → now, frames
+base → now and the rule's, one rotation, path, ratio, the largest frame, THE SHAPE (the largest angle between the two pictures at the same fraction of
+the path) and the start. Flags: `⚠PATH` (path over 1.15 × one + 5°), `RATIO+`, `PACE+` (a frame over the turn's own pace + 2°; `sq` / `mix+sq` at the
+one speed), `NEW ONLY` / `BASE ONLY`. ⚠ Turns are paired in order within a leg: once a walk has diverged (a longer hold), read the shape of the first
+turns only.
+
+**At `e7ff2ed` (LF2) against `0ab1f9f`** — ⛔ a RECORD: the rule is reverted (`cb89bdd`, `LEVEL_FACE_ENTRY.md` §11.2), the code is `0ab1f9f`'s again. The figures of §6 and §7 stand for the code before LF2; these moved (the rest is identical, frame for frame
+where the walk is): `tilt_check` `MODE=out OUTPX=4` `Scene_1` the way out 95 % within 35 → 24 frames, at most 6.0° → 9.0° a frame (the rule's half
+turn); `MODE=pole` `Scene_0bis` 8.6° → 10.9°; `across_check` 7.4° → 9.9° a frame, the half turn 30 → 20 frames; `mid_check` the walk 1 turn, 2 → 11
+frames, 6.2° → 5.8° (the setup on another track: the run's holds 1 → 4, its largest 9.3° → 6.9°); `ridge_check` across 7.4° → 10.0°; `level_entry` b far
+out and at 0.736 every entry 6 – 7 → 15 – 16 frames, the far edge's half turns 25 → 21, `b_far_p_far`'s way back now drawn the long way (−208°, 1.43 —
+LF3's drawing); the replays: `Scene_1` identical, `Scene_0` another play from frame 1398 (the way out), `Scene_0bis` from frame 315 (the largest view
+turn 14.1° → 11.8°). With `EXTRA="&tiltMinMs=0&tiltMaxMs=0"` the three replays are identical to `0ab1f9f` in every frame. The recordings: the session
+scratchpad's `lf2/base`, `lf2/def` (a scratch folder).

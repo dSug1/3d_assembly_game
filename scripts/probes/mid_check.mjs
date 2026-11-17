@@ -4,6 +4,7 @@
 //   URL=http://127.0.0.1:5191/?sceneIndex=4&idleOrbitOn=0S0=0 A=0 PX=3 [IN=1] [SHOW=1] node scripts/probes/mid_check.mjs
 //   (scripts/probes/mid_batch.sh starts a dev server and stops it — the runbook: scripts/probes/ORBIT_GATES.md)
 import { guardProbe } from "./probe_guard.mjs";
+import { turnRecStart, turnRecDump } from "./turn_rec.mjs"; // (LF2) DUMP=<file>: every frame of the run for turn_table.mjs
 import { spawn, spawnSync } from "node:child_process";
 import { mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -69,6 +70,7 @@ try {
   await ev(`[...document.querySelectorAll('pre[data-role="error"]')].forEach((x) => x.remove())`);
   await ev("window.__step(240)");
   await ev(REC);
+  await turnRecStart(ev);
   const step = (n) => ev(`window.__step(${n})`);
   const state = async () => JSON.parse(await ev(`(() => { const s = window.__st; const n = s.gizmoNormal; const g = s.asmGizmoAt; const z = s.asmZone; return JSON.stringify({ ap: s.approach, auto: !!s.asmTiltAuto,
     tilt: s.asmTilt ? s.asmTilt.id : null, n: n ? [n[0], n[1], n[2]] : null, g: g ? [g[0], g[1], g[2]] : null, side: s.asmSpitSide ?? 0, zone: z ? z.zone.orientation : null, axis: z ? [z.zone.axis[0], z.zone.axis[1], z.zone.axis[2]] : null, pole: z && z.zone.poles.length ? [z.zone.poles[0][0], z.zone.poles[0][1], z.zone.poles[0][2]] : null,
@@ -223,6 +225,7 @@ try {
     for (let i = 1; i < R.length; i++) { const t = rot(F(i - 1), F(i)); if (t === t) { big = Math.max(big, t); all += t; } if (R[i][22] && !R[i - 1][22]) made++; if (!R[i][22] && R[i - 1][22]) left++; if (R[i][18] && !R[i - 1][18]) holds++; }
     console.log(`  SUMMARY (${R.length} frames): the view's largest turn in one frame ${big.toFixed(1)}°, in all ${all.toFixed(0)}°; tilts made ${made}, left ${left}; dy holds set ${holds}`); }
   console.log(`  errors ${errors}, recErr ${await ev("window.__recErr ?? window.__stepErr ?? null")}`);
+  await turnRecDump(ev);
   ws.close();
 } finally {
   kill();

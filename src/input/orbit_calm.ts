@@ -158,15 +158,21 @@ export function calmHeading(yaw: number, u0: Vec3, u: Vec3): number {
  * yaw toward the pole — the calm faded there (`poleWeight`, 60° … 85°), and straight up the direction has no heading at all (the guard: the yaw) — so a dy
  * alone turned a camera looking down: a roll toward the yaw's side, its size the yaw's angle off the face × the withheld share (probed: 21° off the
  * front, 14° on the cube over the last 25° of pitch, 18.6° in ONE frame on the heptagon's ridge).
+ * ⭐⭐⭐ (2026-11-17, `LEVEL_FACE_ENTRY.md` §3, package LF1 (A) — the owner: *"Agreed to every recommendation. Proceed."*) THE SQUARE CAMERA'S SHARE
+ * (`squareShare`, the share `calmDir` shows it by): the calm's share times (1 − it). Close in the square camera shows the face along its normal, so the
+ * picture's heading IS the face's own — at the share 1 the reading is the face's heading; at 0 (far out) the value is the one before, to the bit.
+ * ⛔ The calm's reading close in (as before): near a face's end the heading the calm would give, 28° off the face's, rolled the picture −11.1° in the 20
+ * frames before `Scene_0`'s bottom edge and took 13.2° back in the edge's turn (the leak). ⛔ The blend toward the level reading read off the square
+ * camera's normal instead of the orbit's pitch (the study's first try): it moved `Scene_1`'s tilt exits — the reading was the wrong quantity.
  */
-export function calmLevelHeading(yaw: number, c: CalmState | null, kH = 0): number {
+export function calmLevelHeading(yaw: number, c: CalmState | null, kH = 0, squareShare = 0): number {
   if (c === null) return yaw;
   const hn = Math.hypot(c.n[0], c.n[2]);
   if (!(hn > 1e-3)) return yaw;
   const a = Math.atan2(Math.sin(yaw - Math.atan2(c.n[2], c.n[0])), Math.cos(yaw - Math.atan2(c.n[2], c.n[0])));
   const s0 = 1 - (1 - Math.min(1, Math.max(0, c.sH))) * (1 - Math.min(1, Math.max(0, kH)));
   const x = Math.min(1, Math.max(0, (Math.abs(a) - Math.PI / 2) / (Math.PI / 2)));
-  const s = s0 + (1 - s0) * x * x * (3 - 2 * x);
+  const s = (s0 + (1 - s0) * x * x * (3 - 2 * x)) * (1 - Math.min(1, Math.max(0, squareShare)));
   return yaw + (s - 1) * a;
 }
 

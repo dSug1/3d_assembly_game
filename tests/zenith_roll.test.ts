@@ -98,7 +98,8 @@ describe("the camera's heading through the zenith (§9)", () => {
     const src = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8");
     expect(src).toMatch(/offsetFrame\(u, cameraHeading\(cam\.yaw, orbitDir\(cam\.yaw, cam\.v\), u, levelHeadingOf\(st, cam\.yaw\)\)/);
     expect(src).toMatch(/st\.asmHeadO = heldOffsetStep\(st\.asmHeadO, tgt, w, st\.asmHeadW, dYaw\)/);
-    expect(src).toMatch(/return st\.asmHeadO !== null \? yaw \+ st\.asmHeadO : calmLevelHeading\(yaw, st\.asmCalm, st\.asmCalmWhole\)/);
+    // ⭐ (2026-11-17, LF1 (A)) with the square camera's share as 4th argument (`tests/level_square_share.test.ts`)
+    expect(src).toMatch(/return st\.asmHeadO !== null \? yaw \+ st\.asmHeadO : calmLevelHeading\(yaw, st\.asmCalm, st\.asmCalmWhole, squareShareShown\(st\)\)/);
     expect(src).not.toMatch(/const hW = cameraHeading\(yW, uOW,/);
   });
 });

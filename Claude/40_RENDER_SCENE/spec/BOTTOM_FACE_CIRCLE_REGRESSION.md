@@ -144,6 +144,7 @@ The probes (not in the repo — absolute paths): `C:/Users/sugit/AppData/Local/T
   tests` is empty); `npm run verify`: 164 files, **2058 vectors**. The probes' options A added (`WORSTF`, `TURNONLY`, `TRACE`) went with it;
   `mid_check`'s mended setup (`c67bb67`) stays. W11 (the two clocks in one transition, `TILTED_POLE_CLOSE_IN.md` §12) stands as before A: measured, not
   reported by the owner.
+* **The deploy** (the same word of his): live `main` `6c0a165` = branch `1.0.147-` at `3de1256` (pushed), served 2026-11-17 06:33Z. ⛔ His look on it is owed.
 * **His correction on `Scene_0bis`, verbatim** (after the analysis, before the revert): *"Sorry: this is exit or enter from or into the bottom face with dx
   or with dy in scene 0bis at all distance: this creates a shake of the camera at the entrance or exit"*. ⛔ NOT ANALYSED: the two agents walked dy
   only, and found nothing far out. A check (dx and dy, every distance, before and after A, against `c7ac510`) was started and stopped for the revert:
@@ -153,3 +154,124 @@ The probes (not in the repo — absolute paths): `C:/Users/sugit/AppData/Local/T
   across; 13 – 16 from a tip).
 * **The order agreed with him** (*"Agreed"*): the change and its own check → the deploy on his word and his look → step 3 ONCE on the final code
   (the whole rebuild audited, safe clean-ups, the docs in final form) → the merge into the main folder.
+
+## 10. Why the heptagon's bottom face shakes — AN EXPLANATION, NOTHING BUILT (2026-11-17, an Opus agent, on HEAD `86ae4e8` = live `6c0a165`)
+
+**The owner, verbatim (on the phone, build `6c0a165`):** *"This is good and if nothing else needs to be built I will keep like that, except one thing I
+want to understand: Scene_0bis: Enter and leave the bottom face by dx and by dy, from any previous face at every distance: the camera view aligns the
+screen vertical with the world axis quickly at the crossing of the edge. This gives the feel of a shake. Scene 0 at close in: enter the bottom face from
+dy on a rectangle face at a calm (ie the gizmo close to one right or left edge): the camera view rolls when dy goes down (probably due to tge calm) and
+the quikly realigns when the gizmo enters the bottom face and the tilted-pole orbit takes over. This gives the feeling of a shake as well. The same does
+not happen in scene 0 enter/exit from/to the heptagon at close in, nor does it happen in scene 1 to/from the bottom face at any calm. Why the bottom
+face of the heptagon is different?"*
+
+### 10.1 The answer in five sentences
+
+1. The heptagon's bottom is the only level face in these scenes reached from faces that LEAN (51° from it). A cube's bottom and the heptagon's end
+   faces are reached from vertical faces.
+2. Two camera rules choose the "heading" (which way is up on the glass) differently, by 28° to 50°. On `Scene_0` close in: the calm's heading near the
+   bottom edge against the face's own. On `Scene_0bis` far out: the camera's own heading against the heading carried onto the free face.
+3. A camera square to a VERTICAL face looks level. For a level look every heading gives the same picture, so the difference does not show.
+4. A camera square to the LEANING face looks up 38°. There a heading difference IS a roll of the picture, and the turn at the edge takes it back in
+   2 to 9 frames: the shake.
+5. It shows only near an END of the face: only there does the calm (or the camera's line of sight) leave the face's own heading. In the middle the two
+   agree.
+
+### 10.2 What was measured (headless, 60 frames a second, a slow dy of 1 px a frame)
+
+"The roll" = the angle on the glass between the screen's vertical and the world's vertical (meaningful while the view is not near vertical). A "turn" =
+how much the picture turns about the look in a frame. The calm share = how much of the orbit's yaw the picture shows (1 = all of it, 0.25 = a quarter).
+
+| case | before the edge | at the edge |
+|---|---|---|
+| `Scene_0` close in, lower front face, gizmo near the +x end (x = 202 of ±245 mm; calm share 0.77) | roll −1.9° → **+8.9° in 4 frames**, as the camera's pitch passes 50° – 56° (frames −16 … −12) | the tilt made at −11; the picture rolls back **5.6°, 3.2°, 1.6°, 0.9°** (frames −10 … −7); then the square camera pitches 6° a frame |
+| the same, gizmo in the middle (x = −17; share 0.25) | −1.9° all the way | no roll (0.26° a frame: the pitch's own) |
+| the same near the end with a fast dy (3 px a frame) | no roll: the tilt fires before the camera's pitch reaches 50° | — |
+| `Scene_0`, the +x end face (vertical) down to the bottom | 0.0° | 0.3° a frame (the pitch only) |
+| `Scene_1` close in, front face near the +x end (x = 198; share 0.73) | 0.0° | 0.2° – 0.3° a frame |
+| `Scene_0bis` far out, middle (x = 3) | −2° … −4° | no turn at the entry (0.2° a frame) |
+| `Scene_0bis` far out, near the +x end (x = 191; share 0.7) | −3° (upright); the body's axis 57° off the screen's vertical | **one turn of 47° in 9 frames** (5.9° a frame), the gizmo held: the world's vertical ends 50° off the screen's vertical, the body's axis across the glass (100°) |
+| the same, out again over the entry edge (a dy up) | −50° | **one turn of 39° in 7 frames**: upright again (−3°) |
+| `Scene_0bis` close in, near the +x end (x = 186) | −1.9° | in 0.8°, out −2.3° in all: no turn |
+| `Scene_0bis` far out, a dx out over the +x end onto the tip's triangle | −78° | **78° in 14 frames** (the side exit's quarter turn, 6° a frame) |
+| the same close in | −63° | **68° in 16 frames**, three frames of 9.1° – 9.6° |
+
+* **"The world axis" the view aligns to on `Scene_0bis`** is the heading carried in, (0, 0, −1): across the body, toward the long edge the gizmo came
+  over. After the entry turn the body's axis lies across the glass and the world's vertical no longer points up the glass (50° off). It is not the world's
+  vertical, nor the spit's axis.
+* **`c7ac510`** (the build the owner approved on 2026-11-16, before C5, C2W, step 2.5): the `Scene_0` near-end walk and the `Scene_0bis` far-out entry
+  and exit give the SAME figures frame for frame (+8.9°, then 5.56°, 3.15° …; 46.8° in, 39.9° out). Nothing since changed it.
+
+### 10.3 The logic, with file and line
+
+**(a) `Scene_0`: what rolls the picture on the way down a leaning face near its end.**
+
+* Close in the square camera shows the piece along the FACE'S NORMAL, whatever the orbit's yaw: `calmDir` mixes in `sq.n` with the share `sq.q` = 1
+  (`src/render/assembly_wiring.ts` 420 – 425; target and share in `squareFrame`, 448 – 458).
+* The world camera's heading is `cameraHeading(…, levelHeadingOf(…))` (`assembly_wiring.ts` 1527; `src/input/orbit_calm.ts` 205). Below 50° of the
+  camera's pitch it is the shown direction's own heading (`calmHeading`, 146): upright. From 50° to 60° (`LEVEL_HEADING_BLEND_RAD`,
+  `LEVEL_HEADING_FROM_RAD`, 196 – 198) it blends to the "level reading" (`calmLevelHeading`, 162; held by `heldOffsetStep` in `calmFrame`,
+  `assembly_wiring.ts` 494 – 500). That is the owner's zenith-roll fix (2026-11-13, [`ORBIT_ANY_SHAPE.md`](ORBIT_ANY_SHAPE.md) §9: *"this is good"*).
+* The level reading assumes the picture is the CALM's: heading = yaw + (share − 1) × (the yaw's angle off the face). The square camera shows the face's
+  own heading instead. The gap is share × that angle: near the end 0.77 × 37° ≈ 28° (measured: yaw −53°, face −90°, level reading −62°).
+* `offsetFrame` (`src/input/assembly_orbit.ts` 233) turns a heading into an up vector weighted by the sine of the view's elevation. Square to the lower
+  face the view looks up 38°: a 28° gap is a ~12° roll (10.8° measured, the blend not yet whole). Square to a vertical face the view is level: the same
+  gap gives 0°. That is why `Scene_1` and the heptagon's end faces show nothing.
+* The camera follows the orbit with a lag; the roll needs the camera's pitch past 50° before the tilt fires. A slow dy shows it, a fast one does not.
+
+**(b) `Scene_0`: what realigns it at the bottom's edge, and how fast.**
+
+* At the edge the automatic tilt is made (`tiltOn`, `assembly_wiring.ts` 1673). The bottom is a free face, so its heading is the one carried in by the
+  entry edge (C2W: `freeEntry`, 1694; `capTiltHeading(…, along)`, 1695; `src/input/orbit_charts.ts` 533). Over the lower front face that is the face's
+  up unfolded: the picture as it was BEFORE the roll.
+* Under the tilt the camera is upright in the tilted frame (`assembly_wiring.ts` 1512 – 1518): the level reading is no longer read. The difference is
+  carried by ONE camera turn from the pose shown (`seamTurnStart`, 1752) at the one speed `tiltRollDegS` = 360°/s, its share = angle done / whole
+  (`zoneStep`, 2029 – 2036). The roll is ~11°: two to four frames.
+
+**(c) `Scene_0bis`: the entry and the exit far out.**
+
+* On the spit's bound faces the heading is `spitCameraHeading` (`src/input/polar_zone.ts` 213; `assembly_wiring.ts` 1506 – 1507): below 60° of view
+  pitch the shown direction's own heading — upright against the world's vertical.
+* On the free face the camera's up IS the carried heading (`assembly_wiring.ts` 1505; `freeHeadingAngle`, `src/input/free_face.ts` 338). Entered from a
+  long side it lies across the body (`freeEntry` 2160 – 2166 → `entryHeading`; D-T2, [`TILTED_POLE_CLOSE_IN.md`](TILTED_POLE_CLOSE_IN.md) §3.4: *"the
+  layout with the axis ACROSS the glass"*).
+* Far out the camera is not square to the face (N2, the calm kept): near an end it looks partly ALONG the body (the calm shows 0.7 of the yaw), so its
+  own heading differs from the carried one by 40° – 50°. At the entry `freeFaceFrame` starts one camera turn from the pose shown (2213 – 2214); at the
+  exit `freeFaceExit` turns to the spit's upright camera (2228 – 2238); both at 360°/s, the gizmo held. Close in the square camera looks straight at the
+  face, the two headings agree, and the turn is next to nothing.
+
+### 10.4 By design or not
+
+* **The rules are the owner's:** the calm (58d86ff, *"It shall stay"*); the zenith-roll level reading (`ORBIT_ANY_SHAPE.md` §9, *"this is good"*); the
+  square camera close in (2026-11-10); the carried heading on a free face (D-T2 *"agreed"*, D-T7); a free face's exits by the edge (§3.3); one speed (T5).
+* **The shake is a consequence nobody decided.** (a) The level reading was written for the world camera under the calm; nothing adapts it to the square
+  camera, which shows the face's own heading. The gap shows only on a leaning face near an end, and no gate walks that slowly. (b) C4's brief says the
+  entry turn is *"by the rule, next to nothing"*, and T7 *"no surprise at an entry"*. That holds when the camera is square to the face (close in, or the
+  middle). Far out near an end it is a 47° turn; §9.1 of `TILTED_POLE_CLOSE_IN.md` measured the entry in the middle only. The dx exit onto a tip's
+  triangle is a quarter turn, as decided (§3.4: *"a side exit: a quarter turn there"*).
+* **Not new:** `c7ac510` gives the same figures.
+
+### 10.5 What could change it (nothing built, no recommendation)
+
+1. **`Scene_0`: the level reading with the square camera's share.** Close in, read the level heading as the square camera shows it (the face's own),
+   so it agrees with the picture. Cost: it touches the owner-approved zenith fix; a close-in arrival at a top edge to re-measure; a pure function, vectors.
+2. **`Scene_0`: no level reading while the square camera is whole.** The same effect by state, not by a formula. Cost: a second rule beside the zenith
+   fix; the same re-checks.
+3. **`Scene_0bis`: N1 (`freeFaceSquare` 1), already built behind a slider.** Far out too the camera goes square to the free face, so the carried
+   heading is the picture's own (as close in: no turn). Cost: the orbit over that face becomes a pan; the owner judges on the device. Nothing to build.
+   ⛔ **CORRECTED (measured 2026-11-17, `LEVEL_FACE_ENTRY.md` §4.3): this was NOT measured when written, and it is false** — with N1 the entry near an
+   end far out still turns **44°** (45° without): the camera turns square to the face at the same edge, by the same angle.
+4. **`Scene_0bis`: blend toward the carried heading before the edge** (by the finger's last millimetres, as the way in blends, T10). Cost: a camera
+   change before the edge, against T4 (*"the edge is the only trigger"*); a band to add.
+5. **A slower realignment** (a speed of its own for these small turns). Cost: the gizmo held longer (T5); *"one speed for every tilt"* relaxed.
+6. **Keep as is.** The shake stays near the ends of the heptagon's leaning faces close in under a slow dy, and at `Scene_0bis`'s bottom far out near
+   its ends.
+
+### 10.6 Not checked
+
+No device look. Two finger speeds (1 and 3 px a frame). `Scene_0bis` at medium distance. The dx ENTRY from a tip's triangle (the walk's dx back went
+round the body: not reached). `Scene_0`'s exit from the bottom near an end. The probes (not in the repo — absolute paths):
+`C:/Users/sugit/AppData/Local/Temp/claude/58fcf8122906abb9/b2290347-4989-4dda-a6ab-49506e5270d4/scratchpad/regress_bottom/why_bottom/` (`walk.mjs`,
+`batch.sh`, `roll.mjs`; the recordings in `out/`). A scratch folder: it may be cleared.
+
+⭐ **The proposal that follows (2026-11-17, PROPOSED, nothing built)**: why a level face, the correction of `Scene_0` close in, four candidates for `Scene_0bis` measured round the corner, one rule for every tilt → [`LEVEL_FACE_ENTRY.md`](LEVEL_FACE_ENTRY.md).

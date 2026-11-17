@@ -10,6 +10,7 @@
 // EVERY press of the script: 2 794 frames of the boot pose, "identical bit for bit" whatever the code. The box is removed after the boot, any other
 // error box stops the run, and the run ends with what the script MOVED (the camera's, the piece's and the gizmo's travel) — nothing moved: exit 3.
 import { guardProbe } from "./probe_guard.mjs";
+import { turnRecStart, turnRecDump } from "./turn_rec.mjs"; // (LF2) DUMP=<file>: every frame of the run for turn_table.mjs
 import { spawn, spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -116,6 +117,7 @@ try {
   await ev("window.__step(240)");
   if (!(await ev("window.__st.frames > 30"))) throw new Error("the scene does not draw");
   await ev(RECORD);
+  await turnRecStart(ev);
   const step = (n) => ev(`window.__step(${n})`);
   const W = 1200, H = 800;
   const mouse = (type, x, y, buttons, clickCount = 1) => send("Input.dispatchMouseEvent", { type, x, y, button: "left", buttons, clickCount });
@@ -154,6 +156,7 @@ try {
   const recErr = await ev("window.__recErr ?? window.__stepErr ?? null");
   writeFileSync(join(DIR, `${OUT}.json`), JSON.stringify({ url: URL, seed: +(env.SEED ?? 1), errors, recErr, frames }));
   console.log(`${OUT}: ${frames.length} frames, ${errors} errors, recErr ${recErr} → ${join(DIR, OUT + ".json")}`);
+  await turnRecDump(ev);
   ws.close();
 } finally {
   killChrome();

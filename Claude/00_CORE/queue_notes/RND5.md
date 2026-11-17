@@ -424,7 +424,7 @@ built, decision 3 relaxed far out from a tip; (c) R2, as today (the turn 55 – 
 ## 2026-11-17 — the deploy, the owner's look, the bottom face's circle ANALYSED (two Opus agents) — ✅ DECIDED: PACKAGE A REVERTED `6e56dfc`
 
 ✅✅ **The owner, 2026-11-17: *"Revert and then deploy"*** — package A (`fe06c2c`, `c53f54a`) is REVERTED by `6e56dfc`: `src` and `tests` byte-equal to
-`c5aa295`, 164 files, **2058 vectors**. Open: his corrected report on `Scene_0bis` (a SHAKE at the bottom face's entry and exit, by dx or dy, at every
+`c5aa295`, 164 files, **2058 vectors**; DEPLOYED: live `main` `6c0a165` = `1.0.147-` at `3de1256` (his look owed). Open: his corrected report on `Scene_0bis` (a SHAKE at the bottom face's entry and exit, by dx or dy, at every
 distance — not analysed, to be judged on the reverted build first); the top ridge 50 % faster (not built; (a) its own speed for the half turns or (b)
 every turn — not answered yet); step 3 once on the final code → `BOTTOM_FACE_CIRCLE_REGRESSION.md` §9.
 
@@ -439,3 +439,54 @@ every turn — not answered yet); step 3 once on the final code → `BOTTOM_FACE
   made every turn straight. Verdict: sound in principle, a missed case; the ease also counted twice close in (holds twice as long). ⛔ `Scene_0bis`
   far out not reproduced. Six options, the ridge's pace, what is not checked →
   [`BOTTOM_FACE_CIRCLE_REGRESSION.md`](../../40_RENDER_SCENE/spec/BOTTOM_FACE_CIRCLE_REGRESSION.md).
+* **His look on `6c0a165`, "why the heptagon's bottom shakes" — EXPLAINED, nothing built** (an Opus agent): the only level face reached from LEANING
+  faces; a heading gap (the zenith fix's level reading against the square camera, `Scene_0` close in; the carried heading against the calm's view,
+  `Scene_0bis` far out) is a roll only when the view is not level — +8.9° then back in 4 frames, 47° in / 39° out in 9 / 7 frames; none on vertical
+  faces or close in on `Scene_0bis`; the same at `c7ac510`; a consequence nobody decided; options →
+  [`BOTTOM_FACE_CIRCLE_REGRESSION.md`](../../40_RENDER_SCENE/spec/BOTTOM_FACE_CIRCLE_REGRESSION.md) §10.
+* **Why a level face, and what would stop the shake — PROPOSED, nothing built** (an Opus agent): the two "up" rules agree on the glass only when the camera looks square to the edge (δ = atan(tan lean / sin elevation)); (A) `Scene_0` close in, the level reading with the square camera's share (`Scene_0bis` and `Scene_1` identical in every frame); (B) four candidates measured round the bottom / rectangle / triangle corner, and close in a roll the long way (262° – 273°, 127° in one frame) found; one rule for every tilt (his word) → [`LEVEL_FACE_ENTRY.md`](../../40_RENDER_SCENE/spec/LEVEL_FACE_ENTRY.md). N1 measured: it does NOT remove the entry turn (44°).
+
+## 2026-11-17 — the level face's entry: ✅ APPROVED by the owner (*"Agreed to every recommendation. Proceed."*) — the build as briefed
+
+The four recommendations he agreed to: (A) `Scene_0` close in built; (iv′) on a free face far out built **behind a switch** (`freeEntryUpright`, the
+default 1; 0 = today) for his comparison on the phone; (v) the close-in roll the long way round built only if its condition passes the gates, else left
+out and reported; the timing rule — 333 ms the longest duration for EVERY half turn (his *"50% faster"*, by one rule), 250 ms the least duration's
+starting value. The rule finalized without §5's cliff at 2° (the least duration grows with the angle up to 30°). Three packages, an Opus builder then an
+Opus auditor each: **LF1** (A) + (iv′) and the study's walks as a gate · **LF2** the timing rule · **LF3** (v), root cause first →
+[`LEVEL_FACE_ENTRY.md`](../../40_RENDER_SCENE/spec/LEVEL_FACE_ENTRY.md) §9. Not in this build: the 27° left back over the entry edge near an end (a
+study of its own). Then: the deploy on his word, his look, step 3 once, the merge.
+
+## 2026-11-17 — LF1 built (an Opus agent): the gate, (A) built; (iv′) built then REVERTED — 21° in one frame far out
+
+* **The gate** (`92f0878`): the study's walks in `scripts/probes` (`level_entry_*`; `ORBIT_GATES.md` §7) — `Scene_0` close in (6 walks), `Scene_0bis`
+  round the corner at BOTH tips at four distances (27 walks); every timed turn's path against its one rotation, and the largest roll in one frame
+  outside the timed turns. The study's figures reproduced exactly. New: the close-in long way round at the −x tip too (+257° for 112.6°), for LF3.
+* **(A)** (`3ef7ba7`): `Scene_0` close in near an end, the roll before the bottom edge −11.1° → 0.0°, the edge's turn 13.2° → 2.3°, down off a top
+  face −13.1° → 0.0°; `Scene_0bis` and `Scene_1` unchanged (`Scene_1` 11 frames in the last digits, as the study). 4 vectors, 4 mutants red.
+* **(iv′)** (`069682a`, behind `freeEntryUpright`): the entry silent (+45° → 0°), a ccw loop one turn (83°), the cw loop 69° → 32°, close in
+  untouched, the switch at 0 identical to (A) — but far out at 2 px a frame the picture now rolls **up to 21° in ONE frame** outside any timed turn
+  (today ≤ 4.4°): the fade by the view's elevation (70° – 80°) sits where the bottom is seen far out, and the depth's blend has no bound per frame.
+  **Reverted** (`fa72bab`). The study's prototype had the same (its timed-turn gates could not see it). Options for the owner → [`LEVEL_FACE_ENTRY.md`](../../40_RENDER_SCENE/spec/LEVEL_FACE_ENTRY.md) §10.3:
+  the fade by the square camera's share; a bound per frame at the one speed; a longer band; or no (iv′).
+* **Next:** his choice on (iv′); LF2 (the timing rule) and LF3 (the long way round) on `3ef7ba7`'s code. No device look.
+
+## 2026-11-17 — LF2 built (an Opus agent; base `0ab1f9f`): one rule for every tilt — far out; close in kept at the one speed
+
+* **The gate** (`6236fb4`): every probe records each frame with `DUMP=` (`scripts/probes/turn_rec.mjs`); `turn_table.mjs` reads every timed turn base
+  against new — frames, the rule's frames, one rotation, path, the largest frame, the route at the same fraction of the path.
+* **The rule** (`e7ff2ed`; `git revert e7ff2ed` undoes it): `turnDurationMs` / `turnStepRad` (`src/input/orbit_tilt.ts`), `tiltMinMs` 250, `tiltMaxMs`
+  333, `tiltSmallDeg` 30, three sliders; read by `zoneStep`, the paced entry's time and the way out's ceiling. 2080 vectors (`tests/turn_rule.test.ts`,
+  red on 11 mutants). Both durations at 0: the three replays identical in every frame.
+* **Measured first, then built**: with the rule alone, every close-in transition changed its PATH (the square camera's pitch runs beside it — the two
+  clocks of `TILTED_POLE_CLOSE_IN.md` §12): the half turns ended at 172° instead of 180°, 9° – 11° off their route. So **a turn the square camera runs
+  beside keeps the one speed** (`turnDials`). Close in nothing changes (the 52° entries stay 9 frames, the close-in half turns 30).
+* **Far out**: `Scene_0bis`'s entries 6 – 7 → 15 – 16 frames, the half turns 25 – 31 → 20 – 21 (the top ridge's *"50% faster"*), the way out at 4 px
+  37 → 25 frames; a finger-paced way out unchanged. ⚠ The entries' route 4° – 7° off the base's mid-turn (the gizmo's ease and the piece's spring in
+  the turn's first frames, untimed); ⚠ one far-edge half turn now drawn the long way (−208° for 151°, `b_far_p_far`) and one in the `Scene_0bis` replay's
+  other play — LF3's drawing → [`LEVEL_FACE_ENTRY.md`](../../40_RENDER_SCENE/spec/LEVEL_FACE_ENTRY.md) §11.1.
+* **Next:** the owner — the close-in turns (§12's option A, or as they are), the entries' route; LF3. No device look.
+
+* **Then REVERTED** (`cb89bdd`, after the independent audit): far out the rule changed the camera's path (a new long-way half turn on `b_far_p_far`,
+  ratio 1.05 → 1.43; the entries 4° – 7° off their route), and the brief's answer to a path change was to build nothing. The code is `0ab1f9f`'s again;
+  the gate's tools (`6236fb4`) stay. The owner's options (wait for LF3; time the entries after the ease settles; accept and `git revert cb89bdd`) →
+  [`LEVEL_FACE_ENTRY.md`](../../40_RENDER_SCENE/spec/LEVEL_FACE_ENTRY.md) §11.2.
