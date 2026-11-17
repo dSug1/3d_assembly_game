@@ -2,7 +2,7 @@
 
 > **STATUS** · ⭐ **S0 and S1 LAUNCHED 2026-11-17** (Opus agents, a builder then an independent auditor each; local commits; **nothing wired, no existing
 > game file changed**). **OWNS** · the record of the surface build: the owner's words, the parallel rule, the merge order, each package as briefed and
-> as built, the notes for the merges. **READ WITH** · [ORBIT_SURFACE.md](ORBIT_SURFACE.md) (the specification — its decisions are PROVISIONAL, to be
+> as built, the notes for the merges, ⭐ the ledger FINDINGS → CHECKS (§8). **READ WITH** · [ORBIT_SURFACE.md](ORBIT_SURFACE.md) (the specification — its decisions are PROVISIONAL, to be
 > tested), [ORBIT_SURFACE_SHAPES.md](ORBIT_SURFACE_SHAPES.md) (the shapes study), [ORBIT_SURFACE_AUDIT.md](ORBIT_SURFACE_AUDIT.md).
 
 ## 1. The owner's words (2026-11-17), and what they amend
@@ -133,3 +133,29 @@ like `Scene_1`'s), as a figure for the wiring step. A new file under `src`, a ne
   The three files typecheck clean (the project's settings; the only errors reported are two older ones in the study's own
   `scripts/probes/surface_study/shapes.ts`, which they import). ⚠ Built and checked by Fable alone, no second agent's audit; scripts are
   outside `npm run verify`.
+
+## 8. ⛔ FINDINGS → CHECKS: THE LEDGER (the owner's rule, 2026-11-17)
+
+> *"capture in the md files that any findings we learn from the orbit's surface rebuild needs its check to be integrated in a check script to be
+> run as part of the scene workflow. check_parts_reach_their_seat was the check script for the orbit chart to make sure each part reaches its
+> seat. we can develop a check script to checks all the findings we will learn from the orbit's surface or use the same script and extend its
+> scope."* — the owner, 2026-11-17.
+
+**The rule in full:** [SCENE_WORKFLOW.md](../../20_GAME_RULES/spec/SCENE_WORKFLOW.md) §9 — every finding about a SCENE gets a check in a
+check script, run at the scene workflow's export gate, shown failing once, in the same change as the finding's record, and a row here.
+⛔ **It binds every package's brief from now on**: each brief ends with *"what did this teach about how a scene must be drawn, ordered or
+marked? → its check, its control, its row in §8"*; a builder with nothing to add says so. One script or several: open
+(`SCENE_WORKFLOW.md` §9.3).
+
+| # | the finding (where it was learned) | what a scene must satisfy | its check | status |
+|---|---|---|---|---|
+| 1 | A part placed after what closes its seat cannot be placed (S0; the plan's rule 2 — `Scene_2`'s first plan slid the pistons in sideways) | at its stage every goal has a free straight way in, and the way in the scene names is free | `scripts/surface/check_parts_reach_their_seat.ts` — FAIL: SHUT, way in BLOCKED | ✅ built, shown failing (a head before its pistons) |
+| 2 | A goal entered along ONE axis needs the ghost and the plunge (S0, finding 2: the six pistons, 1.9° – 2.7°) | every narrow goal has a ghost with a plunge at its opening | the same — WARN: NARROW, and says when no ghost is authored | ✅ built; the threshold (10°) is the check's own: the owner's word owed |
+| 3 | Ghosts and seat markers end 2 – 17 mm from the collision pieces (S0, finding 3) | the plunge's depth and the collision pieces agree; the collision pieces follow the drawn part | the same — WARN: a ghost off by more than 1 mm. ⏳ Against the DRAWN meshes: B1 | ✅ the first half built; ⏳ B1 owed (to run before the plunge is built) |
+| 4 | Two pistons stop 1.4 mm short of their pin (S0, finding 4) | at its goal a part touches what it seats on and sits inside nothing | the same — WARN: touches no placed part / sits INSIDE a placed piece | ✅ built |
+| 5 | A way in free but 7.5° from a blocked direction; the smallest wide sets, 28° – 30° round the vertical (S0, findings 5, 6) | nothing to pass — facts for the owner's look | the same — WARN under 10°; each part's share and widest opening printed | ✅ built |
+| 6 | The orbited piece's collision ignores every FROZEN body, and `Scene_2`'s plinth is frozen (read in the code at the review; not seen in the game) | ⏳ to decide once seen in the game: the game's rule changes, or a scene's frozen parts other than its floor are reported | none yet | ⏳ owed — first to check in the pick-up flow |
+| 7 | The landing map's cost grows with the placed parts' convex pieces (S1: 36 – 270 ms a direction on `Scene_1` for a whole map) | ⏳ proposed: a budget per scene, once the wiring has chosen the map's representation | none yet (B3 will run the game's own function on the `.glb`) | ⏳ owed — after the wiring's choice |
+| 8 | The specification's own checks, from the shapes study: solids (B1), exposed per stage (B2), where each held piece first touches (B3), coverage (B5), features at a threshold (B6) | `PART_AUTHORING.md` §6.1, each with its pass rule | specified there | ⏳ not built — B1, B2 first; B3, B5 once the landing map is wired |
+
+⭐ Rows are ADDED by each package and by each look of the owner; a row leaves only when its check is built AND has been seen failing.

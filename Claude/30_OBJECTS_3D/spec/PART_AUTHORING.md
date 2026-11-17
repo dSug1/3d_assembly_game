@@ -334,7 +334,8 @@ Blender; Blender previews it. Each moving piece's PIVOT is authored where the fo
 > The owner's aim (2026-11-16): *"we shall amend the blender object building workflow to make sure that any surface built in blender is built with consideration of the playability of the game, therefore in consideration with the rules we are specifying here."* — and his approval of the recommendation (2026-11-16, [ORBIT_SURFACE.md](../../40_RENDER_SCENE/spec/ORBIT_SURFACE.md) §8 Q7): *"I agree with the recommendations, although they shall be later tested and could be reversed if the testing shows they need to be reversed."*
 > ⛔ **SPECIFIED, NOT BUILT**: no Blender script and no game-side check below exists yet — ⭐ but **B4's computation, BUILT 2026-11-17** as a
 > script run on the exported `.glb`, for any scene (`scripts/surface/check_parts_reach_their_seat.ts` → `SCENE_WORKFLOW.md` §8; its colours in
-> Blender and *"a direction starts at a place"* are not built). **First**: B1, B2, B4; **once the landing map exists** (the
+> Blender and *"a direction starts at a place"* are not built). ⛔ **THE RULE** (the owner, 2026-11-17): every finding of the orbit's surface
+> rebuild gets its check in a script run in the scene workflow → `SCENE_WORKFLOW.md` §9. **First**: B1, B2, B4; **once the landing map exists** (the
 > game's L2, [ORBIT_SURFACE.md](../../40_RENDER_SCENE/spec/ORBIT_SURFACE.md) §5.1): B3, B5; B6 beside them. The brief they read: [`../../20_GAME_RULES/spec/SCENE_WORKFLOW.md`](../../20_GAME_RULES/spec/SCENE_WORKFLOW.md) §7.1.
 > The rule numbers (S…, P…) are [ORBIT_SURFACE.md](../../40_RENDER_SCENE/spec/ORBIT_SURFACE.md)'s.
 

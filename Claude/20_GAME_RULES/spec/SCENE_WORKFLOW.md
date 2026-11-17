@@ -5,6 +5,7 @@
 > **READ IF** · you are starting a new scene, or about to model, import or script the parts of one
 > **LAST VERIFIED** · 2026-11-12 (branch `1.0.124from1.0.121-Added_scene_2`) · ⭐ §7 (the playability amendments) APPROVED 2026-11-16, to be tested
 > ⭐ §8 — the check *can every part reach its seat?* — ✅ BUILT 2026-11-17 as a script for ANY scene's `.glb`, run on `Scene_2`
+> ⭐ §9 — ⛔ THE RULE (the owner, 2026-11-17): what the orbit's surface rebuild teaches about a scene becomes a CHECK run in this workflow
 
 > *"I think we first need to draft an assembly plan how the player would build the assembly. That will determine how to geometrize the parts, how to
 > draw them and their supporting surfaces in blender, etc. Propose a workflow which could be adopted for any new scene and which will be captured in
@@ -229,7 +230,8 @@ says WHEN. ⛔ Each ⛔ GATE is the owner's — nothing after it starts before i
    moves at the end), ⛔ **GATE: the owner's review of the face proxies and ghosts** (`review_proxies.py`, the review `.blend`).
 5. **The export** — the last step: one `.glb`, read back by the script (§4.4). ⭐⭐ Then **the check *can every part reach its seat?*** on
    that file (§8: one command, about a minute, no Blender) — ⛔ **GATE: PASS, and each warning read with the owner** (a NARROW part is an
-   insertion: it has its ghost and the plunge, or it is widened). Commit the `.blend`, the script, the `.glb`, the previews.
+   insertion: it has its ghost and the plunge, or it is widened). ⭐ Every check born later from the orbit's surface rebuild joins this gate
+   (§9). Commit the `.blend`, the script, the `.glb`, the previews.
 
 ### 6.4 W4 – W7: into the game — ⭐ a VERTICAL SLICE first (§1)
 
@@ -426,3 +428,44 @@ these three, run `SELF=1` and rerun `Scene_2` (its figures are in the document a
 ⏳ **Still owed** (§7): the check at EACH build step — the `.glb` exists only at the export, so the build script of the next scene must write a
 provisional `.glb` per step for it; its result painted on the faces in the review `.blend`; a vector per scene at W5; and *"a direction starts
 at a place the gizmo reaches"*, once the landing map is wired.
+
+## 9. ⛔ THE RULE — WHAT THE ORBIT'S SURFACE REBUILD TEACHES ABOUT A SCENE BECOMES A CHECK RUN IN THIS WORKFLOW (2026-11-17)
+
+> *"capture in the md files that any findings we learn from the orbit's surface rebuild needs its check to be integrated in a check script to be
+> run as part of the scene workflow. check_parts_reach_their_seat was the check script for the orbit chart to make sure each part reaches its
+> seat. we can develop a check script to checks all the findings we will learn from the orbit's surface or use the same script and extend its
+> scope."* — the owner, 2026-11-17.
+> (The reach check was born in the orbit's SURFACE work — its package S0 — not in the charts' rebuild: `ORBIT_SURFACE_BUILD.md` §7.)
+
+### 9.1 The rule
+
+Whatever the orbit's surface rebuild teaches about how a scene's parts must be drawn, ordered or marked — from a study, a package, a walk or
+the owner's look on the device — is not left as a sentence in a document. For each finding:
+
+1. **A check, in a check script** that reads the scene (its exported `.glb`, with the game's own readers — §8 is the model) and says PASS,
+   FAIL or a warning in plain words.
+2. **Run in this workflow**, at the gate of the export (§6.3 item 5), for EVERY new scene — and rerun on the scenes already built.
+3. **Shown failing once** (a planted control or a scene changed on purpose — *a check never seen failing is not trusted*, `PART_AUTHORING.md`
+   §4.2), and its thresholds read from the game's files, never retyped.
+4. **In the same change as the finding's record**, and a row in THE LEDGER — `ORBIT_SURFACE_BUILD.md` §8: the finding, what a scene must
+   satisfy, its check, built or owed. ⛔ A finding whose check is not built yet is listed there as OWED — never dropped.
+
+It is §6.3 item 3 (*every finding the owner makes that a check missed → a new check and a planted control*) widened from the Blender
+build's own checks to everything the surface rebuild learns.
+
+### 9.2 What counts — read as follows (Claude's reading, to correct)
+
+* **A finding about the SCENE** (a part's shape, its collision pieces, its seat markers and ghosts, the order of the steps — what changes from
+  one scene to the next): a check of the scene, by this rule.
+* **A finding about the GAME's code** (how the gizmo, the landing or the collision behaves): golden vectors, as always (`CLAUDE.md` rule 2) —
+  a scene check cannot stand in for them.
+* **A rule of the game whose result depends on a scene's shape** (a groove too narrow for the piece, a face at a threshold, a mouth's lip, a
+  face too small to land on): BOTH — the vector for the rule, and a scene check that reports WHERE a scene has that shape, so that it is seen
+  at the export gate and not first on the device.
+
+### 9.3 One script or several — ⛔ OPEN, nothing built
+
+The owner left both ways open (above): a script for all the surface's findings, or `check_parts_reach_their_seat.ts` with a wider scope.
+**Proposed (Claude), his word owed when the second check is built:** ONE command to run at the gate, giving one verdict for the scene; behind it
+each check stays its own file, named after the question it answers — as he asked for the first (*"so we know what the script is about when we
+re-use it later on"*) — so widening the scope does not make that name untrue. Until then the gate runs §8's command.
