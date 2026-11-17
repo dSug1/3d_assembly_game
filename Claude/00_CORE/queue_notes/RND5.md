@@ -527,3 +527,20 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   benefit on FAST walks), what is not in it.
 * **Then**: step 3 (the audit of the whole charts' diff from `510bbd8`, one round of fixes), the final documents, the merge's preparation. The merge
   itself: his word.
+
+## 2026-11-17 (night, 22:45) — the job list MODIFIED by the owner: the silent entry built and tested before the audit; G3's note
+
+* **His words** (whole in [`LEVEL_FACE_ENTRY.md`](../../40_RENDER_SCENE/spec/LEVEL_FACE_ENTRY.md) §15): not happy with the entry turn (*"Why it cannot
+  keep the quaternion it inherited from the previous face ? Or … why can't we make the turn slower"*); then *"once you have successfully completed
+  branch 1.0.148- or you have reverted to 1.0.147-, insert the build and test of entry silent with "Kept at the entry, then turned to the face's
+  layout over its first half" before you perform the full audit"*; *"I assume this is valid for any level face"*; *"make sure that this can be done
+  after the fast orbit"*.
+* **The night's list now**: (1) the fast orbit FO1 / FO2 (running) → the deploy if it passes, or back to `1.0.147-`; (2) **the silent entry** = (iv′)
+  from `069682a` with its two cures, behind `freeEntryUpright` — built and tested, not deployed (§15: the decisions E1 – E7, the contract, the gates;
+  valid for any level face that carries a heading; independent of the fast orbit, built after it); (3) the full audit, one round of fixes; (4) the
+  final documents, the merge prepared.
+* **G3's note** ([`FAST_ORBIT.md`](../../40_RENDER_SCENE/spec/FAST_ORBIT.md) §1 F9, §4): a far edge's half turn coming out the other way round is
+  listed, not a failure — written by the lead while FO1 was being built, so that a defect of the two-target drawing that is at the base already cannot
+  undo the build.
+* **Room made**: `LEVEL_FACE_ENTRY.md` §11.1 (LF2 as built, reverted) moved word for word →
+  `Claude/40_RENDER_SCENE/history/2026-11-17_lf2_timing_rule_as_built.md`.

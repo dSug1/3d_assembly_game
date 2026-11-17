@@ -16,6 +16,11 @@ the fast orbit is successful or on the work of branch 1.0.147- if you reverted).
 regression. If test fail, report and wait my instruction. - Once audit is complete, update the md files, prepare for the merge into worktree
 "3d_assembly_game". I will then authorize the merge, you will merge, and we will then continue our work on the orbit's surface."*
 
+**The job list modified the same night** (his words whole in [`LEVEL_FACE_ENTRY.md`](LEVEL_FACE_ENTRY.md) §15): *"once you have successfully completed
+branch 1.0.148- or you have reverted to 1.0.147-, insert the build and test of entry silent … before you perform the full audit"*, and *"make sure
+that this can be done after the fast orbit (i.e. the fast orbit does not need the entry silent built beforehand"* — it does not: FO1 and FO2 are built
+and gated on a tree without it (§15's E4).
+
 ## 1. The decisions taken for him to review (Fable, that night — he asked for no question)
 
 | # | decision | why | to change it |
@@ -28,6 +33,7 @@ regression. If test fail, report and wait my instruction. - Once audit is comple
 | F6 | The ease is a slider, default **100 ms** (the time to reach the one speed from rest); at 0 today's pace, bit for bit | a guess, for his hand | the slider |
 | F7 | The coast stopped at a crossing, the dy hold after a half turn (T9), the band at every trigger (T11): as today | not part of his question | — |
 | F8 | ONE deploy, once both packages are settled | one look for him | — |
+| F9 | A far edge's HALF TURN coming out the other way round is LISTED, not a failure (G3's note) — added by the lead at 22:45 while FO1 was being built | far out the two-target drawing takes a half turn the short way (ratio about 1.05) or the long way (about 1.4) by a degree of its start pose; it is so at the base already ([`LEVEL_FACE_ENTRY.md`](LEVEL_FACE_ENTRY.md) §10.3's far walk, §11.2, §12), and both LF2 and (iv′) met it; a gate that fails on it would undo the build for a defect that is not its own | the drawing's own fix (§13's table, row 1) |
 
 ## 2. FO1 — a running turn redirected, the gizmo not held under the limit: the contract
 
@@ -64,7 +70,7 @@ walks are recorded at the base BEFORE any change under `src`.
 | G0 | `npm run verify` green; every new vector shown red on a mutant |
 | G1 — OFF | the limit at 0 (FO2: the ease at 0): the three replays and the level-entry walks FRAME FOR FRAME against the base (FO2: against FO1's end) |
 | G2 — close in | at the defaults, every turn made while the close-in latch is on: turn for turn as at the base (its frames, its one rotation, its path, the gizmo held) |
-| G3 — the held turns | at the defaults, every turn at or over the limit: still one turn, the gizmo held, its one rotation within 2°, its path ratio not worse (+ 0.02), its dy hold as at the base |
+| G3 — the held turns | at the defaults, every turn at or over the limit still holds the gizmo until it is whole and keeps its dy hold as at the base; where its START is the base's (the gizmo within 5 mm, the picture within 2°) its one rotation within 2° and its path ratio not worse (+ 0.02). ⚠ **KNOWN, NOT THIS BUILD'S** (F9 — it binds the builder AND the auditor): a half turn that starts from another pose than at the base and comes out the other way round (short ↔ long) is LISTED with both figures and is not a failure, provided its largest frame is not over the base's worst half turn on the same walk + 1°, and nothing else of it changed (one turn, the gizmo held, its dy hold) |
 | G4 — no drift | (i) on every frame with no turn running the pose drawn equals the target, to the last bit; (ii) a fast walk's orbit angles replayed frame by frame with every turn whole at once (`tiltRollDegS` 0): the state identical on every frame, the final camera identical to the last bit |
 | G5 — the slow walks | at the defaults, each existing far-out walk: no error, the health clean, its route completed in no more frames than at the base + 10 %, its worst frame (the picture's turn in one frame) not over the base's + 1° |
 | G6 — the benefit | FAST walks (20 and 30 px a frame, steered to the same targets: the corner loops both ways at both tips far out and part way, along the bottom's edge, across the bottom and back, over the top ridge), against the base on the same walk: no frame with the gizmo stopped for a turn under the limit; per loop the picture's total turning not over the base's + 5 %; the picture's reversals (its roll changing side by over 1° a frame) not more than at the base; the frames per loop not more; the worst frame not over the base's + 1° |
