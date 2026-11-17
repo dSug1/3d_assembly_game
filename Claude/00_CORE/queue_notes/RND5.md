@@ -439,3 +439,8 @@ every turn — not answered yet); step 3 once on the final code → `BOTTOM_FACE
   made every turn straight. Verdict: sound in principle, a missed case; the ease also counted twice close in (holds twice as long). ⛔ `Scene_0bis`
   far out not reproduced. Six options, the ridge's pace, what is not checked →
   [`BOTTOM_FACE_CIRCLE_REGRESSION.md`](../../40_RENDER_SCENE/spec/BOTTOM_FACE_CIRCLE_REGRESSION.md).
+* **His look on `6c0a165`, "why the heptagon's bottom shakes" — EXPLAINED, nothing built** (an Opus agent): the only level face reached from LEANING
+  faces; a heading gap (the zenith fix's level reading against the square camera, `Scene_0` close in; the carried heading against the calm's view,
+  `Scene_0bis` far out) is a roll only when the view is not level — +8.9° then back in 4 frames, 47° in / 39° out in 9 / 7 frames; none on vertical
+  faces or close in on `Scene_0bis`; the same at `c7ac510`; a consequence nobody decided; options →
+  [`BOTTOM_FACE_CIRCLE_REGRESSION.md`](../../40_RENDER_SCENE/spec/BOTTOM_FACE_CIRCLE_REGRESSION.md) §10.
