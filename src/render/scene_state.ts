@@ -361,22 +361,7 @@ export interface SceneState {
    *  gizmo is on: the face map it indexes and the facet's index in it (another map's entry is none — a seat), the face's position `ci` in the atlas's contour
    *  (the WORLD's coordinates), and the HEADING carried (a unit vector in the world, in the face's plane — the camera's up there): set IN AT THE EDGE, kept
    *  until the place is one band past the face (`freeFaceFrame`) */
-  asmFree: {
-    readonly map: import("../input/face_map").FaceMap;
-    readonly facet: number;
-    readonly ci: number;
-    /** the heading SHOWN (the camera's up on the face): the layout, or (LF1 (iv′), `freeEntryUpright` 1) the picture's upright blended toward it — set by
-     * the camera's frame (`freeShownHeading`), read by the exit's turn */
-    readonly heading: import("../core/vec").Vec3;
-    /** ⭐ (LF1 (iv′)) the layout taken at the entry (`freeEntryHeading`) */
-    readonly layout: import("../core/vec").Vec3;
-    /** ⭐ (LF1 (iv′)) the entry edge: a corner, the unit direction into the face square to the edge, the face's centre's depth (m) — null: no blend */
-    readonly entry: { readonly a: import("../core/vec").Vec3; readonly inward: import("../core/vec").Vec3; readonly centreDepth: number } | null;
-    /** ⭐ (LF1 (iv′)) the gizmo's signed depth from the entry edge (m), read at its place each frame (0 with no entry edge) */
-    readonly depth: number;
-    /** ⭐ (LF1 (iv′)) the picture's offset off the view's level part, read once at the entry frame by the camera (`pictureOffset`; null: not yet) */
-    readonly offset: number | null;
-  } | null;
+  asmFree: { readonly map: import("../input/face_map").FaceMap; readonly facet: number; readonly ci: number; readonly heading: import("../core/vec").Vec3 } | null;
   /** ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §16 — package C2W) THE PLACE BEFORE THE ONE SHOWN: the facet of the frame before
    *  `asmShown`'s, with the map it indexed — the tilt, made one frame after the gizmo reached a cap (`tiltOn` reads the place shown), takes its entry edge
    *  from it (`freeEntry`); `null`: none (the start, the switch off) */

@@ -42,7 +42,7 @@ import { poseAboutPiece, poseFramingTwo, type CamPose } from "../input/orbit_til
 import { poleCrossingDue, poleSeam } from "../input/pole_crossing";
 import { dirGap, easedDir, easeRest, poleYawKept, seamOutPaced, seamOutShare, seamOutStep, seamOutTarget, seamTurnPace, seamTurnStep, seamWholeRad, tiltLeavesNow, turnHoldsGizmo } from "../input/seam_turn";
 import { bandedFacet } from "../input/face_band";
-import { contourFaceAt, crossingEvent, entryBlendHeading, exitHoldSign, pictureOffset, viewLevelTurned, exitTurnRad, faceOwnUp, freeEdges, freeEntryHeading, freeHeadingAngle, isFreeFace } from "../input/free_face";
+import { contourFaceAt, crossingEvent, exitHoldSign, exitTurnRad, faceOwnUp, freeEdges, freeEntryHeading, freeHeadingAngle, isFreeFace } from "../input/free_face";
 import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, capTilt, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, swingEase, tiltAutoLatch, frameBox, tiltDir, tiltFaces, onTiltedFacet, type Mat3 } from "../input/orbit_tilt";
 
 /** ⭐ The look point's ease (ms). */
@@ -1512,10 +1512,8 @@ function assemblyCameraFrameRaw(st: SceneState, cam: OrbitAt, off?: CameraAngleO
     const uW = mulM(B, sF);
     // ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §3.4, step C4) ON A FREE FACE (a level face of the spit): the camera's up the heading CARRIED in at the entry
     // (`freeHeadingAngle`) — ⛔ the side's heading (`spitCameraHeading`): it turned the picture in the middle of the face
+    if (st.asmFree !== null) return offsetFrame(uW, freeHeadingAngle(st.asmFree.heading, uW), o.yawRad, o.pitchRad);
     const side = st.asmSpitSide !== 0 ? st.asmSpitSide : spitSide(uW, st.asmZone!.zone.axis, 0);
-    // ⭐⭐⭐ (2026-11-17, LF1 (iv′)) the heading SHOWN: entered over an edge, the picture the bound face's camera would show continued, the layout by the
-    // face's middle
-    if (st.asmFree !== null) return offsetFrame(uW, freeHeadingAngle(freeShownHeading(st, uW, spitCameraHeading(uW, st.asmZone!.zone.axis, side)), uW), o.yawRad, o.pitchRad);
     return offsetFrame(uW, spitCameraHeading(uW, st.asmZone!.zone.axis, side), o.yawRad, o.pitchRad);
   }
   // ⭐⭐⭐ (2026-11-10, §9.4) THE TILTED POLE: the camera upright IN F (the pressed cap a side), turned into the world
@@ -2212,11 +2210,7 @@ function freeFaceFrame(st: SceneState, t: MapTarget, prev: { readonly map: FaceM
   const fr = st.asmFree;
   if (fr !== null) {
     const d = t.stack === fr.facet ? 0 : distanceToFacets(map, [fr.facet], t.surface);
-    if (onTiltedFacet(t.stack, fr.facet, d, edgeMarginM(st))) {
-      // ⭐⭐⭐ (2026-11-17, LF1 (iv′)) the gizmo's depth from the entry edge, re-read at its place (the camera's frame blends the heading by it)
-      if (fr.entry !== null) st.asmFree = { ...fr, depth: freeDepthAt(fr.entry, B, t) };
-      return;
-    }
+    if (onTiltedFacet(t.stack, fr.facet, d, edgeMarginM(st))) return;
     freeFaceExit(st, fr, at.contour, contourOfFacet(map, B, at.contour, t.stack));
     return;
   }
@@ -2225,63 +2219,12 @@ function freeFaceFrame(st: SceneState, t: MapTarget, prev: { readonly map: FaceM
   const en = freeEntry(st, map, B, at, t.stack, prev);
   if (en === null) return;
   const { ci, from, heading } = en;
-  // ⭐⭐⭐ (2026-11-17, `LEVEL_FACE_ENTRY.md` §4.2, §9 — LF1 (iv′), the switch `freeEntryUpright`) entered over an edge: the picture's upright continued
-  // there, the layout by the face's middle (the camera's frame, `freeShownHeading`); 0, or no edge: the layout at once (as before)
-  const entry = st.cfg.freeEntryUpright === 1 ? freeEntryEdge(at.contour, ci, from) : null;
-  st.asmFree = { map, facet: t.stack, ci, heading, layout: heading, entry, depth: entry === null ? 0 : freeDepthAt(entry, B, t), offset: null };
+  st.asmFree = { map, facet: t.stack, ci, heading };
   const mixWas = st.asmZoneMix;
   if (st.asmCamLast !== null) st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0 };
   easeCarry(st, mixWas);
   st.lastVerdict = `orbit: onto the spit's level face — the heading carried in ${from >= 0 && from !== ci ? "over its edge" : "from the picture shown"}`;
   st.hudDirty = true;
-}
-
-/**
- * ⭐⭐⭐ (2026-11-17, LF1 (iv′)) THE ENTRY EDGE of the contour's free face `ci` entered from the face `from` (the side shared with it that gives the layout,
- * `entryHeading`'s): a corner, the unit direction into the face square to the side (in its plane), the face's centre's depth from the side. null: no
- * entry over an edge (none before, the same face, not a neighbour, a level neighbour) — the layout alone, as before. The contour's: the MODEL's.
- */
-function freeEntryEdge(contour: readonly ChartFace[], ci: number, from: number): NonNullable<SceneState["asmFree"]>["entry"] {
-  const F = contour[ci];
-  if (F === undefined || from < 0 || from === ci) return null;
-  const e = freeEdges(contour, ci, WORLD_UP).find((x) => x.to === from);
-  if (e === undefined || e.heading === null) return null;
-  const dx = e.b[0] - e.a[0], dy = e.b[1] - e.a[1], dz = e.b[2] - e.a[2];
-  const dl = Math.hypot(dx, dy, dz);
-  if (!(dl > 1e-9)) return null;
-  const d: Vec3 = [dx / dl, dy / dl, dz / dl];
-  const c: Vec3 = [F.c[0] - e.a[0], F.c[1] - e.a[1], F.c[2] - e.a[2]];
-  const k = c[0] * d[0] + c[1] * d[1] + c[2] * d[2];
-  const w: Vec3 = [c[0] - k * d[0], c[1] - k * d[1], c[2] - k * d[2]];
-  const depth = Math.hypot(w[0], w[1], w[2]);
-  if (!(depth > 1e-6)) return null;
-  return { a: e.a, inward: [w[0] / depth, w[1] / depth, w[2] / depth], centreDepth: depth };
-}
-
-/** ⭐⭐⭐ (2026-11-17, LF1 (iv′)) the gizmo's SIGNED depth (m) from the entry edge into the face at the map's place `t` (its surface point turned into the
- * world by `B` — the MODEL's coordinates, never a drawn mesh); ≤ 0 on the edge and the band past it. */
-function freeDepthAt(entry: NonNullable<NonNullable<SceneState["asmFree"]>["entry"]>, B: Mat3, t: MapTarget): number {
-  const p = mulM(B, t.surface);
-  return (p[0] - entry.a[0]) * entry.inward[0] + (p[1] - entry.a[1]) * entry.inward[1] + (p[2] - entry.a[2]) * entry.inward[2];
-}
-
-/**
- * ⭐⭐⭐ (2026-11-17, LF1 (iv′)) THE HEADING SHOWN on the free face, read by the camera's frame for its direction `uW` (centre → camera, BEFORE the owner's
- * camera offsets) and `hBound` the heading the spit's camera of a BOUND face would take there (`spitCameraHeading`): `entryBlendHeading` of `uW`'s
- * level part turned by the picture's offset read ONCE at the entry frame (`pictureOffset` on the bound camera — so the entry continues its picture
- * exactly), the layout, the gizmo's depth and `uW`'s elevation; kept in `asmFree.heading` for the exit's turn. No entry edge (or the switch 0): the
- * heading carried, as before. ⛔ The level part of the camera drawn last (as prototyped): the owner's camera offsets (2.5°, 2°) and the side bias made a
- * 3° – 4° turn of the entry. ⛔ The bound camera's picture read every frame: close in its side bias swung the heading across the axis (24° in a frame).
- */
-function freeShownHeading(st: SceneState, uW: Vec3, hBound: number): Vec3 {
-  const fr = st.asmFree;
-  if (fr === null) return [1, 0, 0];
-  if (fr.entry === null) return fr.heading;
-  const el = Math.asin(Math.min(1, Math.abs(uW[1]) / Math.max(1e-12, Math.hypot(uW[0], uW[1], uW[2]))));
-  const off = fr.offset ?? pictureOffset(uW, offsetFrame(uW, hBound, 0, 0).up);
-  const h = entryBlendHeading(viewLevelTurned(uW, off), fr.layout, fr.depth, fr.entry.centreDepth, el, st.cfg.freeEntryUpright);
-  st.asmFree = { ...fr, heading: h, offset: off };
-  return h;
 }
 
 /**

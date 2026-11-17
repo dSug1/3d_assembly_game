@@ -237,8 +237,6 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "polar zones: leave a zone this far past its rim (mm)", "zoneExitMm", 0, 100, 1),
             // ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §3.4, step C4) the two far-out variants of a spit's level face, for the owner's look
             tunable(st, "a spit's level face: the calm kept (0) / the camera square to it (1)", "freeFaceSquare", 0, 1, 1),
-            // ⭐⭐⭐ (2026-11-17, `LEVEL_FACE_ENTRY.md` §9, LF1 (iv′)) the entry of a spit's level face, the two for the owner's comparison on the phone
-            tunable(st, "a spit's level face: the entry edge's layout at once (0) / the picture's upright continued, the layout by the face's middle (1)", "freeEntryUpright", 0, 1, 1),
           ],
         },
       ],
