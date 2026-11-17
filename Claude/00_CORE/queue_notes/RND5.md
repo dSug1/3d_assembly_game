@@ -420,3 +420,17 @@ built, decision 3 relaxed far out from a tip; (c) R2, as today (the turn 55 – 
   from the gizmo's side): the turn is the mirror of the one before — to see on the device; (2) the two-target framing (`poseFramingTwo`) rolls the long
   way when a turn's end pose swings half round the piece–aim line (separation near 180°): no edge crossing reaches it in the gates, an apex crossing did;
   (3) the side's bias (60° → 75° of the view) fading in under a fast climb turns a drag frame 10.3° (far out, near a tip). ⛔ No device look.
+
+## 2026-11-17 — the deploy, the owner's look, the bottom face's circle ANALYSED (two Opus agents; NOTHING BUILT, THE OWNER TO DECIDE)
+
+* **Deployed** (the owner: *"Deploy so i can test and tell me what to look at."*): live `main` `a17c75e` = `1.0.147-` at `a1a52f0`. The night chain was
+  stopped before step 3: step 3 is not run.
+* **The owner's look:** *"4- nothing feels blocked. This is good"* (C5's hold); *"3- scene 0bis top ridge: ... good and I want to keep it. Just make
+  it 50% faster."* (measured, NOT built); and a regression — the camera makes a circle at the bottom face close in (`Scene_0`, `Scene_1`; `Scene_0bis`
+  at the bottom's exit, *"at any distance"*).
+* **The analysis, challenged:** first bad commit `fe06c2c` (package A) on all three scenes, `c5aa295` clean. Cause: inside a running turn A sets the
+  square camera at its target at once, so the two-target framing (`poseFramingTwo`) draws the whole 52° – 90° pitch — not one rotation close in: the
+  camera swings sideways round the body (`Scene_1` 124° of path for 90°, 32.7° off its arc). A discriminating run (only that step of A switched off)
+  made every turn straight. Verdict: sound in principle, a missed case; the ease also counted twice close in (holds twice as long). ⛔ `Scene_0bis`
+  far out not reproduced. Six options, the ridge's pace, what is not checked →
+  [`BOTTOM_FACE_CIRCLE_REGRESSION.md`](../../40_RENDER_SCENE/spec/BOTTOM_FACE_CIRCLE_REGRESSION.md).
