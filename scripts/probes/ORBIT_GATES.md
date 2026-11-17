@@ -371,8 +371,9 @@ node scripts/probes/fast_walk_table.mjs <base>/fw_f_edge_px20.json <new>/<tag>_f
   six crossings 10 mm each side (R1, `POLAR_ORBIT_CLEANUP.md` §9.7: no oscillation at an edge); `f_far_p_px20` — across the bottom to its far edge and
   back; `f_ridge_px20` — over the top ridge and back (a half turn); `f_s0_up_px20` (`Scene_0`) and `f_s1_over_px20` (`Scene_1`, the cube up over its top
   and down its back face, and back) — far out, two edges and back.
-* **The reading** (per walk `WALK` and per loop): frames; `still <90 / ≥90` — the frames the gizmo stood still (under 0.05 mm) while a turn ran, by the
-  turn's size at its first known frame (`LIMIT`, 90); the picture's TOTAL TURNING (each frame's rotation summed); its REVERSALS (the roll on the glass
+* **The reading** (per walk `WALK` and per loop): frames; `still <90 / ≥90` — the frames the gizmo stood still (under 0.05 mm) while a turn that HOLDS it
+  ran, by the turn's size at its first known frame (`LIMIT`, 90; a free turn with the gizmo still — the finger's own stop — counted apart, `stillFree`;
+  `fast_walk_table.mjs` with `ALLOW_HELD=1` lists a hold under the limit without flagging it, for a build with a fallback that holds); the picture's TOTAL TURNING (each frame's rotation summed); its REVERSALS (the roll on the glass
   changing side with over 1° a frame on both sides); the WORST frame; the faces crossed. Then every turn by its own object (`mix.id`): its size, frames,
   ONE ROTATION, PATH, ratio, largest frame, HELD / free (the build's decision — `hold`; a build without it: every timed turn held), REPLACED (the next frame
   runs another turn: a change of frame arrived before it was whole).
@@ -381,6 +382,8 @@ node scripts/probes/fast_walk_table.mjs <base>/fw_f_edge_px20.json <new>/<tag>_f
   pose drawn equals the camera stage's target on every frame with no turn (the build's readout `probeCamPose`; at the base: not recorded); (ii) the zone,
   the tilt, the free face and its heading, the spit's side, the map's angles; the camera on every frame where neither run turns; the last frame's camera.
   Measured at the base on two walks: the discrete state identical, the numbers within 5e-10 (the replays' last-digit noise) — the replay itself is sound.
+  ⚠ (FO1, 2026-11-18) on `Scene_1` (`f_s1_over_px20`, no turn at all) the replay drifts by 5.6 mm from frame 20: the inputs recorded are not the whole
+  state there — read that walk's G4 as not meaningful. FO1's own figures (built, reverted): `FAST_ORBIT.md` §6; its recordings `<scratchpad>/fo1/def`, `fo1/off`.
 
 ### 9.1 The base (the code of `892b6a3` = the live `c343c4f`'s; recorded at `8997e45`, docs only after it) — `<scratchpad>/fo1/base`
 

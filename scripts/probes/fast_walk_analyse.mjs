@@ -2,8 +2,9 @@
 // `fast_walk_check.mjs` (or any recording in its format):
 //   node scripts/probes/fast_walk_analyse.mjs <rec.json> ...          LIMIT (90) the turn size the split is read at (deg)
 // Per walk, and per loop (the legs `loop<r>-…`; `to-start` and the rest apart):
-// * FRAMES — the frames; STILL < / ≥ — the frames the gizmo stands still (under 0.05 mm) while a transition's turn runs, by the turn's size (its angle
-//   — the picture's, `rad` — at its first known frame: under LIMIT, at or over it);
+// * FRAMES — the frames; STILL < / ≥ — the frames the gizmo stands still (under 0.05 mm) while a transition's turn that HOLDS it runs, by the turn's
+//   size (its angle — the picture's, `rad` — at its first known frame: under LIMIT, at or over it); a turn decided free with the gizmo still (the finger's
+//   own stop) is counted apart (`stillFree`, in the table);
 // * TURNING — the picture's total turning (the sum of each frame's rotation of the camera's orientation, degrees);
 // * REVERSALS — how many times the picture's roll on the glass changes side with over 1° a frame on both sides (the frames over 1° in order: a sign change
 //   between two of them is one reversal);
@@ -26,7 +27,7 @@ const f1 = (x) => (x === null || x === undefined || Number.isNaN(x) ? "-" : x.to
 
 /** the reading of a span of frames [a, b] (the frame a − 1 the one before) */
 export function readSpan(C, F, roll, a, b) {
-  let frames = 0, turning = 0, worst = 0, stillU = 0, stillO = 0, rev = 0, last = 0;
+  let frames = 0, turning = 0, worst = 0, stillU = 0, stillO = 0, stillFree = 0, rev = 0, last = 0;
   const size = new Map();
   for (let i = a; i <= b; i++) {
     frames++;
@@ -35,14 +36,18 @@ export function readSpan(C, F, roll, a, b) {
     if (m) {
       if (m.known && !size.has(m.id ?? -1)) size.set(m.id ?? -1, deg(m.rad));
       const still = i > 0 && C[i].g && C[i - 1].g && len(sub(C[i].g, C[i - 1].g)) * 1000 < 0.05;
-      if (still) { const s = size.get(m.id ?? -1); if (s !== undefined && s < LIMIT) stillU++; else stillO++; }
+      // a turn that HOLDS the gizmo (`hold` as the build decided; none recorded: today's rule — a timed turn holds); a free turn with the gizmo still is
+      // the finger's own stop (a lift), counted apart
+      const held = m.hold !== null && m.hold !== undefined ? m.hold : !m.byMm && !m.out;
+      if (still && !held) stillFree++;
+      else if (still) { const s = size.get(m.id ?? -1); if (s !== undefined && s < LIMIT) stillU++; else stillO++; }
     }
     if (Math.abs(roll[i]) > 1) { const s = Math.sign(roll[i]); if (last !== 0 && s !== last) rev++; last = s; }
   }
   // the faces the gizmo crossed (the heptagon's labels round its axis — B the bottom, F the lower front rectangle, T / U a tip's triangles, o<k> / t<k>)
   const faces = [];
   for (let i = a; i <= b; i++) { const f = faceOf(C[i].g); if (f !== null && faces[faces.length - 1] !== f) faces.push(f); }
-  return { frames, turning, worst, stillU, stillO, rev, faces };
+  return { frames, turning, worst, stillU, stillO, stillFree, rev, faces };
 }
 
 const AY = +(process.env.AY ?? 0.229), AZ = +(process.env.AZ ?? 0.191), RIM = +(process.env.RIM ?? 0.2475), SEC = 360 / 7;
@@ -84,12 +89,10 @@ export function turnsOf(C, F) {
   return out;
 }
 
-const files = process.argv.slice(2);
-for (const file of files) {
-  const C = JSON.parse(readFileSync(file, "utf8"));
+/** a recording read: per walk (`WALK`), per loop (`loop<r>`) and `to-start`, and its turns */
+export function readWalk(C) {
   const F = C.map(frame3);
   const roll = rollsOf(C, F);
-  console.log(`# ${file.split(/[\\/]/).pop()}: ${C.length} frames`);
   const groups = [];
   for (let i = 0; i < C.length; i++) {
     const lg = C[i].leg;
@@ -97,6 +100,16 @@ for (const file of files) {
     const g = groups[groups.length - 1];
     if (g && g.key === key) g.b = i; else groups.push({ key, a: i, b: i });
   }
+  const parts = { WALK: readSpan(C, F, roll, 0, C.length - 1) };
+  for (const g of groups) if (/^loop\d+$|^to-start$/.test(g.key)) parts[g.key] = readSpan(C, F, roll, g.a, g.b);
+  return { F, roll, groups, parts, turns: turnsOf(C, F) };
+}
+
+const main = process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
+for (const file of main ? process.argv.slice(2) : []) {
+  const C = JSON.parse(readFileSync(file, "utf8"));
+  const { F, roll, groups } = readWalk(C);
+  console.log(`# ${file.split(/[\/]/).pop()}: ${C.length} frames`);
   const all = readSpan(C, F, roll, 0, C.length - 1);
   const head = (r) => `frames ${String(r.frames).padStart(4)} | still <${LIMIT} ${String(r.stillU).padStart(3)} ≥${LIMIT} ${String(r.stillO).padStart(3)} | turning ${f1(r.turning).padStart(6)}° | reversals ${String(r.rev).padStart(3)} | worst ${f1(r.worst)}°`;
   console.log(`  WALK    ${head(all)}`);

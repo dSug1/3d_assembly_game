@@ -557,3 +557,13 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
 * **The night's order now**: the fast orbit and its deploy → **the dy hold's fix** (root cause first, the decisions D1 – D5, the gates: the report's
   case at every distance, no ping-pong, nothing worse elsewhere) → the silent entry (tested with these walks too) → the audit → the final documents,
   the merge prepared. Built and tested, not deployed: his word.
+
+## 2026-11-18 — FO1 (the fast orbit's first package): built, measured, NOT BUILT — reverted
+
+* **The result**: the game is the base's again. FO1 (`45b0d2f`: no hold for a timed turn under 90° outside close in, the two readers on the target,
+  the back-and-forth fallback) reverted by `2a5a28b`. Why: with its fallback the 30 px fast loops reverse the picture more than at the base (4 → 14,
+  6 → 12, 10 → 16, 15 → 18), the worst frame is over the base + 1° on 5 walks, and the `Scene_0bis` replay shows a free turn that began at 59° and
+  chased the finger round a 342° path to end 113° away. The figures and the owner's options: [`FAST_ORBIT.md`](../../40_RENDER_SCENE/spec/FAST_ORBIT.md) §6.
+* **What passed**: the limit 0 is today's game bit for bit (replays, level entry a and b, the fast walks); close in untouched (every `tilt_check`
+  recording identical); on 20 px loops the turning 18 – 61 % lower and no stop at each edge.
+* **What stays**: the gate (`5401ad7`) — the fast walks, their reading, the no-drift replay, the base table: `scripts/probes/ORBIT_GATES.md` §9.

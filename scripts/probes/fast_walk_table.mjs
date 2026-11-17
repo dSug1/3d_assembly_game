@@ -8,6 +8,8 @@ import { readFileSync } from "node:fs";
 import { readWalk } from "./fast_walk_analyse.mjs";
 
 const LIMIT = +(process.env.LIMIT ?? 90);
+// ALLOW_HELD=1: a hold under the limit is the fallback's (`turnGoesBack`) — listed, not flagged
+const ALLOW_HELD = process.env.ALLOW_HELD === "1";
 const f1 = (x) => x.toFixed(1);
 const args = process.argv.slice(2);
 let flagged = 0;
@@ -20,14 +22,14 @@ for (let p = 0; p + 1 < args.length; p += 2) {
     const b = B.parts[k], n = N.parts[k];
     if (!b || !n) { console.log(`  ${k.padEnd(8)} only in ${b ? "the base" : "the new"}`); continue; }
     const fl = [];
-    if (n.stillU > 0) fl.push("STILL<");
+    if (n.stillU > 0 && !ALLOW_HELD) fl.push("STILL<");
     if (n.turning > b.turning * 1.05 + 1e-9) fl.push("TURNING+");
     if (n.rev > b.rev) fl.push("REV+");
     if (n.frames > b.frames) fl.push("FRAMES+");
     if (n.worst > b.worst + 1) fl.push("WORST+");
     if (k !== "to-start" && fl.length) flagged++;
     const pct = b.turning > 0 ? `${n.turning >= b.turning ? "+" : ""}${f1((100 * (n.turning - b.turning)) / b.turning)}%` : "-";
-    console.log(`  ${k.padEnd(8)} frames ${b.frames}→${n.frames} | still <${LIMIT} ${b.stillU}→${n.stillU}, ≥${LIMIT} ${b.stillO}→${n.stillO} | turning ${f1(b.turning)}→${f1(n.turning)}° (${pct}) | reversals ${b.rev}→${n.rev} | worst ${f1(b.worst)}→${f1(n.worst)}° | ${n.faces.join(" ")}${fl.length ? "  ⚠ " + fl.join(" ") : ""}`);
+    console.log(`  ${k.padEnd(8)} frames ${b.frames}→${n.frames} | still held <${LIMIT} ${b.stillU}→${n.stillU}, ≥${LIMIT} ${b.stillO}→${n.stillO} (free turn, finger stopped ${n.stillFree}) | turning ${f1(b.turning)}→${f1(n.turning)}° (${pct}) | reversals ${b.rev}→${n.rev} | worst ${f1(b.worst)}→${f1(n.worst)}° | ${n.faces.join(" ")}${fl.length ? "  ⚠ " + fl.join(" ") : ""}`);
   }
   const tb = B.turns, tn = N.turns;
   console.log(`  turns ${tb.length}→${tn.length}; held ${tb.filter((t) => t.held).length}→${tn.filter((t) => t.held).length}; replaced before whole ${tb.filter((t) => t.replaced).length}→${tn.filter((t) => t.replaced).length}`);

@@ -1,6 +1,6 @@
 # A fast orbit over many edges — one follower instead of a train of turns (2026-11-17)
 
-> **STATUS** · ✅ **THE OWNER'S GO, the night of 2026-11-17** — the build as briefed: §1 – §5 (branch `1.0.148-`, from `1dac167`); as built: after §5.
+> **STATUS** · ✅ **THE OWNER'S GO, the night of 2026-11-17** — the build as briefed: §1 – §5 (branch `1.0.148-`, from `1dac167`); as built: after §5 — ⛔ FO1 NOT BUILT, measured and reverted (§6)
 > **OWNS** · how a camera turn behaves when the gizmo crosses edges fast: which turns hold the gizmo, a running turn redirected, the pace of a turn that
 > does not hold · **READ WITH** · [`LEVEL_FACE_ENTRY.md`](LEVEL_FACE_ENTRY.md) §14 (the proposal: the turns counted, the literature, why nothing
 > drifts), [`TILTED_POLE_CLOSE_IN.md`](TILTED_POLE_CLOSE_IN.md) §1 (the rules T1 – T12), `scripts/probes/ORBIT_GATES.md` (the gates). The dossier:
@@ -88,3 +88,44 @@ the fast corner loops (else no benefit: not built); G4 again.
 Close in (F3). The close-in long way round, the far-out entry turn's size, one rule for every tilt on the held turns, the 27° back over the entry edge
 ([`LEVEL_FACE_ENTRY.md`](LEVEL_FACE_ENTRY.md) §13's table, rows 1 – 4). Any change to what drives the piece and the camera. A wait before a turn, a
 forecast of the next crossing, fewer frames at speed (§14: looked at, not proposed).
+
+## 6. FO1 as measured — NOT BUILT (2026-11-18, the builder of the night's chain)
+
+**The result first.** FO1 was built (`45b0d2f`), measured, and **reverted** (`2a5a28b`): the game's code is the base's again (`892b6a3`'s `src` and
+`tests`). Its own fallback (§2 5.) was built and measured too; with it, the picture still goes back and forth more than at the base on the 30 px loops,
+so by §2 5. FO1 is not built. To look at it again: `git revert 2a5a28b` (one commit brings the code, its slider and its 15 vectors back).
+
+**What was built** (in `45b0d2f`): the limit `turnHoldFromDeg` (90; 0 … 180; a slider under TILTED POLE next to the turns' speed; at 0 every turn holds);
+the decision `timedTurnHolds` in `seam_turn.ts`, made once at a timed turn's first frame in `zoneMixPose` (the picture's one rotation from the pose shown
+to its target; the close-in latch on, the limit 0 or the angle unknown: held) and kept on the turn (`asmZoneMix.hold`); `tiltClampStep` lets the
+orbit's steps through a turn decided free; the two readers (a free face entered with no entry edge, a zone's switch at a pole) read the target while such
+a turn runs (`fadeFree`, `readNotFade`, `bareDir`); the fallback `turnGoesBack` — a turn that would send the picture back toward the one the last free turn
+left, within 300 ms (`TURN_BACK_WINDOW_MS`), holds. Vectors: `tests/fast_orbit.test.ts` (15; 16 mutants each turned it red: the limit, close in, the unknown angle,
+the angle at the limit, the decision passed, the readers, the window, back / on, the default, the range, the four wiring pins).
+
+**The gates** (base: `<scratchpad>/fo1/base` and `lf3/base`; now: `fo1/off`, `fo1/def`; the runbook `scripts/probes/ORBIT_GATES.md` §9).
+
+| gate | measured | verdict |
+|---|---|---|
+| G1 — the limit 0 | the three replays identical frame for frame (2794 / 2794 each); level entry a 6 / 6 and b 27 / 27 walks identical; the 23 fast walks identical | ✅ |
+| G2 — close in | `tilt_check` default, out (4 px, 1 px), ridge, press, rim, pole on the three scenes: every recording identical frame for frame; `ridge_check` tip far and close in identical | ✅ |
+| G3 — the held turns | the over-the-ridge walk's half turn identical (180°, 28 frames held); the dy holds of `across_check` as at the base (936 → 937 frames) | ✅ where measured |
+| G4 (i) | on every frame with no turn running, in all 23 fast walks, the pose drawn = the target to the last bit | ✅ |
+| G4 (ii) | 18 walks identical but in the last digits (≤ 1.1e-9), 3 to the last bit; ⚠ `f_ccw_p_d736_px30` and `f_ccw_m_d736_px30`: the free face's carried heading differs on ONE frame (the entry read while a HELD turn ran — the readers were changed only during a free turn); ⚠ `f_s1_over_px20` (`Scene_1`, no turn at all): the camera 5.6 mm off from frame 20 — the replay's inputs are not the whole state there (a probe limit, not the build) | ⚠ |
+| G5 — the replays at the defaults | `Scene_1` the last digits (≤ 6.8e-10), `Scene_0` identical, `Scene_0bis` another play from frame 315 (drag 5) — ⛔ **one free turn there began at 58.8° and its target ran away with the finger: 113° in the end, drawn over a PATH of 342° in 36 frames (ratio 3.02, 17.4° in one frame)** — package A's circle, by another road | ❌ |
+| G6 — the fast walks | the gizmo never held for a turn under 90° (but the fallback's); the total turning 18 – 61 % lower on every loop walk; the frames 3 – 30 % fewer; ⛔ the worst frame over the base + 1° on 5 walks (12.6 → 15.6°, 13.6 → 15.8°, 13.6 → 15.9°, 16.8 → 20.9°, 19.8 → 24.3°: the finger's own turn now adds to the timed turn's 6° a frame); ⛔ the reversals more than at the base on 5 walks (30 px: 4 → 14, 6 → 12, 10 → 16, 15 → 18; the edge at 20 px 0 → 1, in the lift after it) | ❌ |
+
+**What a hand would have felt** (the walks at 20 px a frame far out): a corner loop in 11 – 17 frames instead of 19 – 36, the picture turning about half as
+much, no stop at each edge; along the bottom's long edge at 20 px, 21 frames instead of 91 and 92° of turning instead of 332°. And on the fastest finger
+(30 px a frame), the picture swinging back and forth up to three times as often, and frames of 20 – 24° where the base had 17 – 20°.
+
+**Why, in plain words.** A timed turn fades from a FIXED picture (the pose shown when it began) to a target the finger now keeps moving. When the gizmo
+was held the target stood still; free, the target runs ahead of the fade, the angle left grows instead of shrinking (58.8° → 267° in the replay), and the
+fade goes round the long way. And each frame the finger's own turn adds to the turn's 6° (`tiltRollDegS`). Both are in the two-target drawing and the
+turn's pace — which this build was told not to touch (§2 3., lesson 3 of the brief).
+
+**Options for the owner** (none built): (a) a free turn that eases the GAP between the shown and the target rather than fading from a fixed pose (the
+target's own motion passed through, only the initial difference dissolved — as the piece's direction is eased, `easedDir`); (b) a free turn whose
+angle grows past the limit while it runs becomes held (the decision made once today: the brief forbade switching it inside a turn); (c) FO2's eased pace
+alone does not cure either (it never exceeds the one speed, and the circle is the fixed start, not the speed); (d) keep today's game (the limit 0).
+The probes stay: the fast walks and their base (§9 of the runbook) are the gate any next attempt is measured on.
