@@ -691,7 +691,7 @@ the results."* And that night: *"Progress as much as you can without asking me q
 
 | # | the question | his answer | what follows |
 |---|---|---|---|
-| 1 | W11, the tilt's entry under a fast dy (§12.4) | *"1- A"* | **BUILD** option A — the one turn truly one — on `1.0.147-` |
+| 1 | W11, the tilt's entry under a fast dy (§12.4) | *"1- A"* | **BUILD** option A — the one turn truly one — on `1.0.147-`; built `fe06c2c`, `c53f54a`, ⛔ REVERTED `6e56dfc` (the owner, 2026-11-17: *"Revert and then deploy"*) — it brought a circle of the camera at a cap's entry close in ([`BOTTOM_FACE_CIRCLE_REGRESSION.md`](BOTTOM_FACE_CIRCLE_REGRESSION.md)); W11 stands as before |
 | 2 | the spit's half turn (§13.4) | *"2- R1"* | **BUILD** R1 — the turn at the gizmo's edge — on `1.0.147-`; built `1038a29`, ⛔ REVERTED `21e600d` — it broke decision 3 (§19); ✅ the owner, 2026-11-17: *"Keep as it is right now"* — **R1 DROPPED**, the turn stays as built |
 | 3 | `Scene_0bis`'s top ridge reached from a tip (§13.4) | *"I don't want to change what is currently built: it looks good on the screen. Record and do nothing. We may reopen if we need when we build game scenes later on."* | **KEPT AS BUILT**; may be reopened when game scenes are built |
 | 4 | a level top that is not a rectangle (W8; D-T5, §5) | *"Maintain D-T5. This kind of geometry probably means that the piece has a rotation symetry axis around the gravity axis so D-T5 makes sense. Just record as we may reopen if we need when we build game scenes later on."* | **D-T5 MAINTAINED** (polar at every distance on such a cap); nothing built; may be reopened when game scenes are built |
@@ -706,7 +706,7 @@ a matter for the later surface work (the study before step B, §6).
 **Not in this chain**: step B; anything on 3, 4 or 5; any change of the game beyond A and R1; any push or deploy. ⚠ R1 moves where the spit's half
 turn is triggered, also on the ridge arrived at from a tip (3): the builder of R1 measures that arrival before and after and reports any change.
 
-## 18. PACKAGE A — W11, OPTION A: ONE TRANSITION, ONE TURN (as briefed, 2026-11-16 night, an Opus agent; branch `1.0.147-`)
+## 18. PACKAGE A — W11, OPTION A: ONE TRANSITION, ONE TURN (as briefed, 2026-11-16 night, an Opus agent; branch `1.0.147-`) — ⛔ REVERTED `6e56dfc`, the record
 
 **The contract** (§12.4 A, the owner's *"1- A"*): while a transition's turn runs the square camera's target is reached INSIDE it — one clock; the
 piece's direction ease read once the frame's view is set, at EVERY turn start; the picture never faster than `tiltRollDegS` (6° a frame) in any path.
@@ -721,7 +721,7 @@ The frame change itself unchanged (at once, the gizmo kept, every angle set). **
    speed's step over the turn's whole angle); the square camera's own share when no turn runs (its step capped by the angle it turns the direction).
 **Expected**: every change of frame close in turns the picture once, ≤ 6° a frame (today 6.2 – 8.9); the ridge's and the spit's half turns slower.
 
-### 18.1 As built (2026-11-17 night: `fe06c2c`, then `c53f54a`, Opus agents; base `e79d820`) — `git revert c53f54a fe06c2c` undoes A
+### 18.1 As built (2026-11-17 night: `fe06c2c`, then `c53f54a`, Opus agents; base `e79d820`) — `git revert c53f54a fe06c2c` undoes A: ⛔ DONE, `6e56dfc`
 `seam_turn.ts`: FINGER capped and waiting for the angle (`seamTurnStep`), `squareShareStep` / `nlerpAngle`, `squareRestarts`, `seamStepRad`; the wiring:
 `squareFrame` (at its target inside a turn, else its share capped), `seamEaseRead` after `calmFrame` (the gap from `dirFrom`; the turn's axis and
 framing rule read afresh), every clock waiting for it, `turnRestart`. Two causes found while building, both fixed in the rule: (a) where the camera

@@ -1,6 +1,6 @@
 # The camera's circle at the bottom face — the regression of package A (2026-11-17)
 
-⛔⛔ **AN ANALYSIS. NOTHING BUILT. THE OWNER TO DECIDE.** Two Opus agents: one analysed the owner's report, a second tried to refute it and ran its
+✅✅ **DECIDED (the owner, 2026-11-17: *"Revert and then deploy"*): PACKAGE A IS REVERTED, `6e56dfc`** — §9. What follows is the analysis as it was put to him (written before his decision: "nothing built, the owner to decide"). Two Opus agents: one analysed the owner's report, a second tried to refute it and ran its
 own checks. Every figure here is headless (60 frames a second, a dy of 3 px a frame). ⛔ No device look.
 
 The dossier's entry: [`RND5.md`](../../00_CORE/queue_notes/RND5.md). Package A itself: [`TILTED_POLE_CLOSE_IN.md`](TILTED_POLE_CLOSE_IN.md) §18.
@@ -135,3 +135,21 @@ Options 2 or 3, with 4, keep what A gained and the ridge the owner likes. Option
 No device look; one finger speed; `Scene_2`; the commits between `c7ac510` and `c5aa295` one by one (both clean, the same figures); the full gates.
 The probes (not in the repo — absolute paths): `C:/Users/sugit/AppData/Local/Temp/claude/58fcf8122906abb9/b2290347-4989-4dda-a6ab-49506e5270d4/scratchpad/regress_bottom/`
 (`bottom_walk.mjs`, `bw_batch.sh`, `bw_turns.mjs`, `my_frames.mjs`; the recordings in `out/` and `out2/`). A scratch folder: it may be cleared.
+
+## 9. The owner's decision, and what is open (2026-11-17)
+
+* **The decision**: option 1 of §6 was recommended to him (it restores exactly a state he approved on the phone; what A protects — never over 6° a
+  frame — is not what he asks for: he asks for the ridge 50 % faster, about 9° a frame). His word: *"Revert and then deploy"*.
+* **The revert**: `6e56dfc` (one commit undoing `c53f54a` and `fe06c2c`). `src` and `tests` are byte-equal to `c5aa295` again (`git diff c5aa295 -- src
+  tests` is empty); `npm run verify`: 164 files, **2058 vectors**. The probes' options A added (`WORSTF`, `TURNONLY`, `TRACE`) went with it;
+  `mid_check`'s mended setup (`c67bb67`) stays. W11 (the two clocks in one transition, `TILTED_POLE_CLOSE_IN.md` §12) stands as before A: measured, not
+  reported by the owner.
+* **His correction on `Scene_0bis`, verbatim** (after the analysis, before the revert): *"Sorry: this is exit or enter from or into the bottom face with dx
+  or with dy in scene 0bis at all distance: this creates a shake of the camera at the entrance or exit"*. ⛔ NOT ANALYSED: the two agents walked dy
+  only, and found nothing far out. A check (dx and dy, every distance, before and after A, against `c7ac510`) was started and stopped for the revert:
+  first his look on the reverted build — if the shake is still there, it is not package A's and the check is run against that build.
+* **The top ridge 50 % faster (§7)**: not built. Put to him, not answered yet: (a) a speed of its own for the half turns at a crossing, with a
+  slider (recommended), or (b) every turn 50 % faster by the existing setting. After the revert the ridge is the one of `c7ac510` again (30 frames
+  across; 13 – 16 from a tip).
+* **The order agreed with him** (*"Agreed"*): the change and its own check → the deploy on his word and his look → step 3 ONCE on the final code
+  (the whole rebuild audited, safe clean-ups, the docs in final form) → the merge into the main folder.
