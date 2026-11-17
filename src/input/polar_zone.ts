@@ -9,8 +9,9 @@
  * `snapToWorldAxis`, `zoneOrientation`), with the three knobs only they read (`valenceMin`, `facetMinRatio`, `snapDeg`; the record: `POLAR_ZONES.md`).
  *
  * The runtime helpers: which zone the gizmo is in with the exit's hysteresis (`zoneAt`, D-Z7), the finger read in F's upright screen (`fingerInFrame`), and
- * the zenith edge crossed as on `Scene_0` (`spitSide`, `spitHeading`, `crossingHold` — the owner: *"the dy hold happens after the crossing, not before
- * the crossing"*, *"I want to replicate the behavior of scene 0 when crossing the zenith edge"*).
+ * the spit's side (`spitSide`, `spitHeading`, `spitCameraHeading` — the owner: *"I want to replicate the behavior of scene 0 when crossing the zenith
+ * edge"*) — ⭐⭐⭐ (2026-11-17, R1) decided by the gizmo's face (`faceSide`), the heading read on the side's view (`spitSideView`); the hold the one rule's
+ * (`free_face.ts`'s `crossingEvent`; ⛔ `crossingHold`, the finger's last dy sign, deleted).
  */
 import type { Vec3 } from "../core/vec";
 import type { FaceMap, Facet } from "./face_map";
@@ -226,56 +227,49 @@ export function spitCameraHeading(u: Vec3, a: Vec3, side: number): number {
 export const SPIT_BIAS_FROM_RAD = (60 * Math.PI) / 180;
 /** ⭐ … whole from this one. */
 export const SPIT_BIAS_FULL_RAD = (75 * Math.PI) / 180;
-/** ⭐ A side change is a CROSSING (the turn, the hold) only seen from this pitch up / down: below it the heading is the direction's own (`spitCameraHeading`). */
+/** ⭐ Looking down from this pitch the spit's finger is swapped (`fingerSwapped`, the wiring's `zoneFinger`); below it the heading is the direction's own
+ *  (`spitCameraHeading`). ⛔ (2026-11-17, R1) no longer the side change's test: the gizmo's face decides it (`faceSide`). */
 export const SPIT_CROSSING_PITCH_RAD = SPIT_BIAS_FROM_RAD;
 
-/** ⭐ (2026-11-14) the part of a unit direction square to the axis under this, the direction is round a TIP (within 30° of the axis): no crossing there */
-export const SPIT_OVER_AXIS_MIN = 0.5;
-
 /**
- * ⭐⭐⭐ (2026-11-14) HOW STEEPLY THE DIRECTION `u` PASSES THE AXIS `a`: the pitch (rad) of its part SQUARE to the axis — a side change with it steep
- * (≥ `SPIT_CROSSING_PITCH_RAD`) is the camera passing OVER or UNDER the axis (the zenith edge, the bottom face's middle: a crossing — the turn, the hold);
- * 0 round a tip (that part under `SPIT_OVER_AXIS_MIN`: its way means nothing there — a silent change). ⛔ (the same day) the pitch of `u` itself: on the
- * bottom face off its middle `u` leans along the axis (41° toward a tip, 2026-11-14's walk) though it passes under the axis — read as "round a tip", the
- * side flipped with no turn and no hold, the finger's mapping with it: the gizmo bounced across the middle every few frames.
+ * ⭐⭐⭐ (2026-11-17, `TILTED_POLE_CLOSE_IN.md` §13.4 R1, §19 — the owner: *"2- R1"*) THE SIDE OF A BOUND FACE of the spit: the side of the axis `a` its
+ * world normal `n` leans to — the sign of its part along `spitSideRef(a)` (a tip's triangle by its part square to the side, its lean along the axis not
+ * counted); 0, no side, within `SPIT_SIDE_HYST_DEG` of square to the side (the triangle under or over a tip's end). The GIZMO's banded face decides the
+ * spit's side, one band past the edge as every crossing (the wiring's `spitFaceStep`) — ⛔ the camera's direction crossing the vertical plane through the
+ * axis (`spitSide` with its 2° band, `crossingPitch`, `overAxisPitch`: deleted): far out the calm keeps the camera near the face's middle, the turn landed
+ * 55 – 60 mm into the face beyond the ridge.
  */
-export function overAxisPitch(u: Vec3, a: Vec3): number {
-  const k = dot(u, a);
-  const r: Vec3 = [u[0] - k * a[0], u[1] - k * a[1], u[2] - k * a[2]];
-  const lr = len(r);
-  return lr >= SPIT_OVER_AXIS_MIN ? Math.asin(Math.min(1, Math.abs(r[1]) / lr)) : 0;
+export function faceSide(n: Vec3, a: Vec3): number {
+  const s = dot(n, spitSideRef(a));
+  return Math.abs(s) > Math.sin(SPIT_SIDE_HYST_DEG * D) ? Math.sign(s) : 0;
 }
 
 /**
- * ⭐⭐⭐ (2026-11-14, the owner's records: a fast finger) HOW STEEPLY THE CAMERA'S PATH PASSED THE AXIS between last frame's direction `u0` and this one's
- * `u1`: `overAxisPitch` where the path cuts the side's plane (`spitSideRef`: the place the side really changed) — not at either end alone. ⛔ Read at the
- * frame's end only: the camera went from straight under the body (pitch 85°) to 70° past it in one frame — read there 19°, "round a tip", the side
- * flipped with no turn: the heading by 170° in ONE frame. Both ends on one side of the plane (the hysteresis): the end nearer it. `u0` none: `u1`'s.
+ * ⭐⭐⭐ (2026-11-17, R1) TWO FACES MET ONLY AT A POLE of the spit (`pole`, the tip's apex, in the polygons' frame): both polygons have a corner there (within
+ * `tol`) and they share fewer than two corners — no edge between them. The gizmo going from one to the other passed OVER THE APEX (round the tip, the
+ * orbit through its pole): no edge was crossed, so the side is not changed there (the next edge settles it). ⛔ Read as an edge's crossing: the turn's
+ * end pose swung half round the tip with the calm, the piece and its aim swapped places on the glass (the framing's separation at 179°) and the turn's
+ * picture rolled the long way — 60.6° in one frame (`Scene_0bis`'s seeded replay, drag 21).
  */
-export function crossingPitch(u0: Vec3 | null, u1: Vec3, a: Vec3): number {
-  if (u0 === null) return overAxisPitch(u1, a);
+export function metAtPoleOnly(a: readonly Vec3[], b: readonly Vec3[], pole: Vec3, tol: number): boolean {
+  const at = (P: readonly Vec3[], q: Vec3): boolean => P.some((p) => len(sub(p, q)) < tol);
+  if (!at(a, pole) || !at(b, pole)) return false;
+  // the corners of `a` (a polygon may repeat a point: counted once) that are also corners of `b`
+  const shared: Vec3[] = [];
+  for (const p of a) if (at(b, p) && !at(shared, p)) shared.push(p);
+  return shared.length < 2;
+}
+
+/**
+ * ⭐⭐⭐ (R1, W3's second half) THE DIRECTION THE SPIT CAMERA'S HEADING IS READ AT on `side` (`spitCameraHeading`): the camera's `u` itself when it is on that
+ * side (or on the plane, or no side) — today's heading unchanged; on the other side `u` MIRRORED across the side's plane (the vertical plane through the
+ * axis), so the heading keeps the side's sign whatever the camera's lag: continuous across the plane, and looking down on the other side it is the side's
+ * own (the picture turned half round — the half turn the gizmo's crossing starts). ⛔ `u` itself with the side the gizmo's: on the other side its level
+ * part outweighs the side's bias below ~73°, and the heading passed through its zero as the camera came over — half a turn in a few degrees of path.
+ */
+export function spitSideView(u: Vec3, a: Vec3, side: number): Vec3 {
   const r = spitSideRef(a);
-  const d0 = dot(u0, r);
-  const d1 = dot(u1, r);
-  if (d0 * d1 < 0) {
-    const t = d0 / (d0 - d1);
-    const m: Vec3 = [u0[0] + (u1[0] - u0[0]) * t, u0[1] + (u1[1] - u0[1]) * t, u0[2] + (u1[2] - u0[2]) * t];
-    const l = len(m);
-    return l > 1e-9 ? overAxisPitch([m[0] / l, m[1] / l, m[2] / l], a) : Math.PI / 2; // ⭐ through the centre: straight over the axis
-  }
-  return overAxisPitch(Math.abs(d0) < Math.abs(d1) ? u0 : u1, a);
-}
-
-/**
- * ⭐⭐⭐ (§8's hold, after the crossing) THE DY HOLD once the side changed, the gizmo on its face (normal `n`): the dy sign that crossed (`sign`, the
- * finger's last) held until the finger has gone `edgeHoldMm` the other way. `null`: no dy to hold, or no way along the face toward the new `side` (its
- * normal along that way). ⛔ (2026-11-16, step C5) where the gizmo crossed (`g0`) and the way into the face beyond (`d`) no longer returned: read by
- * nothing. ⭐ (step C5) kept under the charts too, handed to the one event (`crossTurn`; `TILTED_POLE_CLOSE_IN.md` §13.3).
- */
-export function crossingHold(n: Vec3 | null, a: Vec3, side: number, sign: number): { readonly sign: 1 | -1; readonly back: number } | null {
-  if (sign === 0 || n === null) return null;
-  const s = spitSideRef(a);
-  const w: Vec3 = [s[0] * side, s[1] * side, s[2] * side];
-  const k = dot(w, n);
-  return unit([w[0] - k * n[0], w[1] - k * n[1], w[2] - k * n[2]]) === null ? null : { sign: sign > 0 ? 1 : -1, back: 0 };
+  const k = dot(u, r);
+  if (side === 0 || k * side >= 0) return u;
+  return [u[0] - 2 * k * r[0], u[1] - 2 * k * r[1], u[2] - 2 * k * r[2]];
 }

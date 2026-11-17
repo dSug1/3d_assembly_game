@@ -397,8 +397,9 @@ export interface SceneState {
   asmCamLast: import("../input/orbit_tilt").CamFrame | null;
   /** ⭐⭐⭐ (2026-11-13, the owner: *"replicate the behavior of scene 0 when crossing the zenith edge"*) the spit's side of the axis (`spitSide`; 0: none) */
   asmSpitSide: number;
-  /** ⭐⭐⭐ (2026-11-14) the camera's direction the spit's side was last read at (world) — the crossing read on the path from it (`crossingPitch`) */
-  asmSpitU: import("../core/vec").Vec3 | null;
+  /** ⭐⭐⭐ (2026-11-17, `TILTED_POLE_CLOSE_IN.md` §19 — R1) the WORLD normal of the bound face the gizmo's band read last in a spit (`spitFaceStep`) — the
+   *  face LEFT at a change of side, for the hold's rule (`crossingEvent`). ⛔ `asmSpitU`, the camera's direction the side was read at (`crossingPitch`) */
+  asmSpitN: { readonly n: import("../core/vec").Vec3; readonly facet: number; readonly map: object } | null;
   /** ⭐⭐⭐ (2026-11-13, the owner) the zones drawn in fuchsia (`zoneHighlightFrame`) and the zones' key they were built for */
   asmZoneMesh: { readonly key: string; readonly mesh: import("@babylonjs/core/Meshes/mesh").Mesh } | null;
   /** ⭐ (§3.5) the angle of F's up on the glass (`fingerInFrame`) — kept looking along the axis */

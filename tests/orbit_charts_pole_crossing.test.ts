@@ -334,7 +334,7 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`)", () => {
     expect(c).not.toMatch(/getBoundingInfo|pickWithRay|absolutePosition|st\.camera\.|cameraPrev|modelCast|gizmoNormal/);
     // the turn started exactly as the spit's crossing starts it (the same event, `crossTurn`; ⛔ the spit's own lines of the switch off: step 2.5)
     expect(fnSource(W, "function seamTurnStart(")).toContain("st.asmZoneMix = st.asmCamLast === null ? null : { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0, ...(paced ? { byMm: true } : {}) };");
-    expect(fnSource(W, "export function spitStep(")).toContain("crossTurn(st, { at: null, uWas: null, carry: true, paced: false, hold: hold === null ? 0 : hold.sign });");
+    expect(fnSource(W, "function spitFaceStep(")).toContain("crossTurn(st, { at: null, uWas: null, carry: true, paced: false, hold });"); // ⭐ (R1) the spit's side at the gizmo's edge
     // ⛔ the sway: nothing read off a drawn mesh, a pick or the camera for a place, a normal or a frame (the pose shown only starts the turn)
     expect(x).not.toMatch(/getBoundingInfo|pickWithRay|absolutePosition|st\.camera\.|cameraPrev|modelCast|gizmoNormal/);
   });
