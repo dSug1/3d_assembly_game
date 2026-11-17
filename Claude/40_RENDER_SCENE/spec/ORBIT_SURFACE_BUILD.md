@@ -75,3 +75,6 @@ like `Scene_1`'s), as a figure for the wiring step. A new file under `src`, a ne
   **The result: no goal of `Scene_2` is shut; the plan's way in is free for all sixteen; the six pistons are NARROW (1.9° – 2.7° round their bore,
   as the plan's ONE axis); the ghosts differ from the collision pieces by each part's seat marker's offset from its `UCX_` pieces, to 0.1 mm (pistons
   10 mm, heads 17 mm, crankshaft 2 mm) — a question for the owner.** Nothing wired, no game file changed, no registration line needed (§6 unchanged).
+* **S1 — THE DESIGN, written before the code** (2026-11-17, the builder) → [ORBIT_SURFACE_LANDING_MAP.md](ORBIT_SURFACE_LANDING_MAP.md): the
+  signature, the units and frames, the algorithm (the union of the convex pairs' Minkowski sums as half-spaces, cast along the normal) and why it is
+  exact, the tie key, "nothing to land on" a kind with no depth, the lookup and its error. As built: to follow.
