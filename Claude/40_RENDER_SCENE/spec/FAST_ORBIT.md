@@ -1,6 +1,6 @@
 # A fast orbit over many edges — one follower instead of a train of turns (2026-11-17)
 
-> **STATUS** · ✅ **THE OWNER'S GO, the night of 2026-11-17** — the build as briefed: §1 – §5 (branch `1.0.148-`, from `1dac167`); as built: after §5 — ⛔ FO1's first build measured and reverted (§6); ⭐ the fix rounds on the contract amended (§7)
+> **STATUS** · ✅ **THE OWNER'S GO, the night of 2026-11-17** — the build as briefed: §1 – §5 (branch `1.0.148-`, from `1dac167`); as built: after §5 — ⛔ FO1's first build measured and reverted (§6); ⭐ the fix rounds on the contract amended (§7); ⛔ fix round 1 (test 2) built on §7, measured, NOT BUILT — reverted (§8)
 > **OWNS** · how a camera turn behaves when the gizmo crosses edges fast: which turns hold the gizmo, a running turn redirected, the pace of a turn that
 > does not hold · **READ WITH** · [`LEVEL_FACE_ENTRY.md`](LEVEL_FACE_ENTRY.md) §14 (the proposal: the turns counted, the literature, why nothing
 > drifts), [`TILTED_POLE_CLOSE_IN.md`](TILTED_POLE_CLOSE_IN.md) §1 (the rules T1 – T12), `scripts/probes/ORBIT_GATES.md` (the gates). The dossier:
@@ -158,3 +158,37 @@ branches.
 decisions F1 – F9 but F8 (one deploy, of FO1 alone), the gates G0 – G7 of §4 as written (with F15's reading), the limit at 0 = today's game bit for
 bit. **Measured first**: the `Scene_0bis` replay at the defaults (§6's circle), the 30 px loops, the walk along the edge, the no-drift check — then
 the OFF and close-in gates. As built: §8.
+
+## 8. Fix round 1 (test 2) as measured — NOT BUILT (2026-11-18, the builder of fix round 1)
+
+**The result first.** The second build (`83a7713`: §7's F10, F11, F12, F13; no fallback) was measured and **reverted** (`18787b9`): `src` and `tests`
+are `892b6a3`'s again. It **cures the circle** but fails G6 and G5: the picture now follows the finger's own fastest turn while a free turn runs. To
+look at it again: `git revert 18787b9`. Not deployed: there is nothing for the owner to look at on his phone.
+
+**What was built**: the start of a free turn kept in its first frame's target's frame and put back from each frame's target (`startInTarget`,
+`startPutBack`, in `seam_turn.ts`; given to both drawings); the clock of a free turn advanced by the one speed's step less the target's own turn in the
+last frame (`turnBudgetStep`); the two readers on the target during every timed turn made far out with the limit not 0 (`timedTurnReadsTarget`); a free
+turn running when the close-in latch comes on replaced by a held one from the pose shown (`freeTurnEndsAtLatch`). A turn that holds: today's code.
+Vectors `tests/fast_orbit.test.ts` (25); 19 mutants, each red (the axes, the origin, the up, the piece of the put back; the budget negative, blind,
+reading NaN; the readers close in, at 0, by the hold; the latch every frame, on a held turn; the wiring's fixed start, carry, two-target drawing, held
+pace, target's turn, readers, F13).
+
+| gate | base → now | verdict |
+|---|---|---|
+| the circle (`Scene_0bis` replay, 20 free turns) | the turn's angle: grew 58.8° → 267° (§6) → **constant** in every turn (spread 0.0°); the gap drawn ↔ target grew at most 0.93° a frame in 18 turns, 1.13° and 1.08° in two; every turn not replaced ends on the target (gap 0.00°); path ≤ the target's own path + the first gap (e.g. 97° = 53° + 42°, the §6 turn's 342° for 113° gone) | ✅ (two frames 0.1° over) |
+| G5 replays | `Scene_0`, `Scene_1`: identical to the base, every frame. `Scene_0bis`: another play from frame 315; the view's largest frame 14.1° → 13.8°; **the roll 18.9° → 29.3°** (f1704: the target's own roll 29.8° there, at the free face's exit in the spit); gizmo steps ≤ 98 mm, 0 errors | ❌ |
+| G6 fast walks (23) | the gizmo never still for a turn under 90°; total turning −3 % to −68 % on 17 walks, unchanged on the three with no free turn, **+17 %, +18 %, +28 %** on three 30 px walks; **the worst frame over the base + 1° on 9 walks** (12.6 → 17.7°, 13.6 → 19.6°, 16.8 → 26.8°, 17.3 → 29.6°, 25.9 → 43.0° …); **more reversals on 11** (6 → 7 … 4 → 14) | ❌ |
+| F14 — the edge (2 / 8 / 20 px) | reversals 0 / 0 / 0 → 0 / 0 / 1 (the one in the lift after the walk, the walk itself 0 → 0); turning −3 %, −22 %, −50 % | the fallback NOT needed: not built |
+| G1 – G4, G0 on `83a7713` | NOT MEASURED (stopped at G6, the brief's rule); its vectors and typecheck green on the files touched | — |
+
+**Why, in plain words.** With the start carried, a free turn's picture turns exactly as its target does, plus the turn's own small step. So the
+worst frame is the target's own: in each walk's worst frame the target itself turned 15 – 41° (e.g. 43.0° drawn, 41.3° the target's, at the map's pole
+at 30 px a frame). At the base the same moments fall inside HELD turns: the gizmo stops, the target stands still, and the finger's fastest stretch
+is never drawn. F11 cannot slow the picture below its target without letting the gap grow, which F10 forbids. And under a fast finger the budget is
+0, so a turn waits, the next change of frame replaces it from the pose shown and the gaps add up: turns replaced before whole 3 → 16, and some sums
+reach 90° and hold again (51 frames on `f_ccw_p_far_px30`).
+
+**What is left — options for the owner** (none built): (a) judge the worst frame against the TARGET's own turn (+ 1°) instead of the base's — the
+cure as built passes that; (b) a free turn held again while the target turns faster than the one speed (a hold decided inside a turn: §2 1. forbids
+it); (c) smooth the finger's own orbit where it turns fastest (the map's poles, the spit's axis) — a change to what drives the camera: out of bounds;
+(d) keep today's game (the limit 0). Test 3 is the last: a third failure is the abort, back to `1.0.147-`. Recordings: `<scratchpad>/fo1b`.

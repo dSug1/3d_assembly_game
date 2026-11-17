@@ -577,3 +577,12 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   moving target makes the picture swing round its start. The contract amended (F10 – F16, for him to review): the start carried with the target (only
   the turn's own gap dissolves), the one speed as the picture's budget, the readers on the target in every timed turn, FO2 not run tonight. A failed
   test 3 = the abort, back to `1.0.147-`.
+
+## 2026-11-18 — fix round 1 of the fast orbit (test 2): built on §7, measured, NOT BUILT — reverted
+
+* **The result**: the game is the base's again (`83a7713` built, `18787b9` its revert). The circle is cured — a free turn's angle stays its first
+  frame's, the gap drawn ↔ target never grows (≤ 1.13° a frame) — but the picture now follows the finger's own fastest turn while a free turn runs:
+  the worst frame over the base + 1° on 9 of 23 fast walks (up to 43.0° vs 25.9°), more reversals on 11, the `Scene_0bis` replay's roll 18.9° → 29.3°.
+  At the base those moments fall inside held turns. The fallback (F14) was not needed. Figures and options: [`FAST_ORBIT.md`](../../40_RENDER_SCENE/spec/FAST_ORBIT.md) §8.
+* **What stays**: the turns' recorder records each turn's hold and the pose built / drawn (`0c885d1`); the circle's check, `turn_circle.mjs` (`a46b5a7`).
+* **Next**: test 3 (fix round 2) is the last; a third failure is the abort, back to `1.0.147-`.

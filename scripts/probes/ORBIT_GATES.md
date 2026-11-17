@@ -384,6 +384,13 @@ node scripts/probes/fast_walk_table.mjs <base>/fw_f_edge_px20.json <new>/<tag>_f
   Measured at the base on two walks: the discrete state identical, the numbers within 5e-10 (the replays' last-digit noise) — the replay itself is sound.
   ⚠ (FO1, 2026-11-18) on `Scene_1` (`f_s1_over_px20`, no turn at all) the replay drifts by 5.6 mm from frame 20: the inputs recorded are not the whole
   state there — read that walk's G4 as not meaningful. FO1's own figures (built, reverted): `FAST_ORBIT.md` §6; its recordings `<scratchpad>/fo1/def`, `fo1/off`.
+* **The circle's check** (2026-11-18, fix round 1 — `FAST_ORBIT.md` §8): `node scripts/probes/turn_circle.mjs <rec.json> …` on a fast walk or on a replay's
+  DUMP (`OUT=<f> DUMP=<f>/tr bash scripts/probes/replay_batch.sh rep` — `turn_rec.mjs` now records each turn's `id`, its `hold`, its readers `rt` and the
+  pose built / drawn `pose`; null on a build without `probeCamPose`). Per free turn: its angle (min..max), the gap drawn ↔ target (first, the most it
+  grew in a frame — GAP+ over 1° —, its decrements, at the end), its one rotation, path and the target's own path (PATH); per run the worst frame with
+  the TARGET's own turn in it. Read the worst frame against the target's: a free turn whose start is carried turns as its target does.
+  ⚠ Never edit a file under `src` while a batch runs: Vite reloads the page and that walk's recording is lost (`Cannot read properties of undefined`).
+  The second build's figures (reverted): `FAST_ORBIT.md` §8; its recordings `<scratchpad>/fo1b` (`fw_*`, `rep_*`, `tr_rep_*`, `g6_table.txt`).
 
 ### 9.1 The base (the code of `892b6a3` = the live `c343c4f`'s; recorded at `8997e45`, docs only after it) — `<scratchpad>/fo1/base`
 
