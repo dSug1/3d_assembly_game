@@ -3,6 +3,7 @@
 //   URL=http://127.0.0.1:5191/?sceneIndex=1&idleOrbitOn=0 [MODE=out|ridge|press|rim|pole] [SHOW=<leg>] node scripts/probes/tilt_check.mjs
 //   (a dev server must serve the URL; scripts/probes/tilt_batch.sh starts one and stops it — the runbook: scripts/probes/ORBIT_GATES.md)
 import { guardProbe } from "./probe_guard.mjs";
+import { turnRecStart, turnRecDump } from "./turn_rec.mjs"; // (LF2) DUMP=<file>: every frame of the run for turn_table.mjs
 import { spawn, spawnSync } from "node:child_process";
 import { mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -66,6 +67,7 @@ try {
   await ev(`[...document.querySelectorAll('pre[data-role="error"]')].forEach((x) => x.remove())`);
   await ev("window.__step(240)");
   await ev(RECORD);
+  await turnRecStart(ev);
   const step = (n) => ev(`window.__step(${n})`);
   const state = async () => JSON.parse(await ev(`(() => { const s = window.__st; const n = s.gizmoNormal; return JSON.stringify({ ap: s.approach, auto: !!s.asmTiltAuto, tilt: s.asmTilt ? s.asmTilt.id : null, ny: n ? n[1] : null, nz: n ? n[2] : null, el: s.orbit.elevation, yaw: s.orbit.yaw, gx: s.asmGizmoAt ? s.asmGizmoAt[0] : null, gy: s.asmGizmoAt ? s.asmGizmoAt[1] : null, gz: s.asmGizmoAt ? s.asmGizmoAt[2] : null, hold: !!s.asmEdgeHold, mix: !!s.asmZoneMix }); })()`));
   const mouse = (type, x, y, buttons) => send("Input.dispatchMouseEvent", { type, x, y, button: "left", buttons, clickCount: 1 });
@@ -346,6 +348,7 @@ try {
   const err = await ev("window.__recErr ?? window.__stepErr ?? null");
   console.log(`  errors ${errors}, recErr ${err}; the tilt's state, every change (${log.length}):`);
   for (const l of log) console.log(`   f${String(l.f).padStart(4)} ${l.leg.padEnd(14)} ap ${l.ap.toFixed(3)} el ${l.el.toFixed(2)} auto ${l.auto ? 1 : 0} pend ${l.pend ? 1 : 0} tilt ${String(l.tilt).padEnd(6)} zone ${l.zone} n ${l.n} up ${l.up.join(",")} | ${l.v}`);
+  await turnRecDump(ev);
   ws.close();
 } finally {
   kill();

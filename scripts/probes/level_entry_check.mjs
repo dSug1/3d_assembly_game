@@ -37,8 +37,8 @@ const RECORD = `(() => { const st = window.__st; window.__cam = []; window.__leg
     const g = st.asmGizmoAt, n = st.gizmoNormal, m = st.asmZoneMix, sq = st.asmSquare, c = st.asmCalm, t = st.camera.getTarget(), fr = st.asmFree;
     window.__cam.push({ leg: window.__leg, c: [st.camera.position.x, st.camera.position.y, st.camera.position.z], t: [t.x, t.y, t.z], up: [st.camera.upVector.x, st.camera.upVector.y, st.camera.upVector.z],
       yaw: st.orbit.yaw, el: st.orbit.elevation, g: g ? [g[0], g[1], g[2]] : null, n: n ? [n[0], n[1], n[2]] : null,
-      mix: m ? { k: m.k, rad: m.rad, rule: m.rule, byMm: !!m.byMm, out: !!m.out } : null, ds: st.asmDySign, eh: st.asmEdgeHold ? 1 : 0,
-      sqq: sq ? sq.q : -1, sqn: sq && sq.n ? [sq.n[0], sq.n[1], sq.n[2]] : null,
+      mix: m ? { k: m.k, rad: m.rad, whole: m.rad + (st.asmDirEase && st.asmDirEase.mix === m ? st.asmDirEase.angle : 0), known: m.axis !== null, rule: m.rule, byMm: !!m.byMm, out: !!m.out } : null, ds: st.asmDySign, eh: st.asmEdgeHold ? 1 : 0,
+      sqq: sq ? sq.q : -1, sqn: sq && sq.n ? [sq.n[0], sq.n[1], sq.n[2]] : null, sqt: sq && sq.target ? [sq.target[0], sq.target[1], sq.target[2]] : null,
       tilt: st.asmTilt ? st.asmTilt.id : 0, th: st.asmTilt ? st.asmTilt.heading : null, zone: st.asmZone ? st.asmZone.zone.orientation : null, ap: st.approach, auto: !!st.asmTiltAuto,
       ease: st.asmDirEase ? st.asmDirEase.angle * 180 / Math.PI : 0, spit: st.asmSpitSide ?? null, hold: !!st.asmEdgeHold,
       calm: c ? { n: [c.n[0], c.n[1], c.n[2]], sH: c.sH, sV: c.sV, wA: c.wA ?? 0 } : null, cw: st.asmCalmWhole, cwv: st.asmCalmWholeV, headO: st.asmHeadO, headW: st.asmHeadW, cp: st.cameraPrev && st.cameraPrev.cam ? [st.cameraPrev.cam.yaw, st.cameraPrev.cam.v] : null, pq: st.pieceQ ? [st.pieceQ.yaw, st.pieceQ.v] : null,
