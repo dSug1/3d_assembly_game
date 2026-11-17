@@ -1,6 +1,6 @@
 # A fast orbit over many edges — one follower instead of a train of turns (2026-11-17)
 
-> **STATUS** · ✅ **THE OWNER'S GO, the night of 2026-11-17** — the build as briefed: §1 – §5 (branch `1.0.148-`, from `1dac167`); as built: after §5 — ⛔ FO1's first build measured and reverted (§6); ⭐ the fix rounds on the contract amended (§7); ⛔ fix round 1 (test 2) built on §7, measured, NOT BUILT — reverted (§8); ⛔ fix round 2 (test 3, the last) — three realisations measured, NOT BUILT — reverted (§9): the abort, back to `1.0.147-`
+> **STATUS** · ✅ **THE OWNER'S GO, the night of 2026-11-17** — the build as briefed: §1 – §5 (branch `1.0.148-`, from `1dac167`); as built: after §5 — ⛔ FO1's first build measured and reverted (§6); ⭐ the fix rounds on the contract amended (§7); ⛔ fix round 1 (test 2) built on §7, measured, NOT BUILT — reverted (§8); ⛔ fix round 2 (test 3, the last) — three realisations measured, NOT BUILT — reverted (§9); ⛔ **THE ABORT DONE: the work is back on `1.0.147-`, the fast orbit is NOT in the game** (§10: what was learned, the lead's proposal)
 > **OWNS** · how a camera turn behaves when the gizmo crosses edges fast: which turns hold the gizmo, a running turn redirected, the pace of a turn that
 > does not hold · **READ WITH** · [`LEVEL_FACE_ENTRY.md`](LEVEL_FACE_ENTRY.md) §14 (the proposal: the turns counted, the literature, why nothing
 > drifts), [`TILTED_POLE_CLOSE_IN.md`](TILTED_POLE_CLOSE_IN.md) §1 (the rules T1 – T12), `scripts/probes/ORBIT_GATES.md` (the gates). The dossier:
@@ -229,3 +229,30 @@ than 6° a frame inside a turn; at 30 px a frame the picture falls behind the fi
 **The owner's options** (none built): (a) v2 with a hold decided again when a free turn's gap reaches the limit (changes §2 1.); (b) the gates judged
 at 20 px only, with 30 px read as "beyond the one speed" (changes G6); (c) the held turn's drawing fixed for a start far from its target (§5, row 1 of
 `LEVEL_FACE_ENTRY.md` §13's table); (d) keep today's game — the abort, `1.0.147-`.
+
+## 10. The abort, done — what the three builds taught, what the lead would propose (the lead, 2026-11-18 01:25)
+
+**The abort.** Three real tests, three failures (§6, §8, §9): his rule applied — *"If the test fails a third time, abort and revert to the branch
+1.0.147-."* The worktree is back on `1.0.147-`. The night's documents and probes were carried over (twelve commits picked, the tree identical to
+`1.0.148-`'s tip); no commit past `892b6a3` touches `src` or `tests` there. `1.0.148-` is kept, local and not pushed, as the record of the three
+builds: `45b0d2f`, `83a7713`, `1b6b1a7`, each reverted by the commit after it. Nothing deployed: the live game is `892b6a3`'s code. The night goes on
+from `1.0.147-`: the dy hold, the silent entry, the audit.
+
+**What the three builds taught** (measured, §6 – §9):
+
+* The first build's circle had one cause — a turn fading from a start fixed in the world while its target moves — and it is cured in both later
+  builds.
+* What is left is not a method's fault. With the gizmo free, a fast finger turns the camera's TARGET itself by 21 – 52° in one frame at the gate's
+  fastest pace (30 px a frame), near the map's poles and the spit's axis. Today's game never draws those stretches: its turns hold the gizmo there.
+  Without the hold the picture either draws them (builds 2, v1, v3: frames of 17 – 43°) or lags behind them (v2: 6° a frame at most, a lag of 80 –
+  137°, then a held turn that jumps 55 – 130° in its first frame).
+* At the gate's second pace (20 px a frame) v2 is better than today's game on three figures of four: the loops in 163 – 291 frames against 178 – 340,
+  the picture's total turning 45 – 58 % lower, the worst frame 6.0 – 9.8° against 12.6 – 14.8°. The fourth is worse: more reversals on five loops (2 →
+  3, 0 → 2; the edge 0 → 1).
+* Found in today's game on the way: a HELD turn's drawing can jump far in its first frame when it starts far from its target and the piece has moved
+  (§9, the outside findings) — only v2 makes such starts.
+
+**What the lead would propose, if he wants the fast orbit taken up again** (NOT built, NOT measured — for his word): v2, with the gizmo held again
+when a free turn's lag reaches the limit (90°) — §9's option (a). It keeps his rule that a turn of 90° or more holds, and it bends only the lead's own
+§2 1. (the hold decided once). To be measured before any build: which pace his own fast orbit has — a play recorded on his phone would say whether 20
+or 30 px a frame is the case to judge.

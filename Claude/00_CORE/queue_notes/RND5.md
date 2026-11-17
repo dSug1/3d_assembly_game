@@ -596,3 +596,14 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   better on everything but reversals); the gap never growing (v3). At 30 px each fails G6: the picture shows the target's fastest frames, or it lags,
   the next turn holds and its drawing jumps 55 – 130°. G5's `Scene_0bis` replay: 14.1° → 49.6°. Figures and options: [`FAST_ORBIT.md`](../../40_RENDER_SCENE/spec/FAST_ORBIT.md) §9.
 * **What stays**: the reading `scripts/probes/turn_where.mjs` (`e3a924a`); the recordings `<scratchpad>/fo1c`.
+
+## 2026-11-18 (01:25) — the fast orbit: three real tests failed — THE ABORT done, the night goes on from `1.0.147-`
+
+* **The three tests**: the first build (`45b0d2f`: the circle), fix round 1 (`83a7713`: the circle cured, the picture follows the finger's fastest
+  turns — frames of 17 – 43°), fix round 2 (`1b6b1a7`: every free frame within 6°, but at 30 px a frame a lag of 80 – 137° then a held turn that
+  jumps). Each measured and reverted by its builder ([`FAST_ORBIT.md`](../../40_RENDER_SCENE/spec/FAST_ORBIT.md) §6, §8, §9).
+* **The abort** (his rule, the lead's step): the worktree back on `1.0.147-`; the night's documents and probes carried over (twelve commits picked,
+  the tree identical to `1.0.148-`'s tip, no commit past `892b6a3` touching `src` or `tests`); `1.0.148-` kept local, not pushed, as the record.
+  Nothing deployed. The lead's reading and proposal: §10 there.
+* **Next, in his order**: the dy hold's fix ([`DY_HOLD_REVERSAL.md`](../../40_RENDER_SCENE/spec/DY_HOLD_REVERSAL.md)), the silent entry
+  ([`LEVEL_FACE_ENTRY.md`](../../40_RENDER_SCENE/spec/LEVEL_FACE_ENTRY.md) §15), the audit — all on `1.0.147-`, without the fast orbit.
