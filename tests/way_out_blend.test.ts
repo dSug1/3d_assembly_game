@@ -228,7 +228,7 @@ describe("⭐⭐⭐ the wiring (source pins, comments stripped)", () => {
     expect(f).toContain("if (zm === null || zm.out === undefined) return;");
     expect(f).toContain("const whole = turnWhole(st, zm);");
     expect(f).toContain("const target = seamOutTarget(o.outMm, o.orbitMm, st.cfg.tiltOutBlendMm, st.cfg.tiltBlendMm, st.router.all().length > 0);");
-    expect(f).toContain("const dl = turnDialsOf(st, zm); o.p = seamOutStep(o.p, target, dtMs, whole, st.cfg.tiltRollDegS, zm.axis !== null, dl.minMs, dl.maxMs, dl.smallDeg); zm.k = seamOutShare(o.p);"); // ⭐ (2026-11-17, LF2) its ceiling one rule for every tilt
+    expect(f).toContain("o.p = seamOutStep(o.p, target, dtMs, whole, st.cfg.tiltRollDegS, zm.axis !== null); zm.k = seamOutShare(o.p);");
     expect(f).toContain("if (o.p >= 1) st.asmZoneMix = null;");
     const a = fnCode(W, "export function assemblyFrame(");
     before(a, "seamTurnFrame(st, dtMs);", "seamOutFrame(st, dtMs);");
@@ -236,7 +236,7 @@ describe("⭐⭐⭐ the wiring (source pins, comments stripped)", () => {
   });
   it("⭐ the timed clock leaves it alone (`zoneStep`), and `tiltClampStep` does not hold for it (`turnHoldsGizmo`)", () => {
     const z = fnCode(W, "function zoneStep(");
-    expect(z).toContain("const dl = zm !== null && zm.byMm !== true && zm.out === undefined ? turnDialsOf(st, zm) : null; if (zm !== null && dl !== null && zm.axis !== null) {"); // ⭐ (2026-11-17, LF2) the same guard (`dl` null for a paced turn and the way out), the dials read first
+    expect(z).toContain("if (zm !== null && zm.axis !== null && zm.byMm !== true && zm.out === undefined) {");
     const h = fnCode(W, "export function tiltClampStep(");
     expect(h).toContain("const zoneTurning = zm !== null && turnHoldsGizmo(zm.out !== undefined, zm.byMm === true, st.asmTiltPending, st.asmBlend !== null, zm.k);");
   });

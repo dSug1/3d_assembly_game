@@ -218,10 +218,6 @@ export function installTuningMenu(st: SceneState): void {
             // ⛔ (2026-11-15, the owner: *"cancel my rule and remove the press action on the orbit"*) no press tilts: close in only — the labels say so
             tunable(st, "tilted pole: close in, a face holding a pole made a side (1) / off (0)", "tiltedPole", 0, 1, 1),
             tunable(st, "tilted pole: every tilt's speed — its roll, its swing (°/s; 0: at once)", "tiltRollDegS", 0, 1440, 30),
-            // ⭐⭐⭐ (2026-11-17, `LEVEL_FACE_ENTRY.md` §9, LF2) one rule for every tilt: the turn's duration a function of its angle — its three dials
-            tunable(st, "every tilt's least duration (ms; 0: none)", "tiltMinMs", 0, 1000, 10),
-            tunable(st, "every tilt's longest duration (ms; 0: none)", "tiltMaxMs", 0, 2000, 10),
-            tunable(st, "every tilt: the angle under which the least duration shrinks with the turn (°)", "tiltSmallDeg", 1, 90, 1),
             tunable(st, "tilted pole: automatic within this distance (m; 0: never)", "tiltAutoM", 0, 3, 0.05),
             tunable(st, "tilted pole: automatic — the camera blended in over the orbit's first (mm of finger; 0: at once)", "tiltBlendMm", 0, 100, 5),
             // ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §8, step C3) the way out of close in, blended

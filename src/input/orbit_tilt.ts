@@ -588,49 +588,6 @@ export function rollDurationMs(rad: number, degS: number): number {
 }
 
 /**
- * ⭐⭐⭐ (2026-11-17, `LEVEL_FACE_ENTRY.md` §9, §11 — package LF2; the owner: *"You can relax "one speed for every tilt" to "one rule for every tilt""*, then
- * *"Agreed to every recommendation. Proceed."*) ONE RULE FOR EVERY TILT — A TURN'S DURATION (ms) IS A FUNCTION OF ITS ANGLE (`angleDeg`, its size): the
- * larger of the one speed's (`angle / speedDegS`) and the LEAST duration (`minMs`), the least SHRINKING with the angle under `smallDeg` (`minMs × angle /
- * smallDeg`: a small turn at a slow speed, never a quarter second's hold for a turn of 2°), and never over the LONGEST (`maxMs`, when over 0 — it wins
- * over the least). One continuous function. `minMs` 0 / `maxMs` 0: none — both 0: the one speed's, today's (`rollDurationMs`). `speedDegS` 0: no speed
- * term. At the defaults (360°/s, 250 ms, 333 ms, 30°): 2.4° 20 ms, 10° 83 ms, 27° 225 ms, 30° – 90° 250 ms, 100° 278 ms, from 120° on 333 ms.
- */
-export function turnDurationMs(angleDeg: number, speedDegS: number, minMs: number, maxMs: number, smallDeg: number): number {
-  const a = Number.isFinite(angleDeg) ? Math.abs(angleDeg) : 0;
-  const speed = speedDegS > 0 ? (a / speedDegS) * 1000 : 0;
-  const least = minMs > 0 ? minMs * Math.min(1, smallDeg > 0 ? a / smallDeg : 1) : 0;
-  const d = Math.max(speed, least);
-  return maxMs > 0 ? Math.min(d, maxMs) : d;
-}
-
-/**
- * ⭐⭐⭐ (2026-11-17, LF2 — `LEVEL_FACE_ENTRY.md` §11; the brief: *"the rule changes the pace, never the path"*) THE DIALS A TURN READS: the rule's
- * (`minMs`, `maxMs`, `smallDeg`) — or none (0, 0: the one speed, as before) for a transition's turn with a SECOND CLOCK beside it (`beside`: the square
- * camera turning toward its face at some frame of that turn, `squareTurning` — `TILTED_POLE_CLOSE_IN.md` §12's two clocks). The picture is the mix of
- * the two; stretching one clock and not the other draws ANOTHER PATH (measured on the gates: the close-in half turns 180° → 172°, their shape 9° – 11°
- * off; a dy's entry onto `Scene_1`'s top 12° in 2 frames then the square camera's 72° alone → one turn of 99° of path for 89°). Timing the square
- * camera's own turn too would rebuild the clocks (§12's option A): not this rule's.
- */
-export function turnDials(beside: boolean, minMs: number, maxMs: number, smallDeg: number): { readonly minMs: number; readonly maxMs: number; readonly smallDeg: number } {
-  return beside ? { minMs: 0, maxMs: 0, smallDeg } : { minMs, maxMs, smallDeg };
-}
-
-/**
- * ⭐⭐⭐ (LF2) ONE FRAME OF A TIMED TURN UNDER THE RULE: the angle (rad) a turn whose whole is `wholeRad` (as it is NOW — the clock reads it each frame,
- * as before) advances in `dtMs`: its whole over its duration (`turnDurationMs`). Where the one speed IS the rule's duration (both dials 0, or a turn of
- * 90° – 120° at the defaults) the speed's step exactly as before (bit for bit). `Infinity`: a duration of 0 — whole at once (`degS` 0, no dial).
- */
-export function turnStepRad(wholeRad: number, dtMs: number, degS: number, minMs = 0, maxMs = 0, smallDeg = 30): number {
-  const dt = Math.max(0, dtMs);
-  const w = Number.isFinite(wholeRad) ? Math.abs(wholeRad) : 0;
-  const deg = (w * 180) / Math.PI;
-  const dur = turnDurationMs(deg, degS, minMs, maxMs, smallDeg);
-  if (degS > 0 && dur === turnDurationMs(deg, degS, 0, 0, smallDeg)) return ((degS * Math.PI) / 180) * (dt / 1000);
-  if (!(dur > 0)) return Infinity;
-  return (w * dt) / dur;
-}
-
-/**
  * ⭐⭐⭐ (2026-11-10, the rebuild — the owner: *"once the tilt starts, it cannot be rolled back … and shall complete"*, *"keep the edge, and not use any
  * stretch"*, *"1-b"*: the gizmo HELD until the tilt completes) — IS A TILT UNDER WAY: its swing (a tilt just made: the camera's heading turned square), its
  * roll back to upright (started as the gizmo CROSSED the edge, or out past the automatic tilt's threshold), not yet whole. While it is, every orbit step is

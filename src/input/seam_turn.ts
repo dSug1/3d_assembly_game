@@ -15,7 +15,7 @@
  * ⛔ ENGINE-FREE. Rodrigues' formula, a linear clock — textbook; no licence, no patent.
  */
 import { cross, dot, type Vec3 } from "../core/vec";
-import { rotateAbout, turnStepRad } from "./orbit_tilt";
+import { rotateAbout } from "./orbit_tilt";
 
 /** ⭐ The gap between two shown directions: the ONE rotation (unit `axis`, `angle` in rad, 0 … π) taking the new direction onto the one shown before. */
 export interface DirEase {
@@ -119,8 +119,6 @@ export function seamTurnHolds(paced: boolean, pending: boolean, blendActive: boo
  * ⭐⭐⭐ ONE FRAME OF A TURN, `t` its state (`k` the share, `done` the angle turned so far, `rad` the whole turn's angle as read now, `axisKnown`: the
  * camera's stage has read it): HELD — as it is; FINGER — the share the finger's (`share`, never back: today's `max`), `done` its angle; TIME — from the
  * frame its angle is known, `done` on at `degS` °/s toward `rad` (the zones' own clock, `zoneStep`), `k` its share. `degS` 0: whole at once.
- * ⭐⭐⭐ (2026-11-17, LF2 — `LEVEL_FACE_ENTRY.md` §11) by TIME under ONE RULE FOR EVERY TILT (`turnStepRad`: the duration a function of `rad`, the least
- * `minMs` shrinking under `smallDeg`, the longest `maxMs`); both dials 0 (their defaults here): the one speed, as before, bit for bit.
  */
 export function seamTurnStep(
   t: { readonly k: number; readonly done: number; readonly rad: number; readonly axisKnown: boolean },
@@ -128,9 +126,6 @@ export function seamTurnStep(
   share: number,
   dtMs: number,
   degS: number,
-  minMs = 0,
-  maxMs = 0,
-  smallDeg = 30,
 ): { readonly k: number; readonly done: number } {
   if (pace === "HELD") return { k: t.k, done: t.done };
   if (pace === "FINGER") {
@@ -138,7 +133,7 @@ export function seamTurnStep(
     return { k, done: k * t.rad };
   }
   if (!t.axisKnown) return { k: t.k, done: t.done };
-  const done = Math.min(t.rad, t.done + turnStepRad(t.rad, dtMs, degS, minMs, maxMs, smallDeg));
+  const done = degS > 0 ? Math.min(t.rad, t.done + ((degS * Math.PI) / 180) * (Math.max(0, dtMs) / 1000)) : t.rad;
   return { k: t.rad > 1e-9 ? Math.min(1, done / t.rad) : 1, done };
 }
 
@@ -172,19 +167,15 @@ export function seamOutTarget(outMm: number, orbitMm: number, outSpanMm: number,
  * ⭐⭐⭐ (step C3) ONE FRAME OF THE WAY OUT'S PROGRESS `p`: toward `target`, NEVER BACK (a smaller target holds it), by at most the tilts' one speed
  * (`degS` °/s over the turn's whole angle `wholeRad`, `turnWhole`'s) ON THE SHARE SHOWN — a fast finger never flips the picture in a frame. Held
  * until the camera's stage has read the turn's angle (`axisKnown`, as the timed clock). A turn of no angle, or `degS` 0: the target at once (no angle: whole).
- * ⭐⭐⭐ (2026-11-17, LF2 — `LEVEL_FACE_ENTRY.md` §11) the ceiling is ONE RULE FOR EVERY TILT's pace for this turn (`turnStepRad` over `wholeRad`: the
- * least `minMs` shrinking under `smallDeg`, the longest `maxMs`) — both dials 0 (their defaults here): the one speed, as before, bit for bit; the
- * fingers' pace below it unchanged.
  */
-export function seamOutStep(p: number, target: number, dtMs: number, wholeRad: number, degS: number, axisKnown: boolean, minMs = 0, maxMs = 0, smallDeg = 30): number {
+export function seamOutStep(p: number, target: number, dtMs: number, wholeRad: number, degS: number, axisKnown: boolean): number {
   const p0 = Number.isFinite(p) ? Math.min(1, Math.max(0, p)) : 0;
   if (!axisKnown) return p0;
   if (!(wholeRad > 1e-9)) return 1;
   const t = Number.isFinite(target) ? Math.min(1, Math.max(0, target)) : 1;
   if (!(t > p0)) return p0;
-  const stepRad = turnStepRad(wholeRad, dtMs, degS, minMs, maxMs, smallDeg);
-  if (!Number.isFinite(stepRad)) return t;
-  const r = stepRad / wholeRad;
+  if (!(degS > 0)) return t;
+  const r = (((degS * Math.PI) / 180) * (Math.max(0, dtMs) / 1000)) / wholeRad;
   // ⭐⭐⭐ (the auditor, 2026-11-16 — T5, the owner: *"one speed for every tilt"*) THE ONE SPEED IS THE PICTURE'S: what is shown is the smooth share of `p`
   // (`seamOutShare`, its slope up to 1.5 in the middle), so the progress's step is the speed's step over the steepest slope the step can meet — the
   // SHOWN share never moves faster than `degS`; slower at both ends (the smooth start and end). ⛔ The speed's step on `p` itself: 540°/s in the middle
