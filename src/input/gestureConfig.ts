@@ -414,6 +414,14 @@ export interface GestureConfig {
    * the charts) THE WAY OUT OF CLOSE IN: the camera's turn after the automatic tilt is left BY DISTANCE spread over this much of the approach finger's
    * travel outward (mm on the glass; never faster than `tiltRollDegS`; the gizmo free) — 0: the timed turn, the gizmo held, as before (0 … 60) */
   tiltOutBlendMm: number;
+  /** ⭐⭐⭐ (2026-11-17, `LEVEL_FACE_ENTRY.md` §9, §11 — package LF2; the owner: *"one rule for every tilt"*) ONE RULE FOR EVERY TILT: a timed turn of the
+   * picture at a crossing (the gizmo held, one turn that completes) lasts at least this long (ms; 0: none) — the least shrinking with the turn under
+   * `tiltSmallDeg` (`turnDurationMs`) (0 … 1000) */
+  tiltMinMs: number;
+  /** ⭐⭐⭐ (LF2) …and at most this long (ms; 0: none — else at least `tiltMinMs`): every half turn 333 ms (the owner's *"50% faster"*) (0 … 2000) */
+  tiltMaxMs: number;
+  /** ⭐⭐⭐ (LF2) …the angle under which the least duration shrinks with the turn (°; 1 … 90): a turn of 2° about a frame, never a quarter second */
+  tiltSmallDeg: number;
   /** ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8) after an edge that turns the camera round, the dy that crossed held until the FINGER has gone this far the other way (mm; ⛔ 2026-11-14 the gizmo's depth in the face beyond) */
   edgeHoldMm: number;
   /** ⭐⭐⭐ (2026-11-13, the pinch is the approach) the approach per mm of the two fingers' spread (× the two-finger dy it replaces — 1 the same pace) */
@@ -872,6 +880,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitContactMmPerMm: 4, // ⭐⭐⭐ (2026-11-12, step 3; the owner on the device: "set ... to 4 mm" — 1 was the slide's 1 : 1)
   tiltBlendMm: 10, // ⭐⭐⭐ (2026-11-11, the owner: *"set a faster alignment per mm as the one you previously chose required a lot of delta position mm"*) the automatic tilt's blend by the orbit's first 10 mm of finger (30 before) — a guess until a hand sets it
   tiltOutBlendMm: 12, // ⭐⭐⭐ (2026-11-16, step C3) the way out's turn over the approach finger's first 12 mm outward — a guess with a slider
+  tiltMinMs: 250, // ⭐⭐⭐ (2026-11-17, LF2; the owner: "Agreed to every recommendation") the quarter turn's own time — a starting value, a slider for his eye
+  tiltMaxMs: 333, // ⭐⭐⭐ (LF2; confirmed by the owner for EVERY half turn) 20 frames: the half turns 50 % faster
+  tiltSmallDeg: 30, // ⭐⭐⭐ (LF2) where a turn starts to read as a shake (LEVEL_FACE_ENTRY.md §5)
   tiltAutoM: 0.6, // ⭐⭐⭐ (2026-11-10, the owner: *"instead Percent use m for the slider tilted pole automatic within this and set the default to 0.3 m"* → *"correction: set the default at 0.6m"*) the automatic tilt within 0.6 m of the gizmo (off beyond 0.65 m) — 20 % of the far distance before (1.2 m on `Scene_1`), 30 % before that
   facetMergeDeg: 20, // ⭐⭐⭐ (2026-11-04, Step 5, D5) the faces contour: the faces within 20° of a facet's normal are its (MAP_AXIS_DEG's)…
   facetMinShare: 0.25, // …and a facet kept with a quarter of its polygon real face at least
@@ -1027,6 +1038,9 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.tiltAutoM >= 0 && cfg.tiltAutoM <= 6)) throw new Error(`tiltAutoM (${cfg.tiltAutoM}) must be in [0, 6] m.`);
   if (!(cfg.tiltBlendMm >= 0 && cfg.tiltBlendMm <= 200)) throw new Error(`tiltBlendMm (${cfg.tiltBlendMm}) must be in [0, 200] mm.`);
   if (!(cfg.tiltOutBlendMm >= 0 && cfg.tiltOutBlendMm <= 60)) throw new Error(`tiltOutBlendMm (${cfg.tiltOutBlendMm}) must be in [0, 60] mm.`);
+  if (!(cfg.tiltMinMs >= 0 && cfg.tiltMinMs <= 1000)) throw new Error(`tiltMinMs (${cfg.tiltMinMs}) must be in [0, 1000] ms.`);
+  if (!(cfg.tiltMaxMs === 0 || (cfg.tiltMaxMs >= cfg.tiltMinMs && cfg.tiltMaxMs <= 2000))) throw new Error(`tiltMaxMs (${cfg.tiltMaxMs}) must be 0 or in [tiltMinMs (${cfg.tiltMinMs}), 2000] ms.`);
+  if (!(cfg.tiltSmallDeg >= 1 && cfg.tiltSmallDeg <= 90)) throw new Error(`tiltSmallDeg (${cfg.tiltSmallDeg}) must be in [1, 90]°.`);
   if (cfg.zoneOn !== 0 && cfg.zoneOn !== 1) throw new Error(`zoneOn (${cfg.zoneOn}) must be 0 or 1.`);
   if (!(cfg.zoneUprightMaxDeg >= 0 && cfg.zoneUprightMaxDeg <= cfg.zoneSpitMinDeg && cfg.zoneSpitMinDeg <= 90)) throw new Error(`zoneUprightMaxDeg (${cfg.zoneUprightMaxDeg}) ≤ zoneSpitMinDeg (${cfg.zoneSpitMinDeg}) ≤ 90 deg.`);
   if (!(cfg.zoneWholeShare >= 0 && cfg.zoneWholeShare <= 1.01)) throw new Error(`zoneWholeShare (${cfg.zoneWholeShare}) must be in [0, 1.01].`);

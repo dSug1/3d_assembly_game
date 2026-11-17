@@ -43,7 +43,7 @@ import { poleCrossingDue, poleSeam } from "../input/pole_crossing";
 import { dirGap, easedDir, easeRest, poleYawKept, seamOutPaced, seamOutShare, seamOutStep, seamOutTarget, seamTurnPace, seamTurnStep, seamWholeRad, tiltLeavesNow, turnHoldsGizmo } from "../input/seam_turn";
 import { bandedFacet } from "../input/face_band";
 import { contourFaceAt, crossingEvent, exitHoldSign, exitTurnRad, faceOwnUp, freeEdges, freeEntryHeading, freeHeadingAngle, isFreeFace } from "../input/free_face";
-import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, capTilt, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, swingEase, tiltAutoLatch, frameBox, tiltDir, tiltFaces, onTiltedFacet, type Mat3 } from "../input/orbit_tilt";
+import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, capTilt, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, turnDials, turnStepRad, swingEase, tiltAutoLatch, frameBox, tiltDir, tiltFaces, onTiltedFacet, type Mat3 } from "../input/orbit_tilt";
 
 /** ⭐ The look point's ease (ms). */
 const LOOK_TAU_MS = 120;
@@ -326,6 +326,17 @@ function turnWhole(st: SceneState, zm: NonNullable<SceneState["asmZoneMix"]>): n
 }
 
 /**
+ * ⭐⭐⭐ (2026-11-17, LF2 — `LEVEL_FACE_ENTRY.md` §11) THE DIALS OF ONE RULE FOR EVERY TILT this turn reads (`turnDials`): none — the one speed, as before —
+ * once the square camera has turned beside it (`beside`, kept for the turn's life: the two clocks of `TILTED_POLE_CLOSE_IN.md` §12 keep their
+ * relative pace, so the picture's path is the one drawn before); else the three dials.
+ */
+function turnDialsOf(st: SceneState, zm: NonNullable<SceneState["asmZoneMix"]>): { readonly minMs: number; readonly maxMs: number; readonly smallDeg: number } {
+  const sq = st.asmSquare;
+  if (zm.beside !== true && squareTurning(sq.n, sq.target, sq.q)) zm.beside = true;
+  return turnDials(zm.beside === true, st.cfg.tiltMinMs, st.cfg.tiltMaxMs, st.cfg.tiltSmallDeg);
+}
+
+/**
  * ⭐⭐⭐ (2026-11-15, §12 2.4c) ONE FRAME OF A PACED TURN (the automatic tilt's entry made pending — `byMm`), after the finger's travel is counted
  * (`asmBlend.mm`): held while the camera is pending, by the finger's travel while the blend runs, then by time (`seamTurnPace`, `seamTurnStep`); whole:
  * none. ⭐ Every other turn: `zoneStep`'s clock, as ever.
@@ -335,7 +346,9 @@ function seamTurnFrame(st: SceneState, dtMs: number): void {
   if (zm === null || zm.byMm !== true) return;
   const bl = st.asmBlend;
   const pace = seamTurnPace(true, st.asmTiltPending, bl !== null);
-  const r = seamTurnStep({ k: zm.k, done: zm.done, rad: turnWhole(st, zm), axisKnown: zm.axis !== null }, pace, bl === null ? 1 : blendShare(bl.mm, st.cfg.tiltBlendMm), dtMs, st.cfg.tiltRollDegS);
+  // ⭐⭐⭐ (2026-11-17, LF2 — `LEVEL_FACE_ENTRY.md` §11) by time under ONE RULE FOR EVERY TILT (its three dials); held and by the finger unchanged
+  const dl = turnDialsOf(st, zm);
+  const r = seamTurnStep({ k: zm.k, done: zm.done, rad: turnWhole(st, zm), axisKnown: zm.axis !== null }, pace, bl === null ? 1 : blendShare(bl.mm, st.cfg.tiltBlendMm), dtMs, st.cfg.tiltRollDegS, dl.minMs, dl.maxMs, dl.smallDeg);
   zm.k = r.k;
   zm.done = r.done;
   if (zm.k >= 1) st.asmZoneMix = null;
@@ -372,7 +385,9 @@ function seamOutFrame(st: SceneState, dtMs: number): void {
   const o = zm.out;
   const whole = turnWhole(st, zm);
   const target = seamOutTarget(o.outMm, o.orbitMm, st.cfg.tiltOutBlendMm, st.cfg.tiltBlendMm, st.router.all().length > 0);
-  o.p = seamOutStep(o.p, target, dtMs, whole, st.cfg.tiltRollDegS, zm.axis !== null);
+  // ⭐⭐⭐ (2026-11-17, LF2) its ceiling ONE RULE FOR EVERY TILT's pace for this turn
+  const dl = turnDialsOf(st, zm);
+  o.p = seamOutStep(o.p, target, dtMs, whole, st.cfg.tiltRollDegS, zm.axis !== null, dl.minMs, dl.maxMs, dl.smallDeg);
   zm.k = seamOutShare(o.p);
   zm.done = zm.k * whole;
   if (o.p >= 1) st.asmZoneMix = null;
@@ -2036,12 +2051,18 @@ function zoneStep(st: SceneState, dtMs: number): void {
   // share leapt to 0.49, the next frame the turn was 167° — 80° in one frame. If the whole grows, the camera keeps its speed toward the new whole
   // ⭐⭐⭐ (2026-11-15, §12 2.4c) a PACED turn (the automatic tilt's entry made pending) advances in `seamTurnFrame`, by its own pace
   // ⭐⭐⭐ (2026-11-16, step C3) …and the way out paced by the fingers (`out`) in `seamOutFrame`
-  if (zm !== null && zm.axis !== null && zm.byMm !== true && zm.out === undefined) {
+  // ⭐ (LF2) the square camera beside the turn read from its first frame (before its angle is known)
+  const dl = zm !== null && zm.byMm !== true && zm.out === undefined ? turnDialsOf(st, zm) : null;
+  if (zm !== null && dl !== null && zm.axis !== null) {
     const degS = st.cfg.tiltRollDegS;
     // ⭐⭐⭐ (2026-11-15, §12 2.4c, the auditor's find) over the transition's WHOLE angle (`turnWhole`: the camera's plus the piece's direction's gap
     // eased on this turn; no ease: the camera's own, as ever)
     const whole = turnWhole(st, zm);
-    zm.done = degS > 0 ? Math.min(whole, zm.done + (degS * Math.PI / 180) * (dtMs / 1000)) : whole;
+    // ⭐⭐⭐ (2026-11-17, LF2 — `LEVEL_FACE_ENTRY.md` §9, §11; the owner: *"one rule for every tilt"*) THE PACE BY ONE RULE: the turn's duration a function of
+    // its whole as it is now (`turnStepRad`, `turnDurationMs`: the least `tiltMinMs` shrinking under `tiltSmallDeg`, the longest `tiltMaxMs`) — both 0:
+    // the one speed, bit for bit as before
+    // its dials none once the square camera has turned beside it (`turnDialsOf`: the two clocks keep their pace — the path drawn before)
+    zm.done = Math.min(whole, zm.done + turnStepRad(whole, dtMs, degS, dl.minMs, dl.maxMs, dl.smallDeg));
     zm.k = whole > 1e-9 ? Math.min(1, zm.done / whole) : 1;
     if (zm.k >= 1) st.asmZoneMix = null;
   }

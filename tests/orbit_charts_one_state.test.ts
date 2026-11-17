@@ -306,7 +306,7 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): ONE STATE (⛔ the
     expect(t).toContain("const pace = seamTurnPace(true, st.asmTiltPending, bl !== null);");
     expect(t).toContain("bl === null ? 1 : blendShare(bl.mm, st.cfg.tiltBlendMm)");
     const z = fnSource(W, "function zoneStep(");
-    expect(z).toContain("if (zm !== null && zm.axis !== null && zm.byMm !== true && zm.out === undefined) {"); // ⭐ (2026-11-16, step C3) the way out paced in `seamOutFrame`
+    expect(z).toContain("const dl = zm !== null && zm.byMm !== true && zm.out === undefined ? turnDialsOf(st, zm) : null; if (zm !== null && dl !== null && zm.axis !== null) {"); // ⭐ (2026-11-17, LF2) the same guard (`dl` null for a paced turn and the way out), the dials read first // ⭐ (2026-11-16, step C3) the way out paced in `seamOutFrame`
     const a = fnSource(W, "export function assemblyFrame(");
     before(a, "if (st.asmBlend !== null) st.asmBlend.mm += fingerMm;", "seamTurnFrame(st, dtMs);");
     before(a, "if (st.asmTiltAuto && st.asmTilt === null) tiltOn(st,", "seamTurnFrame(st, dtMs);");
@@ -377,7 +377,8 @@ describe("⭐⭐⭐ the transition's whole angle: the camera's turn PLUS the pie
   it("wired: `zoneStep`'s clock and a paced turn's both run over `turnWhole` — this turn's eased direction, else the camera's own", () => {
     const aw = readFileSync("src/render/assembly_wiring.ts", "utf8").replace(/\s+/g, " ");
     expect(aw).toContain("function turnWhole(st: SceneState, zm: NonNullable<SceneState[\"asmZoneMix\"]>): number { const e = st.asmDirEase; return seamWholeRad(zm.rad, e !== null && e.mix === zm ? e.angle : 0); }");
-    expect(aw).toContain("const whole = turnWhole(st, zm); zm.done = degS > 0 ? Math.min(whole, zm.done + (degS * Math.PI / 180) * (dtMs / 1000)) : whole; zm.k = whole > 1e-9 ? Math.min(1, zm.done / whole) : 1;");
+    expect(aw).toContain("const whole = turnWhole(st, zm); // ⭐⭐⭐ (2026-11-17, LF2"); // ⭐ (2026-11-17, LF2) the pace by one rule for every tilt (tests/turn_rule.test.ts)
+    expect(aw).toContain("zm.done = Math.min(whole, zm.done + turnStepRad(whole, dtMs, degS, dl.minMs, dl.maxMs, dl.smallDeg)); zm.k = whole > 1e-9 ? Math.min(1, zm.done / whole) : 1;");
     expect(aw).toContain("seamTurnStep({ k: zm.k, done: zm.done, rad: turnWhole(st, zm), axisKnown: zm.axis !== null }, pace,");
     expect(aw).not.toContain("Math.min(zm.rad, zm.done +");
   });
