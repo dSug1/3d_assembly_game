@@ -586,7 +586,7 @@ The table of the four sites read on `1190db2` → [2026-11-17_c5_four_sites_and_
 
 ### 13.3 As built (2026-11-16, an Opus agent) — MOVED (2026-11-17, word for word, to make room)
 `crossingHoldSign`, `crossingEvent`, `crossTurn` and the four sites, the vectors, the gates → [2026-11-17_c5_four_sites_and_as_built.md](../history/2026-11-17_c5_four_sites_and_as_built.md).
-⛔ Its spit's hold (the finger's last dy sign, the side off the camera) replaced by R1 (§19).
+⛔ Its spit's hold (the finger's last dy sign, the side off the camera) STANDS: R1 was built and REVERTED (§19).
 
 ### 13.4 The top ridge arrived at from a tip (`Scene_0bis`) — measured, nothing built
 
@@ -617,7 +617,7 @@ no swap under the finger.
 
 ✅ **The owner, 2026-11-16 (evening): *"2- R1"*** — **R1**, to BUILD on branch `1.0.147-`; R2 not taken. **The ridge arrived at from a tip**
 (the table above): *"3- I don't want to change what is currently built: it looks good on the screen. Record and do nothing. We may reopen if we need
-when we build game scenes later on."* — **KEPT AS BUILT**, nothing changed for it (§17). ⭐ R1 built (§19): the turn fires there at the rim, its size, its hold and the walk's stop as before.
+when we build game scenes later on."* — **KEPT AS BUILT**, nothing changed for it (§17). ⛔ R1 built then REVERTED (§19): far out from the −x tip it mirrored and enlarged that turn.
 
 ## 14. PACKAGE T1 — THE TEST SCENES, as briefed — MOVED (2026-11-16, word for word, to make room)
 The six test shapes, what was run on each and what was flagged → [TILTED_POLE_TEST_SCENES.md](TILTED_POLE_TEST_SCENES.md) §14.
@@ -692,7 +692,7 @@ the results."* And that night: *"Progress as much as you can without asking me q
 | # | the question | his answer | what follows |
 |---|---|---|---|
 | 1 | W11, the tilt's entry under a fast dy (§12.4) | *"1- A"* | **BUILD** option A — the one turn truly one — on `1.0.147-` |
-| 2 | the spit's half turn (§13.4) | *"2- R1"* | **BUILD** R1 — the turn at the gizmo's edge — on `1.0.147-`; ✅ built `1038a29` (§19) |
+| 2 | the spit's half turn (§13.4) | *"2- R1"* | **BUILD** R1 — the turn at the gizmo's edge — on `1.0.147-`; built `1038a29`, ⛔ REVERTED `21e600d` — it broke decision 3 (§19); open, the owner's |
 | 3 | `Scene_0bis`'s top ridge reached from a tip (§13.4) | *"I don't want to change what is currently built: it looks good on the screen. Record and do nothing. We may reopen if we need when we build game scenes later on."* | **KEPT AS BUILT**; may be reopened when game scenes are built |
 | 4 | a level top that is not a rectangle (W8; D-T5, §5) | *"Maintain D-T5. This kind of geometry probably means that the piece has a rotation symetry axis around the gravity axis so D-T5 makes sense. Just record as we may reopen if we need when we build game scenes later on."* | **D-T5 MAINTAINED** (polar at every distance on such a cap); nothing built; may be reopened when game scenes are built |
 | 5 | RINGS ([`TILTED_POLE_TEST_SCENES.md`](TILTED_POLE_TEST_SCENES.md) §15, F5) | *"Record and do nothing. We may reopen if we need when we build game scenes later on."* | **NOTHING BUILT**; may be reopened when game scenes are built |
@@ -755,7 +755,7 @@ band past it, as every other crossing — the hold by the one rule (`crossingHol
 second half), so that far out the turn no longer lands 55 – 60 mm into the face beyond the ridge. Bound by decision 3: the top ridge reached from a tip
 keeps its turn's size, the direction held and whether the walk goes on — only WHERE it fires may move. Unchanged: C4's level faces, `Scene_1`, the tilt.
 
-**As built — `1038a29` (`git revert 1038a29` undoes R1)**:
+**As built — `1038a29`, ⛔⛔ REVERTED by `21e600d`** (decision 3 broken, below; the code is `a1a52f0`'s again — this is the build's record):
 * **The side is the gizmo's** (`spitFaceStep`, once a frame after the band's reading and a free face's frame): on a bound face of a spit the side its
   WORLD normal leans to (`faceSide` — none within the side's 2° of square: the triangle under a tip's end). The band (2.4d) keeps the face left until the
   gizmo is one band past the edge, so the change is read there. A side where none was (the zone's switch, a free face's exit — whose own turn is the
@@ -792,6 +792,8 @@ camera's): one turn 12.5 mm past the ridge (30 mm before), the walk's dy held an
 the one before — the axis on the glass 92° → 6° (93° → 169° before), the view 166° in all (151°); 7.4 → 10.3° in one frame, a drag frame before the
 turn: the bias of `spitCameraHeading` (60° → 75°) fading in under a fast climb (no turn running, the camera on the gizmo's side). From the +x tip (the
 gizmo round the body, the view never steep): a turn of one frame at the tip's ridge line, no hold, the walk goes on as before (106° in all). The walks
-back: the same events and numbers. Judged within decision 3 (the size of the turn, the dy held, the walk blocked: as before); the far −x drift's side
-is the owner's to see on the device.
+back: the same events and numbers. ⛔ Judged within decision 3 by the builder — WRONGLY (the audit): far out from the −x tip the setup's side −1 → +1,
+the drift the other way (−27.6 mm off the middle, +45 before), the turn mirrored AND larger (79.6 → 96.0°, the view 151 → 166°), a 10.3° frame added;
+decision 3 lets only WHERE it fires move → REVERTED (`21e600d`). Cause: the side (and the finger's mapping) read off the gizmo's tip triangle. Open, the
+owner's: R1 with that case's side off the camera (a special case beside the rule), decision 3 relaxed far out from a tip, or R2 (as today).
 ⚠ Not measured: the owner's records of 2026-11-14 (not replayed); a device. ⛔ No device look.

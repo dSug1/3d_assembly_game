@@ -393,7 +393,16 @@ runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press
      finishes once it slows or lifts: to judge on the device.
   4. **A turn started with no world map still reads no ease** — unchanged from before A.
 
-## 2026-11-17 (night) — PACKAGE R1, the spit's half turn at the gizmo's edge (an Opus agent; base `a1a52f0`; the code commit `1038a29`)
+## 2026-11-17 (night) — PACKAGE R1, the spit's half turn at the gizmo's edge (an Opus agent; base `a1a52f0`; the code commit `1038a29`) — ⛔ REVERTED `21e600d`
+
+⛔⛔ **REVERTED by `21e600d` after its audit** — the code is `a1a52f0`'s again (2081 vectors); R1 is NOT built. The audit's blocker: far out from
+`Scene_0bis`'s −x tip R1 changed more than WHERE the ridge's turn fires, which decision 3 (*"I don't want to change what is currently built"*) and the
+brief's stop rule forbid — the setup's side −1 → +1, the gizmo's drift over the ridge the other way (−27.6 mm off the middle, +45 before), the turn
+mirrored (the axis on the glass 92° → 6°, against 93° → 169°) and LARGER (79.6 → 96.0°, the view 151 → 166° in all), a 10.3° drag frame (7.4 before).
+The builder had judged that case "as before": wrong. Its cause: the side, and with it the finger's mapping, read off the gizmo's tip triangle instead
+of the camera. **The owner's to decide** (nothing built): (a) R1 with that case's side kept off the camera — a special case beside the rule; (b) R1 as
+built, decision 3 relaxed far out from a tip; (c) R2, as today (the turn 55 – 60 mm into the face beyond, far out). The record below is the build's.
+`mid_check`'s mended setup (below) is kept: it was in the docs commit, not the code's.
 
 * **As briefed** (the owner's *"2- R1"*): the spit's change of side triggered by the GIZMO crossing an edge, one band past it, the hold by the one rule,
   the heading on bound faces rebuilt (W3's second half); decision 3 binding (the ridge from a tip: only where the turn fires may move).
