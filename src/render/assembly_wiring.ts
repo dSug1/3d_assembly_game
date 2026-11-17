@@ -492,7 +492,8 @@ function calmFrame(st: SceneState, dtMs: number): void {
     return;
   }
   const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
-  const tgt = calmLevelHeading(q.yaw, st.asmCalm, st.asmCalmWhole) - q.yaw;
+  // ⭐⭐⭐ (2026-11-17, `LEVEL_FACE_ENTRY.md` §3, LF1 (A)) the level reading takes the square camera's share: close in the face's own heading
+  const tgt = calmLevelHeading(q.yaw, st.asmCalm, st.asmCalmWhole, squareShareShown(st)) - q.yaw;
   const w = poleWeight(Math.sin(Math.abs(pitchOfV(q.v))));
   const dYaw = st.asmHeadYaw === null ? 0 : Math.atan2(Math.sin(q.yaw - st.asmHeadYaw), Math.cos(q.yaw - st.asmHeadYaw));
   st.asmHeadO = heldOffsetStep(st.asmHeadO, tgt, w, st.asmHeadW, dYaw);
@@ -502,7 +503,16 @@ function calmFrame(st: SceneState, dtMs: number): void {
 
 /** ⭐⭐⭐ (2026-11-13, §9) the world camera's level heading at `yaw`: the held offset (`asmHeadO`), else the level reading now. */
 function levelHeadingOf(st: SceneState, yaw: number): number {
-  return st.asmHeadO !== null ? yaw + st.asmHeadO : calmLevelHeading(yaw, st.asmCalm, st.asmCalmWhole);
+  return st.asmHeadO !== null ? yaw + st.asmHeadO : calmLevelHeading(yaw, st.asmCalm, st.asmCalmWhole, squareShareShown(st));
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-17, `LEVEL_FACE_ENTRY.md` §3, LF1 (A)) the square camera's share AS SHOWN — the one `calmDir` blends the direction by (none without a
+ * normal): what the level reading (`calmLevelHeading`) takes away from the calm's. Far out 0: the reading as before, to the bit.
+ */
+function squareShareShown(st: SceneState): number {
+  const sq = st.asmSquare;
+  return sq.n === null || !(sq.q > 0) ? 0 : sq.q;
 }
 
 /** ⭐ The calm's eased state (`st.asmCalm`) and its whole share's TARGET by position (left in `st.asmCalmWhole` for `calmFrame` to ease). */
