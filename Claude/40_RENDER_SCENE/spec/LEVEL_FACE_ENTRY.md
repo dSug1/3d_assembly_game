@@ -490,7 +490,7 @@ path. Where the square camera turns BESIDE a transition's turn (close in: the ti
 the other could draw another path — that is measured first; what does not hold the contract keeps today's pace and is written here with the reason.
 The gate's instrument: `scripts/probes/turn_rec.mjs` (`DUMP=` on the probes) and `scripts/probes/turn_table.mjs` (every timed turn, base against new).
 
-### 11.1 As built (2026-11-17: the gate `6236fb4`, the rule `e7ff2ed` — `git revert e7ff2ed` undoes it)
+### 11.1 As built (2026-11-17: the gate `6236fb4`, the rule `e7ff2ed` — ⛔ REVERTED by `cb89bdd`, §11.2; this section is the record)
 
 **In one paragraph.** The rule is built as §9 states it (`turnDurationMs`, `turnStepRad` in `src/input/orbit_tilt.ts`; three dials `tiltMinMs` 250,
 `tiltMaxMs` 333, `tiltSmallDeg` 30, sliders after the speed in ORBIT › TILTED POLE, URL overrides). It paces `zoneStep`'s turns, the paced entry's
@@ -558,3 +558,29 @@ first-frame peaks of `TILTED_POLE_CLOSE_IN.md` §12 — because of the exception
 option A), then the rule on that one clock; or keep them at the one speed. (2) The far-out entries' route 4° – 7° off the base's on the way (the gizmo's
 ease and the piece's spring, untimed, in the turn's first frames): accept it, or time the turn from the frame those settle. (3) The long way of a half
 turn's drawing, (a) – (b): LF3. No device look (rule 5).
+
+### 11.2 Reverted (2026-11-17, `cb89bdd`): the rule changes the camera's path far out — the owner decides
+
+**The result first.** The timing rule is NOT in the game any more. `cb89bdd` reverts `e7ff2ed` (the code and its vectors): `src` and `tests` are
+`0ab1f9f`'s again, byte for byte. The gate's tools (`6236fb4`) and the record above stay.
+
+**Why.** The brief's contract was "the pace, never the path", and its answer to a path change was to build nothing. The independent audit reproduced
+three path changes far out, at the default dials:
+- `Scene_0bis`, `b_far_p_far`, the way back over the far edge: a NEW long-way turn. Path 150.7° → 216.3°, one rotation 144.1° → 151.4°, ratio
+  1.05 → 1.43, the largest frame 7.1° → 12.0°.
+- The far-out entries onto the bottom: 4° – 7° off the base's route at the same fraction of the path (5.7° – 6.5° in the audit's sample), against a
+  3° tolerance.
+- The `Scene_0bis` replay (its other play from frame 315): a 135° turn drawn with 235° of path (ratio 1.67, 13.8° in a frame). Measured by the builder
+  only.
+
+Close in nothing had changed (the exception of §11.1). So what was left of the rule was its far-out part, and that part changed paths.
+
+**What it would take — the owner's options.**
+1. **Wait for LF3** (the half turn's two-target drawing going the long way), then measure the rule again: the long-way turns (a) and (c) should go
+   with it. The entries' 4° – 7° would remain.
+2. **Time the entries from the frame the gizmo's ease and the piece's spring settle** (the first two frames carry 5.6° and 4.8° that the rule does
+   not time), so the slower turn draws the base's route. A small design of its own, not built.
+3. **Accept the far-out route as it was measured at `e7ff2ed`** and restore it: `git revert cb89bdd`. The figures are in §11.1.
+4. Close in, unchanged: the rule there needs the square camera's pitch inside the one turn (`TILTED_POLE_CLOSE_IN.md` §12, option A).
+
+No device look (rule 5).

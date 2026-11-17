@@ -174,7 +174,7 @@ player sees may. ⚠ On `Scene_0bis` `EDGE=top` is not meaningful (the spit: the
 
 ## 6. THE BASELINE AT `276a6c2`
 
-⭐ (2026-11-17, LF2) the code before LF2's timing rule: the figures that LF2 moved are in §8 (these rows kept as they were).
+⭐ (2026-11-17, LF2) LF2's timing rule was built (`e7ff2ed`) and REVERTED (`cb89bdd`): these rows stand for the current code; §8 records what the rule moved.
 
 The code of `276a6c2` (the runs made on `a794693`, one docs commit after it — no code changed). Both switches at their defaults (1) — ⛔ the rows
 of the switches off moved at step 2.5 to [the history note](../../Claude/40_RENDER_SCENE/history/2026-11-16_orbit_gates_off_baselines.md). ⭐ Step 2.5
@@ -337,7 +337,7 @@ the path) and the start. Flags: `⚠PATH` (path over 1.15 × one + 5°), `RATIO+
 one speed), `NEW ONLY` / `BASE ONLY`. ⚠ Turns are paired in order within a leg: once a walk has diverged (a longer hold), read the shape of the first
 turns only.
 
-**At `e7ff2ed` (LF2) against `0ab1f9f`** — the figures of §6 and §7 stand for the code before LF2; these moved (the rest is identical, frame for frame
+**At `e7ff2ed` (LF2) against `0ab1f9f`** — ⛔ a RECORD: the rule is reverted (`cb89bdd`, `LEVEL_FACE_ENTRY.md` §11.2), the code is `0ab1f9f`'s again. The figures of §6 and §7 stand for the code before LF2; these moved (the rest is identical, frame for frame
 where the walk is): `tilt_check` `MODE=out OUTPX=4` `Scene_1` the way out 95 % within 35 → 24 frames, at most 6.0° → 9.0° a frame (the rule's half
 turn); `MODE=pole` `Scene_0bis` 8.6° → 10.9°; `across_check` 7.4° → 9.9° a frame, the half turn 30 → 20 frames; `mid_check` the walk 1 turn, 2 → 11
 frames, 6.2° → 5.8° (the setup on another track: the run's holds 1 → 4, its largest 9.3° → 6.9°); `ridge_check` across 7.4° → 10.0°; `level_entry` b far

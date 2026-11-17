@@ -486,3 +486,7 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   other play — LF3's drawing → [`LEVEL_FACE_ENTRY.md`](../../40_RENDER_SCENE/spec/LEVEL_FACE_ENTRY.md) §11.1.
 * **Next:** the owner — the close-in turns (§12's option A, or as they are), the entries' route; LF3. No device look.
 
+* **Then REVERTED** (`cb89bdd`, after the independent audit): far out the rule changed the camera's path (a new long-way half turn on `b_far_p_far`,
+  ratio 1.05 → 1.43; the entries 4° – 7° off their route), and the brief's answer to a path change was to build nothing. The code is `0ab1f9f`'s again;
+  the gate's tools (`6236fb4`) stay. The owner's options (wait for LF3; time the entries after the ease settles; accept and `git revert cb89bdd`) →
+  [`LEVEL_FACE_ENTRY.md`](../../40_RENDER_SCENE/spec/LEVEL_FACE_ENTRY.md) §11.2.
