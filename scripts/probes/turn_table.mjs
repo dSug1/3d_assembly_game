@@ -6,7 +6,7 @@
 // over ½° off its target — the gizmo held, `squareTurning`). A transition's turn with the square camera turning in it is `mix+sq`.
 // Per turn: its WHOLE (the clock's angle, the camera's plus the piece's direction's ease, at its last frame; `sq`: the square camera's angle to its
 // target at the start), its frames, the frames THE RULE gives that whole at the defaults (`turnDurationMs`: 250 ms least, shrinking under 30°; 333 ms
-// longest; 360°/s), THE ONE ROTATION (the camera's orientation the frame before the turn → its last frame), THE PATH (the sum of each frame's rotation),
+// longest; 360°/s — a `sq` or `mix+sq` turn: the one speed's, `turnDials`), THE ONE ROTATION (the camera's orientation the frame before the turn → its last frame), THE PATH (the sum of each frame's rotation),
 // the ratio, the LARGEST FRAME; base | now; then Δ one, Δ path, THE SHAPE (the largest angle between the base's and the new orientation at the same
 // fraction of the path, 10 % … 90 %, slerped between frames) and the START (the two orientations the frame before the turn).
 // Flags: ⚠PATH a path over 1.15 × the one rotation + 5° (b: at the base, n: now); RATIO+ the ratio worse than the base's by over 0.02; PACE+ a frame
@@ -87,7 +87,8 @@ function at(t, f) {
 const f1 = (x) => (x === undefined || Number.isNaN(x) ? "-" : x.toFixed(1));
 const listed = (t) => t.one >= MIN || t.path >= MIN;
 const bad = (t) => t.path > 1.15 * t.one + 5;
-const ruleFr = (t) => ruleMs(t.whole) / FRAME_MS;
+// ⭐ a turn the square camera runs beside (`sq`, `mix+sq`) keeps the one speed (LF2, `turnDials`): its own frames are the speed's
+const ruleFr = (t) => (t.kind === "mix" ? ruleMs(t.whole) : R_DEGS > 0 ? (t.whole / R_DEGS) * 1000 : 0) / FRAME_MS;
 const paceOver = (t) => { const rf = ruleFr(t); return rf > 0 && t.big > t.whole / Math.max(1, rf) + 2; };
 
 const args = process.argv.slice(2);
@@ -95,7 +96,7 @@ for (let p = 0; p + 1 < args.length; p += 2) {
   const B = turnsOf(JSON.parse(readFileSync(args[p], "utf8")));
   const N = turnsOf(JSON.parse(readFileSync(args[p + 1], "utf8")));
   console.log(`# ${args[p].split(/[\\/]/).pop()}  →  ${args[p + 1].split(/[\\/]/).pop()}   (turns: base ${B.length}, now ${N.length}; listed ≥ ${MIN}°)`);
-  console.log("  leg              kind    pace whole° | fr base→now (rule) | one° base→now | path° base→now | ratio base→now | big° base→now | shape° start° | flags");
+  console.log("  leg              kind    pace whole° base→now | fr base→now (rule) | one° base→now | path° base→now | ratio base→now | big° base→now | shape° start° | flags");
   const legs = [...new Set([...B, ...N].map((t) => t.leg))];
   const stats = { n: 0, shape: 0, dOne: 0, dPath: 0, flags: 0 };
   for (const leg of legs) {
@@ -115,7 +116,7 @@ for (let p = 0; p + 1 < args.length; p += 2) {
       if (x && paceOver(x)) fl.push("PACE+ b"); if (y && paceOver(y)) fl.push("PACE+ n");
       if (!x) fl.push("NEW ONLY"); if (!y) fl.push("BASE ONLY");
       if (fl.some((s) => s !== "PACE+ b" && s !== "⚠PATH b")) stats.flags++;
-      console.log(`  ${leg.padEnd(16).slice(0, 16)} ${t.kind.padEnd(7)} ${t.pace.padEnd(4)} ${f1(t.whole).padStart(6)} | ${String(x ? x.n : "-").padStart(3)}→${String(y ? y.n : "-").padEnd(3)} (${f1(ruleFr(t))}) | ${f1(x?.one)}→${f1(y?.one)} | ${f1(x?.path)}→${f1(y?.path)} | ${x ? (x.path / Math.max(1e-9, x.one)).toFixed(2) : "-"}→${y ? (y.path / Math.max(1e-9, y.one)).toFixed(2) : "-"} | ${f1(x?.big)}→${f1(y?.big)} | ${f1(shape)} ${f1(start)} | ${fl.join(" ")}  [f${x ? x.s : "-"}/f${y ? y.s : "-"}]`);
+      console.log(`  ${leg.padEnd(16).slice(0, 16)} ${t.kind.padEnd(7)} ${t.pace.padEnd(4)} ${f1(x?.whole)}→${f1(y?.whole)} | ${String(x ? x.n : "-").padStart(3)}→${String(y ? y.n : "-").padEnd(3)} (${f1(ruleFr(t))}) | ${f1(x?.one)}→${f1(y?.one)} | ${f1(x?.path)}→${f1(y?.path)} | ${x ? (x.path / Math.max(1e-9, x.one)).toFixed(2) : "-"}→${y ? (y.path / Math.max(1e-9, y.one)).toFixed(2) : "-"} | ${f1(x?.big)}→${f1(y?.big)} | ${f1(shape)} ${f1(start)} | ${fl.join(" ")}  [f${x ? x.s : "-"}/f${y ? y.s : "-"}]`);
     }
   }
   console.log(`  PAIRED ${stats.n}: the largest |Δ one| ${stats.dOne.toFixed(2)}°, |Δ path| ${stats.dPath.toFixed(2)}°, shape ${stats.shape.toFixed(2)}°; turns flagged (now, or unpaired) ${stats.flags}`);

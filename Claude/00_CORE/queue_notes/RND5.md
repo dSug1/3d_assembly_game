@@ -469,3 +469,20 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   **Reverted** (`fa72bab`). The study's prototype had the same (its timed-turn gates could not see it). Options for the owner → [`LEVEL_FACE_ENTRY.md`](../../40_RENDER_SCENE/spec/LEVEL_FACE_ENTRY.md) §10.3:
   the fade by the square camera's share; a bound per frame at the one speed; a longer band; or no (iv′).
 * **Next:** his choice on (iv′); LF2 (the timing rule) and LF3 (the long way round) on `3ef7ba7`'s code. No device look.
+
+## 2026-11-17 — LF2 built (an Opus agent; base `0ab1f9f`): one rule for every tilt — far out; close in kept at the one speed
+
+* **The gate** (`6236fb4`): every probe records each frame with `DUMP=` (`scripts/probes/turn_rec.mjs`); `turn_table.mjs` reads every timed turn base
+  against new — frames, the rule's frames, one rotation, path, the largest frame, the route at the same fraction of the path.
+* **The rule** (`e7ff2ed`; `git revert e7ff2ed` undoes it): `turnDurationMs` / `turnStepRad` (`src/input/orbit_tilt.ts`), `tiltMinMs` 250, `tiltMaxMs`
+  333, `tiltSmallDeg` 30, three sliders; read by `zoneStep`, the paced entry's time and the way out's ceiling. 2080 vectors (`tests/turn_rule.test.ts`,
+  red on 11 mutants). Both durations at 0: the three replays identical in every frame.
+* **Measured first, then built**: with the rule alone, every close-in transition changed its PATH (the square camera's pitch runs beside it — the two
+  clocks of `TILTED_POLE_CLOSE_IN.md` §12): the half turns ended at 172° instead of 180°, 9° – 11° off their route. So **a turn the square camera runs
+  beside keeps the one speed** (`turnDials`). Close in nothing changes (the 52° entries stay 9 frames, the close-in half turns 30).
+* **Far out**: `Scene_0bis`'s entries 6 – 7 → 15 – 16 frames, the half turns 25 – 31 → 20 – 21 (the top ridge's *"50% faster"*), the way out at 4 px
+  37 → 25 frames; a finger-paced way out unchanged. ⚠ The entries' route 4° – 7° off the base's mid-turn (the gizmo's ease and the piece's spring in
+  the turn's first frames, untimed); ⚠ one far-edge half turn now drawn the long way (−208° for 151°, `b_far_p_far`) and one in the `Scene_0bis` replay's
+  other play — LF3's drawing → [`LEVEL_FACE_ENTRY.md`](../../40_RENDER_SCENE/spec/LEVEL_FACE_ENTRY.md) §11.1.
+* **Next:** the owner — the close-in turns (§12's option A, or as they are), the entries' route; LF3. No device look.
+
