@@ -465,3 +465,27 @@ every reading measured here; it is not measured.
 
 (iv′): the owner's choice above, then a builder (`069682a` is the starting point). LF2 (the timing rule) and LF3 (the long way round: now seen at both
 tips — +263° at +x ccw, +257° at −x cw close in, +273° with 128° in one frame at 0.515) as briefed in §9, on `3ef7ba7`'s code. No device look (rule 5).
+
+## 11. LF2 — one rule for every tilt: the inventory (2026-11-17, an Opus agent — base `0ab1f9f`, the code of `3ef7ba7`)
+
+**What reads the tilts' one speed (`tiltRollDegS`, 360°/s) or times a camera turn today, and what LF2 does with each.** The rule (§9) is for a TIMED
+TURN OF THE PICTURE AT A CROSSING — the gizmo held, one turn that completes. Everything else keeps today's pace, for the reason given. One rule for
+every tilt: no crossing keeps a pace of its own, none gets a case of its own. Lines are at `0ab1f9f`.
+
+| where | what it times | LF2 |
+|---|---|---|
+| `src/render/assembly_wiring.ts:2039-2047` `zoneStep` (its clock, `zm.done` toward `turnWhole`) | the ONE camera turn of every change of frame by time: a zone's switch (`zoneSwitch` :2122), a free face's entry (`freeFaceFrame` :2224) and exit (`freeFaceExit` → `crossTurn` :2248), the spit's crossing (`spitStep` → :2337), the ridge's half turn (`poleCross` → :1979), the tilt's exit over an edge (`tiltOff` → :1849 / :1862, not paced), the tilt's entry made with the approach over (`tiltOn` :1762, not pending) | **the rule** — the pace read each frame from the whole as it is now, as today |
+| `src/render/assembly_wiring.ts:338` `seamTurnFrame` → `src/input/seam_turn.ts:136` `seamTurnStep` (its TIME branch) | the tilt's entry made while the approach ran (`byMm`): held, then by the finger's travel, then by time | **the rule** on its TIME branch; HELD and FINGER unchanged (a turn paced by the finger is not timed) |
+| `src/render/assembly_wiring.ts:375` `seamOutFrame` → `src/input/seam_turn.ts:178` `seamOutStep` | the way out of close in (C3): paced by the fingers, never faster than the one speed on the share shown; by time once no finger is down | **the rule** as its ceiling (the rule's pace for that turn instead of the one speed); the fingers' pace unchanged |
+| `src/render/assembly_wiring.ts:453` `squareFrame` → `src/input/orbit_tilt.ts:294` `squareTurn` | the square camera's own turn toward its face close in (its direction stepped at the one speed; the gizmo held meanwhile by `squareTurning`) | **stays**: the square camera's own clock — the second clock of `TILTED_POLE_CLOSE_IN.md` §12; it has no whole of its own (a step toward a target that moves), and timing it apart from the transition it runs beside would draw another path (package A's lesson). Its 52° pitches close in stay 9 frames: an owner's decision (§11's report) |
+| `src/render/assembly_wiring.ts:458` `squareFrame` (`wholeShareStep` over `rollDurationMs(RELOCATE_ANGLE, …)`) | the square camera's SHARE eased in / out (125 ms) | **stays**: a share's ease, not a turn |
+| `src/render/assembly_wiring.ts:1173` (the gizmo's depth glide), `:1750`, `:1856`, `:1928`, `:2118` (the relocations after a change of frame) | the gizmo's drawn place glided over 45°'s time (125 ms) | **stays**: a relocation glide, not a turn of the picture |
+| `src/render/assembly_wiring.ts:1720` `tiltOn` (`swingDurMs = rollDurationMs(deltaShown, …)`) | read only by the tilt's relocation glide (:1750) — the camera's turn of the tilt's entry is `zoneStep`'s / `seamTurnFrame`'s (row 1, 2) | **stays**: a relocation glide's duration |
+| `src/input/gestureConfig.ts:862`, `src/render/tuning_menu.ts:220` | the speed itself and its slider | the speed stays the rule's `ω`; three dials beside it (§9) |
+
+**The contract — the rule changes the pace, never the path.** Within a transition other clocks may run (the square camera's turn and share, the
+piece's direction ease — part of the whole, on the same clock —, the gizmo's relocation glide). Each transition put under the rule is measured on the
+gates' walks against `0ab1f9f`: the same one rotation (within 2°), the same path (within 3° or 3 %), the same orientation at the same fraction of the
+path. Where the square camera turns BESIDE a transition's turn (close in: the tilt's entry and exit, the ridge, the spit), stretching one clock and not
+the other could draw another path — that is measured first; what does not hold the contract keeps today's pace and is written here with the reason.
+The gate's instrument: `scripts/probes/turn_rec.mjs` (`DUMP=` on the probes) and `scripts/probes/turn_table.mjs` (every timed turn, base against new).
