@@ -259,6 +259,8 @@ how much the picture turns about the look in a frame. The calm share = how much 
    fix; the same re-checks.
 3. **`Scene_0bis`: N1 (`freeFaceSquare` 1), already built behind a slider.** Far out too the camera goes square to the free face, so the carried
    heading is the picture's own (as close in: no turn). Cost: the orbit over that face becomes a pan; the owner judges on the device. Nothing to build.
+   ⛔ **CORRECTED (measured 2026-11-17, `LEVEL_FACE_ENTRY.md` §4.3): this was NOT measured when written, and it is false** — with N1 the entry near an
+   end far out still turns **44°** (45° without): the camera turns square to the face at the same edge, by the same angle.
 4. **`Scene_0bis`: blend toward the carried heading before the edge** (by the finger's last millimetres, as the way in blends, T10). Cost: a camera
    change before the edge, against T4 (*"the edge is the only trigger"*); a band to add.
 5. **A slower realignment** (a speed of its own for these small turns). Cost: the gizmo held longer (T5); *"one speed for every tilt"* relaxed.
@@ -271,3 +273,5 @@ No device look. Two finger speeds (1 and 3 px a frame). `Scene_0bis` at medium d
 round the body: not reached). `Scene_0`'s exit from the bottom near an end. The probes (not in the repo — absolute paths):
 `C:/Users/sugit/AppData/Local/Temp/claude/58fcf8122906abb9/b2290347-4989-4dda-a6ab-49506e5270d4/scratchpad/regress_bottom/why_bottom/` (`walk.mjs`,
 `batch.sh`, `roll.mjs`; the recordings in `out/`). A scratch folder: it may be cleared.
+
+⭐ **The proposal that follows (2026-11-17, PROPOSED, nothing built)**: why a level face, the correction of `Scene_0` close in, four candidates for `Scene_0bis` measured round the corner, one rule for every tilt → [`LEVEL_FACE_ENTRY.md`](LEVEL_FACE_ENTRY.md).
