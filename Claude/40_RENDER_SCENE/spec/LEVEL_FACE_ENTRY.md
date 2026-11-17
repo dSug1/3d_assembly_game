@@ -1,6 +1,6 @@
 # Entering a level face — why the picture shakes there, and what would stop it (2026-11-17)
 
-> **STATUS** · ✅ **APPROVED BY THE OWNER 2026-11-17** (*"Agreed to every recommendation. Proceed."*) — the build as briefed: §9; as built: after it. A study with measurements (an Opus agent, 2026-11-17), on the code of
+> **STATUS** · ✅ **APPROVED BY THE OWNER 2026-11-17** (*"Agreed to every recommendation. Proceed."*) — the build as briefed: §9; as built: after it; ⛔ **THE CHAIN STOPPED on his word 2026-11-17** (§13: (A) built and LIVE, (iv′) and the timing rule built then reverted, (v) stopped at its root cause §12); a fast orbit's turns merged: PROPOSED §14. A study with measurements (an Opus agent, 2026-11-17), on the code of
 > `e252d0f` (= live `main` `6c0a165`). Every candidate was prototyped in a throwaway worktree and undone; nothing is committed under `src` or `tests`.
 > **OWNS** · the entry and the exit of a level face (the bottom of `Scene_0` / `Scene_0bis`, any level top) and the timing of every camera turn ·
 > **READ WITH** · [`TILTED_POLE_CLOSE_IN.md`](TILTED_POLE_CLOSE_IN.md) §1 – §3 (the rules T1 – T12, the carried heading),
@@ -629,3 +629,108 @@ frame) are the two clocks of `TILTED_POLE_CLOSE_IN.md` §12 (the square camera's
 
 **Where the fix must go (step 2):** the choice of drawing at the turn's first frame, from the two end poses: about the piece where the framing is too
 close to its degenerate case to be trusted, or where its own path would exceed the one rotation. Never switched inside a running turn.
+
+## 13. The deploy, the owner's look, the chain stopped on his word (2026-11-17, evening)
+
+* **Deployed** (the owner: *"deploy the fix"*): live `main` `c343c4f` = `1.0.147-` at `892b6a3` (20:46) — `src` and `tests` equal to `3ef7ba7`: (A)
+  alone; 165 files, 2062 vectors.
+* **His look**: *"I am happy with the build as it is now. Is it necessary to continue the chain ?"* — it was not: only LF3 was left, for a defect he
+  had not reported. His word: *"stop the chain and clear its leftover processes. save the builder's unfinished prototype as a patch outside the
+  project, then restore the folder to the deployed commit. record in the documents the deploy, the stop on your word, and the open point. Do not audit
+  yet. I want to check one thing before"* (§14).
+* **Stopped at 21:13**: LF3 in its step 2. KEPT: §12 (the root cause, `3553f79`). NOT in the tree — its prototype, never committed, not audited:
+  `lf3Drawable(a, b, A)` in `src/input/orbit_tilt.ts`, asked ONCE at a turn's first frame from its two end poses (`zoneMixPose`: `zm.rule` 0 → 2, the
+  turn drawn about the piece, never switched inside a running turn): the framing's blend walked in 16 steps; about the piece when the framing gives up
+  on the way (`null`), when the piece and the aim come under **0.9°** apart, or when they come under **3°** apart AND the framing's path exceeds 1.15
+  × the one rotation + 5°. Its only reading (the builder's, the gate's nine close-in walks; not audited): the four long-way turns drawn straight —
+  `b_ccw_p_close` f492 278.5° → 105.0° of path for 102.0°, `b_ccw_p_d515` f442 342.7° → 105.0°, `b_cw_m_close` f428 270.0° → 97.7° for 96.0°,
+  `b_cw_m_d515` f584 132.0° → 97.7°; the two-clocks turn (`b_ccw_m_d515` f446, 90.8° for 70.8°) as before. NOT read: the replays, `tilt_check`,
+  `mid_check`, the far-out walks; no vector. The patch (97 lines): `orbit_charts_lf3_prototype_2026-11-17.patch` in the folder `_saved_patches` beside
+  the worktrees.
+* **The code now**: `src`, `tests`, `scripts` = `892b6a3`'s, byte for byte; the worktree clean.
+* **Step 3** (the audit of the whole diff, the final docs): NOT run — *"Do not audit yet"*.
+
+**Open — none is owed for the build the owner is happy with; each waits for his word:**
+
+| # | open point | where it stands |
+|---|---|---|
+| 1 | Close in on `Scene_0bis`, at a corner's side exits the picture rolls the long way round (262° – 274° for ~105°, up to 128° in one frame) — in the live build; not reported by the owner | the root cause §12, the prototype above; reopened if it shows on a game scene |
+| 2 | `Scene_0bis` far out: the entry turn onto the bottom near an end (25° – 45° in 6 – 9 frames), the two opposite turns of a corner loop | as built; (iv′) reverted — his options §10.3 |
+| 3 | One rule for every tilt (333 ms / 250 ms), with it the top ridge's half turn *"50% faster"* | reverted — his options §11.2; the ridge as built |
+| 4 | The 27° back over the entry edge near an end (the calm's look) | never studied (§8) |
+| 5 | A fast orbit over many edges: the turns merged | PROPOSED §14 |
+
+## 14. A fast orbit over many edges — one follower instead of a train of turns (PROPOSED 2026-11-17; nothing built, nothing prototyped)
+
+**The owner** (verbatim): *"when I orbit fast, the gizmo travels fast on the orbit's surface. This is not a problem for large surfaces such as the
+cube of scene 1 but this is an issue on the spit heptagon in scene 0bis because there are a lot of edges and corners and each crossing triggers a
+movement of the camera: orbiting fast creates a lot of rapid movements of the camera. Is there a way to smoothen these movements, for example by
+smoothing the curve of the camera movement between an initial quaternion and a final quaternion and ignoring the intermediate quaternion (this would
+avoid unecessary turns if the intermediate quaternions are caused by intermediate crossings of edges or corners) ? Do not build: check the patent-free
+state-of-the-art literature, propose something."*
+
+**Measured, from recordings already on disk** (the session scratchpad's `lf3/base` = the deployed code; the gates' scripted replay, the SAME finger on
+each scene, 2794 frames = 46.6 s; a transition's turn = the recorder's `mix`; no new run):
+
+| scene | a transition's turns | their frames (the gizmo held) | under 15° / 15° – 45° / 45° – 100° / over 100° |
+|---|---|---|---|
+| `Scene_0bis` | **22** | 229 (8.2 % of the play) | 4 / 6 / 9 / 3 |
+| `Scene_0` | 4 | 33 (1.2 %) | 2 / 0 / 2 / 0 |
+| `Scene_1` | 4 | 40 (1.4 %) | 2 / 0 / 1 / 1 |
+
+On `Scene_0bis` 14 of the 22 turns start within 30 frames (half a second) of the end of the one before, in 6 trains: 90° (16 frames), 5° (1), 174°
+(30) inside 1.08 s — 282° turned, the train's last picture 116° from its first; 55° (10), 91° (17) inside 0.50 s — 160° for 68°; 120° (21), 32° (6) —
+170° for 91°. The 6 trains together: 1034° turned, 688° first to last. ⚠ A crude upper reading of what merging could save: "first to last" includes
+the orbit's own motion between the turns, and with the gizmo free the walk itself would differ. ⚠ The square camera's own turns close in (they hold
+the gizmo too) are not counted. ⚠ No gate walks faster than 6 px a frame. At 4 px a frame the corner walk (`b_ccw_p_far_px4`) dithers across the
+bottom's edge: 119 turns of 2° – 4°, two frames each, the gizmo held each time — LF1's builder read it as the probe's steering; a finger running along
+an edge would do the same (not shown on a device).
+
+**Why today's game cannot merge them.** T5 (2026-11-10: *"once the tilt starts, it cannot be rolled back … and shall complete"*, the decision *"1-b"*,
+`POLAR_ORBIT_CLEANUP.md` §9.7): every turn runs to its end on its own clock and **the gizmo is held meanwhile** (`tiltClampStep` → `turnHoldsGizmo`:
+each orbit step refused, the finger's travel dropped, the coast stopped). So the next crossing can only come AFTER the turn has ended: there is never
+an intermediate target to skip, and a fast finger gets stop – turn – go – stop – turn. His idea needs T5 relaxed where it has no job. ✅ The other half
+exists already: a change of frame arriving while a turn runs starts the new turn FROM THE PICTURE SHOWN (`zoneSwitch`, `seamTurnStart`,
+`freeFaceFrame`: `from: poseShown(st)`) — the turn before is left where it was.
+
+**The literature** (the test applied for "patent-free": published in print over 20 years ago, or a patent listed as expired — ⚠ a reading of dates,
+not a lawyer's opinion):
+
+| technique | source | what it gives here |
+|---|---|---|
+| The one rotation between two orientations (slerp) | Shoemake, *Animating rotation with quaternion curves*, SIGGRAPH 1985 | the straight turn between two pictures — the game's `poseAboutPiece` already |
+| A critically damped follower: it chases a target that may move or be replaced, never overshoots, keeps its speed across a change of target | Lowe, *Critically Damped Ease-In/Ease-Out Smoothing*, Game Programming Gems 4, 2004, pp. 95 – 101 (the engines' "smooth damp"); second-order tracking in control theory, far older | the camera eases toward the NEWEST target; a target replaced before the ease has built up leaves almost no trace |
+| Arrive: full speed, then slowing so as to stop on the target; re-aimed every frame | Reynolds, *Steering Behaviors For Autonomous Characters*, GDC 1999; the trapezoid speed profile of motion control | a bounded speed (the one speed) with an eased end |
+| A band at a trigger (hysteresis) | classic | T11's band, already |
+| Moving round an object close to its surface: the camera turned EARLY at a corner by looking ahead along the motion, the motion clipped, an optional smoothing of the eye and the aim | Khan, Komalo, Stam, Fitzmaurice, Kurtenbach, *HoverCam*, I3D 2005; US 8,044,953 (priority 2002-06-28; listed expired, 2025-01-18) | the look-ahead — ⛔ NOT proposed: it changes what drives the camera (out of scope), and needs a forecast for each kind of trigger |
+| A transition as an offset on the new target, faded out | Bollo, *Inertialization*, GDC 2018 | the same result as Lowe's follower — ⛔ NOT used: recent, its patent status not established |
+| The survey | Christie, Olivier, Normand, *Camera Control in Computer Graphics*, Computer Graphics Forum 27(8), 2008 | where reactive (follower) methods stand against planned paths |
+
+**The proposal — ONE FOLLOWER, three parts, each measurable alone:**
+
+1. **The newest target wins** — as coded today when a turn is replaced: a crossing never queues a turn, it redirects the running one from the picture
+   shown. Nothing to build: it only shows once part 2 lets a second crossing happen.
+2. **The gizmo is not held for a turn under 90°** (`turnHoldsGizmo`): the finger goes on, read off the picture drawn (as a spit's `zoneFinger` reads
+   it today). Over 90° (a ridge's or a far edge's half turn, where the finger's reading flips) today's hold and T9's dy hold stay; the close-in
+   entries (T10) and the square camera's own turn stay.
+3. **The pace eased** (a critically damped follower, its speed capped at the one speed): the first frames of a turn are small, so a target replaced
+   within about a tenth of a second is almost never drawn (his *"ignoring the intermediate"*), and a small turn no longer reads as a jitter (his
+   criterion of 2026-11-17; what LF2's rule was for). ⚠ LF2's lesson binds it: a pace changes the PATH far out (the gizmo's ease, the piece's spring,
+   the two-target drawing) — so part 3 is measured after parts 1 – 2, alone, with the path gate.
+
+**What it bends, said before any build:** T5's *"the gizmo held while it runs"* (under 90°) and *"cannot be rolled back … shall complete"* (a turn may
+be REDIRECTED by a new crossing — never undone by the same crossing inside the band, T11). The reasons he gave for T5 (R1 no oscillation at an edge,
+R2 never left half done, R3 a bounded speed) are kept by: the band (R1), the follower always arriving at the newest target (R2), the cap (R3).
+
+**Obstacles, and the fallback for each:** (a) a finger running ALONG an edge — crossings in a row, the picture between the two frames' — the band; if
+it still shows, a turn redirected BACK within a few frames keeps the hold (today's rule there); (b) T6 — during a redirected turn the picture is not
+yet upright on the face under the gizmo: bounded by the turn's own time (≤ 0.25 s under 90°); (c) the two-target drawing restarted mid-turn near its
+degenerate case (§12): today's defect, not a new one — but more restarts; (d) close in, the square camera's pitch beside the turn (the two clocks):
+out of this proposal — far out and part way first.
+
+**Looked at and not proposed:** a wait before every turn (a lag at every slow crossing — against T4); a forecast of the next crossing (five kinds of
+trigger to forecast); fewer frames at speed (reopens what drives the orbit).
+
+**Before any build:** his word; then a throwaway prototype (parts 1 – 2 are one predicate), measured headless on the three scenes with FAST walks
+added to the gate (20 – 30 px a frame: round the corner, along an edge, over the ridge), read with the path gate and the free roll; his look; then
+part 3.

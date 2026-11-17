@@ -490,3 +490,23 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   ratio 1.05 → 1.43; the entries 4° – 7° off their route), and the brief's answer to a path change was to build nothing. The code is `0ab1f9f`'s again;
   the gate's tools (`6236fb4`) stay. The owner's options (wait for LF3; time the entries after the ease settles; accept and `git revert cb89bdd`) →
   [`LEVEL_FACE_ENTRY.md`](../../40_RENDER_SCENE/spec/LEVEL_FACE_ENTRY.md) §11.2.
+
+## 2026-11-17 (evening) — (A) DEPLOYED; the owner's look; the chain STOPPED on his word; his question on the fast orbit
+
+* **Deployed** (the owner: *"deploy the fix"*): live `main` `c343c4f` = `1.0.147-` at `892b6a3` (20:46; `src` and `tests` equal to `3ef7ba7` — (A)
+  alone; 165 files, 2062 vectors).
+* **His look**: *"I am happy with the build as it is now. Is it necessary to continue the chain ?"* — no: only LF3 was left. Then: *"stop the chain
+  and clear its leftover processes … save the builder's unfinished prototype as a patch outside the project, then restore the folder to the deployed
+  commit … record in the documents the deploy, the stop on your word, and the open point … Do not audit yet. I want to check one thing before"*.
+* **Stopped** (21:13): LF3 in its step 2 — its root cause kept (`3553f79`, §12), its prototype never committed (its rule in words, its one reading and
+  the patch's place → [`LEVEL_FACE_ENTRY.md`](../../40_RENDER_SCENE/spec/LEVEL_FACE_ENTRY.md) §13). The worktree clean; `src`, `tests`, `scripts` =
+  `892b6a3`'s. ⚠ The stop left the builder's DRIVER script alive (its scratchpad `run_gates.sh`): the first batch killed, it launched the next one —
+  stop the driver FIRST, then the batch, the server, the browser, the guards, the profile folder (`ORBIT_GATES.md` §0's incident, one level up).
+* **Open, none owed** (§13's table): the close-in long way round (root cause known, not fixed — in the live build); the far-out entry turn ((iv′)
+  reverted); one rule for every tilt and the ridge *"50% faster"* (reverted); the 27° back over the entry edge.
+* **Step 3 NOT run** (*"Do not audit yet"*).
+* **His question** — a fast orbit on `Scene_0bis`: *"each crossing triggers a movement of the camera: orbiting fast creates a lot of rapid movements
+  of the camera. Is there a way to smoothen these movements … ignoring the intermediate quaternion … Do not build: check the patent-free
+  state-of-the-art literature, propose something."* (whole in §14). Measured from recordings on disk: the same scripted play, 22 transition turns on
+  `Scene_0bis` against 4 on `Scene_0` and 4 on `Scene_1`, 14 of the 22 within half a second of the one before. PROPOSED (§14, nothing built): one
+  follower — the newest target wins, the gizmo not held for a turn under 90°, the pace eased; it bends T5 (said there). His word before any prototype.
