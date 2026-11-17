@@ -14,6 +14,8 @@
 *.html text eol=lf
 *.css  text eol=lf
 *.yml  text eol=lf
+# bash reads a CR as part of each line: shell scripts stay LF on every checkout (scripts/probes/*.sh)
+*.sh   text eol=lf
 
 # Windows launchers must stay CRLF or cmd.exe mis-parses them.
 *.bat  text eol=crlf

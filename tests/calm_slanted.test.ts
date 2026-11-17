@@ -42,13 +42,14 @@ function frame(c: CalmState | null, y: number, p: number, rule: "new" | "old" = 
   const t = mapTarget(fm, y, p, opts);
   const f = fm.facets[t.stack]!;
   if (rule === "old") {
-    // ⛔ the rule as built before: the normal flattened to level, dy's run the world's height in the box
+    // ⛔ the rule as built before: the normal flattened to level, dy's run the world's height in the box (⭐ 2026-11-16, step 2.5: `calmTarget`'s `box`
+    // deleted — the same reading handed as the facet's own run: the box's height along the world's up)
     const l = Math.hypot(f.n[0], f.n[2]);
-    return calmStep(c, calmTarget(t, { n: l > 1e-9 ? [f.n[0] / l, 0, f.n[2] / l] : f.n, b: [0, 1, 0], bLo: 0, bHi: 1 }, box, K), 16);
+    return calmStep(c, calmTarget(t, { n: l > 1e-9 ? [f.n[0] / l, 0, f.n[2] / l] : f.n, b: [0, 1, 0], bLo: box.lo[1], bHi: box.hi[1] }, K), 16);
   }
   const col = fm.columns[t.side]!;
   const across = { lo: mapTarget(fm, col.mid - col.hw - 1e-6, p, opts).normal, hi: mapTarget(fm, col.mid + col.hw + 1e-6, p, opts).normal };
-  return calmStep(c, calmTarget(t, f, box, K, across), 16);
+  return calmStep(c, calmTarget(t, f, K, across), 16);
 }
 const settled = (y: number, p: number, rule: "new" | "old" = "new") => {
   let c: CalmState | null = null;
@@ -130,7 +131,7 @@ describe("⭐⭐⭐ (2026-11-09, §8) THE CALM ON A SLANTED FACE — the horizon
     }
   });
 
-  it("⭐⭐ a VERTICAL face exactly as before (the cube's every side): the same targets in either rule (the world's up; the box's height)", () => {
+  it("⭐⭐ a VERTICAL face exactly as before (the cube's every side): the same targets in either rule (the world's up; its own height — the box's here, step 2.5)", () => {
     for (const y of [0, 10, 170, 180, 185]) {
       const p = 15 * D;
       const t = mapTarget(fm, y * D, p, opts);
@@ -138,10 +139,12 @@ describe("⭐⭐⭐ (2026-11-09, §8) THE CALM ON A SLANTED FACE — the horizon
       expect(Math.abs(f.n[1])).toBeLessThan(1e-9);
       const col = fm.columns[t.side]!;
       const across = { lo: mapTarget(fm, col.mid - col.hw - 1e-6, p, opts).normal, hi: mapTarget(fm, col.mid + col.hw + 1e-6, p, opts).normal };
-      const a = calmTarget(t, f, box, K);
-      expect(a).toEqual(calmTarget(t, { n: f.n, b: [0, 1, 0], bLo: 0, bHi: 1 }, box, K));
+      const a = calmTarget(t, f, K);
+      const w = calmTarget(t, { n: f.n, b: [0, 1, 0], bLo: box.lo[1], bHi: box.hi[1] }, K);
+      expect([a.n, a.sH, a.sV]).toEqual([w.n, w.sH, w.sV]);
+      expect(a.wA).toBeCloseTo(w.wA, 12); // its own extent the box's to the rounding of its polygon
       // its slice ends neighbour slanted faces: there the vertical calm released too — in its middle untouched
-      if (Math.abs(((y + 360) % 180) - 0) < 11) expect(calmTarget(t, f, box, K, across).sV).toBeCloseTo(a.sV, 9);
+      if (Math.abs(((y + 360) % 180) - 0) < 11) expect(calmTarget(t, f, K, across).sV).toBeCloseTo(a.sV, 9);
     }
   });
 });

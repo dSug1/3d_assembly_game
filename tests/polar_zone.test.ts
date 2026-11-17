@@ -1,12 +1,12 @@
 /**
- * ⭐⭐⭐ (2026-11-13, `Claude/40_RENDER_SCENE/spec/POLAR_ZONES.md` §4.4) THE POLAR ZONES' VECTORS: `Scene_0bis`'s tipped heptagon has ONE zone (both tips,
- * the axis x, a spit, F for the whole assembly); `Scene_1`'s cube and `Scene_0`'s heptagon NONE; two same-width pieces stacked NONE (the owner: a size
- * relative to the piece would flag every stack); the frame, the finger in F, the hold of R4 in the spit (D-Z3) and the exit's hysteresis (D-Z7).
+ * ⭐⭐⭐ (2026-11-13, `Claude/40_RENDER_SCENE/spec/POLAR_ZONES.md` §4.4) THE POLAR ZONES' VECTORS: the frame, the finger in F, the hold of R4 in the spit
+ * (D-Z3) and the exit's hysteresis (D-Z7). ⛔⛔ (2026-11-16, step 2.5 — `Claude/00_CORE/queue_notes/RND5.md`) the DETECTORS' vectors deleted with
+ * `polarZones` (the zones on the three scenes, the axis snapped, the orientation): the zones are the atlas's (`chartZones`, `orbit_charts_atlas.test.ts`).
  */
 import { describe, expect, it } from "vitest";
 import { buildFaceMap, type MapFace } from "../src/input/face_map";
 import { prismOutline } from "../src/core/prism";
-import { DEFAULT_ZONE_OPTS, fingerInFrame, fingerSwapped, polarZones, snapToWorldAxis, spitSide, spitHeading, spitCameraHeading, crossingHold, zoneAt, zoneFrame, zoneOrientation, distanceToFacets, crossingPitch, overAxisPitch } from "../src/input/polar_zone";
+import { fingerInFrame, fingerSwapped, spitSide, spitHeading, spitCameraHeading, crossingHold, spitSideRef, zoneAt, zoneFrame, distanceToFacets, crossingPitch, overAxisPitch } from "../src/input/polar_zone";
 import { mulM, mulT } from "../src/input/orbit_tilt";
 import type { Vec3 } from "../src/core/vec";
 
@@ -29,20 +29,6 @@ function face(vs: Vec3[], mid: Vec3, part = "p"): MapFace {
 const W = 0.483;
 const HX = 0.245;
 
-/** a box lo..hi as six faces */
-function boxFaces(lo: Vec3, hi: Vec3, part: string): MapFace[] {
-  const mid: Vec3 = [(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2];
-  const P = (x: number, y: number, z: number): Vec3 => [x ? hi[0] : lo[0], y ? hi[1] : lo[1], z ? hi[2] : lo[2]];
-  return [
-    face([P(0, 0, 0), P(1, 0, 0), P(1, 1, 0), P(0, 1, 0)], mid, part),
-    face([P(0, 0, 1), P(1, 0, 1), P(1, 1, 1), P(0, 1, 1)], mid, part),
-    face([P(0, 0, 0), P(0, 0, 1), P(0, 1, 1), P(0, 1, 0)], mid, part),
-    face([P(1, 0, 0), P(1, 0, 1), P(1, 1, 1), P(1, 1, 0)], mid, part),
-    face([P(0, 0, 0), P(1, 0, 0), P(1, 0, 1), P(0, 0, 1)], mid, part),
-    face([P(0, 1, 0), P(1, 1, 0), P(1, 1, 1), P(0, 1, 1)], mid, part),
-  ];
-}
-
 /** `Scene_0`'s heptagon (tip 0: flat ends) or `Scene_0bis`'s tipped one (tip > 0) */
 function prism(sides: number, tip: number) {
   const faces: MapFace[] = [];
@@ -64,56 +50,7 @@ function prism(sides: number, tip: number) {
   return buildFaceMap(faces, box);
 }
 
-describe("⭐⭐⭐ the polar zones on the three scenes (POLAR_ZONES.md §4.4)", () => {
-  it("Scene_0bis: ONE zone — both tips' 14 triangles, the axis x, a spit, F for the whole assembly", () => {
-    const map = prism(7, 0.12);
-    const zs = polarZones(map);
-    expect(zs.length).toBe(1);
-    const z = zs[0]!;
-    expect(z.facets.length).toBe(14);
-    expect(z.poles.length).toBe(2);
-    expect(Math.abs(z.axis[0])).toBe(1);
-    expect(z.orientation).toBe("SPIT");
-    expect(z.whole).toBe(true);
-  });
-  it("Scene_0's heptagon (flat ends) and Scene_1's cube: NO zone", () => {
-    expect(polarZones(prism(7, 0)).length).toBe(0);
-    const cube = boxFaces([-HX, 0, -W / 2], [HX, W, W / 2], "c");
-    expect(polarZones(buildFaceMap(cube, { lo: [-HX, 0, -W / 2], hi: [HX, W, W / 2] })).length).toBe(0);
-  });
-  it("two same-width pieces stacked: NO zone (the corners meet 3 or 4 facets — the owner's objection to a piece-relative size)", () => {
-    const a = boxFaces([0, 0, 0], [0.045, 0.03, 0.045], "a");
-    const b = boxFaces([0, 0.03, 0], [0.045, 0.06, 0.045], "b");
-    expect(polarZones(buildFaceMap([...a, ...b], { lo: [0, 0, 0], hi: [0.045, 0.06, 0.045] })).length).toBe(0);
-  });
-  it("S_min is relative to the PLACED set: the tips stop being small when the ratio is lowered under 0.15 (71 / 483 mm)", () => {
-    expect(polarZones(prism(7, 0.12), { ...DEFAULT_ZONE_OPTS, facetMinRatio: 0.1 }).length).toBe(0);
-  });
-  it("a single tip (one end flat): one zone, one pole, its axis along x from the rim to the apex", () => {
-    const faces: MapFace[] = [];
-    const mid: Vec3 = [0, W / 2, 0];
-    const prof = prismOutline(7, W, W)!.map(([z, y]) => [z, y + W / 2] as [number, number]);
-    const at = (x: number, k: number): Vec3 => [x, prof[k]![1], prof[k]![0]];
-    const n = prof.length;
-    for (let k = 0; k < n; k++) faces.push(face([at(-HX, k), at(-HX, (k + 1) % n), at(HX, (k + 1) % n), at(HX, k)], mid));
-    const apex: Vec3 = [HX + 0.12, W / 2, 0];
-    for (let k = 0; k < n; k++) faces.push(face([at(HX, k), at(HX, (k + 1) % n), apex], mid));
-    faces.push(face([...Array(n)].map((_, k) => at(-HX, k)), mid));
-    const zs = polarZones(buildFaceMap(faces, { lo: [-HX, 0, -W / 2], hi: [HX + 0.12, W, W / 2] }));
-    expect(zs.length).toBe(1);
-    expect(zs[0]!.poles.length).toBe(1);
-    expect(zs[0]!.axis).toEqual([1, 0, 0]);
-  });
-});
-
-describe("⭐⭐ the zone's axis, frame and orientation (§3.4 – §3.5, D-Z2, D-Z6)", () => {
-  it("snapped onto a world axis within 10°, kept beyond", () => {
-    const c = Math.cos((7 * Math.PI) / 180);
-    const s = Math.sin((7 * Math.PI) / 180);
-    expect(snapToWorldAxis([c, s, 0], 10)).toEqual([1, 0, 0]);
-    const t: Vec3 = [Math.cos(0.44), Math.sin(0.44), 0];
-    expect(snapToWorldAxis(t, 10)).toEqual(t);
-  });
+describe("⭐⭐ the zone's frame (§3.4)", () => {
   it("F: a rotation (orthonormal, right-handed), F's vertical the axis; the vertical axis gives the world's own frame", () => {
     for (const a of [[1, 0, 0], [0, 0, -1], [0.6, 0.8, 0]] as Vec3[]) {
       const R = zoneFrame(a);
@@ -129,15 +66,6 @@ describe("⭐⭐ the zone's axis, frame and orientation (§3.4 – §3.5, D-Z2, 
     expect(zoneFrame([0, 1, 0])).toEqual([[1, 0, 0], [0, 1, 0], [0, 0, 1]]);
     // a horizontal axis: F's yaw 0 the world's up (§3.4)
     expect(mulM(zoneFrame([1, 0, 0]), [1, 0, 0])).toEqual([0, 1, 0]);
-  });
-  it("S1 up to 30° from the vertical, S2 from 60°, between the tag (untagged S1)", () => {
-    const at = (deg: number): Vec3 => [Math.sin((deg * Math.PI) / 180), Math.cos((deg * Math.PI) / 180), 0];
-    expect(zoneOrientation(at(25), DEFAULT_ZONE_OPTS)).toBe("UPRIGHT");
-    expect(zoneOrientation(at(45), DEFAULT_ZONE_OPTS)).toBe("UPRIGHT");
-    expect(zoneOrientation(at(45), DEFAULT_ZONE_OPTS, "SPIT")).toBe("SPIT");
-    expect(zoneOrientation(at(65), DEFAULT_ZONE_OPTS)).toBe("SPIT");
-    expect(zoneOrientation(at(115), DEFAULT_ZONE_OPTS)).toBe("SPIT");
-    expect(zoneOrientation(at(170), DEFAULT_ZONE_OPTS)).toBe("UPRIGHT");
   });
 });
 
@@ -218,15 +146,16 @@ describe("⭐⭐⭐ the zenith edge crossed as on Scene_0 (the owner): the side,
       prev = h;
     }
   });
-  it("the hold after the crossing: into the face beyond, square to the ridge, down its slope; the dy that crossed; none without a dy", () => {
+  it("the hold after the crossing: the dy that crossed (its last sign), nothing gathered yet; none without a dy, no face, or a face whose normal is the way to the new side (⛔ 2026-11-16, step C5: `g0` and `d` no longer returned — read by nothing)", () => {
     const nBack: Vec3 = [0, 0.9 / Math.hypot(0.9, 0.44), 0.44 / Math.hypot(0.9, 0.44)];
     const back = spitSide([0, 0.3, 1], a, 0);
-    const h = crossingHold([0, 0.48, 0.19], nBack, a, back, 1)!;
-    expect(h.sign).toBe(1);
-    expect(Math.abs(h.d[0])).toBeLessThan(1e-12); // square to the ridge (along x)
-    expect(h.d[1]).toBeLessThan(0); // down the face beyond
-    expect(Math.abs(h.d[0] * nBack[0] + h.d[1] * nBack[1] + h.d[2] * nBack[2])).toBeLessThan(1e-12); // along it
-    expect(crossingHold([0, 0, 0], nBack, a, back, 0)).toBeNull();
+    const h = crossingHold(nBack, a, back, 1)!;
+    expect(h).toEqual({ sign: 1, back: 0 });
+    expect(crossingHold(nBack, a, back, -2)).toEqual({ sign: -1, back: 0 });
+    expect(crossingHold(nBack, a, back, 0)).toBeNull();
+    expect(crossingHold(null, a, back, 1)).toBeNull();
+    const w = spitSideRef(a);
+    expect(crossingHold([w[0] * back, w[1] * back, w[2] * back], a, back, 1)).toBeNull(); // no way along the face toward the new side
   });
 });
 
@@ -245,7 +174,9 @@ describe("⭐⭐ the zone the gizmo is in, with the exit's hysteresis (D-Z7)", (
   });
   it("the distance to a zone's facets: 0 on them, the way to the rim beside", () => {
     const map = prism(7, 0.12);
-    const z = polarZones(map)[0]!;
+    // the tips' 14 triangles (⛔ `polarZones(map)[0]`: step 2.5) — the facets leaning along x
+    const z = { facets: map.facets.map((_, i) => i).filter((i) => map.facets[i]!.real && Math.abs(map.facets[i]!.n[0]) > 0.5) };
+    expect(z.facets.length).toBe(14);
     const apex: Vec3 = [HX + 0.12, W / 2, 0];
     expect(distanceToFacets(map, z.facets, apex)).toBeLessThan(1e-6);
     expect(distanceToFacets(map, z.facets, [0, W / 2, 0])).toBeGreaterThan(0.2);

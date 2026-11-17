@@ -177,4 +177,218 @@ runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press
 * ✅ **C3 built and audited** (`86f2cbe`, an Opus agent, + the auditor's completion: the one speed on the picture): the way out of close in blended —
   the study's §8.1. Today measured first (180° in 0.52 s whatever the finger, the gizmo held, trailing the zoom); now the turn follows the approach
   finger over `tiltOutBlendMm` (12 mm; 0: today's), smooth at both ends, never over the one speed (6.0° a frame at most), the gizmo free, finished by
-  time only once the finger has lifted. **2058 vectors**; the slider at 0: bit for bit. LOCAL — the owner's look owed.
+  time only once the finger has lifted. **2058 vectors**; the slider at 0: bit for bit. ✅ Deployed 2026-11-16 (the owner: *"Deploy"*): `c7ac510` merged as main `40c6325`, live, both switches on by default; the owner's look owed.
+
+## 2026-11-16 — the rest launched by Opus agents; the to-do before step B
+
+* **The owner's words**: *"Do everything except the step B. Make sure to maximize the use of Opus agents as I do not have much Fable credits left
+  for this week. Also, before step B, we will need to work on the surface definition and the singularities (voids, channels, mouths, protrusions,
+  small faces): just capture that in your to do list for the moment."*
+* **Launched now, in this order** — each package built by an Opus agent and audited by another Opus agent: the probes and the gates moved into
+  `scripts/probes/` with their runbook and baseline (`scripts/probes/ORBIT_GATES.md`); **W11** (the tilt's entry under a fast dy); **C5** (one
+  half-turn event); **the test scenes**; **C2's wiring** (W5, W7); then, a second chain, **step 2.5** and **step 3 parts 1 and 2** of the charts.
+  ⛔ **Step B is NOT started.**
+* ⭐ **TO DO BEFORE STEP B — the surface definition and the singularities** (voids, channels, mouths, protrusions, small faces): a study by the
+  four-part method (the rules; the obstacles and the fallbacks; a systematic design from prior art; an audit of what is built), approved by the owner
+  before any build. The part of C5 / W9 about *"a mouth as a concave edge"* moves into that study (`TILTED_POLE_CLOSE_IN.md` §6).
+
+## 2026-11-16 — C1 / W11 measured (an Opus agent): structural, NOT built — the options are the owner's
+
+* **The brief**: the tilt's entry under a fast dy turns the view 8.5° in one frame — measure it, name its cause, build the fix only if it is clear and
+  systematic (the share shown never faster than the tilts' one speed), else report the options.
+* **Measured** (`tilt_check.mjs` with every frame's transition state recorded, the three scenes): what jumps is the piece's SHOWN direction —
+  (1.) the direction's ease is read the moment the frame changes, before the same frame's square camera takes its first step (its target just
+  changed by the tilt): the gap (6.49°) is applied to a direction the step had already brought back, the piece is drawn 6.45° off at k = 0 and the
+  framing turns the camera 6.2° to hold it; then 8.0° the next frame. (2.) The root: every change of frame close in starts TWO turns at the one speed
+  — the transition's one turn and the square camera's pitch over the edge — and they add on the glass: the tilt's entries 6.7 – 8.2°, its exit 8.7°,
+  the ridge's and the spit's half turns 8.5 – 8.9° over most of their ~30 frames.
+* **Tried and reverted** (nothing committed): the ease read after the view's update — the entry 0.4 / 1.4° but another entry 10.4°; with the square
+  camera's pitch inside the one turn as well — `Scene_1` 6.0° at most, `Scene_0bis` 54.6° (a turn started in the camera's stage escapes the read).
+* ⛔ **Not built**: structural, in code every change of frame shares, and every fix changes what the owner has looked at (the ridge, the spit, the
+  tilt's turns). The options A (the one turn truly one — recommended), B (a limiter on the picture), C (one shared budget), D (keep) →
+  [`TILTED_POLE_CLOSE_IN.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) §12.
+
+## 2026-11-16 — C5, one half-turn event (an Opus agent)
+
+* **The brief**: the four places that each make *"a crossing that turns the camera and may hold a dy"* (the tilt's exit, the ridge close in, the
+  spit's change of side, a free face's exit) made ONE event — a pure rule in `src/input`, one wiring function the four call, the dead fields removed,
+  under `chartLayout` 1 (0: bit for bit); the hold by D-T4 (§10); then the spit's top ridge arrived at from a tip measured (`Scene_0bis`).
+* **The design** (written before the build): the hold is the dy that pushed the gizmo out over the edge AND would bring it straight back after the
+  turn — on a free face's level edge exactly §10's rule; the four sites' facts and dead fields tabled →
+  [`TILTED_POLE_CLOSE_IN.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) §13.
+* **Built** (§13.3): `crossingHoldSign`, `crossingEvent` (pure) and `crossTurn` (the one wiring function) — the tilt's exit, the ridge, the spit's
+  side and a free face's exit call it; the hold by the rule at the tilt's exit and the ridge; the spit keeps the finger's last sign (the mirror rule
+  built, measured — a second half turn arriving from a tip — and withdrawn); `EdgeHold.g0` / `.d` deleted. Every gate equal to the baseline, the
+  default replays bit for bit. ⛔ Not built: the spit's turn at the gizmo's edge (R1, the owner's) — far out it lands 55 – 60 mm past the ridge (§13.4).
+
+## 2026-11-16 — T1, the test scenes (an Opus agent; before C2's wiring)
+
+* **The brief**: six test shapes as scenes in a throwaway worktree (`1.0.146t-Orbit-charts-test-scenes`, never merged) — an upright prism with a
+  top that is not a rectangle, a shape the charts leave to RINGS, a step, an L-shaped top, a box turned 30°, a thin lying bar with pointed ends —
+  each walked far out and close in, headless; the findings tied to W5, W7, W8, RINGS (W12) or new →
+  [`TILTED_POLE_TEST_SCENES.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_TEST_SCENES.md) §14 – §15. Nothing in the game changes.
+* **Measured** (the scenes and the probe on the throwaway branch, `a828c92`; `Scene_1` the control): ⛔ **F1** a step and an L are not on the face
+  map at all (the faces contour is the polytope of each direction's main plane: the step's map a box neither part is, the L's its bounding square;
+  the gizmo on no face for stretches, flickering at the L's pole, a hold with no turn); **F2** W5 confirmed on the box turned 30° (4 of 10 entries
+  off the entry edge, 36° and 90°); **F3** W8 confirmed (the square camera's target the face left, 70 – 90° off, on the pentagon's and the
+  bipyramid's caps); **F4** those caps a stall close in; **F5** RINGS not wired (the bipyramid's place stalls on one triangle 494 frames); **F6** the
+  way out from a cap with no tilt not paced (9.6°/frame, once 55.6° in one frame); **F7** timed turns of 11.8 – 18.9°/frame at a bottom's side
+  exit → [`TILTED_POLE_TEST_SCENES.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_TEST_SCENES.md) §15, each row with its command. Nothing fixed.
+
+## 2026-11-16 — C2W, C2's wiring on gravity's caps: W5 and W7 (an Opus agent)
+
+* **The brief**: under `chartLayout` 1 a free face reached under gravity's layout (the cube's top) shows the heading carried in by its entry edge —
+  the pure functions C4 calls in a spit zone (W5); a tilted frame's face map built in the shape's own box, not the world box's turned corners (W7);
+  one wiring function for a free face's entry whatever its zone. `Scene_0`, `Scene_0bis`, `Scene_1` unchanged; the gain on the test scenes. W8 and
+  RINGS not built → [`TILTED_POLE_CLOSE_IN.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) §16.
+* **Built** (`e56f34f`): `capTiltHeading(…, along)`, `frameBox`, one entry function `freeEntry` for a spit's free face and gravity's cap,
+  `asmPlaceWas`; 2088 vectors. Every gate on `Scene_0`, `Scene_0bis`, `Scene_1` identical to the baseline (the default replays bit for bit). T_e (the
+  turned box): entries off the edge 4 of 10 → 1 (the first, the pending camera's); W7 found offline only (a long flat box turned 30° / 45°: a tilted
+  map all virtual in the turned world box). ⛔ W8 and RINGS not built (W8 needs D-T5 reopened) →
+  [`TILTED_POLE_CLOSE_IN.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) §16.1.
+
+## 2026-11-16 — T2, the test scenes again after C2W (an Opus agent; measured, nothing built)
+
+* **The brief**: the rebuild branch merged INTO the throwaway (`1.0.146t-`), every measurement of the T1 findings re-run, the column AFTER and WHAT
+  REMAINS (W8, RINGS) → [`TILTED_POLE_TEST_SCENES.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_TEST_SCENES.md) §15.
+* **Measured**: F2 (W5) fixed but one (4 of 10 entries off the edge → 1, the first after the approach); F1, F3 – F8 unchanged (T_a – T_d, T_f
+  identical line for line); ⭐ F9 WITHDRAWN — the probe's own count (a zone's missing normal read as `null`; corrected on the throwaway, T_f 0
+  frames). ⛔ Open, the owner's: W8 (reopen D-T5: a layout square to the entry edge on any polygon cap, or polar with the cap's normal as the
+  square camera's target), RINGS (before step B or not), F1 (the surface's definition before step B).
+
+## 2026-11-16 — step 2.5, THE OLD DETECTORS AND THE TWO SWITCHES DELETED (an Opus agent) — as briefed, the list before any code change
+
+* **The brief**: every code path that runs only when `chartLayout` or `chartCalm` is 0 deleted — the zone detectors and the layout of the game
+  before the charts, the old tilt exits and holds, the old box of a frame's map, the old calm; the two tunables (their validation, sliders, URL
+  overrides); the state fields only those paths used; the vectors that test only what goes; the exports left with no caller
+  (`tests/unwired_debt.test.ts`). ⭐ The default game (both switches 1 since `cb55778`) BIT FOR BIT: the default replays of `Scene_0`, `Scene_0bis`,
+  `Scene_1` against the base (`d917d04`) and every default gate of `scripts/probes/ORBIT_GATES.md` line for line. A pure function that took a switch
+  loses the argument (never a constant `true` in its place). One new vector: no identifier `chartLayout` / `chartCalm` left under `src`. The probes'
+  "off" replays and `S:0` legs removed, their baseline tables moved to `history/`.
+* **THE LIST, read off the code at `d917d04`** (`src/render/assembly_wiring.ts` unless named):
+  * the CALM — `calmDir` L415-416 (`tl.k`: written by the old roll back only, always 0 now); `calmTargets` L548 `calmRules(chartLayout, chartCalm)`,
+    L552 / L601 `calmKnobs(st, rules.smooth, rules.ownRun)` and the `box` argument (read only by the box-height rule, `ownRun` false), L566-571 and
+    L619-623 (`!rules.everyFacet`: no calm on a polar zone's facets, whole toward them — and `zoneFacetOf` with them), L575 / L627 (`rules.noPitchFade`),
+    L613 `wholeEnds(rules.ownRun, …)`; `calmKnobs` L634-647 (`smooth`, `ownRun`). In `src/input/orbit_calm.ts`: `calmRules` and `CalmRules`,
+    `CalmKnobs.smooth` / `.ownRun`, `wholeEnds`, `calmTarget`'s `box` parameter and its two paths of the old calm (`edgeShare` for the shares, a vertical
+    facet's share on the box's height — the bounce's rule).
+  * the FACE MAPS — `faceMapOf` L877 (`#C…` in the key), L881 `frameBox(…) : tiltBox(…)` (the old box of a frame's map); `worldFaceMap` L893;
+    `chartOpts` L905-907 (always the charts' layout now: the call takes `{ layout: "chart", scale: "normals" }`).
+  * the ZONE DETECTORS — `zonesOf` L2193-2198 (`polarZones`, `zoneOptsOf` L2173-2176); in `src/input/polar_zone.ts` `polarZones` and what only it
+    reads (`contourCorners`, `facetSize`, `snapToWorldAxis`, `zoneOrientation`, the private helpers); `ZoneOpts.valenceMin` / `.facetMinRatio` /
+    `.snapDeg` and the three tunables they come from (`zoneValenceMin`, `zoneFacetMinRatio`, `zoneSnapDeg` — read by `zoneOptsOf` alone: left
+    unread, `tests/config_debt.test.ts` refuses them), their validation and their three sliders (POLAR ZONES).
+  * the TILT — `tiltOn` L1838-1851 (`holdsPole`, `tiltHeading`: the old test and heading), L1870-1878 (the swing's fields overwritten under the
+    charts), L1887 (`turnAngles` by the swing's `D0`), L1896 (`asmMapQ` alone); `nextTiltHeading` L1945-1957 (whole: its one caller is the old roll
+    back); `tiltFrame` L1658-1671 (the swing: `swingMs` is never set under the charts), L1684 (the tie without the band), L1695-1706 (the roll back:
+    `crossing`, `finishing`, `kT`, `k`, `rollStep`, `tiltExits`); the camera's tilted branch L1589-1611 (the roll back's frame: `exitNormal`'s read
+    there, `nextTiltHeading`, `headingFrom`, `frameMix`, `rollRad`, `axis`); `tiltClampStep` L1727, L1736 (`swingTimed`, `tiltUnderWay`); `tiltOff`
+    L1991-1997 (`edgeHoldAt`, the old hold), L2003 / L2034-2045 as reached with no place (kept: `turnAngles` there is the charts' path too);
+    `blendCrossed`'s `finishing` (L1292: always false now). In `src/input/orbit_tilt.ts`: `swingDir` (and `headingTurn` if left with no caller),
+    `headingFrom`, `tiltExits`, `tiltUnderWay`, `frameMix`, `rollStep`, `edgeHoldAt`, `TILT_TIE_M` and `onTiltedFacet`'s default `tolM` (every
+    caller hands the band); in `src/input/face_map.ts` `holdsPole`. The state (`scene_state.ts` `asmTilt`): `delta`, `swingMs`, `byMm`, `swingE`,
+    `swingDurMs`, `k`, `kT`, `finishing`, `rollRad`, `axis`, and `dir` (always the tilt's `map` now — read as `map`).
+  * the CROSSINGS — `squareFrame` L441-456 (the unbanded target, L452-455); `assemblyFrame` L1166-1182 (the guard and `PoleCrossingFacts.chartLayout`
+    in `src/input/pole_crossing.ts`), L1185, L1187, L1234, L1241; the camera's spit branch L1575; `zoneSwitch` L2283; `zoneFinger` L2471; `spitStep`
+    L2498, L2532-2541 (the old turn and hold); `seamOutPaced`'s `chartLayout` argument (`src/input/seam_turn.ts`).
+  * the TUNABLES — `gestureConfig.ts` `chartLayout`, `chartCalm` (L454-458, L890-891, L1058-1059), their sliders (`tuning_menu.ts` L294, L296); the
+    URL: a key no longer in the config is REPORTED by `parseConfigOverrides` (`… not an overridable tunable`), never applied — to check in the app.
+  * `play_recorder.ts` L169 (`asmTilt.k`), and the probes reading it (`walk_probe.mjs`, `tilt_probe.mjs`).
+  * the VECTORS — the files' switch pins and every vector of only the old paths: `tests/orbit_charts_switch.test.ts`, `tests/chart_calm_wiring.test.ts`
+    (the switches, `calmRules`), `tests/orbit_calm.test.ts` (`calmRules`, `smooth` / `ownRun` absent, `wholeEnds` false), `tests/calm_slanted.test.ts`
+    (the box-height rule), `tests/polar_zone.test.ts` (`polarZones`), `tests/orbit_tilt.test.ts` (`swingDir`, `frameMix`, `rollStep`, `tiltUnderWay`,
+    `tiltExits`, `headingFrom`, `TILT_TIE_M`, `holdsPole`, the old wiring pins), `tests/orbit_any_shape.test.ts` (`holdsPole`, the `chartLayout` 0
+    path), `tests/zenith_roll.test.ts`, `tests/orbit_charts_pole_crossing.test.ts` (`{ chartLayout: 0 }`), `tests/way_out_blend.test.ts`
+    (`seamOutPaced`'s argument) — a vector pinning both paths keeps its default half; every source pin of `chartLayout === 1` follows the source
+    (`facets`, `free_face_caps`, `free_face_spit`, `crossing_event`, `orbit_charts_atlas`, `orbit_charts_face_band`, `orbit_charts_one_state`,
+    `assembly_orbit`, `menu_layout`). The names, as deleted: in the as-built entry below.
+* ⛔ **Not in this step, kept and named**: `buildFaceMap`'s `layout` / `scale` options with their "built" defaults — a library default every
+  face-map vector and probe builds on (25 test files); the game no longer reaches it. `turnAngles` (the first frame of a zone, no place yet).
+  `tiltBox` (`frameBox`'s fallback). `edgeShare` (the tilted facet's shares). The dead edge blend (the inventory's F.1, `ORBIT_CHARTS.md` §4.4): not
+  on a switch.
+
+## 2026-11-16 — step 2.5 AS BUILT (an Opus agent; base `0e758a7`, the code of `d917d04`; the code commit `ef5e899`)
+
+* **The list above, checked against the code**: right, and completed — also gone: `asmZoneFacetsF` (`zoneFacetOf`'s memo: `scene_state.ts`, its reset
+  in `scene.ts`, `orbit_state_reset.test.ts` 58 → 57 fields); `nextTiltHeading`, `exitNormal`'s read in the camera, `headingFrom` (the roll back's
+  target); `matMul` and `headingTurn` (only `swingDir` used them); `tiltFrame`'s `dtMs` (read only by the swing and the roll back); `blendCrossed`'s
+  `finishing` (the argument goes, the pure function with it); `PoleCrossingFacts.chartLayout`; `seamOutPaced`'s `chartLayout`; `onTiltedFacet`'s
+  default `tolM` (the tie, `TILT_TIE_M`); `ZoneOpts.valenceMin` / `.facetMinRatio` / `.snapDeg` (and `DEFAULT_ZONE_OPTS`'); in `polar_zone.ts` with
+  `polarZones` the helpers only it read (`contourCorners`, `facetSize`, `facetArea`, `realFacets`, `sharedEdge`, `t2Fails`, `snapToWorldAxis`,
+  `zoneOrientation`, `rimCentroid`, `LEVEL_DEG`, `ALIKE_DEG`); `CalmKnobs.smooth` / `.ownRun`, `calmRules`, `wholeEnds`, `calmTarget`'s `box` (every
+  share by `edgeShareSmooth`, every side facet on its own run); the `#C…` part of both face maps' cache keys; `chartOpts` (now one constant,
+  `CHART_MAP_OPTS`). `play_recorder.ts`'s `tl` is `[id]` (the roll back's `k`, always 0, gone). ⚠ Kept, not on a switch: `turnAngles` (a zone's first
+  frame, a tilt's exit with no place), `tiltBox` (`frameBox`'s fallback), `edgeShare` (`tiltCalmWholeHV`, `poleEdgeWhole`), `frameMix` (`poseAboutPiece`),
+  `swingEase` (the relocation's), `CalmState.poleFade` (a cap's reading keeps the fade), `buildFaceMap`'s "built" defaults (a library default).
+* **What went, by area** (`git diff --stat` of the code commit): `assembly_wiring.ts` (the calm's old paths, the switch's guards, the old tilt's swing,
+  roll back, exits and hold, the zones' detectors, the spit's old turn), `orbit_tilt.ts`, `orbit_calm.ts`, `polar_zone.ts` (286 lines), `face_map.ts`
+  (`holdsPole`), `gestureConfig.ts` (5 tunables, their defaults and validation), `tuning_menu.ts` (5 sliders: 122 → 117), `scene_state.ts` (11 fields of
+  `asmTilt`, `asmZoneFacetsF`), `pole_crossing.ts`, `seam_turn.ts`, `play_recorder.ts`.
+* **The vectors**: 32 deleted, 2 new, the rest of the 19 files' pins kept on their default half (names: the step's report; by file — `orbit_calm` 9,
+  `orbit_tilt` 7, `polar_zone` 7, `chart_calm_wiring` 3, `orbit_charts_switch` 3, `orbit_any_shape` 2, `orbit_charts_face_band` 1). ⭐ NEW
+  (`orbit_charts_switch.test.ts`): no identifier `chartLayout` / `chartCalm` under `src`, comments stripped — RED on restoring one (the tunable in
+  `gestureConfig.ts`; a guard in the wiring); a URL that still carries either is REPORTED and never applied (`parseConfigOverrides`).
+* **The gates** (one run at a time, the probes' guard on): the default replays of `Scene_1`, `Scene_0`, `Scene_0bis` recorded at the base and after —
+  IDENTICAL in all 2794 frames, every field (`replay_cmp`: largest difference 0, `1e-9: never`); every default gate of `ORBIT_GATES.md` recorded at the
+  base and after (`tilt_check` default, `out` ×4, `ridge` ×3, `press` ×3, `rim`, `pole` ×3; `mid`, `across`; `edge_noise` top ×3, side ×2): every output line for line EQUAL to the base's (the URL and the boot line aside: they named the switch) — and equal to §6 of the runbook (the
+  baseline at `276a6c2`), row for row. No process and no `replay_probe_profile_*` left after any batch.
+  `npm run verify`: typecheck clean, **164 test files, 2058 vectors** (2088 − 32 + 2), ~2 min.
+* **A URL with `chartLayout=0&chartCalm=0`**: measured on the three scenes (headless, `page_eval.mjs`): the scene boots and plays the default game; the config has no such key;
+  the HUD's tuning lines show `⛔ chartLayout: not an overridable tunable` and `⛔ chartCalm: not an overridable tunable`; no error panel.
+* **The probes' guard** (`scripts/probes/probe_guard.mjs`, the brief's fix): see `ORBIT_GATES.md` §0 — the in-probe watchdog was a timer that cannot fire
+  while the probe is blocked in a synchronous call (a pipe write to a dead reader, a `spawnSync`); a Windows tree kill of the tool's command does not reach
+  Git Bash's children. Reproduced (a tree kill of a running `tilt_batch.sh 1`: the batch's shell, the server, the probe and its Chrome survived); with the
+  guard everything ended by itself at the deadline, no process and no profile left. ⚠ Until the deadline (8.5 min) the stuck probe stays — the guard
+  cannot tell a stuck probe from a slow one before it.
+* ⛔ Not done here: step 3 (the owner holds it); `ORBIT_STATE_INVENTORY.md` still names the deleted `asmTilt` fields and `asmZoneFacetsF` (the
+  inventory of step 2.1, a record — to update at step 3's docs); `scripts/probes/calm_study.ts` (step 0's study) no longer runs on this tree (noted in it).
+
+## 2026-11-16 (evening) — THE OWNER'S DECISIONS on what step C left open; branch `1.0.147-` (docs only)
+
+* **His words, in full**: *"1- A / 2- R1 / 3- I don't want to change what is currently built: it looks good on the screen. Record and do nothing. We
+  may reopen if we need when we build game scenes later on. / 4- Maintain D-T5. This kind of geometry probably means that the piece has a rotation
+  symetry axis around the gravity axis so D-T5 makes sense. Just record as we may reopen if we need when we build game scenes later on. / 5- Record
+  and do nothing. We may reopen if we need when we build game scenes later on. / 6- I don't understand what is this box, and what is the question.
+  ... Explain in layman's term what this is about or withdraw the question. / Build that in a branch 1.0.147- so I can reverse to branch 1.0.146- if
+  I don't like the results."* And: *"Progress as much as you can without asking me questions. I wish to finish the orbit charts work tonight."*
+* **So**: **1** W11's option **A** (the one turn truly one) — to BUILD; **2** the spit's half turn **R1** (at the gizmo's edge) — to BUILD; **3**
+  `Scene_0bis`'s top ridge reached from a tip — KEPT AS BUILT; **4** a level top that is not a rectangle (W8) — **D-T5 MAINTAINED**, his reason: such
+  a geometry probably means a piece with a rotation symmetry axis about gravity; **5** RINGS — NOTHING BUILT; 3, 4 and 5 may be reopened when game
+  scenes are built; **6** the frame box's scope — the question WITHDRAWN after it was explained to him in plain words (when the camera goes square to
+  a face the game redraws its map of the faces from that direction and first measures a box round the placed parts along it; C2's wiring measures
+  that box from the parts' corners so that it fits a part set at an angle, uses it for every redrawn map, and no game scene shows a difference): kept
+  as built, a matter for the later surface work.
+* **Done** (docs only): branch `1.0.147-` created from `1.0.146-Orbit-charts` (`c5aa295`), which is not touched again; `TILTED_POLE_CLOSE_IN.md`
+  §14 – §15 (the test scenes) moved word for word to make room →
+  [`TILTED_POLE_TEST_SCENES.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_TEST_SCENES.md); the decisions →
+  [`TILTED_POLE_CLOSE_IN.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) §17, and the rows they settle (§5 D-T5, §12.4, §13.4, §16.1).
+  Next on `1.0.147-`: A, then R1. Not in this chain: step B; anything on 3, 4, 5; any push or deploy.
+
+## 2026-11-16 (night) — PACKAGE A, W11's option A, as briefed (an Opus agent; base `e79d820`)
+
+* One transition, one turn: the square camera at its target inside a running turn (a target changed mid-turn restarts the turn from the pose shown);
+  the direction's ease read after the frame's view is set, at every turn start; the shown share capped at `tiltRollDegS` in every path (the
+  finger-paced entry, the square camera's own share). The design →
+  [`TILTED_POLE_CLOSE_IN.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) §18. No new tunable.
+* **As built** (`fe06c2c`, then `c53f54a` below — two commits: `git revert c53f54a fe06c2c` undoes A): every transition close in at ≤ 6° a frame on the three scenes (`Scene_1`'s
+  default 8.7 → 6.0, the ridge 8.5 → 6.0, the way out 6.0 → 5.2; `Scene_0bis`'s spit 8.9 → ≤ 6.4 at a turn's first frame); the top ridge from a tip
+  kept as the owner saw it (125°, the same way round, ≤ 6.6°). Two causes fixed in the rule while building (the camera's angle growing with the ease;
+  the spit's turn axis read before the view was set). 17 vectors, 13 mutants; **2075 vectors**. ⚠ `mid_check` not reproduced on A (its climb lands
+  elsewhere); a drag across a vertical edge while the square camera turns on its own still reaches 7.6 – 8.0° (no transition there — the owner's to
+  decide). ⛔ No device look. → [`TILTED_POLE_CLOSE_IN.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) §18.1.
+* **The second commit, `c53f54a`** (2026-11-17, the first audit's blocker fixed at its root; the second audit: the code sound, `npm run verify` 165
+  files, **2081 vectors**): on `Scene_0bis`'s spit, the free face's exit, the turn's END pose still moved under the rig's own lags (the leash after a
+  drag, the calm's ease) while the turn ran, so the picture turned 6.66, 6.36, 6.17, 6.06° in four frames. Now the share DRAWN is capped in the camera's
+  stage (`shownShareCap`, the picture's actual turn measured by `poseTurnRad`; the clocks carried on from it, the way out's by `seamOutShareInv`); a
+  turn ends where it is drawn whole. Its figures (the second auditor's): `across_check`'s walk 6.6 → 6.7 → 6.0° in a frame; `Scene_0bis` in
+  `tilt_check` 541 → 613 frames in a turn, 3476 → 3544° in all turns; the spit's free-face entry and exit turns ~10 frames longer; `ridge_check`'s walk
+  back 58 frames in a turn (40); one frame of 6.36° left at share 0 — a spit turn's first frame, the end pose's own motion under a drag, not the
+  turn's share. 6 vectors. ⛔ No device look. → [`TILTED_POLE_CLOSE_IN.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) §18.1.
+* **FOR THE OWNER — not decided, nothing built** (from A's builders):
+  1. **The square camera's own turn at a vertical edge during a drag** — 7.6 to 8.0° a frame with no transition running: leave it (it is a drag), or
+     pace it as a transition.
+  2. **The summed clock** — the turns are longer than §12.4 estimated (a 90° exit about 30 frames; the way out 0.67 s against 0.58 s): keep it, or a
+     refined clock.
+  3. **The cap under a fast finger** — a turn paced by the finger adds nothing in the frames where the finger itself moves the picture over 6°, and
+     finishes once it slows or lifts: to judge on the device.
+  4. **A turn started with no world map still reads no ease** — unchanged from before A.

@@ -552,7 +552,6 @@ export function createScene(
   st.asmZoneMesh = null;
   st.asmZones = null;
   st.asmAtlas = null;
-  st.asmZoneFacetsF = null;
   st.asmFaceMap = null;
   st.asmWorldMap = null;
   st.asmParts = null;

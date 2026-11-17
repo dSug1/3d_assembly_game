@@ -1,7 +1,7 @@
 /**
  * ⭐⭐⭐ (2026-11-16, `ORBIT_CHARTS.md` §10.2, §12 2.4d — the owner: *"consider adding hysteresis where needed (for example crossing of edges which trigger
  * camera movement) so that input noise does not transfer to camera movement"*) **THE BANDED FACET** — the face under the gizmo read with ONE band against
- * the place's noise, for a trigger of a camera movement (the square camera's target, under `chartLayout` 1; the wiring in `render/assembly_wiring.ts`):
+ * the place's noise, for a trigger of a camera movement (the square camera's target; the wiring in `render/assembly_wiring.ts`):
  *
  * * the reading KEEPS the facet it has (`cur`) while the place is on it or within `marginM` of it (`distToCurM`: the place's distance to that facet's
  *   polygon, `distanceToFacets` in the map's own frame — the MODEL's coordinates, never a drawn mesh);

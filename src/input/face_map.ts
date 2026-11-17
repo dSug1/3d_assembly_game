@@ -937,18 +937,8 @@ function sAtHeight(f: Facet, y: number): number {
 /** ⭐⭐⭐ (2026-11-12, F2b) Two facets beyond 45° within this many degrees of elevation of each other (and facing apart) hold a pole TOGETHER — a ridge. */
 export const RIDGE_TIE_DEG = 1;
 
-/**
- * ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §3, F2b) DOES FACET `fi` HOLD A POLE — the cap, or a side facet beyond 45° of elevation (a ridge's faces, each
- * holding it from its own side): which one; `null` none. ⭐ A box's sides are vertical: its two caps alone, as before.
- */
-export function holdsPole(map: FaceMap, fi: number): "TOP" | "BOTTOM" | null {
-  if (fi === map.top) return "TOP";
-  if (fi === map.bottom) return "BOTTOM";
-  const f = map.facets[fi];
-  if (f === undefined || f.kind !== "SIDE") return null;
-  const s = Math.SQRT1_2;
-  return f.n[1] > s + 1e-12 ? "TOP" : f.n[1] < -s - 1e-12 ? "BOTTOM" : null;
-}
+/* ⛔ (2026-11-16, step 2.5) `holdsPole` (a facet holds a pole: the cap, or a side beyond 45° — `ORBIT_ANY_SHAPE.md` §3, F2b) deleted with the game before
+ * the charts: the atlas decides which face tilts (`capTiltHeading`, `orbit_charts.ts`). */
 
 /**
  * ⭐⭐ THE GIZMO'S PLANE on a facet's stack at (`x`, `y`) (its `t`, `b` coordinates): the FRONTMOST group whose closed region holds the point (`inside`);

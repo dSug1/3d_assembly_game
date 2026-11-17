@@ -5,7 +5,7 @@
 > where they can be overcome and where they cannot and require a fallback (the "polar zone" equivalent, made more systematic than our empirical design) …
 > design a systematic way to achieve the rules on any geometry, based on what Blender or others have solved … audit the scripts and code we have built
 > and identify weaknesses"*. **OWNS** · step C of the charts' rebuild ([`ORBIT_CHARTS.md`](ORBIT_CHARTS.md) §10.1) · **READ IF** · you touch the tilt, the
-> square camera, a zone's camera or any trigger of a camera turn · **THE OWNER'S DECISIONS** · §5 — nothing is built before them.
+> square camera, a zone's camera or any trigger of a camera turn · **THE OWNER'S DECISIONS** · §5 — nothing is built before them; those of 2026-11-16 (evening) · §17.
 
 ## 0. In one page
 
@@ -263,7 +263,7 @@ tilt's close in. Later scenes with shafts, pins or cones lying on their side get
 | **W8** | **Close in on a cap that takes no tilt** (a level face that is not a rectangle, D-C2) the square camera has NO target (`squareFrame`: *"none over a cap … the automatic tilt comes next"* — it no longer always comes): the camera keeps looking square at the face it left | `squareFrame` | O6 — a loophole, no scene has it |
 | **W9** | **The mouth** (a void open toward a pole): a hold that depends on the path, and a tilt made from a face the gizmo is not on (`asmMouth`, `mouthHold`) — the one place the gizmo is not a function of the place | `assemblyFrame`, `tiltOn` | O11 |
 | **W10** | **Bands in five spaces** — metres of distance, millimetres on the model (5 and 10), millimetres of finger (30), degrees of camera (2), a micrometre tie — and two triggers with none until step 2.4d (measured 2026-11-16, close in on the cube, the place wobbling ±3 mm across the top edge for 4 s: the tilt made and left 21 times, the view turned 1 188°; across a vertical edge: the square camera's target 20 times, 600°) | throughout | T11 |
-| **W11** | **A turn's first frame** — the tilt's entry under a fast dy turns the view 8.5° in one frame (5.7° before step 2.4c set the followers' states) | `seamRebase` | T5 — not yet analysed: the first thing to measure in the build |
+| **W11** | **A turn's first frame** — the tilt's entry under a fast dy turns the view 8.5° in one frame (5.7° before step 2.4c set the followers' states) | `seamRebase` | T5 — ✅ measured 2026-11-16 (C1, §12): not the rebase — two clocks in one transition (its turn and the square camera's pitch) and the direction's ease read too early; ⛔ NOT built, the options are the owner's |
 | **W12** | **Fallbacks with holes** — a face no columns chart serves goes to RINGS, which is not wired (it stays on gravity's map: the leaps and stalls of a BROKEN face); a partial fan likewise (D-C5); a near-level roof entered from its gable is BENT at the entry (by T6 — to be shown to the owner on a test scene, not found by accident) | `orbit_charts.ts`, the wiring | T12 |
 
 ### 4.3 The scripts — what no run covers
@@ -284,7 +284,7 @@ tilt's close in. Later scenes with shafts, pins or cones lying on their side get
 | **D-T2** ✅ | Do a spit's level faces follow the same rule — no turn in the middle of `Scene_0bis`'s bottom face, the half turn at its far edge, the picture unchanged when coming in from a tip? | **Yes** — ✅ the owner, 2026-11-16: *"D-T2: agreed"* | the spit's side, bias and swap are replaced, not tuned; N1 or N2 far out (§3.4) is yours to judge on the device |
 | **D-T3** ✅ | Far out on gravity's top and bottom faces: polar and a limit (D-C6, today), or the same rule far out too (a top face crossable by dy again)? | **keep D-C6** — ✅ the owner, 2026-11-16 (*"D-T2 to D-T7: agree with your recommendations"*) | far out stays as you accepted it (*"polar orbit far out: the sections are ok"*) |
 | **D-T4** ✅ | The dy hold from any turn over 90° (not 120°)? | ✅ the owner, 2026-11-16: *"i have no particular opinion. Weigh the pros and the cons and build what is best"* → **decided by the builder (§10): the hold is set when the turn is over 90° AND the finger's dy was the one pushing the gizmo out over that edge — never on a dy that did not** | none on a rectangle (the far edge, crossed by its dy, as today) |
-| **D-T5** ✅ | A level face that is not a rectangle: the layout square to its entry edge (a tilt), or polar at every distance (D-C2, today)? | **keep D-C2** until a scene has such a face; the design covers it — ✅ the owner, 2026-11-16 | W8's loophole is closed either way |
+| **D-T5** ✅ | A level face that is not a rectangle: the layout square to its entry edge (a tilt), or polar at every distance (D-C2, today)? | **keep D-C2** until a scene has such a face; the design covers it — ✅ the owner, 2026-11-16; ✅ **MAINTAINED**, the owner, 2026-11-16 (evening), on W8 (§17, 4): *"Maintain D-T5. This kind of geometry probably means that the piece has a rotation symetry axis around the gravity axis so D-T5 makes sense. Just record as we may reopen if we need when we build game scenes later on."* | W8's loophole is closed either way |
 | **D-T6** ✅ | A new gesture pushing the same way crosses a far edge again (your rule of 2026-11-14). Keep? | **keep** — ✅ the owner, 2026-11-16 | one crossing per gesture |
 | **D-T7** ✅ | The patents of §3.5 | ✅ the owner, 2026-11-16: the local-up / global-up rule on its own is not what US 7,782,319 claims (§3.5) — **the carried heading stands** | ⛔ never a clickable / draggable 3D orientation widget in the game; ⚠ US 8,044,953 not covered by that reading |
 
@@ -293,12 +293,13 @@ tilt's close in. Later scenes with shafts, pins or cones lying on their side get
 | step | what | gate |
 |---|---|---|
 | **C0** ✅ | run 2026-11-16 (§7) — **an offline round**, as for the charts: the free faces, their layouts and every exit's turn on the 35 shapes and on test scenes (a cube, a heptagon's end, an L-shaped top, a step, a spit body); a walker crossing every edge both ways — no turn without an edge, the turns round every corner adding up; N1 against N2 drawn for the owner | the tables; the owner's look at the drawings |
-| **C1** | W11: the entry's first frame measured and its cause named — before anything is built on it | the probe |
+| **C1** ✅ | W11: the entry's first frame measured and its cause named — before anything is built on it. ✅ Measured 2026-11-16 (§12): structural (two clocks in one transition); ⛔ NOT built — the options A – D are the owner's (§12.4) | the probe |
 | **C2** 🔧 | the pure part built 2026-11-16 (`c5538db`, an Opus agent, audited: `src/input/free_face.ts` — `freeFaces`, `freeEdges`, `entryHeading`, `nearestHeading`, `exitTurnRad`, `turnHolds`; equal to §7's reference on the 35 shapes; 53 vectors, **2013**; NOT wired) — free faces and their layouts in the atlas (pure, `src/input`); the entry by the edge; the exit's turn and the hold computed (W5, W6); the frame's map in the contour's box (W7) | vectors; the three scenes replay unchanged |
-| **C3** 🔧 | built 2026-11-16 (`86f2cbe` + the auditor's completion; §8.1), audited, LOCAL — THE WAY OUT BLENDED (D-T1, W4, §8): the camera's turn after the threshold follows the approach finger (`tiltOutBlendMm`), smooth, never over the one speed, the gizmo free; ⛔ the owner's look owed. W8 (the square camera's target on a cap with no tilt) NOT in this step: with a test scene | the way-out run ✅, the replays ✅ (§8.1) |
+| **C3** 🔧 | built 2026-11-16 (`86f2cbe` + the auditor's completion; §8.1), audited, DEPLOYED 2026-11-16 (the owner: *"Deploy"* — main `40c6325`, both switches on by default) — THE WAY OUT BLENDED (D-T1, W4, §8): the camera's turn after the threshold follows the approach finger (`tiltOutBlendMm`), smooth, never over the one speed, the gizmo free; ⛔ the owner's look owed. W8 (the square camera's target on a cap with no tilt) NOT in this step: with a test scene | the way-out run ✅, the replays ✅ (§8.1) |
 | **C4** 🔧 | built 2026-11-16 (`0125445`, an Opus agent, + the auditor's `28df70c`; §9.1), audited, DEPLOYED 2026-11-16 (the owner: *"Deploy"* — main `6685f8f`) — the spit on the same rule (D-T2, W2, W3): on a spit's level face the heading carried, the finger read off the picture, nothing in the face's middle, the half turn at the far edge; N1 / N2 behind `freeFaceSquare`; ✅✅ **the owner's look, 2026-11-16: *"This is good."*** | `mid_check.mjs`, `across_check.mjs` ✅; the replays ✅ (§9.1); the owner's records of 2026-11-14 not replayed |
-| **C5** | One half-turn event (W1), its hold from any turn over 90° (D-T4, W6); the mouth as a concave edge (W9) | the ridge and far-edge runs |
+| **C5** 🔧 | built 2026-11-16 (§13.3; ⛔ the spit's own trigger not, §13.4) — One half-turn event (W1), its hold from any turn over 90° (D-T4, W6); ⛔ the mouth as a concave edge (W9) MOVED (2026-11-16) into the study "before step B" below | the ridge and far-edge runs |
 | then | step 2.5 of the charts (the old detectors and the switch deleted) | — |
+| **before step B** | **the surface definition and the singularities** (voids, channels, mouths, protrusions, small faces) — the owner, 2026-11-16: *"Also, before step B, we will need to work on the surface definition and the singularities (voids, channels, mouths, protrusions, small faces): just capture that in your to do list for the moment."* A study by the four-part method (the rules; the obstacles and the fallbacks; a systematic design from prior art; an audit of what is built), approved by the owner before any build; C5 / W9's mouth as a concave edge is part of it | the owner's approval of the study |
 
 ## 7. C0 — THE OFFLINE ROUND (run 2026-11-16: `npx vite-node scripts/probes/free_face_study.ts`, a few seconds; `VERBOSE=1` for every table)
 
@@ -460,3 +461,335 @@ After his look on C4 (main `6685f8f`): *"This is good. Commit. For the next depl
   switch-on one.
 * ⚠ **`Scene_2`** has never been run with the switches on (the owner keeps it out of these passes: *"I will do it myself when I troubleshoot the
   scene"*): with this default it runs the charts' layout too.
+
+## 12. STEP C1 — W11, THE TILT'S ENTRY UNDER A FAST DY (2026-11-16, an Opus agent)
+
+**As briefed**: the fault as measured — `Scene_1`, close in, the automatic tilt made on the cube's top under a FAST dy: the view turns 8.5° in ONE
+frame at the tilt's entry (W11, never analysed). Reproduce it (`tilt_check.mjs`, a fast dy; per frame the view's turn, the turn's share, the frame in
+force, what changed state), on `Scene_0` and `Scene_0bis` too; find WHICH quantity jumps in that frame and WHY (to test, not to conclude: the way in's
+share paced by the finger with no cap on the picture's speed; the square camera's target; the piece's direction ease; the frame set at once while the
+turn starts a frame late). Write the root cause here. Build the fix only if it is clear and systematic — the expected form: *from the pose shown, the
+share SHOWN never faster than the tilts' one speed* — under `chartLayout` 1 unless the fault is in common code; if it is not clear, or it changes what
+the owner has looked at and accepted elsewhere, report the options. The gates: verify, the off replays bit for bit, the default replays explained,
+`tilt_check` on the three scenes (the entry's largest one-frame turn at or under the one speed's step, nothing else moved), `edge_noise`, `mid_check`,
+`across_check` unchanged.
+
+### 12.1 Measured — what turns in those frames, and why
+
+`tilt_check.mjs` (its default run, 5 px a frame of dy) with every frame's state recorded besides (the camera's TARGET pose before the turn's mix, the
+turn's share and angles, the direction's ease, the square camera, the calm, the piece's place — a copy of the probe in the session's scratchpad, the
+wiring read through temporary lines, reverted). `Scene_1`, the tilt made on the top at the frame marked ▶ (the approach over: the turn goes by TIME):
+
+| frame | the view (° in the frame) | the camera's target pose (°) | the turn's share k | the camera's turn (°) | the direction's ease (°) | the square camera's normal (° in the frame) | the piece (mm in the frame) |
+|---|---|---|---|---|---|---|---|
+| 84 | 3.1 | 3.1 | — | — | — | 0 | 17 |
+| ▶ 85 | **6.2** | 0.04 | 0 | 0.04 | 6.49 | 6 (its target now the top, 84° away; its share 0.40 → 0.60) | 61 |
+| 86 | **8.0** | 1.75 | 0.92 | 1.8 | 6.49 | 6 | 87 |
+| 87 – 99 | 2.6 → 6.0 | the same | — (over) | — | — | 6 a frame | 38 – 66 |
+
+**The quantity that jumps is the piece's SHOWN direction** — not the camera's target (it moves 0.04° in the tilt's frame) and not the frame's angles
+(`seamRebase` keeps the gizmo, and the piece's raw direction moves 0.04° there too). Two causes, one inside the other:
+
+1. **The ease read too early.** The tilt's one transition (`tiltOn`) reads the gap between the direction drawn before and the new chart's
+   (`seamEase`, 6.49°) the moment the frame changes — before the same frame's calm and square camera have run (`calmFrame`). But the tilt has just
+   changed the square camera's target (the top's normal), and in that same frame the square camera takes its first step (its normal 6°, its share
+   0.40 → 0.60): the raw direction comes back by ~6.5°. The ease is then applied to a direction that no longer needs it: at k = 0 the piece is drawn
+   6.45° off the place it had — against the ease's own rule (*at the start exactly the one drawn before*, `seam_turn.ts`) — and the framing of the
+   turn (`poseFramingTwo`, which keeps the piece where it was on the glass) turns the camera 6.2° to hold it. The next frame the turn's clock reads a
+   whole of 0.04° + 6.49° and advances 0.92 of it at the one speed — 5.97° released, plus the square camera's own step: 8.0°.
+2. **Two clocks in one transition (the root).** Every change of frame close in — the tilt's entry, its exit, the ridge's crossing (`poleCross`), the
+   spit's crossing — also changes the square camera's target, and the square camera then turns on ITS OWN clock at the one speed (`squareTurn`: 84°
+   on a box's edge), while the transition's ONE turn (`asmZoneMix`) runs at the one speed over its own angle from the pose shown to a target that is
+   itself turning. On the glass the two add. Measured on the default run of each scene (the view in one frame while both run):
+
+| scene | the transition | the view, a frame (°) | for how long |
+|---|---|---|---|
+| `Scene_1` | the tilt's entry on the top (above) | 6.2, **8.0** | 2 frames |
+| `Scene_1` | the tilt's entry on the bottom (swing 38°) | 5.3, 6.7, then 6.0 | 2 frames |
+| `Scene_1` | the tilt's exit by dx (a quarter turn) | **8.7 → 8.0** | ~10 frames (the run's largest, 8.7 — not the entry) |
+| `Scene_0` | the tilt's entry on the bottom | 6.4, **8.2**, 6.9 | 3 frames |
+| `Scene_0` | the ridge's half turn (2.4b) | **8.8 → 8.5** | most of its ~30 frames |
+| `Scene_0bis` | the spit's half turn | 6.9, **8.9 → 8.1** | most of its ~30 frames |
+
+**In plain words**: when the frame changes, the game starts ONE camera turn from the picture on the glass — but the camera's "square to the face"
+rule starts its own pitch over the edge at the same moment, at the same speed. Each obeys the one speed; together the picture moves up to one and a
+half times as fast. At the tilt's entry it shows as a jolt, because the piece's direction is also corrected for a step that the pitch had already
+undone in that frame.
+
+The brief's candidates: the finger's pace — not involved (made with the approach over, the turn goes by time); C3's cap — the turn's own clock
+already keeps the one speed, the excess is its moving target; the direction's ease — yes (1.); the turn starting a frame late — costs nothing by
+itself (the camera's turn is 0.04° at its first frame).
+
+### 12.2 Tried, measured, reverted — nothing of it committed
+
+T1 (the ease read after `calmFrame`) and T2 (T1, and the square camera at its target inside a running turn), their table and figures — moved
+word for word → [2026-11-17_package_a_trials_and_gates.md](../history/2026-11-17_package_a_trials_and_gates.md). In short: T1 alone moved the jolt to
+the bottom's entry; T2 kept every turn ≤ 6° on `Scene_1` but broke the spit (54.6°): the shape of a fix, not local.
+
+### 12.3 Why it is not built
+
+The cause is structural (a transition's one turn and the square camera's pitch: two clocks, the ease read between them), it lies in code every change
+of frame close in shares (the tilt's entry and exit, the ridge, the spit, the zones), and any fix changes how every one of them looks — the ridge's
+and the spit's half turns from 8.5 – 8.9° a frame to 6°, their pitch over the edge merged into the one turn — which the owner has looked at and
+accepted (2.4b, 2.4c, C4). By the brief and the standing rule (*root cause before patch*): the finding, the numbers and the options; no build. A fix
+for the entry alone would be the special case beside the rule.
+
+### 12.4 The options — the owner's
+
+| | what | what the player sees | cost |
+|---|---|---|---|
+| **A** (recommended) | **The one turn truly one**: while a transition's turn runs the square camera's target is reached INSIDE it (its pitch part of the one turn), and the direction's ease is read once the frame's view is set — at every start of a turn (the tilt's entry and exit, the ridge, the zone's switch, the spit's crossing in the camera's stage, a free face's entry and exit) | every change of frame close in turns the picture ONCE, never over the one speed (today 6.9 – 8.9° a frame); about as long as today (the larger of the two angles at the one speed) | a build across the turn starts; the three scenes' replays change at every transition (T2: `Scene_1` 8.7 → 6.0°) |
+| **B** | **A limiter on the picture**: each frame the turn's share held back until the picture moves no more than the one speed from the pose shown, whatever runs beside it | the same cap; the two motions still overlap | the piece's ease would lag the camera's share by a frame; a target turning faster than the speed by itself is not limited |
+| **C** | **One shared budget**: the square camera's pitch takes each frame only what the transition's turn leaves of the one speed | the pitch slowed while a turn runs | two clocks kept, coupled — W1's shape (one obstacle, several mechanisms) |
+| **D** | **Keep as is** | 8 – 9° a frame at a transition under a fast finger: a jolt of 1 – 2 frames at the tilt's entry, the whole half turn at the ridge and the spit | nothing |
+
+✅ **The owner, 2026-11-16 (evening): *"1- A"*** — option **A**, to BUILD on branch `1.0.147-` (§17); B, C, D not taken.
+
+## 13. STEP C5 — ONE HALF-TURN EVENT (2026-11-16, an Opus agent; W1, W6; D-T4)
+
+**As briefed**: today FOUR places each make *"a crossing that turns the camera and may hold a dy"* — (1) gravity's tilt left over its far edge
+(`tiltOff` + `edgeHoldAt`: the hold from 120°, the finger's last dy sign); (2) the ridge crossed in a pole zone (`poleCross`); (3) the spit's change of
+side (`spitStep` + `crossingHold`); (4) a free face's exit (`freeFaceExit` + `exitHoldSign`: held when the turn is over 90° AND the finger's dy is the
+one that pushed the gizmo out over that side — D-T4; the owner: *"i have no particular opinion. Weigh the pros and the cons and build what is best"*).
+Make them ONE event: a pure function in `src/input` (the turn between the up shown and the next face's own up unfolded across the edge crossed; the
+hold's sign by the D-T4 rule) and ONE wiring function the four sites call (the frame set at once, the gizmo kept, every angle state set, one camera
+turn from the pose shown, the hold); each site keeps only what is truly its own; the dead fields removed; under `chartLayout` 1 — with it 0 the four
+sites bit for bit as today. Then measure the spit's top ridge ARRIVED AT FROM A TIP (`Scene_0bis`): the old rules still act there (the finger's axes
+swapped above 60° of pitch, `spitCameraHeading`'s side bias) — a fault measured gets its root cause; a fix only if systematic and inside this event;
+a change of the rule for the finger's axes is the owner's. ⛔ Not in it: a mouth as a concave edge (W9, moved to the study before step B), the free
+face's layout rule, C3's way out, the calm.
+
+### 13.1 The four, as they stand (read on `1190db2`)
+
+| | (1) the tilt's exit | (2) the ridge crossed close in | (3) the spit's change of side | (4) a free face's exit |
+|---|---|---|---|---|
+| the trigger | the place one band past the tilted facet (`tiltFrame` → `exit`, made at the next frame's start) — or the latch off by distance (`off`) | close in, the map's angles at ±90°, the finger asking beyond (`poleCrossingDue`) | the camera's shown direction crossing the vertical plane through the axis, steeply (`crossingPitch` ≥ 60°) — in the CAMERA's stage, read off the camera's place | the place one band past the free face (`freeFaceFrame`) |
+| the frame | gravity's (the tilt dropped) | gravity's, unchanged | the zone's, unchanged | the zone's, unchanged |
+| the angles | `seamRebase` at the gizmo (the world map's; at its pole the heading shown kept) | `seamRebase` at the far face's (`poleSeam`) | — | — |
+| the camera's turn | `seamTurnStart` from the pose shown (by distance: C3's `seamOutStart`), the ease from the direction drawn (`seamEase`) | the same turn written out, `seamEase` | the same turn written out, the ease running carried (`easeCarry`) | the same, `easeCarry` |
+| the hold — who | `edgeHoldAt(tl.heading, nT, nW, g, dySign)` (never by distance) | `edgeHoldAt(orbit.yaw, n0, nFar, P, dySign)` | `crossingHold(g, gizmoNormal, axis, side, dySign)` | `exitHoldSign` → `crossingHold(…, held)` |
+| its threshold | the face beyond's level normal more than 120° from the heading | the same | none: every crossing | the turn over 90° |
+| its sign | the finger's LAST dy sign, whatever crossed | the same | the same | the dy that pushed the gizmo out over that side (D-T4) |
+| its side | — (the field `d`, into the face beyond: never read) | the same | the same | the same |
+| **dead** | `EdgeHold.g0`, `EdgeHold.d` — written by `edgeHoldAt` and `crossingHold`, read by nothing (the hold reads `sign`, `back`; the play recorder too) | ← | ← | ← |
+
+The hold ends the same way for all four: the finger the other way for `edgeHoldMm` (`edgeHoldFinger`), the gesture's end (`gestureOver`), the
+assembly's orbit off; (3) also when the side changes round a tip. The gizmo is held while any of these turns runs (`tiltClampStep`), but C3's paced way out.
+
+### 13.2 The design
+
+* **The rule, stated once** (D-T4 made exact — §10): after a crossing, hold the dy sign `s` when **`s` pushed the gizmo out over the edge** — on the
+  glass `s` moves it along the up SHOWN `T`, so `s·T·out > 0` (`out`: from the face left toward the edge, in its plane) — **and `s` would bring it
+  straight back after the turn** — `s` then moves it along the next face's up `U`, so `s·U·out < 0`. On a free face's level edge `U` is `−out` (into a
+  top face) or `+out` (out of a bottom one), and the pair is EXACTLY §10's (the turn over 90° and the dy that pushed): the free face's exits keep their
+  behaviour. Elsewhere it decides what 120° and the last dy sign guessed: a dy sliding ALONG an edge it drifted over is not held when the turn does
+  not send it back.
+* **Pure** (`src/input/free_face.ts`): `faceOwnUp` (a face's "up" — the holding up laid in its plane; none on a level face), `unfoldAcross` (a
+  direction of the face beyond turned about the edge onto the face left's plane — `freeEdges`' own unfolding), `edgeOut`, `crossingHoldSign` (the
+  rule), `crossingEvent` (the turn between `T` and the next face's up unfolded, and the hold) — `exitHoldSign` now through `crossingHoldSign`.
+* **What each site hands it** (its own, by the rule that shows the picture): (1) `T` the tilt's own up (`map · y`: upright in the tilted frame), the
+  faces' world normals; (2) `T` the face left's own up (a bound face is upright); (4) the heading carried and the side's layout (as built);
+  (3) the spit's side flips the camera to the mirror view (the same height, the other side of the axis): `T` the up drawn last frame (the side's
+  upright camera, `asmCamLast`), `U` its mirror across the side's plane, `out` toward the new side — ⛔ built, measured, withdrawn (§13.3).
+* **ONE wiring function** (`crossTurn`): the rebase when the site hands angles (the angle states, the place shown with its eased relocation, the
+  band read afresh — (1), (2)); ONE camera turn from the pose shown (paced by the finger on C3's way out), the piece's direction eased from the one
+  drawn (a change of frame) or the running ease carried (none); the coast stopped; the hold. Each site keeps its trigger, its frame and its views
+  (the calm, the square camera's target, the held zenith heading, the spit's side, the free face's state).
+* **Expected**: `Scene_1`'s cube as today (the far edge crossed by its dy: held; a side edge: not); on the heptagon's scenes a difference only where
+  the last dy sign was not the one that pushed — each measured below.
+
+### 13.3 As built (2026-11-16, an Opus agent)
+
+* **Pure** (`src/input/free_face.ts`): `crossingHoldSign` (the rule of §13.2, its floor `CROSSING_PUSH_MIN` 1e-9), `faceOwnUp`, `unfoldAcross`,
+  `edgeOut`, `crossingEvent` (the turn and the hold); `exitHoldSign` now through `crossingHoldSign` (the same answers on a free face's level sides).
+* **ONE wiring function** (`crossTurn`, `assembly_wiring.ts`), called by the four sites under `chartLayout` 1: `tiltOff` (twice: with a place to keep
+  and without), `poleCross`, `spitStep`, `freeFaceExit`. What each keeps: `tiltOff` its frame, the calm and the square camera out of F, the paced way
+  out's flag (C3); `poleCross` the far face's views (the held heading, the calm, the square camera's target); `spitStep` its side and its trigger;
+  `freeFaceExit` the free face's state and the side read afresh (its unused zone argument removed).
+* **The hold**: the tilt's exit and the ridge by `crossingEvent` (`T` = `map · y`; the face left's own up); a free face's exit by `exitHoldSign` (as
+  built, through the rule); with the switch off `edgeHoldAt` and `crossingHold` as before.
+* ⛔ **The spit's change of side keeps §8's hold** (the finger's last dy sign, `crossingHold`), through the one event. The mirror view as its next up
+  was built and measured, then WITHDRAWN: arrived along the top ridge from a tip (`ridge_check.mjs`, close in) the picture turns ~110°, not a mirror;
+  the dy that had crossed was judged not to push (the gizmo crossed by the tip triangle's fall line, not by the finger's way on the glass), was not
+  held, and brought the gizmo straight back over the ridge — a second half turn: the view 124° → 343° in the drag, from both tips. The rule needs the
+  up the picture turns TO, which a side read off the camera's place does not give (§13.4).
+* **The dead fields**: `EdgeHold.g0` and `.d` deleted; `edgeHoldAt` and `crossingHold` lose their `g0` argument (their `null` cases kept — the switch
+  off bit for bit).
+* **Vectors**: `tests/crossing_event.test.ts` (13; **2071 vectors**, 163 files); the source pins of seven files moved to the event; red on 11 mutants (the come-back test dropped,
+  the push test dropped, the push floor at 0, the unfolding reversed, the outward direction reversed, the own up not laid in the plane, the hold not
+  set by the event, the tilt's exit back on `edgeHoldAt`, the rebase skipped, the spit's hold dropped, `exitHoldSign` on the last sign).
+
+**The gates** (against `scripts/probes/ORBIT_GATES.md` §6, the baseline at `276a6c2`):
+
+| gate | result |
+|---|---|
+| the replays, `chartLayout=0&chartCalm=0` | `Scene_0` identical; `Scene_1`, `Scene_0bis` 2.0e-11 / 2.9e-9 from frame 3 (`1e-6: never`) — the baseline's own noise |
+| the replays, the default | the three scenes IDENTICAL in every frame (2794 / 2794): the seeded play never crosses an exit turning 90° – 120°, nor a far edge or a ridge with another dy sign |
+| `tilt_check` default, `chartLayout` 0, `out` (1 and 4 px), `ridge`, `press`, `rim`, `pole` | every number equal to the baseline (default 8.7 / 673, 8.8 / 2149, 8.9 / 3627 with 13 holds; the way out 180° at 6.0° a frame; the ridge's holds 54 / 54, 45 / 45, 51 / 51, 36 / 36) |
+| `mid_check`, `across_check` (default and off) | equal: the middle reached, 76° / 6.2°; across 241° / 6.6°, the half turn past the far edge, 936 frames held |
+| `edge_noise` (top ±2.5 mm, three scenes; side ±10 mm) | equal: the tilt made / left 0, the view 0° |
+| `ridge_check` (new), 8 runs | equal to the code before in every run (once the spit's hold was kept) |
+
+**Where the rule changes what the player feels** (vectored; no gate run reaches it): a tilt's exit or the ridge crossed with the finger's last dy
+the OTHER way (an edge crossed by a dx with an old dy sign): no hold — before, that old sign was held; an exit turning between 90° and 120° (a free
+face that is not a rectangle — none takes a layout yet, D-T5): held for the dy that pushed — before, free.
+
+### 13.4 The top ridge arrived at from a tip (`Scene_0bis`) — measured, nothing built
+
+`ridge_check.mjs` (new, `scripts/probes/`, its runbook `ORBIT_GATES.md` §4): from each tip along the axis, close in and far out, then one drag back;
+across the ridge from each side, then back:
+
+| run | what happens |
+|---|---|
+| from a tip along the axis, close in (both tips) | the gizmo climbs the tip's triangle and drifts over the apex's ridge line (a straight finger follows the triangle's fall line, not the ridge's line: 3.4 → −10 mm off it); 16 mm past the rim the side changes: ONE half turn (the axis from ~110° on the glass to across it, the view 27° → 66° looking down), the hold on the dy that crossed — the drag then blocked 313 frames; after it the finger's dy goes ROUND the axis |
+| the same, far out | the turn 30 mm past the ridge line (the −x tip); from the +x tip the drift took the gizmo round the body and down a long side (the view never steep) |
+| across the ridge, close in | the half turn 21 – 31 mm past the ridge, then the hold until the drag ends — as designed |
+| across the ridge, far out | the half turn **55 – 60 mm past the ridge** (of a face ~150 mm wide) |
+| the finger's axes | never against the finger outside a turn (0 of 10 – 51 moving frames a drag; one frame 97° at a crossing); the swap above 60° acts only once the turn has put the axis across the glass — no swap under the finger measured |
+
+**Root cause**: the spit's turn is triggered by the CAMERA's shown direction crossing the vertical plane through the axis (`spitSide`,
+`crossingPitch`), not by the gizmo crossing an edge. Close in the square camera follows the gizmo, so the turn lands within 10 – 30 mm of the ridge;
+far out the calm keeps the camera near the face's middle and the turn lands ~60 mm into the face beyond (against T4). Arriving from a tip the turn
+itself is real — the ridge's faces are bound and upright puts the axis across the glass (O8: a roof entered from its gable end) — and its hold is
+right (the same dy brings the gizmo back: the withdrawn rule proved it); what the player loses is the walk along the top. No hold "for no reason",
+no swap under the finger.
+
+**Options — the owner's** (each changes what the player sees):
+
+* **R1** — the spit's half turn on a bound face at the GIZMO's edge, one band past it (the tilt's and C4's trigger), the camera's side set by that
+  event, the hold by §13.2's rule with the face beyond's own up (known at an edge). Removes the far-out lag; the spit then the fourth site in full.
+  A rebuild of the spit's camera heading on bound faces (W3's second half).
+* **R2** — keep (the turn within the calm's lag far out).
+
+✅ **The owner, 2026-11-16 (evening): *"2- R1"*** — **R1**, to BUILD on branch `1.0.147-`; R2 not taken. **The ridge arrived at from a tip**
+(the table above): *"3- I don't want to change what is currently built: it looks good on the screen. Record and do nothing. We may reopen if we need
+when we build game scenes later on."* — **KEPT AS BUILT**, nothing changed for it (§17).
+
+## 14. PACKAGE T1 — THE TEST SCENES, as briefed — MOVED (2026-11-16, word for word, to make room)
+The six test shapes, what was run on each and what was flagged → [TILTED_POLE_TEST_SCENES.md](TILTED_POLE_TEST_SCENES.md) §14.
+
+## 15. THE TEST SCENES — FINDINGS — MOVED (2026-11-16, word for word, to make room)
+F1 – F9, the control, AFTER C2W and WHAT REMAINS → [TILTED_POLE_TEST_SCENES.md](TILTED_POLE_TEST_SCENES.md) §15.
+
+## 16. PACKAGE C2W — C2's WIRING ON GRAVITY'S CAPS: W5 AND W7, as briefed (2026-11-16, an Opus agent; under `chartLayout` 1)
+
+* **The contract**: on a FREE face reached under gravity's layout (a pole zone's cap — the cube's top) the heading shown is the one CARRIED IN by the
+  entry edge, by the same pure functions C4 uses in a spit zone; and a tilted frame's face map is built in the shape's own box, so that a cap that is
+  not an axis-aligned rectangle (the turned box, the L, the triangle) has its facets where its faces are. ONE rule for a free face whatever the kind
+  of its zone: where the spit's and the pole's wiring can share one function, they do.
+* **W5 — the design**: the tilt (`tiltOn`) keeps its test (the atlas's: a CAP with square layouts, `capTiltHeading`), but its heading is the layout
+  whose up is the heading carried in — `freeEntryHeading(freeEdges(…), from, …)`, the function C4's spit entry calls, `from` the face of the place
+  the frame BEFORE the gizmo stood on the cap (the tilt is made one frame after: it reads last frame's place) — and only the nearest to the up
+  shown when there is no edge (the approach arriving with the gizmo already on the cap, §3.3's fourth row). ⛔ Today: the layout nearest the orbit's
+  yaw SNAPPED to the world's axes (`tiltHeading` → `snapHeading`): on the box turned 30° a yaw over its side lands 30° off that side's own heading,
+  and the nearest candidate can be the neighbour's ([`TILTED_POLE_TEST_SCENES.md`](TILTED_POLE_TEST_SCENES.md) §15 F2: 90° off, the view turning 120° over the entry). The entry's own facet found on the
+  contour as C4 finds it (`contourOfFacet`): one wiring function serves both entries. A pole held at a void's mouth (W9, the gizmo not on the cap)
+  keeps today's heading — the study before step B.
+* **W7 — the design**: the frame's map is built in the box of the placed parts' own vertices READ IN THAT FRAME — the rule of the world's map (the
+  parts' box, `shellBox`) in the frame's axes — ⛔ today the world box's eight corners turned (`tiltBox`), loose for any frame off the world's
+  axes. ⚠ Not the contour's corners: the contour is the main planes' polytope and leaves a proud part outside it — its faces would be clipped. A
+  bound equal to the turned world box's within float noise keeps the turned box's number (an axis-aligned shape: bit for bit). One function for
+  every frame the map is built in (a tilt's, a zone's).
+* **Expected**: `Scene_0`, `Scene_0bis`, `Scene_1` — nothing the gates see changes (on a box over a side the snapped yaw already gives that side's
+  layout); the switch off bit for bit. The gain on the test scenes (merged INTO their throwaway branch): T_e's entries on the entry edge's layout.
+* **Not here**: W8 (the square camera's target on a cap with no layout) and RINGS — unless a direct consequence of W5 / W7.
+
+### 16.1 As built (2026-11-16: `e56f34f`, an Opus agent)
+
+* **W5**: `capTiltHeading(…, along)` (`orbit_charts.ts`) — `along` the heading carried in: the candidate whose F-vertical lies nearest it (a tie: the
+  first), unwrapped next to today's, today's number itself when it is that candidate. In the wiring ONE entry function, `freeEntry` (the contour's
+  face, the side shared with the place before, `freeEntryHeading`), called by a spit's free face (`freeFaceFrame`, C4) and by the tilt (`tiltOn`, on
+  the world's map, when the cap is the gizmo's own place and free); `asmPlaceWas` (new, reset with the orbit's state) keeps the place before the one
+  shown — the tilt is made one frame after the place reached the cap. A pole held at a mouth (W9) and `nextTiltHeading` (a cap right after a tilt's
+  exit: no convex contour has one) keep the yaw's nearest.
+* **W7**: `frameBox` (`orbit_tilt.ts`) — the parts' vertices turned into F, their bounds; a bound within `FRAME_BOX_NOISE_M` (1 nm) of `tiltBox`'s
+  that number (`Scene_1`'s real faces sit 0.6 nm inside its box: kept exact). `faceMapOf` builds every frame's map in it (a tilt's, a zone's) under
+  `chartLayout` 1; `tiltBox` otherwise.
+* **Vectors**: `tests/free_face_caps.test.ts` (17), five pinning files updated; **2088 vectors, 164 files**; red on 12 mutants (the report).
+* **Measured** (baseline: the same gates at `28827c6`, recorded before the change): the default replays of the three scenes identical in every frame
+  (a second run; the first run's `Scene_0bis` differed by ≤ 2.9e-9 from frame 3 — the runs' own noise, the second run equal to the baseline); the
+  switch off: the same noise only (`1e-6`: never; that path is untouched). `tilt_check` (default, off, `out`, `ridge`, `pole`), `mid_check`,
+  `across_check`, `edge_noise` (top, side): every output line identical to the baseline's.
+* **The test scenes** (the rebuild branch merged INTO `1.0.146t-`, `a9d11c2`; `t1_walk.mjs`): **T_e** (the box turned 30°) — entries off the entry
+  edge 4 of 10 → **1 of 10**: the three a quarter off (90°: the re-entries after the up and right exits, the bottom's first) now 0.0°, the view over
+  them 120° → 90° (the square camera's pitch alone); the view in all 9952° → 8584°, frames over 6° in a timed turn 429 → 305. ⚠ The one left is the
+  FIRST entry after the approach (35.9°, unchanged): the camera still pending, 38° off square ([`TILTED_POLE_TEST_SCENES.md`](TILTED_POLE_TEST_SCENES.md) §15's artefact) — not shown to be the layout. **T_d**
+  and **T_f**: identical before and after (an axis-aligned square cap; the spit). `Scene_1` on this probe: every entry 0.0° but the first (4.8°, the
+  same pending camera) — no baseline on the same probe version.
+* **W7 found offline, not in a scene**: a long flat box (0.8 × 0.2 × 0.3 m) turned 30° or 45° — under two of its top's four layouts the tilted map
+  built in the turned world box had ALL six facets virtual; in `frameBox` six real (vectored). On T_e (0.5 × 0.3 × 0.3) both boxes give six real
+  facets — [`TILTED_POLE_TEST_SCENES.md`](TILTED_POLE_TEST_SCENES.md) §15's "not found" stands.
+* ✅ **The owner, 2026-11-16 (evening)** (§17): **W8** — D-T5 MAINTAINED (4), nothing built; **RINGS** — *"Record and do nothing"* (5), nothing
+  built; the frame box's scope (`frameBox`, W7) — the question WITHDRAWN, kept as built (6). Both may be reopened when game scenes are built.
+* **Not built — what each needs**: **W8** (close in on a cap with no layout, the square camera's target the face left — F3, F4, F6): no direct
+  consequence of W5 / W7 (such a cap has no layout to carry); it needs D-T5 reopened by the owner — a layout square to the entry edge on any polygon
+  (the free face's rule, `freeEdges` already gives one per side) or the cap's normal as the target with the polar orbit kept. **RINGS** (F5): as [`TILTED_POLE_TEST_SCENES.md`](TILTED_POLE_TEST_SCENES.md) §15
+  lists. ⚠ An entry with no edge reads the camera's up: looking level it has nothing in the cap's plane and the first layout is taken (C4's rule too).
+
+## 17. THE OWNER'S DECISIONS OF 2026-11-16 (evening) — recorded on branch `1.0.147-`
+
+His words, in full: *"1- A / 2- R1 / 3- I don't want to change what is currently built: it looks good on the screen. Record and do nothing. We may
+reopen if we need when we build game scenes later on. / 4- Maintain D-T5. This kind of geometry probably means that the piece has a rotation symetry
+axis around the gravity axis so D-T5 makes sense. Just record as we may reopen if we need when we build game scenes later on. / 5- Record and do
+nothing. We may reopen if we need when we build game scenes later on. / 6- I don't understand what is this box, and what is the question. ... Explain
+in layman's term what this is about or withdraw the question. / Build that in a branch 1.0.147- so I can reverse to branch 1.0.146- if I don't like
+the results."* And that night: *"Progress as much as you can without asking me questions. I wish to finish the orbit charts work tonight."*
+
+| # | the question | his answer | what follows |
+|---|---|---|---|
+| 1 | W11, the tilt's entry under a fast dy (§12.4) | *"1- A"* | **BUILD** option A — the one turn truly one — on `1.0.147-` |
+| 2 | the spit's half turn (§13.4) | *"2- R1"* | **BUILD** R1 — the turn at the gizmo's edge — on `1.0.147-` |
+| 3 | `Scene_0bis`'s top ridge reached from a tip (§13.4) | *"I don't want to change what is currently built: it looks good on the screen. Record and do nothing. We may reopen if we need when we build game scenes later on."* | **KEPT AS BUILT**; may be reopened when game scenes are built |
+| 4 | a level top that is not a rectangle (W8; D-T5, §5) | *"Maintain D-T5. This kind of geometry probably means that the piece has a rotation symetry axis around the gravity axis so D-T5 makes sense. Just record as we may reopen if we need when we build game scenes later on."* | **D-T5 MAINTAINED** (polar at every distance on such a cap); nothing built; may be reopened when game scenes are built |
+| 5 | RINGS ([`TILTED_POLE_TEST_SCENES.md`](TILTED_POLE_TEST_SCENES.md) §15, F5) | *"Record and do nothing. We may reopen if we need when we build game scenes later on."* | **NOTHING BUILT**; may be reopened when game scenes are built |
+| 6 | the frame box's scope (`frameBox`, W7, §16.1) | *"I don't understand what is this box, and what is the question. ... Explain in layman's term what this is about or withdraw the question."* | **WITHDRAWN**, kept as built — see below |
+
+**6, in plain words** (the explanation given to him, after which the question was withdrawn): when the camera goes square to a face, the game
+redraws its map of the faces from that direction, and first measures a box round the placed parts along it. C2's wiring measures that box from the
+parts' corners, so that it fits a part set at an angle; it uses it for every redrawn map, and no game scene shows a difference. It stays as built —
+a matter for the later surface work (the study before step B, §6).
+
+**Not in this chain**: step B; anything on 3, 4 or 5; any change of the game beyond A and R1; any push or deploy. ⚠ R1 moves where the spit's half
+turn is triggered, also on the ridge arrived at from a tip (3): the builder of R1 measures that arrival before and after and reports any change.
+
+## 18. PACKAGE A — W11, OPTION A: ONE TRANSITION, ONE TURN (as briefed, 2026-11-16 night, an Opus agent; branch `1.0.147-`)
+
+**The contract** (§12.4 A, the owner's *"1- A"*): while a transition's turn runs the square camera's target is reached INSIDE it — one clock; the
+piece's direction ease read once the frame's view is set, at EVERY turn start; the picture never faster than `tiltRollDegS` (6° a frame) in any path.
+The frame change itself unchanged (at once, the gizmo kept, every angle set). **The design** (the wiring holds the state, the rules pure in `seam_turn.ts`):
+1. **The square camera inside the turn**: while `asmZoneMix` runs the square camera stands at its target — its normal AND its share (1 close in or on
+   a free face, else 0) — so the turn's end pose is the final one. ⛔ Its own turn (`squareTurn`) and its share's own ease beside the transition's.
+2. **A target changed while a turn runs** (the gizmo free: the finger-paced entry, the way out) is a change of frame: the turn RESTARTED from the pose shown.
+3. **The ease read once the view is set**: a turn's start keeps the direction drawn before it (`dirFrom`); the gap is read after the calm and the square
+   camera (`calmFrame`) — the tilt's entry and exit, the ridge, the zone's switch, the spit's side (its turn starts in the camera's stage: read the next
+   frame), a free face's entry and exit; the turn's clock waits for that read as it waits for its axis.
+4. **The share shown never over the one speed**: the timed turn and the way out (as built); the finger-paced entry (`seamTurnStep`'s FINGER: at most the
+   speed's step over the turn's whole angle); the square camera's own share when no turn runs (its step capped by the angle it turns the direction).
+**Expected**: every change of frame close in turns the picture once, ≤ 6° a frame (today 6.2 – 8.9); the ridge's and the spit's half turns slower.
+
+### 18.1 As built (2026-11-17 night: `fe06c2c`, then `c53f54a`, Opus agents; base `e79d820`) — `git revert c53f54a fe06c2c` undoes A
+`seam_turn.ts`: FINGER capped and waiting for the angle (`seamTurnStep`), `squareShareStep` / `nlerpAngle`, `squareRestarts`, `seamStepRad`; the wiring:
+`squareFrame` (at its target inside a turn, else its share capped), `seamEaseRead` after `calmFrame` (the gap from `dirFrom`; the turn's axis and
+framing rule read afresh), every clock waiting for it, `turnRestart`. Two causes found while building, both fixed in the rule: (a) where the camera
+follows the eased direction (the world's frame) its angle GROWS with the ease in the frame — the clock's step solves for it (`seamStepRad`; ⛔ 6.19° in
+the first frame of `Scene_1`'s exit by an edge); (b) the spit's turn (begun in the camera's stage) kept the axis read before the square camera was at its
+target — 285° of view the far way round for a 93° pose (`Scene_0bis`'s top ridge from a tip): now re-read. 17 vectors (`one_turn.test.ts`), red on 13
+mutants; 10 pins updated; **2075 vectors**. The gates of `fe06c2c` (base → `fe06c2c`) moved word for word → [2026-11-17_package_a_trials_and_gates.md](../history/2026-11-17_package_a_trials_and_gates.md).
+
+⚠ Not equal, not judged: `mid_check` could not park the gizmo 2 mm off the middle on A (its climb lands elsewhere: the gizmo held longer), so its walk
+measured another path. The replays are another play from the first transition (`Scene_1`, `Scene_0` drag 19, `Scene_0bis` drag 5): every earlier drag
+ends on the same gizmo (0.000 mm); in that drag the gizmo is held 1 – 4 frames longer (the turns' pace) and the refused finger moves it 23 – 266 mm
+less; `replay_health` clean, no frame over 20°. ⚠ Still over 6° with NO transition: a drag while the square camera turns on its own at a vertical edge
+(7.6 – 8.0°: its 6° plus the spring's lag) — not in A's list; the owner's to decide whether that edge is a transition too. ⛔ No device look yet.
+
+**The second commit, `c53f54a`** (the first audit's blocker, fixed at its root): on `Scene_0bis`'s spit, the free face's exit, the turn's END pose
+went on moving under the rig's own lags (the camera's leash catching up after a drag, the calm's ease) while the turn ran; the clock reads only the
+angle from the start pose to the end, so the picture turned 6.66, 6.36, 6.17, 6.06° in four frames (`across_check`). Now the share DRAWN is capped in
+the camera's stage (`zoneMixPose`): `shownShareCap` bisects the largest share whose picture turns at most the one speed's step from the pose drawn last
+frame, the picture's turn MEASURED by `poseTurnRad` (the one rotation between two poses' axes, look and roll together — the gates' own measure); the
+clocks carry on from the share drawn (`turnShareDrawn`; the way out's progress by `seamOutShareInv`, the smoothstep's inverse); a turn ENDS where it is
+drawn whole (no longer in its clocks). 6 vectors (`one_turn.test.ts`), pins updated (`pose_about_piece`, `way_out_blend`); **2081 vectors** (165 files). What it changed (its second
+audit's measures): `across_check`'s walk 6.6 → 6.7 → **6.0°** in a frame (base → `fe06c2c` → `c53f54a`); `Scene_0bis` (`tilt_check`) the frames in a
+turn 541 → 613, the whole turn 3476 → 3544°; the spit's free-face entry and exit turns ~10 frames longer; `ridge_check`'s walk back 58 frames in a turn
+(40 before). ⚠ One frame of 6.36° left at share 0 — a spit turn's first frame: the end pose's own motion under a drag, not the turn's share. Open,
+the owner's → [`RND5.md`](../../00_CORE/queue_notes/RND5.md) (package A, its list).

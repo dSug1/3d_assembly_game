@@ -9,6 +9,7 @@
 // second after the start → a full-screen error box) fires under the virtual clock — no frame is stepped while the page loads — and its box then took
 // EVERY press of the script: 2 794 frames of the boot pose, "identical bit for bit" whatever the code. The box is removed after the boot, any other
 // error box stops the run, and the run ends with what the script MOVED (the camera's, the piece's and the gizmo's travel) — nothing moved: exit 3.
+import { guardProbe } from "./probe_guard.mjs";
 import { spawn, spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -61,6 +62,7 @@ function removeProfile() {
 }
 const watchdog = setTimeout(() => { console.error("WATCHDOG"); killChrome(); removeProfile(); process.exit(2); }, 20 * 60_000);
 watchdog.unref();
+guardProbe({ chromePid: chrome.pid, prof, ms: 20 * 60_000 + 30_000 }); // (2026-11-16) the deadline in a process of its own: the timer above cannot fire while a write to a dead pipe blocks this loop (probe_guard.mjs)
 
 // the virtual clock and the frame stepper, installed before any page script runs
 const CLOCK = `(() => { let T = 1000; const q = []; let id = 0;

@@ -12,7 +12,7 @@
  *    camera's turn at a seam between two charts (`seamTurn`).
  * 5. **The assignment** (`assignCharts`, §3): gravity's chart, the frames taken greedily (the fans, the tilted rectangles), the rings, the whole rule, each
  *    cap's square layouts.
- * 6. **Where a frame changes** (step 2.4a, §12, under `chartLayout` 1): a cap's tilt heading from its square layouts (`capTiltHeading`), the zones from
+ * 6. **Where a frame changes** (step 2.4a, §12): a cap's tilt heading from its square layouts (`capTiltHeading`), the zones from
  *    the frames taken (`chartZones`) — ⛔ `holdsPole`, `polarZones`' detectors.
  * ⭐ The reference this module is checked against, exactly, on 35 shapes: `scripts/probes/chart_lib.ts` (`scripts/probes/chart_assign_check.ts`).
  * ⛔ ENGINE-FREE. Plane geometry, a greedy cover — textbook; no licence, no patent.
@@ -510,6 +510,10 @@ export function assignCharts(faces: readonly ChartFace[], o: ChartOpts = DEFAULT
 const CHART_TILT_LAYOUT_DEG = 3;
 /** ⭐ (2.4a) today's heading (`tiltHeading`) IS one of the layouts' when within this (rad): returned unchanged — a world-aligned cap bit for bit. */
 const CHART_TILT_SAME_RAD = 1e-6;
+/** ⭐ (C2W, W5) `capTiltHeading`'s `along` laid in the cap's plane shorter than this has no direction there: today's nearest is taken. */
+const CHART_ALONG_MIN = 1e-6;
+/** ⭐ (C2W, W5) two candidates' cosines to `along` within this are a tie: the first in the layouts' order keeps it. */
+const CHART_ALONG_TIE = 1e-9;
 /** ⭐ (2.4a) a zone's axis within this (per component) of a world axis is that axis exactly — float noise of the contour's frame, not a snap. */
 const CHART_AXIS_CLEAN = 1e-9;
 
@@ -520,8 +524,13 @@ const CHART_AXIS_CLEAN = 1e-9;
  * for AXIS+, its opposite for AXIS-), on a rectangle four headings 90° apart along its own edges; the one nearest today's (`tiltHeading(n, yaw)`) —
  * ⭐ today's value ITSELF when it is a candidate within `CHART_TILT_SAME_RAD`, else that candidate unwrapped next to it. `null`: no tilt — a side face
  * however steep (⛔ `holdsPole`'s 45°), a cap that is not a rectangle (D-C2), a facet not on the contour (a virtual cap: a pole held by an edge, D-C6).
+ * ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §16 — package C2W, W5) `along`: the heading CARRIED IN by the entry edge (`free_face.ts`'s
+ * `freeEntryHeading`, a direction in the cap's plane) — the candidate whose F-vertical lies nearest it is taken (a tie: the first in the layouts' order),
+ * still unwrapped next to today's (`tiltHeading`) and today's value itself when it is that candidate. ⛔ The snapped yaw's nearest alone: on a cap turned
+ * off the world's axes the yaw over a side snaps up to 45° away and the nearest candidate can be the neighbour side's (a quarter off, §15 F2). `along`
+ * null or with nothing in the cap's plane: today's nearest.
  */
-export function capTiltHeading(assign: ChartAssignment, faces: readonly ChartFace[], facet: number, n: Vec3, yaw: number): number | null {
+export function capTiltHeading(assign: ChartAssignment, faces: readonly ChartFace[], facet: number, n: Vec3, yaw: number, along: Vec3 | null = null): number | null {
   const ci = faces.findIndex((f) => f.index === facet);
   if (ci < 0 || assign.kind[ci] !== "CAP") return null;
   const lay = assign.layouts.get(ci);
@@ -540,7 +549,18 @@ export function capTiltHeading(assign: ChartAssignment, faces: readonly ChartFac
   if (cands.length === 0) return null;
   const t = tiltHeading(n, yaw);
   let best = cands[0]!;
-  for (const c of cands) if (Math.abs(wrapPi(c - t)) < Math.abs(wrapPi(best - t))) best = c;
+  const a = along === null ? null : sub(along, mul(unit(n), dot(along, unit(n))));
+  if (a !== null && Math.hypot(a[0], a[1], a[2]) > CHART_ALONG_MIN) {
+    let bestCos = -Infinity;
+    for (const c of cands) {
+      const R = capTilt(c, n);
+      const k = dot([R[0][1], R[1][1], R[2][1]], a);
+      if (k > bestCos + CHART_ALONG_TIE) {
+        best = c;
+        bestCos = k;
+      }
+    }
+  } else for (const c of cands) if (Math.abs(wrapPi(c - t)) < Math.abs(wrapPi(best - t))) best = c;
   const d = wrapPi(best - t);
   return Math.abs(d) < CHART_TILT_SAME_RAD ? t : t + d;
 }

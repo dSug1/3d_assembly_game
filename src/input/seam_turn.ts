@@ -1,6 +1,6 @@
 /**
  * ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4c, "THE ONE TRANSITION" 4.) **THE ONE TRANSITION'S TURN** — the pure rules a change of frame needs under the
- * charts' layout (`chartLayout` 1; the wiring in `render/assembly_wiring.ts`):
+ * charts' layout (the wiring in `render/assembly_wiring.ts`):
  *
  * * **The piece's shown direction eased on the camera turn's clock** (`dirGap`, `easedDir`): a change of frame SETS every angle state to the new chart's
  *   angles at the gizmo (`seamRebase`), and the direction the piece hangs along steps from the one DRAWN before to the new chart's own — by the gap between
@@ -94,6 +94,22 @@ export function seamWholeRad(turnRad: number, easeRad: number): number {
   return t + e;
 }
 
+/**
+ * ⭐⭐⭐ (2026-11-16 night, `TILTED_POLE_CLOSE_IN.md` §18, package A) ONE FRAME'S STEP ON THE TRANSITION'S CLOCK (rad, over `seamWholeRad`'s whole): the one
+ * speed's step `stepRad`, less what the camera's own angle (`turnRad`, read last frame) GROWS in the frame — where the camera follows the eased direction
+ * (the world's frame: `dirAt`) its target moves with the ease, by up to `easeRad` × the share's step, so the whole the clock reads is a frame late. The
+ * share's step `x` solves `x·(turnRad + easeRad) + x²·easeRad = stepRad`: the picture's turn in the frame at most `stepRad`. No ease: `stepRad` itself,
+ * exactly (as before). ⛔ The step on the whole read last frame: 6.19° in the first frame of `Scene_1`'s exit by an edge (the square camera inside it).
+ */
+export function seamStepRad(stepRad: number, turnRad: number, easeRad: number): number {
+  const t = Number.isFinite(turnRad) && turnRad > 0 ? turnRad : 0;
+  const e = Number.isFinite(easeRad) && easeRad > 0 ? easeRad : 0;
+  const w = t + e;
+  if (!(e > 1e-12) || !(stepRad > 0)) return stepRad;
+  const x = (-w + Math.sqrt(w * w + 4 * e * stepRad)) / (2 * e);
+  return x * w;
+}
+
 export type TurnPace = "HELD" | "FINGER" | "TIME";
 
 /**
@@ -126,25 +142,31 @@ export function seamTurnStep(
   share: number,
   dtMs: number,
   degS: number,
+  easeRad = 0,
 ): { readonly k: number; readonly done: number } {
   if (pace === "HELD") return { k: t.k, done: t.done };
   if (pace === "FINGER") {
-    const k = Math.min(1, Math.max(t.k, share));
+    // ⭐⭐⭐ (2026-11-16 night, `TILTED_POLE_CLOSE_IN.md` §18, package A — the owner: *"1- A"*) THE SHARE SHOWN NEVER OVER THE ONE SPEED: the finger's
+    // share, but at most `degS`'s step a frame over the turn's whole angle — and only once that angle is read (as the timed clock). ⛔ The finger's share at
+    // once: a fast finger turned the picture as fast as it went (the path the W11 auditor named, unmeasured)
+    if (!t.axisKnown) return { k: t.k, done: t.done };
+    const want = Math.min(1, Math.max(t.k, share));
+    const k = degS > 0 && t.rad > 1e-9 ? Math.min(want, t.k + seamStepRad(((degS * Math.PI) / 180) * (Math.max(0, dtMs) / 1000), t.rad - easeRad, easeRad) / t.rad) : want;
     return { k, done: k * t.rad };
   }
   if (!t.axisKnown) return { k: t.k, done: t.done };
-  const done = degS > 0 ? Math.min(t.rad, t.done + ((degS * Math.PI) / 180) * (Math.max(0, dtMs) / 1000)) : t.rad;
+  const done = degS > 0 ? Math.min(t.rad, t.done + seamStepRad(((degS * Math.PI) / 180) * (Math.max(0, dtMs) / 1000), t.rad - easeRad, easeRad)) : t.rad;
   return { k: t.rad > 1e-9 ? Math.min(1, done / t.rad) : 1, done };
 }
 
 /**
  * ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §8, step C3 — D-T1, the owner: *"Find a way to blend properly the camera movement on the way out"*) THE WAY
- * OUT OF CLOSE IN, BLENDED: is the turn after the tilt's exit PACED BY THE FINGER — under the charts' layout (`chartLayout` 1), the tilt left BY DISTANCE
+ * OUT OF CLOSE IN, BLENDED: is the turn after the tilt's exit PACED BY THE FINGER — the tilt left BY DISTANCE
  * (`off`: turned off, and `closeIn` false: the automatic tilt's latch is off — ⛔ a tilt turned off by a zone's switch keeps the latch on), with the span
  * over 0 (`outBlendMm`, `tiltOutBlendMm`). Otherwise (an edge's exit, a zone's, the span 0): the timed turn, the gizmo held — as built.
  */
-export function seamOutPaced(chartLayout: number, off: boolean, closeIn: boolean, outBlendMm: number): boolean {
-  return chartLayout === 1 && off && !closeIn && outBlendMm > 0;
+export function seamOutPaced(off: boolean, closeIn: boolean, outBlendMm: number): boolean {
+  return off && !closeIn && outBlendMm > 0;
 }
 
 /**
@@ -207,6 +229,99 @@ export function turnHoldsGizmo(out: boolean, paced: boolean, pending: boolean, b
 export function poleYawKept(mq: { readonly yaw: number; readonly pitch: number }, maxPitch: number, yawShown: number | null): { readonly yaw: number; readonly pitch: number } {
   if (yawShown === null || !Number.isFinite(yawShown) || !(Math.abs(mq.pitch) >= maxPitch - 1e-9)) return mq;
   return { yaw: Math.atan2(Math.sin(yawShown), Math.cos(yawShown)), pitch: mq.pitch };
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-16 night, `TILTED_POLE_CLOSE_IN.md` §18, package A) THE SQUARE CAMERA'S MIX, as an angle: the direction `calmDir` shows is the normalised
+ * mix `(1 − q)·b + q·n` of the calm's direction `b` and the square normal `n`, `thetaRad` apart — its angle from `b` at the share `q` (0 at 0, θ at 1).
+ */
+export function nlerpAngle(q: number, thetaRad: number): number {
+  return Math.atan2(q * Math.sin(thetaRad), 1 - q + q * Math.cos(thetaRad));
+}
+
+/**
+ * ⭐⭐⭐ (package A — the owner's *"1- A"*: the picture never faster than the tilts' one speed, *"the square camera's own share included"*) ONE FRAME OF THE
+ * SQUARE CAMERA'S OWN SHARE (no transition running): from `q0` toward `qWant`, the direction shown (`nlerpAngle`) turned by at most `maxRad` — exactly
+ * that while short (the share at that angle: `sin a / (sin a + sin(θ − a))`), the share asked once within it. No angle, no limit (`Infinity`: no speed),
+ * or the two directions opposite (no arc): the share asked. ⛔ Its own ease (`wholeShareStep` over 125 ms, or the finger's blend) uncapped: 11° and more
+ * in a frame at a quarter turn.
+ */
+export function squareShareStep(q0: number, qWant: number, thetaRad: number, maxRad: number): number {
+  const a = Number.isFinite(q0) ? Math.min(1, Math.max(0, q0)) : 0;
+  const w = Number.isFinite(qWant) ? Math.min(1, Math.max(0, qWant)) : a;
+  if (!Number.isFinite(maxRad) || !(thetaRad > 1e-9) || thetaRad > Math.PI - 1e-6) return w;
+  const m = Math.max(0, maxRad);
+  const a0 = nlerpAngle(a, thetaRad);
+  const aw = nlerpAngle(w, thetaRad);
+  if (Math.abs(aw - a0) <= m) return w;
+  const a1 = aw > a0 ? a0 + m : a0 - m;
+  const s = Math.sin(a1);
+  return s / (s + Math.sin(thetaRad - a1));
+}
+
+/**
+ * ⭐⭐⭐ (package A, the audit's blocker — 2026-11-17) THE PICTURE'S TURN between two camera poses (rad, 0 … π): the one rotation taking the first pose's
+ * axes (its look `look − eye`, its up made square to it, their right) onto the second's — what the eye sees turn, the look and the roll together (the
+ * gates' own measure). A degenerate pose (no look, an up along it): 0.
+ */
+export function poseTurnRad(a: { readonly eye: Vec3; readonly look: Vec3; readonly up: Vec3 }, b: { readonly eye: Vec3; readonly look: Vec3; readonly up: Vec3 }): number {
+  const axes = (p: { readonly eye: Vec3; readonly look: Vec3; readonly up: Vec3 }): { l: Vec3; u: Vec3; r: Vec3 } | null => {
+    const l = unit([p.look[0] - p.eye[0], p.look[1] - p.eye[1], p.look[2] - p.eye[2]]);
+    if (l === null) return null;
+    const k = dot(p.up, l);
+    const u = unit([p.up[0] - k * l[0], p.up[1] - k * l[1], p.up[2] - k * l[2]]);
+    if (u === null) return null;
+    return { l, u, r: cross(u, l) };
+  };
+  const A = axes(a);
+  const B = axes(b);
+  if (A === null || B === null) return 0;
+  const tr = dot(A.l, B.l) + dot(A.u, B.u) + dot(A.r, B.r);
+  return Math.acos(Math.max(-1, Math.min(1, (tr - 1) / 2)));
+}
+
+/**
+ * ⭐⭐⭐ (package A, the audit's blocker — 2026-11-17, the owner's *"1- A"*: the picture never faster than the tilts' one speed, in any path) THE SHARE
+ * DRAWN THIS FRAME: the clock's share `kWant`, unless the picture would turn more than `maxRad` from the pose drawn last frame (`turnAt(k)`: the picture's
+ * turn at the share `k`, `poseTurnRad`) — then the largest share from `k0` (the one drawn last frame) that keeps it within (bisected; the turn's picture
+ * grows with its share). ⭐ What the clock cannot count: the turn's END pose itself still moving under the rig's own lags (the camera's leash catching up
+ * on the orbit, the calm's ease) while the turn runs — measured on `Scene_0bis`'s free-face exit, 6.66° in the frame after a drag. Even `k0` over it (the
+ * end pose alone moving more): `k0` — the turn adds nothing that frame. `maxRad` not finite or not over 0 (no speed), or `kWant` not over `k0`: `kWant`.
+ */
+export function shownShareCap(k0: number, kWant: number, turnAt: (k: number) => number, maxRad: number): number {
+  if (!(Number.isFinite(maxRad) && maxRad > 0) || !(kWant > k0)) return kWant;
+  if (!(turnAt(kWant) > maxRad)) return kWant;
+  if (turnAt(k0) > maxRad) return k0;
+  let lo = k0;
+  let hi = kWant;
+  for (let i = 0; i < 30; i++) {
+    const m = (lo + hi) / 2;
+    if (turnAt(m) > maxRad) hi = m;
+    else lo = m;
+  }
+  return lo;
+}
+
+/** ⭐ (package A, the audit's blocker) the way out's progress whose smooth share (`seamOutShare`) is `k` (0 … 1): the smoothstep's inverse. */
+export function seamOutShareInv(k: number): number {
+  const y = Number.isFinite(k) ? Math.min(1, Math.max(0, k)) : 1;
+  return 0.5 - Math.sin(Math.asin(1 - 2 * y) / 3);
+}
+
+/** ⭐ (package A) under this angle two square normals are one (the gizmo's hold's own tie, `squareTurning`'s half degree) */
+export const SQUARE_SAME_RAD = (0.5 * Math.PI) / 180;
+
+/**
+ * ⭐⭐⭐ (package A) WHILE A TURN RUNS THE SQUARE CAMERA STANDS AT ITS TARGET (normal and share) — the turn's end pose the final one, ONE clock. A change of
+ * that target while the turn runs (the gizmo free: the finger-paced entry, the way out — a new face's normal, or the share's target switched) is a change
+ * of frame: the turn RESTARTED from the pose shown. Not at a turn just started (`read` false — its ease not read yet: the snap is that turn's own), nor
+ * with no square normal yet.
+ */
+export function squareRestarts(read: boolean, n: Vec3 | null, target: Vec3 | null, q: number, qTarget: number): boolean {
+  if (!read || n === null) return false;
+  if (Math.abs(q - qTarget) > 1e-9) return true;
+  if (target === null) return false;
+  return dot(n, target) < Math.cos(SQUARE_SAME_RAD);
 }
 
 /** ⭐⭐⭐ THE TILT LEFT AT ONCE: the place off the tilted facet (`onFacet` false) or the tilt turned off (`off`) — ⛔ a roll back inside F first. */

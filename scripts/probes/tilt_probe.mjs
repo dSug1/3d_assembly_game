@@ -4,6 +4,8 @@
 // gizmo, the tilt's state (k, the facet, the exit). Prints, per scenario: the press's jumps, the swing's end, the drag's largest per-frame steps, the roll
 // at the exit and after, the exit's frame. Chrome hygiene as `page_eval.mjs` (its own profile, removed in `finally`; a watchdog; the tree killed on Windows).
 //   URL=…  BOOT_MS=15000  ONLY=name (one scenario)  STEP=3 (px a frame)  OUT=file.json (the frames)
+// ⛔ (2026-11-16, step 2.5) the modes `stop` and `back` waited on the roll back's share (`asmTilt.k`), deleted with the game before the charts: they no
+// longer trigger (the press's tilt itself was removed 2026-11-15) — the record of the tilted pole's first build
 import { spawn, spawnSync } from "node:child_process";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -136,7 +138,7 @@ try {
       const tl = st.asmTilt;
       window.__rec.push({ tag: window.__tag, p, t, up, roll, g: st.asmG ? [...st.asmG] : null, piece: st.greenBox ? v3(st.greenBox.getAbsolutePosition()) : null,
         tl: tl ? { id: tl.id, k: tl.k, facet: tl.facet, exit: tl.exit, sw: tl.swingMs } : null, stack: st.asmShown ? st.asmShown.t.stack : null, band: st.asmShown ? st.asmShown.t.band : null,
-        goff: st.asmGOff ? st.asmGOff.left : null, gz: st.asmGizmo ? [...st.asmGizmo] : null, cm: st.asmCalm ? [st.asmCalm.n.map((x) => +x.toFixed(3)), +st.asmCalm.sH.toFixed(3), +st.asmCalm.sV.toFixed(3)] : null, pq: st.pieceQ ? [st.pieceQ.yaw, st.pieceQ.v] : null, cw: st.asmCalmWhole ?? null, au: st.asmTiltAuto ?? null, dfr: st.asmTilt ? st.asmTilt.dir : null, bo: st.boxOrbit ? [st.boxOrbit.yaw, st.boxOrbit.v] : null, ov: [st.orbit.yaw, st.orbit.elevation], v: String(st.lastVerdict ?? "").slice(0, 80) }); } catch (e) { window.__recErr = String(e); }
+        goff: st.asmGOff ? st.asmGOff.left : null, gz: st.asmGizmo ? [...st.asmGizmo] : null, cm: st.asmCalm ? [st.asmCalm.n.map((x) => +x.toFixed(3)), +st.asmCalm.sH.toFixed(3), +st.asmCalm.sV.toFixed(3)] : null, pq: st.pieceQ ? [st.pieceQ.yaw, st.pieceQ.v] : null, cw: st.asmCalmWhole ?? null, au: st.asmTiltAuto ?? null, dfr: st.asmTilt ? st.asmTilt.map : null /* ⛔ (step 2.5) the swing frame dir deleted: the tilt map */, bo: st.boxOrbit ? [st.boxOrbit.yaw, st.boxOrbit.v] : null, ov: [st.orbit.yaw, st.orbit.elevation], v: String(st.lastVerdict ?? "").slice(0, 80) }); } catch (e) { window.__recErr = String(e); }
       requestAnimationFrame(tick); };
     requestAnimationFrame(tick); return true; })()`);
   const vp = JSON.parse(await ev("JSON.stringify([innerWidth, innerHeight])"));

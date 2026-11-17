@@ -1,8 +1,9 @@
 /**
  * GOLDEN VECTORS — **THE WAY OUT OF CLOSE IN, BLENDED, STEP C3** (2026-11-16, `Claude/40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md` §8; the owner's D-T1:
  * *"I would prefer to return to the orbit when the distance is crossed back … Find a way to blend properly the camera movement on the way out"*), under
- * `chartLayout` 1 only, for the automatic tilt left BY DISTANCE only, with `tiltOutBlendMm` over 0:
- * * `seamOutPaced` — the way out paced only under the switch, left by distance (`off`, the latch off), the span over 0; an edge's exit, a zone's, 0: timed.
+ * the charts' layout (⛔ its switch `chartLayout` and `seamOutPaced`'s argument deleted at step 2.5, 2026-11-16), for the automatic tilt left BY DISTANCE
+ * only, with `tiltOutBlendMm` over 0:
+ * * `seamOutPaced` — the way out paced only when left by distance (`off`, the latch off), the span over 0; an edge's exit, a zone's, 0: timed.
  * * `seamOutTarget`, `seamOutStep` — the progress: no travel with a finger down, it waits; the approach's travel outward over the span, the orbit's over
  *   `tiltBlendMm`, the larger; the finger lifted, it completes at the tilts' one speed (a half turn at 360°/s: 30 frames at 60 fps); a fast finger, one
  *   speed's step a frame; never back; held until the turn's angle is read; no angle: whole.
@@ -33,19 +34,17 @@ function framesToWhole(p0: number, target: number, whole = HALF, degS = SPEED, m
   return n;
 }
 
-describe("⭐⭐⭐ `seamOutPaced`: the way out paced only under the switch, left by distance, the span over 0", () => {
+describe("⭐⭐⭐ `seamOutPaced`: the way out paced only when left by distance, the span over 0", () => {
   it("⭐ the table", () => {
-    for (const layout of [0, 1])
-      for (const off of [false, true])
-        for (const closeIn of [false, true])
-          for (const mm of [0, 12, 60]) expect(seamOutPaced(layout, off, closeIn, mm), `${layout} ${off} ${closeIn} ${mm}`).toBe(layout === 1 && off && !closeIn && mm > 0);
+    for (const off of [false, true])
+      for (const closeIn of [false, true])
+        for (const mm of [0, 12, 60]) expect(seamOutPaced(off, closeIn, mm), `${off} ${closeIn} ${mm}`).toBe(off && !closeIn && mm > 0);
   });
-  it("⭐ an edge's exit (`off` false), a zone's (`off` with the latch still on), `tiltOutBlendMm` 0, `chartLayout` 0: the timed turn (false)", () => {
-    expect(seamOutPaced(1, false, false, 12)).toBe(false);
-    expect(seamOutPaced(1, true, true, 12)).toBe(false);
-    expect(seamOutPaced(1, true, false, 0)).toBe(false);
-    expect(seamOutPaced(0, true, false, 12)).toBe(false);
-    expect(seamOutPaced(1, true, false, 12)).toBe(true);
+  it("⭐ an edge's exit (`off` false), a zone's (`off` with the latch still on), `tiltOutBlendMm` 0: the timed turn (false) — ⛔ `chartLayout` 0: step 2.5", () => {
+    expect(seamOutPaced(false, false, 12)).toBe(false);
+    expect(seamOutPaced(true, true, 12)).toBe(false);
+    expect(seamOutPaced(true, false, 0)).toBe(false);
+    expect(seamOutPaced(true, false, 12)).toBe(true);
   });
 });
 
@@ -134,7 +133,7 @@ describe("⭐⭐⭐ the progress (`seamOutTarget`, `seamOutStep`)", () => {
     expect(seamOutStep(0, 0.7, DT, HALF, 0, true)).toBe(0.7);
   });
   it("⭐ `tiltOutBlendMm` 0: the caller's TIMED path — `seamOutPaced` false, so no paced turn is ever started (the old `seamTurnStart(st, false)`)", () => {
-    expect(seamOutPaced(1, true, false, 0)).toBe(false);
+    expect(seamOutPaced(true, false, 0)).toBe(false);
   });
 });
 
@@ -196,10 +195,14 @@ const before = (src: string, a: string, b: string) => {
 
 describe("⭐⭐⭐ the wiring (source pins, comments stripped)", () => {
   const W = "render/assembly_wiring.ts";
-  it("⭐ `tiltOff`: under `chartLayout === 1` the paced turn only when `seamOutPaced` (left by distance, `tiltOutBlendMm` > 0) — else the old `seamTurnStart(st, false)`", () => {
+  it("⭐ `tiltOff`: the paced turn only when `seamOutPaced` (left by distance, `tiltOutBlendMm` > 0) — else the old `seamTurnStart(st, false)`", () => {
     const f = fnCode(W, "function tiltOff(");
-    expect(f).toContain("if (st.cfg.chartLayout === 1) { if (seamOutPaced(st.cfg.chartLayout, tl.off, st.asmTiltAuto, st.cfg.tiltOutBlendMm)) seamOutStart(st); else seamTurnStart(st, false); if (uWas !== null) seamEase(st, uWas); }");
-    expect(f.match(/seamOutStart\(/g)?.length).toBe(1);
+    // ⭐⭐⭐ (2026-11-16, step C5) through the one event (`crossTurn`): the paced flag the site's, the turn started there
+    expect(f).toContain("const paced = seamOutPaced(tl.off, st.asmTiltAuto, st.cfg.tiltOutBlendMm);");
+    expect(f).toContain("crossTurn(st, { at: { mq: poleYawKept(mq0, ORBIT_PITCH_MAX_RAD, hP), g }, uWas, carry: false, paced, hold: held });");
+    expect(f).toContain("} else st.asmMapQ = null; crossTurn(st, { at: null, uWas, carry: false, paced, hold: held });");
+    const c = fnCode(W, "function crossTurn(");
+    expect(c).toContain("if (c.paced) seamOutStart(st); else if (st.asmCamLast !== null) seamTurnStart(st, false); if (c.uWas !== null) seamEase(st, c.uWas);");
     // the latch read is LAST frame's: `tiltOff` runs before the latch is stepped
     const a = fnCode(W, "export function assemblyFrame(");
     before(a, "if (st.asmTilt !== null && st.asmTilt.exit) tiltOff(st);", "st.asmTiltAuto = tiltAutoLatch(st.asmTiltAuto, approachDistance(st.cfg, st.approach), st.cfg.tiltAutoM);");
@@ -220,20 +223,20 @@ describe("⭐⭐⭐ the wiring (source pins, comments stripped)", () => {
     // nowhere else is the out-turn's state written
     expect(codeOnly(raw(W)).match(/\.outMm \+=|\.orbitMm \+=/g)?.length).toBe(2);
   });
-  it("⭐ `seamOutFrame`: the target from the travels and the router's pointers, the step at the one speed over `turnWhole`, `k` the smoothstep; called under the switch after `seamTurnFrame`", () => {
+  it("⭐ `seamOutFrame`: the target from the travels and the router's pointers, the step at the one speed over `turnWhole`, `k` the smoothstep; called after `seamTurnFrame`", () => {
     const f = fnCode(W, "function seamOutFrame(");
     expect(f).toContain("if (zm === null || zm.out === undefined) return;");
     expect(f).toContain("const whole = turnWhole(st, zm);");
     expect(f).toContain("const target = seamOutTarget(o.outMm, o.orbitMm, st.cfg.tiltOutBlendMm, st.cfg.tiltBlendMm, st.router.all().length > 0);");
-    expect(f).toContain("o.p = seamOutStep(o.p, target, dtMs, whole, st.cfg.tiltRollDegS, zm.axis !== null); zm.k = seamOutShare(o.p);");
-    expect(f).toContain("if (o.p >= 1) st.asmZoneMix = null;");
+    expect(f).toContain("o.p = seamOutStep(o.p, target, dtMs, whole, st.cfg.tiltRollDegS, zm.axis !== null && zm.dirFrom === undefined); zm.k = seamOutShare(o.p);"); // ⭐ (package A) …and its ease read
+    expect(f).not.toContain("st.asmZoneMix = null"); // ⭐ (package A, the audit's blocker) whole: ended once DRAWN, in the camera's stage (`zoneMixPose`)
     const a = fnCode(W, "export function assemblyFrame(");
-    before(a, "if (st.cfg.chartLayout === 1) seamTurnFrame(st, dtMs);", "if (st.cfg.chartLayout === 1) seamOutFrame(st, dtMs);");
-    before(a, "if (st.cfg.chartLayout === 1) seamOutFrame(st, dtMs);", "const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };");
+    before(a, "seamTurnFrame(st, dtMs);", "seamOutFrame(st, dtMs);");
+    before(a, "seamOutFrame(st, dtMs);", "const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };");
   });
   it("⭐ the timed clock leaves it alone (`zoneStep`), and `tiltClampStep` does not hold for it (`turnHoldsGizmo`)", () => {
     const z = fnCode(W, "function zoneStep(");
-    expect(z).toContain("if (zm !== null && zm.axis !== null && zm.byMm !== true && zm.out === undefined) {");
+    expect(z).toContain("if (zm !== null && zm.axis !== null && zm.dirFrom === undefined && zm.byMm !== true && zm.out === undefined) {"); // ⭐ (package A) …and its ease read
     const h = fnCode(W, "export function tiltClampStep(");
     expect(h).toContain("const zoneTurning = zm !== null && turnHoldsGizmo(zm.out !== undefined, zm.byMm === true, st.asmTiltPending, st.asmBlend !== null, zm.k);");
   });
@@ -242,7 +245,7 @@ describe("⭐⭐⭐ the wiring (source pins, comments stripped)", () => {
     expect(s).toContain("st.asmZoneMix = st.asmCamLast === null ? null : { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0, ...(paced ? { byMm: true } : {}) };");
     expect(s).not.toContain("out");
     const t = fnCode(W, "function tiltOn(");
-    expect(t).toContain("if (uWas !== null) { seamTurnStart(st, byMm); seamEase(st, uWas); }");
+    expect(t).toContain("st.asmFree = null; seamTurnStart(st, byMm); seamEase(st, uWas);");
     const e = fnCode(W, "function seamEase(");
     expect(e).toContain("st.asmDirEase = null;");
   });

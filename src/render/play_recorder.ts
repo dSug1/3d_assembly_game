@@ -166,7 +166,7 @@ export function installPlayRecorder(stIn: SceneState): void {
         ms: st.asmShown?.t ? [st.asmShown.t.stack, st.asmShown.t.band, st.asmShown.t.side ?? null] : null,
         gn: r4(v3(st.gizmoNormal ?? null)),
         ap: typeof st.approach === "number" ? +st.approach.toFixed(4) : null,
-        tl: st.asmTilt ? [st.asmTilt.id, +st.asmTilt.k.toFixed(3)] : null,
+        tl: st.asmTilt ? [st.asmTilt.id] : null, // ⛔ (2026-11-16, step 2.5) the roll back's share (`k`, always 0 under the charts) deleted with it
         sq: sq && sq.n && sq.target ? [+((Math.acos(Math.max(-1, Math.min(1, sq.n[0] * sq.target[0] + sq.n[1] * sq.target[1] + sq.n[2] * sq.target[2]))) * 180) / Math.PI).toFixed(1), +sq.q.toFixed(2)] : null,
         zs: st.asmSpitSide ?? null,
         zm: st.asmZoneMix ? [+st.asmZoneMix.k.toFixed(3), st.asmZoneMix.rule, +st.asmZoneMix.rad.toFixed(2)] : null,

@@ -124,9 +124,9 @@ describe("the camera turned about the piece (a polar zone's turn)", () => {
     expect(aw).toContain("export function spitStep(st: SceneState, cp: OrbitAt): void {");
     expect(aw).not.toContain("  spitStep(st);");
     expect(gb).toMatch(/const camPlace = cameraPlaceNow\(st\);[^\n]*\n(?:\s*\/\/[^\n]*\n)*\s*if \(assemblyOn\(st\)\) spitStep\(st, camPlace\);\n\s*const camFrame = cameraFrameNow\(st, camPlace, off, dtSec \* 1000\);/);
-    expect(aw).toContain("const t = zm.rule === 2 ? null : poseFramingTwo(zm.from, to, piece, zm.k, zm.keep);");
-    expect(aw).toContain("const r = poseAboutPiece(zm.from, to, piece, zm.k, zm.axis);");
-    expect(gb).toContain("const zp = zoneMixPose(st, pp, camAt, lookAt, camFrame.up);");
+    expect(aw).toContain("const t = zm.rule === 2 ? null : poseFramingTwo(zm.from, to, piece, k, zm.keep);"); // ⭐ (package A, the audit's blocker) the share DRAWN (`shownShareCap`)
+    expect(aw).toContain("const r = poseAboutPiece(zm.from, to, piece, k, zm.axis);");
+    expect(gb).toContain("const zp = zoneMixPose(st, pp, camAt, lookAt, camFrame.up, dtSec * 1000);");
     // ⭐⭐⭐ (2026-11-14) the spit's side: the SHOWN rule at the ORBIT's own angles (⛔ the piece's spring: late; ⛔ the bare orbit: the square camera's turn over the ridge unseen)
     expect(aw).not.toContain("const u = dirAt(st, st.orbit.yaw, st.orbit.elevation);");
   });

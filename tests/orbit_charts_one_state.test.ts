@@ -1,6 +1,6 @@
 /**
  * GOLDEN VECTORS — **THE ORBIT ON CHARTS, STEP 2.4c: ONE STATE AT EVERY CHANGE OF FRAME** (2026-11-15, `Claude/40_RENDER_SCENE/spec/ORBIT_CHARTS.md` §11 1.,
- * §12 2.4c and "THE ONE TRANSITION"), under `chartLayout` 1 only:
+ * §12 2.4c and "THE ONE TRANSITION") (⛔ its switch `chartLayout` and the old paths deleted at step 2.5, 2026-11-16 — the default half kept):
  * * The piece's shown direction eased on the turn's clock (`dirGap`, `easedDir`, `easeRest`): at share 0 the direction drawn before, at 1 the new one
  *   EXACTLY, between them on the arc; a zero gap none; antiparallel directions a half turn about an axis square to the new one; one rigid rotation for every
  *   direction (the piece, its solver, the foot alike); carried onto a restarted turn by its rest.
@@ -9,15 +9,23 @@
  * * The round trip `seamRebase` relies on: places on a box's top (a box and `Scene_1`'s REAL cube) in a cap's layout frame (`capTilt`) and back in the
  *   world's map — `mapAngles`, then the map's place at those angles is the same point (≤ 1e-9 m); at the cap's centre the yaw handed (`poleYawKept`) is
  *   the one asked for, and the place stays the centre.
- * * The wiring (`render/assembly_wiring.ts`): under the switch `tiltOn`, `tiltOff` and `zoneSwitch` (with a place) call `seamRebase` and not `turnAngles`; the
- *   old calls remain for the switch off; the entry's and the exit's turns start from `poseShown`; `dirAt` applies the eased direction.
+ * * The wiring (`render/assembly_wiring.ts`): `tiltOn`, `tiltOff` and `zoneSwitch` (with a place) call `seamRebase` and not `turnAngles`; the entry's and
+ *   the exit's turns start from `poseShown`; `dirAt` applies the eased direction.
  * RED on the mutants listed in the step's report.
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { buildFaceMap, DEFAULT_FACET_OPTS, facetOfNormal, mapAngles, mapTarget, type FaceMap, type Facet, type FacetOpts, type MapFace, type MapOpts } from "../src/input/face_map";
 import { assignCharts, capTiltHeading, chartContour } from "../src/input/orbit_charts";
-import { blendShare, capTilt, mulT, rollDurationMs, rollStep, tiltBox, tiltFaces } from "../src/input/orbit_tilt";
+import { blendShare, capTilt, mulT, rollDurationMs, tiltBox, tiltFaces } from "../src/input/orbit_tilt";
+
+/** ⛔ (2026-11-16, step 2.5) `rollStep` as committed before it was deleted with the roll back (`orbit_tilt.ts` at `d917d04`), verbatim but local — the
+ *  reference the turn's pace is measured against below (today's swing rule) */
+function rollStep(shown: number, target: number, dtMs: number, minMs: number): number {
+  if (!(minMs > 0)) return target;
+  const r = Math.max(0, dtMs) / minMs;
+  return shown + Math.max(-r, Math.min(r, target - shown));
+}
 import { ORBIT_PITCH_MAX_RAD } from "../src/input/assembly_orbit";
 import { dirGap, DIR_GAP_MIN_RAD, easedDir, easeRest, poleYawKept, seamTurnHolds, seamTurnPace, seamTurnStep, seamWholeRad, tiltLeavesNow } from "../src/input/seam_turn";
 import type { ShellBox } from "../src/input/orbit_shell";
@@ -135,7 +143,9 @@ describe("⭐⭐⭐ the turn's pace — today's swing rule on the one camera tur
               expect(seamTurnHolds(paced, pending, blend !== null, 1)).toBe(false);
               // the share: today's swing (paced) — by time at the turn's angle's duration
               const r = seamTurnStep({ k: k0, done: k0 * RAD, rad: RAD, axisKnown: true }, pace, blend === null ? 1 : blendShare(blend, span), 16, DEG_S);
-              const e = paced ? swingE(k0, pending, blend, span, 16, rollDurationMs(RAD, DEG_S)) : rollStep(k0, 1, 16, rollDurationMs(RAD, DEG_S));
+              const e0 = paced ? swingE(k0, pending, blend, span, 16, rollDurationMs(RAD, DEG_S)) : rollStep(k0, 1, 16, rollDurationMs(RAD, DEG_S));
+              // ⭐⭐⭐ (2026-11-16 night, package A — the owner's *"1- A"*) by the finger: the swing's share, but never over the one speed's step a frame (⛔ at once)
+              const e = pace === "FINGER" ? Math.min(e0, k0 + ((DEG_S * Math.PI) / 180) * 0.016 / RAD) : e0;
               expect(r.k).toBeCloseTo(e, 12);
               expect(r.done).toBeCloseTo(r.k * RAD, 12);
             }
@@ -149,11 +159,12 @@ describe("⭐⭐⭐ the turn's pace — today's swing rule on the one camera tur
           expect(seamTurnHolds(false, pending, blend, k)).toBe(k < 1);
         }
   });
-  it("⭐ by time only from the frame the turn's angle is read (`axisKnown`, `zoneStep`'s wait); held and by the finger need none; `degS` 0 whole at once", () => {
+  it("⭐ by time AND by the finger (package A) only from the frame the turn's angle is read (`axisKnown`, `zoneStep`'s wait); held needs none; `degS` 0 whole at once", () => {
     const t = { k: 0, done: 0, rad: Math.PI / 2, axisKnown: false };
     expect(seamTurnStep(t, "TIME", 1, 16, 360)).toEqual({ k: 0, done: 0 });
     expect(seamTurnStep({ ...t, k: 0.3, done: 0.3 }, "HELD", 0.9, 16, 360)).toEqual({ k: 0.3, done: 0.3 });
-    expect(seamTurnStep(t, "FINGER", 0.4, 16, 360).k).toBe(0.4);
+    expect(seamTurnStep(t, "FINGER", 0.4, 16, 360).k).toBe(0); // ⭐ (package A) held: the cap needs the whole angle (⛔ 0.4 at once)
+    expect(seamTurnStep({ ...t, axisKnown: true }, "FINGER", 0.04, 16, 360).k).toBe(0.04); // under the cap: the finger's share
     expect(seamTurnStep({ ...t, axisKnown: true }, "TIME", 1, 16, 0)).toEqual({ k: 1, done: Math.PI / 2 });
     // the finger's share never back (today's `max`)
     expect(seamTurnStep({ k: 0.5, done: 0.5, rad: 1, axisKnown: true }, "FINGER", 0.2, 16, 360).k).toBe(0.5);
@@ -252,34 +263,37 @@ const before = (src: string, a: string, b: string) => {
   expect(src.indexOf(a), `${a} before ${b}`).toBeLessThan(src.indexOf(b));
 };
 
-describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): ONE STATE under the switch, the old path for the switch off", () => {
+describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): ONE STATE (⛔ the old path of the switch off: step 2.5)", () => {
   const W = "render/assembly_wiring.ts";
-  it("⭐ `tiltOn`: the frame at once (`R1`, no swing), F's angles at the gizmo SET (`seamRebase`), the turn from the pose shown at the swing's pace, the ease — `turnAngles` kept for the switch off", () => {
+  it("⭐ `tiltOn`: the frame at once (`R1`, no swing), F's angles at the gizmo SET (`seamRebase`), the turn from the pose shown at the swing's pace, the ease", () => {
     const f = fnSource(W, "function tiltOn(");
-    expect(f).toContain("const chart = st.cfg.chartLayout === 1; const uWas = chart ? drawnDir(st) : null;");
-    before(f, "const uWas = chart ? drawnDir(st) : null;", "st.asmTilt = { id: ++TILT_SEQ,"); // read before anything moves
-    expect(f).toContain("if (chart) { st.asmTilt.dir = R1; st.asmTilt.swingMs = null; st.asmTilt.swingE = 1; }");
-    expect(f).toContain("if (!chart) turnAngles(st, (d) => mulT(D0, d));");
-    expect(f).toContain("if (chart) seamRebase(st, mq); else st.asmMapQ = mq;");
-    expect(f).toContain("if (uWas !== null) { seamTurnStart(st, byMm); seamEase(st, uWas); }");
-    before(f, "const mq = mapAngles(map, gF, fi, mapOpts(st));", "if (chart) seamRebase(st, mq);");
+    expect(f).toContain("const uWas = drawnDir(st);");
+    before(f, "const uWas = drawnDir(st);", "st.asmTilt = { id: ++TILT_SEQ,"); // read before anything moves
+    expect(f).toContain("st.asmTilt = { id: ++TILT_SEQ, map: R1, facet: -1, off: false, exit: false, exitAcross: false, heading: hs };");
+    expect(f).toContain("seamRebase(st, mq);");
+    expect(f).toContain("seamTurnStart(st, byMm); seamEase(st, uWas);");
+    before(f, "const mq = mapAngles(map, gF, fi, mapOpts(st));", "seamRebase(st, mq);");
     before(f, "st.asmShown = null;", "seamTurnStart(st, byMm);");
-    expect(f.match(/turnAngles\(/g)?.length).toBe(1);
+    expect(f).not.toMatch(/turnAngles\(/);
   });
   it("⭐ `tiltOff`: the world's angles at the gizmo (the heading shown at a pole), SET; the dy hold, the calm, the square camera as before; one timed turn from the pose shown", () => {
     const f = fnSource(W, "function tiltOff(");
-    expect(f).toContain("const seam = st.cfg.chartLayout === 1 && g !== null && worldFaceMap(st) !== null; const uWas = seam ? drawnDir(st) : null;");
+    expect(f).toContain("const seam = g !== null && worldFaceMap(st) !== null; const uWas = seam ? drawnDir(st) : null;");
     before(f, "const uWas = seam ? drawnDir(st) : null;", "st.asmTilt = null;");
     expect(f).toContain("if (!seam) turnAngles(st, (d) => mulM(D, d), Math.atan2(Math.sin(hP), Math.cos(hP)));");
-    expect(f).toContain("const mq = seam ? poleYawKept(mq0, ORBIT_PITCH_MAX_RAD, hP) : mq0; if (seam) seamRebase(st, mq); else st.asmMapQ = mq;");
-    expect(f).toContain("if (st.cfg.chartLayout === 1) { if (seamOutPaced(st.cfg.chartLayout, tl.off, st.asmTiltAuto, st.cfg.tiltOutBlendMm)) seamOutStart(st); else seamTurnStart(st, false); if (uWas !== null) seamEase(st, uWas); }"); // ⭐ (2026-11-16, step C3) left by distance with `tiltOutBlendMm` > 0: paced; else timed as before
-    expect(f).toContain("const hold = edgeHoldAt(tl.heading, nT, nW, g, st.asmDySign);"); // the dy hold: unchanged
+    // ⭐⭐⭐ (2026-11-16, step C5) the rebase, the turn (paced by distance: step C3) and the ease through the one event (`crossTurn`)
+    expect(f).toContain("if (seam && mq0 !== null && g !== null) {");
+    before(f, "if (seam && mq0 !== null && g !== null) {", "crossTurn(st, { at: { mq: poleYawKept(mq0, ORBIT_PITCH_MAX_RAD, hP), g }, uWas, carry: false, paced, hold: held }); } else { if (mq0 !== null && g !== null) { st.asmMapQ = mq0;");
+    expect(f).toContain("crossingEvent(mulM(tl.map, [0, 1, 0]), nT, nW, WORLD_UP, st.asmDySign).hold"); // the one rule (⛔ `edgeHoldAt`: step 2.5)
+    const c = fnSource(W, "function crossTurn(");
+    expect(c).toContain("seamRebase(st, mq);");
+    before(c, "seamRebase(st, mq);", "if (c.paced) seamOutStart(st); else if (st.asmCamLast !== null) seamTurnStart(st, false); if (c.uWas !== null) seamEase(st, c.uWas); else if (uCarry !== null) easeCarry(st, mixWas, uCarry);");
     expect(f).toContain("if (nW !== null) sqO.target = nW;");
     expect(f.match(/turnAngles\(/g)?.length).toBe(1);
   });
   it("⭐ `zoneSwitch`: with a place shown the new map's angles SET (`seamRebase`); with none (the first frame) `turnAngles` as today; the turn as today, the ease on it", () => {
     const f = fnSource(W, "function zoneSwitch(");
-    expect(f).toContain("const chart = st.cfg.chartLayout === 1 && g !== null; const uWas = chart ? drawnDir(st) : null;");
+    expect(f).toContain("const chart = g !== null; const uWas = chart ? drawnDir(st) : null;");
     before(f, "const uWas = chart ? drawnDir(st) : null;", "st.asmZone = next === null ? null :");
     expect(f).toContain("const seam = chart && faceMapOf(st) !== null; if (!seam) turnAngles(st, turn);");
     expect(f).toContain("if (seam) seamRebase(st, mq); else st.asmMapQ = mq;");
@@ -295,22 +309,24 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): ONE STATE under th
     expect(t).toContain("const pace = seamTurnPace(true, st.asmTiltPending, bl !== null);");
     expect(t).toContain("bl === null ? 1 : blendShare(bl.mm, st.cfg.tiltBlendMm)");
     const z = fnSource(W, "function zoneStep(");
-    expect(z).toContain("if (zm !== null && zm.axis !== null && zm.byMm !== true && zm.out === undefined) {"); // ⭐ (2026-11-16, step C3) the way out paced in `seamOutFrame`
+    expect(z).toContain("if (zm !== null && zm.axis !== null && zm.dirFrom === undefined && zm.byMm !== true && zm.out === undefined) {"); // ⭐ (package A) …and its ease read // ⭐ (2026-11-16, step C3) the way out paced in `seamOutFrame`
     const a = fnSource(W, "export function assemblyFrame(");
-    before(a, "if (st.asmBlend !== null) st.asmBlend.mm += fingerMm;", "if (st.cfg.chartLayout === 1) seamTurnFrame(st, dtMs);");
-    before(a, "if (st.asmTiltAuto && st.asmTilt === null) tiltOn(st,", "if (st.cfg.chartLayout === 1) seamTurnFrame(st, dtMs);");
-    before(a, "if (st.cfg.chartLayout === 1) seamTurnFrame(st, dtMs);", "const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };");
+    before(a, "if (st.asmBlend !== null) st.asmBlend.mm += fingerMm;", "seamTurnFrame(st, dtMs);");
+    before(a, "if (st.asmTiltAuto && st.asmTilt === null) tiltOn(st,", "seamTurnFrame(st, dtMs);");
+    before(a, "seamTurnFrame(st, dtMs);", "const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };");
     const h = fnSource(W, "export function tiltClampStep(");
     expect(h).toContain("const zoneTurning = zm !== null && turnHoldsGizmo(zm.out !== undefined, zm.byMm === true, st.asmTiltPending, st.asmBlend !== null, zm.k);"); // ⭐ (2026-11-16, step C3) the rule in `turnHoldsGizmo`: as before for every turn but the way out paced by the finger
-    expect(h).toContain("if (st.cfg.chartLayout === 1) { if (!turning && (tl === null || !(tl.exit || tl.off))) return false; } else if (!turning && (tl === null || !(tiltUnderWay(swingTimed, tl.finishing || tl.off, tl.k) || tl.finishing || tl.off))) return false;");
+    expect(h).toContain("if (!turning && (tl === null || !(tl.exit || tl.off))) return false;");
+    expect(h).not.toContain("tiltUnderWay(");
   });
-  it("⭐ no roll back inside F under the switch: the exit asked at once (`tiltLeavesNow`), the camera upright in F to it", () => {
+  it("⭐ no roll back inside F: the exit asked at once (`tiltLeavesNow`), the camera upright in F to it (⛔ the roll back of the switch off: step 2.5)", () => {
     const t = fnSource(W, "function tiltFrame(");
-    expect(t).toContain("if (st.cfg.chartLayout === 1) { if (!tl.exit && tiltLeavesNow(onFacet, tl.off)) { if (!onFacet) tl.exitAcross = (st.asmCalm?.wA ?? 0) > 0.5;");
-    expect(t).toContain("tl.exit = true; } return; }");
-    before(t, "tiltLeavesNow(onFacet, tl.off)", "const crossing = !onFacet && !tl.finishing;");
+    expect(t).toContain("if (!tl.exit && tiltLeavesNow(onFacet, tl.off)) { if (!onFacet) tl.exitAcross = (st.asmCalm?.wA ?? 0) > 0.5;");
+    expect(t).toContain("tl.exit = true; } }");
+    expect(t).not.toContain("tl.finishing");
     const c = fnSource(W, "function assemblyCameraFrameRaw(");
-    expect(c).toContain("const f = { dir: mulM(tl.dir, fF.dir), up: mulM(tl.dir, fF.up) }; // ⭐⭐⭐ (2026-11-15, §12 2.4c) under the charts' layout no roll back inside F: the camera upright in F to the exit, then ONE turn (`asmZoneMix`) if (st.cfg.chartLayout === 1) return f;");
+    expect(c).toContain("return { dir: mulM(tl.map, fF.dir), up: mulM(tl.map, fF.up) };");
+    expect(c).not.toContain("frameMix(");
   });
   it("⭐ `dirAt` applies the eased direction (the turn's own share; another turn or none: whole) — ONE place; the pole's crossing and the spit's restart carry it", () => {
     const d = fnSource(W, "function dirAt(");
@@ -322,10 +338,11 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): ONE STATE under th
     expect(e).toContain("if (gap !== null) st.asmDirEase = { axis: gap.axis, angle: gap.angle, mix };");
     expect(fnSource(W, "function drawnDir(")).toContain("const q = st.boxOrbit ?? st.pieceQ ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };");
     const x = fnSource(W, "function poleCross(");
-    before(x, "const uWas = drawnDir(st);", "seamRebase(st, mq1);");
-    before(x, "if (st.asmCamLast !== null) st.asmZoneMix = {", "seamEase(st, uWas);");
+    // ⭐⭐⭐ (2026-11-16, step C5) the crossing's rebase, turn and ease through the one event (`crossTurn`), the direction drawn read before it
+    before(x, "const uWas = drawnDir(st);", "crossTurn(st, { at: { mq: { yaw: seam.yaw, pitch: seam.pitch }, g: P }, uWas, carry: false, paced: false, hold });");
     const sp = fnSource(W, "export function spitStep(");
-    expect(sp).toContain("const mixWas = st.asmZoneMix; if (st.asmCamLast !== null) st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0 }; easeCarry(st, mixWas);");
+    expect(sp).toContain("crossTurn(st, { at: null, uWas: null, carry: true, paced: false, hold: hold === null ? 0 : hold.sign });"); // the one event, the ease carried
+    expect(sp).not.toContain("easeCarry(st, mixWas)"); // ⛔ the switch off's own turn: step 2.5
     // ⛔ the sway: nothing of a drawn mesh, a pick or the camera read by the ease (the pose shown only starts a turn, in `seamTurnStart`)
     for (const sig of ["function seamEase(", "function drawnDir(", "function easeCarry(", "function seamTurnFrame("]) expect(fnSource(W, sig)).not.toMatch(/getBoundingInfo|pickWithRay|absolutePosition|st\.camera\.|cameraPrev|modelCast/);
   });
@@ -363,8 +380,8 @@ describe("⭐⭐⭐ the transition's whole angle: the camera's turn PLUS the pie
   it("wired: `zoneStep`'s clock and a paced turn's both run over `turnWhole` — this turn's eased direction, else the camera's own", () => {
     const aw = readFileSync("src/render/assembly_wiring.ts", "utf8").replace(/\s+/g, " ");
     expect(aw).toContain("function turnWhole(st: SceneState, zm: NonNullable<SceneState[\"asmZoneMix\"]>): number { const e = st.asmDirEase; return seamWholeRad(zm.rad, e !== null && e.mix === zm ? e.angle : 0); }");
-    expect(aw).toContain("const whole = turnWhole(st, zm); zm.done = degS > 0 ? Math.min(whole, zm.done + (degS * Math.PI / 180) * (dtMs / 1000)) : whole; zm.k = whole > 1e-9 ? Math.min(1, zm.done / whole) : 1;");
-    expect(aw).toContain("seamTurnStep({ k: zm.k, done: zm.done, rad: turnWhole(st, zm), axisKnown: zm.axis !== null }, pace,");
+    expect(aw).toContain("const whole = turnWhole(st, zm); zm.done = degS > 0 ? Math.min(whole, zm.done + seamStepRad((degS * Math.PI / 180) * (dtMs / 1000), zm.rad, turnEase(st, zm))) : whole; zm.k = whole > 1e-9 ? Math.min(1, zm.done / whole) : 1;"); // ⭐ (package A) the step less the camera's growth with the ease
+    expect(aw).toContain("seamTurnStep({ k: zm.k, done: zm.done, rad: turnWhole(st, zm), axisKnown: zm.axis !== null && zm.dirFrom === undefined }, pace,"); // ⭐ (package A) …and its ease read
     expect(aw).not.toContain("Math.min(zm.rad, zm.done +");
   });
 });

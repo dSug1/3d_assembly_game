@@ -12,7 +12,7 @@ import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { approachDistance, approachStep, easePoint, faceSwitches, farDistance, approachStepFree, lookShare, offsetFrame, modelNormal, orbitDir, ORBIT_PITCH_MAX_RAD, pitchOfV, swayRay, unswayHit, vOfPitch, gizmoLag } from "../input/assembly_orbit";
 import { gizmoJoins, insertIndex, joinsKnown, joinStep, LINE_REFINE_BUDGET, refineNow, refineStart, refineStep, sectionFixed, type RefineState } from "../input/section_hull";
-import { blendThroughEdges, buildFaceMap, castPoint, holdsPole, mapAnglesStep, poleBeyondPitch, facetOfNormal, mapAngles, mapTarget, stackDepthAt, type FaceMap, type FacetOpts, type MapFace, type MapOpts, type MapTarget } from "../input/face_map";
+import { blendThroughEdges, buildFaceMap, castPoint, mapAnglesStep, poleBeyondPitch, facetOfNormal, mapAngles, mapTarget, stackDepthAt, type FaceMap, type FacetOpts, type MapFace, type MapOpts, type MapTarget } from "../input/face_map";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { Color4 } from "@babylonjs/core/Maths/math.color";
@@ -26,7 +26,7 @@ import { syncCentre } from "./camera_rig";
 import { orbitDvPerMm, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from "./green_box_wiring";
 import type { LineSample, SceneState } from "./scene_state";
 import { faceTrianglesWorld } from "./contact_wiring";
-import { calmHeading, calmLevelHeading, calmRules, calmShown, calmStep, calmTarget, cameraHeading, capEdgePitch, heldOffsetStep, poleWeight, wholeEnds, type CalmKnobs } from "../input/orbit_calm";
+import { calmHeading, calmLevelHeading, calmShown, calmStep, calmTarget, cameraHeading, capEdgePitch, heldOffsetStep, poleWeight, type CalmKnobs } from "../input/orbit_calm";
 import { facetFrame } from "../input/face_map";
 import { qRotate, type Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
@@ -36,14 +36,14 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { crossingHold, crossingPitch, distanceToFacets, fingerInFrame, fingerSwapped, polarZones, SPIT_CROSSING_PITCH_RAD, spitCameraHeading, spitSide, zoneAt, type PolarZone, type ZoneOpts } from "../input/polar_zone";
+import { crossingHold, crossingPitch, distanceToFacets, fingerInFrame, fingerSwapped, SPIT_CROSSING_PITCH_RAD, spitCameraHeading, spitSide, zoneAt, type PolarZone } from "../input/polar_zone";
 import { assignCharts, capTiltHeading, chartContour, chartZones, DEFAULT_CHART_OPTS, type ChartAssignment, type ChartFace } from "../input/orbit_charts";
 import { poseAboutPiece, poseFramingTwo, type CamPose } from "../input/orbit_tilt";
 import { poleCrossingDue, poleSeam } from "../input/pole_crossing";
-import { dirGap, easedDir, easeRest, poleYawKept, seamOutPaced, seamOutShare, seamOutStep, seamOutTarget, seamTurnPace, seamTurnStep, seamWholeRad, tiltLeavesNow, turnHoldsGizmo } from "../input/seam_turn";
+import { dirGap, easedDir, easeRest, poleYawKept, poseTurnRad, seamOutPaced, seamOutShare, seamOutShareInv, seamOutStep, seamOutTarget, seamStepRad, seamTurnPace, seamTurnStep, seamWholeRad, shownShareCap, squareRestarts, squareShareStep, tiltLeavesNow, turnHoldsGizmo } from "../input/seam_turn";
 import { bandedFacet } from "../input/face_band";
-import { contourFaceAt, exitHoldSign, exitTurnRad, freeEdges, freeEntryHeading, freeHeadingAngle, isFreeFace } from "../input/free_face";
-import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, tiltHeading, edgeHoldAt, capTilt, frameMix, headingFrom, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, onTiltedFacet, type Mat3 } from "../input/orbit_tilt";
+import { contourFaceAt, crossingEvent, exitHoldSign, exitTurnRad, faceOwnUp, freeEdges, freeEntryHeading, freeHeadingAngle, isFreeFace } from "../input/free_face";
+import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, capTilt, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, swingEase, tiltAutoLatch, frameBox, tiltDir, tiltFaces, onTiltedFacet, type Mat3 } from "../input/orbit_tilt";
 
 /** ⭐ The look point's ease (ms). */
 const LOOK_TAU_MS = 120;
@@ -107,7 +107,7 @@ export function ensureAssembly(st: SceneState): void {
 /** ⭐ The orbit's state a held part starts from (`orbitStateStart`). */
 type OrbitStateStart = Pick<
   SceneState,
-  | "asmGizmo" | "asmSupport" | "asmSupportLevel" | "pieceHold" | "pieceHoldPrev" | "asmLook" | "asmFacePoint" | "asmG" | "asmPrevQ" | "asmShown" | "asmFaceBand" | "asmFree" | "asmMapQ"
+  | "asmGizmo" | "asmSupport" | "asmSupportLevel" | "pieceHold" | "pieceHoldPrev" | "asmLook" | "asmFacePoint" | "asmG" | "asmPrevQ" | "asmShown" | "asmFaceBand" | "asmFree" | "asmPlaceWas" | "asmMapQ"
   | "asmEdgeHold" | "asmZone" | "asmZoneMix" | "asmPieceDrawn" | "asmDirEase" | "asmCamLast" | "asmSpitSide" | "asmSpitU" | "asmZoneAlpha" | "asmDySign" | "asmHeadO"
   | "asmHeadW" | "asmHeadYaw" | "asmTilt" | "asmGOff" | "asmTiltAuto" | "asmTiltPending" | "asmOrbitMm" | "asmBlend" | "asmCalmWhole" | "asmCalmWholeV"
   | "asmSquare" | "asmCalm" | "asmMouth" | "asmRawPrev" | "asmGizmoAt" | "asmGizmoLag"
@@ -134,6 +134,7 @@ export function orbitStateStart(): OrbitStateStart {
     asmShown: null,
     asmFaceBand: null,
     asmFree: null,
+    asmPlaceWas: null,
     asmMapQ: null,
     asmEdgeHold: null,
     asmZone: null,
@@ -267,7 +268,7 @@ function dirAt(st: SceneState, yaw: number, v: number): Vec3 {
   // ⭐⭐⭐ (2026-11-04, `1.0.95-`, the owner: *"i am referring to this calm behavior of commit 58d86ff… It shall stay"*) the piece and the camera on the SHOWN
   // direction — the orbit's angle calm in the middle of a face, whole at its edges (`calmDir`); the gizmo is still moved by the orbit's own `u`
   const s = tiltDir(R, calmDir(st, u));
-  // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4c — set under `chartLayout` 1 only) THE SHOWN DIRECTION EASED after a change of frame: the new chart's
+  // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4c) THE SHOWN DIRECTION EASED after a change of frame: the new chart's
   // turned back by the rest of the gap to the one drawn before (`easedDir`), its share the camera turn's own (`asmZoneMix.k`; that turn over or replaced:
   // whole) — ONE place, for the piece, its solver and the foot alike
   const e = st.asmDirEase;
@@ -291,19 +292,61 @@ function seamEase(st: SceneState, uWas: Vec3): void {
   st.asmDirEase = null;
   const mix = st.asmZoneMix;
   if (mix === null) return;
+  // ⭐⭐⭐ (2026-11-16 night, `TILTED_POLE_CLOSE_IN.md` §12.1 1., §18 — package A) PROVISIONAL: read here the view is not yet set (this frame's calm and square
+  // camera, `calmFrame`, run after) — the ease READ AGAIN once it is (`seamEaseRead`), the turn's clock waiting for that read. ⛔ Kept as read here: the square
+  // camera's first step came back in that frame, the piece drawn 6.45° off at k = 0 (W11: 6.2°, then 8.0° in a frame)
   const gap = dirGap(uWas, drawnDir(st));
   if (gap !== null) st.asmDirEase = { axis: gap.axis, angle: gap.angle, mix };
+  mix.dirFrom = uWas;
 }
 
 /**
  * ⭐⭐⭐ (2026-11-15, §12 2.4c) A CAMERA TURN RESTARTED with no change of frame (the spit's crossing, from the pose shown): the shown direction's ease, if one
  * runs on the turn replaced (`was`), carried onto the new one by its REST — never back to its whole (a step). None running: nothing.
+ * ⭐⭐⭐ (package A) …PROVISIONALLY: `uWas` (the direction drawn before the turn was replaced) kept on the new turn — its ease read once the view is set
+ * (`seamEaseRead`), as at every turn start.
  */
-function easeCarry(st: SceneState, was: SceneState["asmZoneMix"]): void {
+function easeCarry(st: SceneState, was: SceneState["asmZoneMix"], uWas: Vec3): void {
   const e = st.asmDirEase;
+  if (st.asmZoneMix !== null && st.asmZoneMix !== was) st.asmZoneMix.dirFrom = uWas;
   if (e === null || was === null || e.mix !== was || st.asmZoneMix === was) return;
   const rest = easeRest(e, was.k);
   st.asmDirEase = st.asmZoneMix === null || rest === null ? null : { axis: rest.axis, angle: rest.angle, mix: st.asmZoneMix };
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-16 night, `TILTED_POLE_CLOSE_IN.md` §18, package A — the owner: *"1- A"*) THE EASE READ ONCE THE FRAME'S VIEW IS SET (after `calmFrame`: the
+ * calm, the square camera at its target inside the turn): the ONE rotation from the direction drawn before the turn started (`dirFrom`) to the one the new
+ * view gives (`drawnDir`, no ease) — at EVERY turn start (the tilt's entry and exit, the ridge, the zone's switch, the spit's side — its turn starts in the
+ * camera's stage: read the next frame —, a free face's entry and exit). The turn's clocks wait for it (`zoneStep`, `seamTurnFrame`, `seamOutFrame`), so at
+ * the read the share is 0 and the piece is drawn exactly where it was. ⭐ The model's coordinates only (the orbit's angles, the calm, the square normal).
+ */
+function seamEaseRead(st: SceneState): void {
+  const zm = st.asmZoneMix;
+  if (zm === null || zm.dirFrom === undefined) return;
+  const from = zm.dirFrom;
+  delete zm.dirFrom;
+  // the turn's axis and framing rule read afresh toward the view just set (the clocks waited: the share is 0, nothing on the glass moves) — ⛔ kept from a
+  // read before it (the spit's turn starts in the camera's stage, before the square camera stands at its target): the turn went round the far way, 285°
+  // of view for a 93° pose (`Scene_0bis`'s top ridge reached from a tip, measured)
+  zm.axis = null;
+  zm.rule = 0;
+  zm.keep = null;
+  st.asmDirEase = null;
+  const gap = dirGap(from, drawnDir(st));
+  if (gap !== null) st.asmDirEase = { axis: gap.axis, angle: gap.angle, mix: zm };
+}
+
+/**
+ * ⭐⭐⭐ (package A, `squareRestarts`) A TURN RESTARTED by a change of the square camera's target while it runs: from the pose shown, its pace kept (the
+ * entry made pending, `byMm`; the way out paced by the fingers, `out` — its progress anew), the direction drawn now kept for the read (`easeCarry`).
+ */
+function turnRestart(st: SceneState): void {
+  const zm = st.asmZoneMix;
+  if (zm === null) return;
+  const uWas = drawnDir(st);
+  st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0, ...(zm.byMm === true ? { byMm: true } : {}), ...(zm.out !== undefined ? { out: { p: 0, outMm: 0, orbitMm: 0 } } : {}) };
+  easeCarry(st, zm, uWas);
 }
 
 /**
@@ -317,11 +360,17 @@ function seamTurnStart(st: SceneState, paced: boolean): void {
 /**
  * ⭐⭐⭐ (2026-11-15, §12 2.4c, the auditor's find) THE WHOLE ANGLE A TURN'S CLOCK RUNS OVER: the camera's own (`rad`) or the piece's shown direction's
  * gap eased on it (`asmDirEase`, this turn's) added (`seamWholeRad`) — never the camera's alone (the gap's rest handed over in one frame). No ease
- * (always, with `chartLayout` 0): the camera's, as ever.
+ * (always before the charts — the game before them deleted at step 2.5): the camera's, as ever.
  */
 function turnWhole(st: SceneState, zm: NonNullable<SceneState["asmZoneMix"]>): number {
   const e = st.asmDirEase;
   return seamWholeRad(zm.rad, e !== null && e.mix === zm ? e.angle : 0);
+}
+
+/** ⭐ (package A) the piece's direction's gap eased on this turn (rad; none: 0) — `seamStepRad`'s growth of the camera's angle */
+function turnEase(st: SceneState, zm: NonNullable<SceneState["asmZoneMix"]>): number {
+  const e = st.asmDirEase;
+  return e !== null && e.mix === zm ? e.angle : 0;
 }
 
 /**
@@ -334,10 +383,10 @@ function seamTurnFrame(st: SceneState, dtMs: number): void {
   if (zm === null || zm.byMm !== true) return;
   const bl = st.asmBlend;
   const pace = seamTurnPace(true, st.asmTiltPending, bl !== null);
-  const r = seamTurnStep({ k: zm.k, done: zm.done, rad: turnWhole(st, zm), axisKnown: zm.axis !== null }, pace, bl === null ? 1 : blendShare(bl.mm, st.cfg.tiltBlendMm), dtMs, st.cfg.tiltRollDegS);
+  const r = seamTurnStep({ k: zm.k, done: zm.done, rad: turnWhole(st, zm), axisKnown: zm.axis !== null && zm.dirFrom === undefined }, pace, bl === null ? 1 : blendShare(bl.mm, st.cfg.tiltBlendMm), dtMs, st.cfg.tiltRollDegS, turnEase(st, zm));
   zm.k = r.k;
   zm.done = r.done;
-  if (zm.k >= 1) st.asmZoneMix = null;
+  // ⭐⭐⭐ (package A, the audit's blocker) whole: ended once drawn (`zoneMixPose`)
 }
 
 /**
@@ -371,15 +420,16 @@ function seamOutFrame(st: SceneState, dtMs: number): void {
   const o = zm.out;
   const whole = turnWhole(st, zm);
   const target = seamOutTarget(o.outMm, o.orbitMm, st.cfg.tiltOutBlendMm, st.cfg.tiltBlendMm, st.router.all().length > 0);
-  o.p = seamOutStep(o.p, target, dtMs, whole, st.cfg.tiltRollDegS, zm.axis !== null);
+  // ⭐⭐⭐ (package A) …and its ease read (`seamEaseRead`), as every clock
+  o.p = seamOutStep(o.p, target, dtMs, whole, st.cfg.tiltRollDegS, zm.axis !== null && zm.dirFrom === undefined);
   zm.k = seamOutShare(o.p);
   zm.done = zm.k * whole;
-  if (o.p >= 1) st.asmZoneMix = null;
+  // ⭐⭐⭐ (package A, the audit's blocker) whole (`o.p` 1): ended once drawn (`zoneMixPose`)
 }
 
-/** ⭐⭐⭐ (2026-11-10, §9.4) the orbit's DIRECTIONS' frame (F → world; the press's swing included) — `null`: the world's. */
+/** ⭐⭐⭐ (2026-11-10, §9.4) the orbit's DIRECTIONS' frame (F → world; ⛔ the press's swing deleted at step 2.5: the tilt's `map`) — `null`: the world's. */
 export function dirFrame(st: SceneState): Mat3 | null {
-  return st.asmTilt === null ? baseFrame(st) : st.asmTilt.dir;
+  return st.asmTilt === null ? baseFrame(st) : st.asmTilt.map;
 }
 
 /**
@@ -404,26 +454,40 @@ function mapFrame(st: SceneState): Mat3 | null {
  * whole within 3.6 m and none from 5.4 m: an A + dy approach through it turned the piece's direction, the approach curved); faded only toward ±90° of pitch.
  */
 function calmDir(st: SceneState, u: Vec3): Vec3 {
+  const base = calmBase(st, u);
+  // ⭐⭐⭐ (2026-11-10, `1.0.120b-`) THE SQUARE CAMERA close in: the gizmo's face's normal (turned at one speed through every edge), over the calm by `q`
+  const sq = st.asmSquare;
+  if (sq.n === null || !(sq.q > 0)) return base;
+  return squareMix(base, sq.n, sq.q);
+}
+
+/** ⭐ (package A — split from `calmDir`) the calm's own direction for `u`, before the square camera's mix (its share's cap reads it). */
+function calmBase(st: SceneState, u: Vec3): Vec3 {
   // ⭐⭐⭐ (2026-11-09, §8 — F7b) the rule in `input/orbit_calm.ts` (`calmShown`): the eased facet's own frame, faded toward its poles
-  // ⭐⭐⭐ (2026-11-10, §9.4) off a tilted facet both shares whole by the exit's share (`k`): at the edge the shown direction is the orbit's own in both frames
   const c = st.asmCalm;
   // ⭐⭐⭐ (2026-11-10, the owner's back-and-forth) …and by the calm's whole share by POSITION (`asmCalmWhole`): never eased, so never behind a fast finger
-  // ⭐⭐⭐ (2026-11-10, the owner: *"the tilt seems to catch up what the calm prevented"*) the vertical share alone toward a top / bottom edge (`asmCalmWholeV`);
-  // the roll back off a tilted facet over a `b` end keeps the horizontal calm too (`exitAcross` — a turn about the edge's own line)
-  const tl = st.asmTilt;
-  const kH = Math.max(tl !== null && !tl.exitAcross ? tl.k : 0, st.asmCalmWhole);
-  const kV = Math.max(tl?.k ?? 0, st.asmCalmWhole, st.asmCalmWholeV);
+  // ⭐⭐⭐ (2026-11-10, the owner: *"the tilt seems to catch up what the calm prevented"*) the vertical share alone toward a top / bottom edge (`asmCalmWholeV`)
+  // ⛔ (2026-11-16, step 2.5) the roll back's share off a tilted facet (`asmTilt.k`) deleted with the roll back: the charts' one transition has none
+  const kH = Math.max(0, st.asmCalmWhole);
+  const kV = Math.max(0, st.asmCalmWhole, st.asmCalmWholeV);
   // ⭐ (2026-11-15, step 2.3) the fade by the pitch carried (`poleFade`; absent: no key, today's)
   const base =
     c !== null && (kH > 0 || kV > 0)
       ? calmShown(u, { n: c.n, sH: 1 - (1 - c.sH) * (1 - kH), sV: 1 - (1 - c.sV) * (1 - kV), wA: c.wA ?? 0, ...(c.poleFade !== undefined ? { poleFade: c.poleFade } : {}) })
       : calmShown(u, c);
-  // ⭐⭐⭐ (2026-11-10, `1.0.120b-`) THE SQUARE CAMERA close in: the gizmo's face's normal (turned at one speed through every edge), over the calm by `q`
-  const sq = st.asmSquare;
-  if (sq.n === null || !(sq.q > 0)) return base;
-  const m: Vec3 = [base[0] * (1 - sq.q) + sq.n[0] * sq.q, base[1] * (1 - sq.q) + sq.n[1] * sq.q, base[2] * (1 - sq.q) + sq.n[2] * sq.q];
+  return base;
+}
+
+/** ⭐ The square camera's mix: the calm's direction `base` and the square normal `n` at the share `q`, normalised (`nlerpAngle` is its angle). */
+function squareMix(base: Vec3, n: Vec3, q: number): Vec3 {
+  const m: Vec3 = [base[0] * (1 - q) + n[0] * q, base[1] * (1 - q) + n[1] * q, base[2] * (1 - q) + n[2] * q];
   const l = Math.hypot(m[0], m[1], m[2]);
   return l > 1e-9 ? [m[0] / l, m[1] / l, m[2] / l] : base;
+}
+
+/** ⭐ (package A) the angle between two unit directions */
+function angleOf(a: Vec3, b: Vec3): number {
+  return Math.acos(Math.max(-1, Math.min(1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2])));
 }
 
 /**
@@ -436,31 +500,50 @@ function squareFrame(st: SceneState, dtMs: number): void {
   const sh = st.asmShown;
   const tl = st.asmTilt;
   // ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §3.4, step C4 — N1, `freeFaceSquare` 1) ON A SPIT'S FREE FACE THE CAMERA SQUARE TO IT at every distance:
-  // the target the face's normal (the map's frame), the share whole by its own ease; off it, back. ⛔ With the switch 0 (N2) or the charts' layout off: none
-  const freeSq = st.cfg.chartLayout === 1 && st.cfg.freeFaceSquare === 1 && st.asmFree !== null ? st.asmFree.map.facets[st.asmFree.facet] : undefined;
-  if (st.cfg.chartLayout === 1) {
-    // ⭐⭐⭐ (2026-11-16, `ORBIT_CHARTS.md` §10.2, §12 2.4d) UNDER THE CHARTS' LAYOUT THE BANDED FACET (`asmFaceBand`, read once a frame in `assemblyFrame`):
-    // the target its normal in the map's frame, its band (SIDE / cap) its `kind` — what `sh.t` gives on that facet (a place's band IS its facet's kind) —
-    // ⛔ the place's own facet (`sh.t.normal`) unbanded: its noise across an edge flipped the target (measured, `Scene_1` close in: 20 flips, 600° of view).
-    // Set with every place shown (`assemblyFrame`; afresh where a change of frame re-reads the place: `tiltOff`, `poleCross`); none: the target kept
-    const fb = sh === null ? null : st.asmFaceBand;
-    const bf = fb === null ? undefined : fb.map.facets[fb.facet];
-    const onCapB = fb !== null && bf !== undefined && bf.kind !== "SIDE" && (tl === null || fb.facet !== tl.facet);
-    sq.target = bf === undefined || onCapB ? sq.target : bf.n;
-    if (freeSq !== undefined) sq.target = freeSq.n;
-  } else {
-    const onCap = sh !== null && sh.t.band !== "SIDE" && (tl === null || sh.t.stack !== tl.facet);
-    sq.target = sh === null || onCap ? sq.target : sh.t.normal;
-  }
+  // the target the face's normal (the map's frame), the share whole by its own ease; off it, back. ⛔ With the switch 0 (N2): none
+  const freeSq = st.cfg.freeFaceSquare === 1 && st.asmFree !== null ? st.asmFree.map.facets[st.asmFree.facet] : undefined;
+  // ⭐⭐⭐ (2026-11-16, `ORBIT_CHARTS.md` §10.2, §12 2.4d) THE BANDED FACET (`asmFaceBand`, read once a frame in `assemblyFrame`):
+  // the target its normal in the map's frame, its band (SIDE / cap) its `kind` — what `sh.t` gives on that facet (a place's band IS its facet's kind) —
+  // ⛔ the place's own facet (`sh.t.normal`) unbanded: its noise across an edge flipped the target (measured, `Scene_1` close in: 20 flips, 600° of view;
+  // deleted with the game before the charts, step 2.5). Set with every place shown (`assemblyFrame`; afresh where a change of frame re-reads the place:
+  // `tiltOff`, `poleCross`); none: the target kept
+  const fb = sh === null ? null : st.asmFaceBand;
+  const bf = fb === null ? undefined : fb.map.facets[fb.facet];
+  const onCapB = fb !== null && bf !== undefined && bf.kind !== "SIDE" && (tl === null || fb.facet !== tl.facet);
+  sq.target = bf === undefined || onCapB ? sq.target : bf.n;
+  if (freeSq !== undefined) sq.target = freeSq.n;
   if (sq.n === null) sq.n = sq.target;
+  // ⭐⭐⭐ (2026-11-16 night, `TILTED_POLE_CLOSE_IN.md` §12.1 2., §18 — package A, the owner: *"1- A"*) WHILE A TRANSITION'S TURN RUNS (`asmZoneMix`) THE
+  // SQUARE CAMERA STANDS AT ITS TARGET — its normal and its share (held while pending: the owner's rule of 2026-11-11) — so the turn's end pose is the
+  // final one and ONE clock carries both; a change of that target while the turn runs (`squareRestarts`) is a change of frame: the turn restarted from the
+  // pose shown. ⛔ Its own turn (`squareTurn`) and share's ease beside the transition's: two clocks adding on the glass (W11: up to 8.9° a frame)
+  const qT = st.asmTiltPending ? sq.q : st.asmTiltAuto || freeSq !== undefined ? 1 : 0;
+  const zm = st.asmZoneMix;
+  if (zm !== null) {
+    if (squareRestarts(zm.dirFrom === undefined, sq.n, sq.target, sq.q, qT)) turnRestart(st);
+    if (sq.target !== null) sq.n = sq.target;
+    sq.q = qT;
+    return;
+  }
+  const n0 = sq.n;
   if (sq.n !== null) {
     const { t } = facetFrame(sq.n);
     sq.n = squareTurn(sq.n, sq.target, dtMs, st.cfg.tiltRollDegS, t);
   }
   // ⭐⭐⭐ (2026-11-11) pending: held (the camera keeps its orientation while the approach goes on); then by the finger's travel (`blendShare`), never by time
   if (st.asmTiltPending) return;
-  if (st.asmTiltAuto && st.asmBlend !== null) sq.q = Math.max(sq.q, blendShare(st.asmBlend.mm, st.cfg.tiltBlendMm));
-  else sq.q = wholeShareStep(sq.q, st.asmTiltAuto || freeSq !== undefined ? 1 : 0, dtMs, rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS));
+  const want = st.asmTiltAuto && st.asmBlend !== null ? Math.max(sq.q, blendShare(st.asmBlend.mm, st.cfg.tiltBlendMm)) : wholeShareStep(sq.q, qT, dtMs, rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS));
+  // ⭐⭐⭐ (package A) ITS OWN SHARE NEVER OVER THE ONE SPEED: the direction it shows turned at most `tiltRollDegS`'s step a frame, less what the normal's own
+  // turn took this frame (`squareShareStep`) — ⛔ the share eased over 125 ms or by the finger's blend, uncapped (11° and more a frame at a quarter turn)
+  const deg = st.cfg.tiltRollDegS;
+  if (n0 === null || sq.n === null || !(deg > 0)) {
+    sq.q = want;
+    return;
+  }
+  const pq = st.boxOrbit ?? st.pieceQ ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
+  const base = calmBase(st, orbitDir(pq.yaw, pq.v));
+  const used = sq.q > 0 ? angleOf(squareMix(base, n0, sq.q), squareMix(base, sq.n, sq.q)) : 0;
+  sq.q = squareShareStep(sq.q, want, angleOf(base, sq.n), Math.max(0, ((deg * Math.PI) / 180) * (Math.max(0, dtMs) / 1000) - used));
 }
 
 /**
@@ -510,69 +593,29 @@ function levelHeadingOf(st: SceneState, yaw: number): number {
   return st.asmHeadO !== null ? yaw + st.asmHeadO : calmLevelHeading(yaw, st.asmCalm, st.asmCalmWhole);
 }
 
-/**
- * ⭐⭐⭐ (2026-11-14) IS FACET `j` OF THE MAP IN USE (`map`, built in the map's frame) ONE OF THE POLAR ZONE'S OWN FACETS (`st.asmZone`, world facet indices)? —
- * its normal and its polygon's centre turned into the world, the world map's facet there (`facetOfNormal`); cached per map and zone. None: false.
- */
-function zoneFacetOf(st: SceneState, map: FaceMap, j: number): boolean {
-  const zn = st.asmZone;
-  if (zn === null) return false;
-  const key = `${st.asmFaceMap?.key ?? "w"}#${st.asmWorldMap?.key ?? ""}#${zn.id}`;
-  if (st.asmZoneFacetsF === null || st.asmZoneFacetsF.key !== key) st.asmZoneFacetsF = { key, of: new Map() };
-  const memo = st.asmZoneFacetsF.of;
-  const hit = memo.get(j);
-  if (hit !== undefined) return hit;
-  const wm = worldFaceMap(st);
-  const f = map.facets[j];
-  let r = false;
-  if (wm !== null && f !== undefined && f.poly.length > 0) {
-    const R = mapFrame(st);
-    const k = 1 / f.poly.length;
-    const c: Vec3 = [f.poly.reduce((a, v) => a + v[0] * k, 0), f.poly.reduce((a, v) => a + v[1] * k, 0), f.poly.reduce((a, v) => a + v[2] * k, 0)];
-    const cW = R === null ? c : mulM(R, c);
-    r = zn.zone.facets.includes(facetOfNormal(wm, R === null ? f.n : mulM(R, f.n), cW));
-  }
-  memo.set(j, r);
-  return r;
-}
-
 /** ⭐ The calm's eased state (`st.asmCalm`) and its whole share's TARGET by position (left in `st.asmCalmWhole` for `calmFrame` to ease). */
 function calmTargets(st: SceneState, dtMs: number): void {
   // ⭐⭐⭐ (2026-11-09, POLAR_ORBIT_CLEANUP.md §8 — F7b) the rule in `input/orbit_calm.ts` (`calmTarget`, `calmStep`): every SIDE facet, slanted ones
   // included, in its own frame; the caps none
+  // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §5.1, step 2.3; the only calm since step 2.5, 2026-11-16) THE CALM ON EVERY SIDE FACE: the shares continuous on a
+  // narrow run (`edgeShareSmooth`), every side facet on its own run (step 2.4e), a polar zone's own facets (a fan's) calmed as any side facet, a side
+  // facet's reading not faded by the pitch. ⛔ Deleted with the switches (`chartLayout`, `chartCalm`): the old calm — no calm on a polar
+  // zone's own facets and whole toward them (`zoneFacetOf`), a vertical facet's share on the box's height (the bounce's rule), `edgeShare`'s step
   const sh = st.asmShown;
   const map = sh === null ? null : faceMapOf(st);
   const cfg = st.cfg;
-  // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §5.1, step 2.3) the calm on every side face (`calmRules`: `chartCalm` with the charts' layout) — all off: today's
-  const rules = calmRules(cfg.chartLayout, cfg.chartCalm);
-  const tg =
-    sh === null || map === null
-      ? { n: null, sH: 1, sV: 1 }
-      : calmTarget(sh.t, map.facets[sh.t.stack]!, cfg.faceSpanShareVOn === 1 ? map.box : null, calmKnobs(st, rules.smooth, rules.ownRun), acrossNormals(st, map, sh));
+  const tg = sh === null || map === null ? { n: null, sH: 1, sV: 1 } : calmTarget(sh.t, map.facets[sh.t.stack]!, calmKnobs(st), acrossNormals(st, map, sh));
   // ⭐⭐⭐ (2026-11-10, §9.4) on the TILTED facet every edge is a frame change: whole toward them over the calm's own edge zones (`tiltCalmWholeHV`) —
   // ⭐⭐⭐ (2026-11-10, the owner: *"the tilt seems to catch up what the calm prevented"*) both shares toward an edge ACROSS, the vertical one alone toward a
   // `b` end (a turn about the edge's own line: the horizontal calm carried over — `shownDirAcross`)
   const tl = st.asmTilt;
   st.asmCalmWhole = 0;
   st.asmCalmWholeV = 0;
-  // ⭐⭐⭐ (2026-11-14, the owner: *"when I orbit fast in scene 0bis, the movements of the gizmo, camera and piece are not coherent: some jumps, tilts/rolls"*)
-  // ON A POLAR ZONE'S OWN FACETS (a tip's fan, small facets round a pole) NO CALM: whole, as over a cap — there is no face to stay square to there, the
-  // zone's polar orbit is the frame. ⛔ The calm facet by facet: each fan facet's normal up to 90° from the body's, the calm's target swung at every
-  // facet change — a 22 – 50° roll and a 17 – 20° turn of the view in ONE frame (18 of the fast walk's 24 jumps, far out)
-  // ⭐ the facet the MAP's place is on THIS frame, the one the calm reads (`zoneFacetOf`) — ⛔ `st.gizmoNormal`: updated after the calm, the frame onto a fan
-  // facet still read the body's — the calm stepped onto the fan facet for that frame (a 14.7° view jump, probed)
-  // ⭐⭐⭐ (2026-11-15, step 2.3) …with `calmRules(…).everyFacet`: a fan facet a side facet like any other (its own shares, whole at its edges)
-  if (!rules.everyFacet && sh !== null && map !== null && zoneFacetOf(st, map, sh.t.stack)) {
-    st.asmCalmWhole = 1;
-    st.asmCalmWholeV = 1;
-    st.asmCalm = calmStep(st.asmCalm, { n: null, sH: 1, sV: 1 }, dtMs);
-    return;
-  }
   if (tl !== null && sh !== null && map !== null && tg.n !== null && sh.t.stack === tl.facet) {
     const p = tiltCalmWholeHV(sh.t, map.facets[sh.t.stack]!, { zoneHPct: cfg.faceSpanZoneHPct, zoneMinHM: cfg.faceSpanZoneMinHCm / 100, zoneVPct: cfg.faceSpanZoneVPct, zoneMinVM: cfg.faceSpanZoneMinVCm / 100 });
     const pV = Math.max(p.h, p.v);
-    // ⭐⭐⭐ (2026-11-15, step 2.3) a side facet's reading: no fade by the pitch with `calmRules(…).noPitchFade`
-    st.asmCalm = calmStep(st.asmCalm, { n: tg.n, sH: 1 - (1 - tg.sH) * (1 - p.h), sV: 1 - (1 - tg.sV) * (1 - pV), wA: tg.wA, ...(rules.noPitchFade ? { poleFade: false } : {}) }, dtMs);
+    // ⭐⭐⭐ (2026-11-15, step 2.3) a side facet's reading: no fade by the pitch
+    st.asmCalm = calmStep(st.asmCalm, { n: tg.n, sH: 1 - (1 - tg.sH) * (1 - p.h), sV: 1 - (1 - tg.sV) * (1 - pV), wA: tg.wA, poleFade: false }, dtMs);
     // ⭐⭐⭐ (2026-11-10) the same share on the SHOWN direction too (by position — the eased state lags a fast finger); ⭐ at every distance (the owner's
     // shake: far out the 120 ms calm alone fell behind, then caught up on the cap)
     st.asmCalmWhole = p.h;
@@ -597,40 +640,24 @@ function calmTargets(st: SceneState, dtMs: number): void {
       return;
     }
     const tS = mapTarget(map, sh.yaw, pE, o);
-    const gS = calmTarget(tS, map.facets[tS.stack]!, cfg.faceSpanShareVOn === 1 ? map.box : null, calmKnobs(st, rules.smooth, rules.ownRun), acrossNormals(st, map, { t: tS, pitch: pE }));
+    const gS = calmTarget(tS, map.facets[tS.stack]!, calmKnobs(st), acrossNormals(st, map, { t: tS, pitch: pE }));
     st.asmCalm = calmStep(st.asmCalm, { n: gS.n, sH: gS.sH, sV: 1, wA: gS.wA }, dtMs);
     return;
   }
   if (tl === null && sh !== null && map !== null && sh.t.band === "SIDE") {
     const col = map.columns[sh.t.side];
-    if (col !== undefined) {
-      const i = col.facets.indexOf(sh.t.stack);
-      // ⭐⭐⭐ (2026-11-10) the VERTICAL share alone (the horizontal calm carried over the edge)
-      // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 step 2.4e) with `calmRules(…).ownRun` toward BOTH of the facet's own ends (`wholeEnds`): every side face
-      // alike — the eased share's target is whole there, and the eased state lags a moving finger; off: the column's outer ends alone, as before
-      if (i >= 0) {
-        const ends = wholeEnds(rules.ownRun, i, col.facets.length);
-        st.asmCalmWholeV = poleEdgeWhole(sh.t.surface, map.facets[sh.t.stack]!, ends.lo, ends.hi, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100);
-      }
-      // ⭐⭐⭐ (2026-11-14) …and BOTH shares whole by position toward an end bordering a polar zone's own facet (no calm there, `zoneFacetOf`) — the calm gone
-      // before the border, as toward a pole. ⛔ Released at the border by the whole share's ease: 45% of a strong calm in one frame, a 24° view jump
-      // ⭐⭐⭐ (2026-11-15, step 2.3) none with `calmRules(…).everyFacet`: a fan facet is calmed, nothing to be whole toward
-      if (i >= 0 && !rules.everyFacet) {
-        const zLo = i > 0 && zoneFacetOf(st, map, col.facets[i - 1]!);
-        const zHi = i < col.facets.length - 1 && zoneFacetOf(st, map, col.facets[i + 1]!);
-        if (zLo || zHi) st.asmCalmWhole = Math.max(st.asmCalmWhole, poleEdgeWhole(sh.t.surface, map.facets[sh.t.stack]!, zLo, zHi, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100));
-      }
-    }
+    // ⭐⭐⭐ (2026-11-10) the VERTICAL share alone (the horizontal calm carried over the edge)
+    // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 step 2.4e) toward BOTH of the facet's own ends: every side face alike — the eased share's target is whole
+    // there, and the eased state lags a moving finger (⛔ the column's outer ends alone, deleted at step 2.5 with `wholeEnds`)
+    if (col !== undefined && col.facets.indexOf(sh.t.stack) >= 0)
+      st.asmCalmWholeV = poleEdgeWhole(sh.t.surface, map.facets[sh.t.stack]!, true, true, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100);
   }
-  // ⭐⭐⭐ (2026-11-15, step 2.3) a side facet's reading (a normal): no fade by the pitch with `calmRules(…).noPitchFade`; a cap's none (`n` null)
-  st.asmCalm = calmStep(st.asmCalm, rules.noPitchFade && tg.n !== null ? { ...tg, poleFade: false } : tg, dtMs);
+  // ⭐⭐⭐ (2026-11-15, step 2.3) a side facet's reading (a normal): no fade by the pitch; a cap's none (`n` null)
+  st.asmCalm = calmStep(st.asmCalm, tg.n !== null ? { ...tg, poleFade: false } : tg, dtMs);
 }
 
-/**
- * ⭐ (2026-11-15, step 2.3) the calm's knobs from the sliders — both `calmTarget` calls; `smooth` from `calmRules` (false: `edgeShare`, today's); ⭐ (step
- * 2.4e) `ownRun` from `calmRules` too (false: a vertical facet's vertical share on the box's height, the bounce's rule, today's)
- */
-function calmKnobs(st: SceneState, smooth: boolean, ownRun: boolean): CalmKnobs {
+/** ⭐ (2026-11-15, step 2.3) the calm's knobs from the sliders — both `calmTarget` calls */
+function calmKnobs(st: SceneState): CalmKnobs {
   const cfg = st.cfg;
   return {
     shareH: cfg.faceSpanShareH,
@@ -640,8 +667,6 @@ function calmKnobs(st: SceneState, smooth: boolean, ownRun: boolean): CalmKnobs 
     shareV: cfg.faceSpanShareV,
     zoneVPct: cfg.faceSpanZoneVPct,
     zoneMinVM: cfg.faceSpanZoneMinVCm / 100,
-    smooth,
-    ownRun,
   };
 }
 
@@ -873,9 +898,11 @@ function faceMapOf(st: SceneState): FaceMap | null {
   if (box === null) return null;
   // ⭐⭐⭐ (2026-11-10, §9.4) under the tilted pole the map is BUILT IN F (`tiltFaces`, `tiltBox`): the pressed cap a side — cached per tilt
   // ⭐⭐⭐ (2026-11-13, POLAR_ZONES.md) …or in the polar zone's frame (`baseFrame`) — cached per zone switch
-  const key = `${parts.key}#${st.cfg.facetMergeDeg}#${st.cfg.facetMinShare}#C${st.cfg.chartLayout}${st.asmTilt !== null ? `#T${st.asmTilt.id}` : `#Z${st.asmZone?.id ?? 0}`}`;
+  const key = `${parts.key}#${st.cfg.facetMergeDeg}#${st.cfg.facetMinShare}${st.asmTilt !== null ? `#T${st.asmTilt.id}` : `#Z${st.asmZone?.id ?? 0}`}`;
   if (st.asmFaceMap !== null && st.asmFaceMap.key === key) return st.asmFaceMap.map;
-  const map = buildFaceMap(tiltFaces(placedFaces(st), R), tiltBox(box, R), { mergeDeg: st.cfg.facetMergeDeg, minShare: st.cfg.facetMinShare, ...chartOpts(st) });
+  // ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §16 — C2W, W7) in the parts' own box READ IN F (`frameBox`) — ⛔ the world box's corners turned (`tiltBox`,
+  // the box of the game before the charts, deleted here at step 2.5): loose for a frame off the world's axes (a cap turned 30°)
+  const map = buildFaceMap(tiltFaces(placedFaces(st), R), frameBox(box, R, parts.parts), { mergeDeg: st.cfg.facetMergeDeg, minShare: st.cfg.facetMinShare, ...CHART_MAP_OPTS });
   st.asmFaceMap = { key, map };
   return map;
 }
@@ -885,22 +912,20 @@ function worldFaceMap(st: SceneState): FaceMap | null {
   const parts = placedParts(st);
   const box = shellOf(st);
   if (box === null) return null;
-  // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §2.2 / §5.2, step 2.2) the charts' switch (`chartOpts`) in the call and the key
-  const key = `${parts.key}#${st.cfg.facetMergeDeg}#${st.cfg.facetMinShare}#C${st.cfg.chartLayout}`;
+  // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §2.2 / §5.2, step 2.2) the charts' layout in the call (`CHART_MAP_OPTS`)
+  const key = `${parts.key}#${st.cfg.facetMergeDeg}#${st.cfg.facetMinShare}`;
   if (st.asmWorldMap !== null && st.asmWorldMap.key === key) return st.asmWorldMap.map;
-  const map = buildFaceMap(placedFaces(st), box, { mergeDeg: st.cfg.facetMergeDeg, minShare: st.cfg.facetMinShare, ...chartOpts(st) });
+  const map = buildFaceMap(placedFaces(st), box, { mergeDeg: st.cfg.facetMergeDeg, minShare: st.cfg.facetMinShare, ...CHART_MAP_OPTS });
   st.asmWorldMap = { key, map };
   if (mapFrame(st) === null) st.asmFaceMap = { key, map };
   return map;
 }
 
 /**
- * ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §2.2 / §5.2, step 2.2) THE CHARTS' SWITCH (`chartLayout`): 1 — both face maps built as the COLUMNS chart, the pole
- * the shape's top / bottom set and the pitch scale read from the faces' normals; 0 — nothing new, the maps as built.
+ * ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §2.2 / §5.2, step 2.2) THE CHARTS' LAYOUT: both face maps built as the COLUMNS chart, the pole the shape's top /
+ * bottom set and the pitch scale read from the faces' normals. ⛔ (2026-11-16, step 2.5) its switch (`chartLayout`) deleted with the maps as built before.
  */
-function chartOpts(st: SceneState): Pick<FacetOpts, "layout" | "scale"> {
-  return st.cfg.chartLayout === 1 ? { layout: "chart", scale: "normals" } : {};
-}
+const CHART_MAP_OPTS: Pick<FacetOpts, "layout" | "scale"> = { layout: "chart", scale: "normals" };
 
 /** ⭐ The placed parts' faces on their model pose (the slide's own: `faceWorld`, `faceTrianglesWorld`), in the world. */
 function placedFaces(st: SceneState): MapFace[] {
@@ -1066,7 +1091,7 @@ function edgeMarginM(st: SceneState): number {
 }
 
 /**
- * ⭐⭐⭐ (2026-11-16, `ORBIT_CHARTS.md` §10.2, §12 2.4d — `chartLayout` 1 only) THE BANDED FACET under the gizmo, read once a frame at the map's place `t`
+ * ⭐⭐⭐ (2026-11-16, `ORBIT_CHARTS.md` §10.2, §12 2.4d) THE BANDED FACET under the gizmo, read once a frame at the map's place `t`
  * (`assemblyFrame`, where `asmShown` is set): the facet kept while the place is on it or within `edgeMarginM` of it (`bandedFacet`, `distanceToFacets` —
  * the map's own frame, the MODEL's coordinates: never a drawn mesh, a world matrix or the camera), else the place's. A reading of another map (a change
  * of frame, a seat) is none: taken afresh at the place's facet. The tilt's exit reads the same distance to the same facet with the same band (`tiltFrame`).
@@ -1159,10 +1184,9 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   // TRANSITION, close in, in the world's frame (`poleCrossingDue`: the map's angles at the pole, the finger asking beyond it) — the gizmo kept, the far
   // face's angles read there, every angle state set to them, one camera turn, the dy hold (`poleCross`); the beyond consumed. ⛔ Far out: the polar orbit's
   // limit (D-C6); a cap: the tilt's (above). Only after the tilt's making: a frame that tilted never crosses
-  if (st.cfg.chartLayout === 1) {
+  {
     const atl = atlasOf(st);
     const due = poleCrossingDue({
-      chartLayout: st.cfg.chartLayout,
       tilted: st.asmTilt !== null,
       zoned: st.asmZone !== null,
       closeIn: st.asmTiltAuto,
@@ -1178,9 +1202,9 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   }
   // ⭐⭐⭐ (2026-11-15, §12 2.4c) the automatic tilt's ONE camera turn at its swing's pace (held while pending, by the finger's travel counted above, then by
   // time) — after the tilt's making, so a turn started this frame takes this frame's travel (as the swing did in `tiltFrame`)
-  if (st.cfg.chartLayout === 1) seamTurnFrame(st, dtMs);
+  seamTurnFrame(st, dtMs);
   // ⭐⭐⭐ (2026-11-16, step C3) the way out of close in, paced by the fingers (`seamOutFrame` — a turn started by `seamOutStart` only)
-  if (st.cfg.chartLayout === 1) seamOutFrame(st, dtMs);
+  seamOutFrame(st, dtMs);
   const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
   const d = approachDistance(st.cfg, st.approach);
   // ⭐⭐⭐ (2026-11-04, STEP 4c-bis) THE GIZMO FROM THE FACE MAP at the orbit's angles (`mapGizmo`) — ⛔ the carrier on the sections' hulls, moved by the
@@ -1226,12 +1250,16 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
       const glide = st.asmMouth !== null ? null : gizmoGlide(st.asmG, st.asmShown === null ? null : wasHeld ? s1 : tiltDir(R, st.asmShown.t.surface), s1, m.hit.point);
       if (glide !== null) st.asmGOff = { v: glide, left: 1, timeMs: 0, durMs: rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS) };
       st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch };
-      // ⭐⭐⭐ (2026-11-16, `ORBIT_CHARTS.md` §12 2.4d) the BANDED FACET read once a frame, at the place just set (in the map's own frame) — charts only
-      if (st.cfg.chartLayout === 1) faceBandRead(st, m.t);
+      // ⭐⭐⭐ (2026-11-16, `ORBIT_CHARTS.md` §12 2.4d) the BANDED FACET read once a frame, at the place just set (in the map's own frame)
+      faceBandRead(st, m.t);
       // ⭐⭐⭐ (2026-11-10, §9.4) the tilted pole's frame this frame: the press's swing, the share of the way off the facet (the roll back), the exit
-      tiltFrame(st, dtMs, m.t.stack, m.t.surface);
+      tiltFrame(st, m.t.stack, m.t.surface);
       // ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §3.4, step C4) a spit's level face: the heading carried — in at the edge, out one band past it
-      if (st.cfg.chartLayout === 1) freeFaceFrame(st, m.t, sh0 !== null && fbWas !== null ? { map: fbWas.map, stack: sh0.t.stack } : null);
+      // ⭐⭐⭐ (2026-11-16, §16 — C2W) the place before this one kept (`asmPlaceWas`): the tilt is made NEXT frame (`tiltOn` reads the place shown), its entry
+      // edge the face this one came from
+      const placeWas = sh0 !== null && fbWas !== null ? { map: fbWas.map, stack: sh0.t.stack } : null;
+      st.asmPlaceWas = placeWas;
+      freeFaceFrame(st, m.t, placeWas);
       // ⭐⭐⭐ (§9.4) a frame change that moves the gizmo: its relocation, eased (`asmGOff`)
       gOffStep(st, dtMs);
       hit = { ...hit, point: withGOff(st, hit.point) };
@@ -1239,6 +1267,9 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     }
   }
   calmFrame(st, dtMs);
+  // ⭐⭐⭐ (2026-11-16 night, `TILTED_POLE_CLOSE_IN.md` §18, package A) the ease of a turn started since read NOW, the frame's view set (the calm, the square
+  // camera at its target inside the turn) — ⛔ read at the turn's start only (W11: the square camera's first step undone in that frame, 8.0° in one)
+  seamEaseRead(st);
   const g0 = st.asmG ?? st.asmGizmo ?? a.centre;
   // ⭐ the face by the edge rule (the quads read it)
   if (hit !== null && hit.normal !== null && faceSwitches(st.gizmoNormal ?? null, st.asmFacePoint, hit.normal, hit.point, edgeMarginM(st))) {
@@ -1279,7 +1310,7 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     if (bl.tiltId === null) {
       bl.tiltId = tid;
       bl.target = st.asmSquare.target;
-    } else if (blendCrossed(bl.tiltId, tid, st.asmTilt?.finishing ?? false, bl.target, st.asmSquare.target)) st.asmBlend = null;
+    } else if (blendCrossed(bl.tiltId, tid, bl.target, st.asmSquare.target)) st.asmBlend = null;
     else if (bl.target === null) bl.target = st.asmSquare.target;
     if (st.asmBlend !== null && blendShare(st.asmBlend.mm, st.cfg.tiltBlendMm) >= 1) st.asmBlend = null;
   }
@@ -1509,12 +1540,38 @@ export function assemblyCameraFrame(st: SceneState, cam: OrbitAt, off?: CameraAn
  * assembly turns behind it; the turn's angle sets its time (`zoneStep`), its axis kept frame to frame. No turn: the pose as given. Measured (Scene_0bis,
  * the zenith edge, far out): the piece leapt from (−0.27, −0.06) of the half-glass to (0.27, 0.76) — the offsets turned with the heading — then went round.
  */
-export function zoneMixPose(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Vec3): CamPose {
+export function zoneMixPose(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Vec3, dtMs: number): CamPose {
   const zm = st.asmZoneMix;
   const to: CamPose = { eye, look, up };
   st.asmPieceDrawn = [piece[0], piece[1], piece[2]]; // ⭐ where the piece is drawn this frame: a turn starting next frame starts from it
   if (zm === null) return to;
-  const r = poseAboutPiece(zm.from, to, piece, zm.k, zm.axis);
+  // ⭐⭐⭐ (2026-11-17, package A — the audit's blocker; the owner: *"1- A"*, the picture never faster than the tilts' one speed) THE SHARE DRAWN: the
+  // clock's, unless the PICTURE would turn more than the one speed's step from the pose drawn last frame (`shownShareCap`, `poseTurnRad`) — the turn's end
+  // pose (`to`) still moves under the rig's own lags while the turn runs (the camera's leash catching up after a drag, the calm's ease), which the clock,
+  // reading only the angle from `from` to `to`, cannot count. ⛔ The clock's share drawn as it was: 6.66, 6.36, 6.17, 6.06° in the four frames after
+  // `Scene_0bis`'s free-face exit, the gizmo held (across_check). The clocks then carry on from the share drawn (`turnShareDrawn`)
+  const k0 = zm.kShown ?? 0;
+  const degS = st.cfg.tiltRollDegS;
+  let k = zm.k;
+  if (degS > 0 && k > k0) {
+    const was = poseShown(st);
+    const at = (x: number): CamPose => {
+      if (x >= 1) return to;
+      const rr = poseAboutPiece(zm.from, to, piece, x, zm.axis);
+      const tt = zm.rule === 2 ? null : poseFramingTwo(zm.from, to, piece, x, zm.keep);
+      return tt !== null ? tt.pose : rr.pose;
+    };
+    k = shownShareCap(k0, k, (x) => poseTurnRad(was, at(x)), ((degS * Math.PI) / 180) * (Math.max(0, dtMs) / 1000));
+    if (k !== zm.k) turnShareDrawn(st, zm, k);
+  }
+  zm.kShown = k;
+  // ⭐⭐⭐ (package A, the audit's blocker) THE TURN ENDS ONCE ITS WHOLE IS DRAWN — here, the camera's stage (⛔ in its clocks, before: the last frame's
+  // step drawn uncapped, the end pose itself as it was): the end pose itself, exactly
+  if (k >= 1) {
+    st.asmZoneMix = null;
+    return to;
+  }
+  const r = poseAboutPiece(zm.from, to, piece, k, zm.axis);
   zm.axis = r.axis ?? zm.axis ?? [0, 1, 0]; // ⭐ the angle read (a turn of nothing has no axis of its own: done at once — never held for ever)
   zm.rad = r.angle;
   // ⭐⭐⭐ (2026-11-14, the owner: *"Is there a way for the camera to realign without the piece nor the assembly/scene to sometimes fly off the screen view
@@ -1523,7 +1580,7 @@ export function zoneMixPose(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, 
   // piece alone, as above. ⛔ About the piece alone everywhere: far out the assembly swung round the piece (4.5° at 7.7 m — off a narrow glass)
   // ⭐ the rule chosen at the turn's first frame and kept (`zm.rule` 2: about the piece) — never switched mid-turn (a jump between the two poses); the
   // two's angles carried frame to frame (`zm.keep`, `FramingKeep`)
-  const t = zm.rule === 2 ? null : poseFramingTwo(zm.from, to, piece, zm.k, zm.keep);
+  const t = zm.rule === 2 ? null : poseFramingTwo(zm.from, to, piece, k, zm.keep);
   if (t === null && zm.rule === 0) zm.rule = 2;
   const pose = t !== null ? t.pose : r.pose;
   if (t !== null) {
@@ -1532,6 +1589,17 @@ export function zoneMixPose(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, 
   }
   st.asmCamLast = { dir: norm3([pose.eye[0] - pose.look[0], pose.eye[1] - pose.look[1], pose.eye[2] - pose.look[2]]), up: pose.up };
   return pose;
+}
+
+/**
+ * ⭐⭐⭐ (package A, the audit's blocker) THE CLOCKS CARRIED ON FROM THE SHARE DRAWN (`k`, held back by `shownShareCap`): the angle turned so far its share of
+ * the transition's whole (`zoneStep`, `seamTurnFrame`), the way out's progress the one whose smooth share it is (`seamOutShareInv`) — never ahead of the
+ * picture, so the next frame's step is the one speed's from what was shown.
+ */
+function turnShareDrawn(st: SceneState, zm: NonNullable<SceneState["asmZoneMix"]>, k: number): void {
+  zm.k = k;
+  zm.done = k * turnWhole(st, zm);
+  if (zm.out !== undefined) zm.out.p = seamOutShareInv(k);
 }
 
 /** ⭐ The pose on the glass now (the camera drawn last frame) — a zone's turn starts from it. */
@@ -1562,43 +1630,19 @@ function assemblyCameraFrameRaw(st: SceneState, cam: OrbitAt, off?: CameraAngleO
     const uW = mulM(B, sF);
     // ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §3.4, step C4) ON A FREE FACE (a level face of the spit): the camera's up the heading CARRIED in at the entry
     // (`freeHeadingAngle`) — ⛔ the side's heading (`spitCameraHeading`): it turned the picture in the middle of the face
-    if (st.cfg.chartLayout === 1 && st.asmFree !== null) return offsetFrame(uW, freeHeadingAngle(st.asmFree.heading, uW), o.yawRad, o.pitchRad);
+    if (st.asmFree !== null) return offsetFrame(uW, freeHeadingAngle(st.asmFree.heading, uW), o.yawRad, o.pitchRad);
     const side = st.asmSpitSide !== 0 ? st.asmSpitSide : spitSide(uW, st.asmZone!.zone.axis, 0);
     return offsetFrame(uW, spitCameraHeading(uW, st.asmZone!.zone.axis, side), o.yawRad, o.pitchRad);
   }
-  // ⭐⭐⭐ (2026-11-10, §9.4) THE TILTED POLE: the camera upright IN F (the pressed cap a side), turned into the world; off the facet the frame turned toward
-  // the world's upright by the exit's share (`frameMix` — the roll back, paced by the finger, reversible; the far edge's half turn about one kept axis)
+  // ⭐⭐⭐ (2026-11-10, §9.4) THE TILTED POLE: the camera upright IN F (the pressed cap a side), turned into the world
+  // ⭐⭐⭐ (2026-11-15, §12 2.4c) no roll back inside F: the camera upright in F to the exit, then ONE turn (`asmZoneMix`) — ⛔ (step 2.5, 2026-11-16) the
+  // roll back of the game before the charts deleted (`frameMix` toward the world's upright by the exit's share, `nextTiltHeading`, `headingFrom`)
   const tl = st.asmTilt;
   if (tl !== null) {
     const uF = orbitDir(cam.yaw, cam.v);
     const sF = calmDir(st, uF);
     const fF = offsetFrame(sF, calmHeading(cam.yaw, uF, sF), o.yawRad, o.pitchRad);
-    const f = { dir: mulM(tl.dir, fF.dir), up: mulM(tl.dir, fF.up) };
-    // ⭐⭐⭐ (2026-11-15, §12 2.4c) under the charts' layout no roll back inside F: the camera upright in F to the exit, then ONE turn (`asmZoneMix`)
-    if (st.cfg.chartLayout === 1) return f;
-    const uW = mulM(tl.dir, sF);
-    // ⭐⭐⭐ (2026-11-10, `1.0.120b-`) the roll's target EXACTLY the world's camera after the exit — the orbit's world yaw through `calmHeading`, as the world's
-    // branch builds it (⛔ a vertical view's heading read off this camera's own up: the target equal to it, the roll 0 ms, then the 180° flip in one frame
-    // when the world's branch took over — the square camera looking straight down at the tilted top)
-    const uOW = mulM(tl.dir, uF);
-    // ⭐⭐⭐ (2026-11-11) a view straight down / up (the square camera on the tilted top) read toward the face the gizmo exits onto (`headingFrom`,
-    // `exitNormal`) — as the world's camera reads it the frame after, its view turning there (⛔ the orbit's yaw: a roll there and back at the exit)
-    // ⭐⭐⭐ (2026-11-13) …through the world's own heading rule (`cameraHeading`): toward a pole the calm read level — the calm the world's branch has right
-    // after the exit (`tiltOff`: over a `b` end the exit face's normal with the horizontal share kept, else none)
-    const nX = exitNormal(st);
-    const yW = anglesOfDir(uOW, cam.yaw).yaw;
-    const cW = st.asmCalm !== null && tl.exitAcross && nX !== null ? { n: nX, sH: st.asmCalm.sH, sV: 1, wA: 1 } : null;
-    // ⭐⭐⭐ (2026-11-14, the owner's roll back and forth at the zenith edge, the jump after a dx — the walks: EVERY ridge crossing closed by a 104° – 180°
-    // turn in ONE frame) over a RIDGE — the face crossed onto holds the same pole, the next tilt made at once (close in) — the roll back aims at THAT
-    // tilt's heading (`nextTiltHeading`, `tiltOn`'s own test): one timed roll, the next tilt's swing then nothing. ⛔ The calm's reading (the exit face's heading straight up, the
-    // orbit's yaw after a dx): 175° one way then 180° back in a frame, or a little then 172° – 180° in a frame
-    const hR = nextTiltHeading(st, nX, yW);
-    const hW = cameraHeading(yW, uOW, headingFrom(uW, nX), hR ?? calmLevelHeading(yW, cW));
-    const mix = frameMix(f, offsetFrame(uW, hW, o.yawRad, o.pitchRad), tl.k, tl.axis);
-    tl.rollRad = mix.angle; // ⭐ (2026-11-10) the roll's whole angle — its duration at `tiltRollDegS`
-    if (!(tl.k > 0)) return f;
-    tl.axis = mix.axis;
-    return mix.frame;
+    return { dir: mulM(tl.map, fF.dir), up: mulM(tl.map, fF.up) };
   }
   const u = dirAt(st, cam.yaw, cam.v);
   // ⭐⭐ (2026-10-28) the offsets in the camera's own frame, never faded — the same whichever face hosts the gizmo (`offsetFrame`)
@@ -1638,66 +1682,34 @@ function gOffStep(st: SceneState, dtMs: number): void {
 const RELOCATE_ANGLE = Math.PI / 4;
 
 /**
- * ⭐⭐⭐ ONE FRAME OF THE TILTED POLE, after the map's place (`stack` at the map's angles `mq`): the press's swing advanced (`swingDir`); the share of the way
- * off the tilted facet (`exitShare` — the camera's roll back and the calm's shares whole by it); off the facet: whole, and the world's frame next frame.
- * ⛔ (2026-11-15, the owner: *"cancel my rule and remove the press action on the orbit"*) the swing an automatic tilt's alone: no press tilts.
+ * ⭐⭐⭐ ONE FRAME OF THE TILTED POLE, after the map's place (`stack`, the place `surface` in F): is the gizmo still on the tilted facet — else (or the tilt
+ * turned off) the exit asked, made at the next frame's start (`tiltOff`). ⛔ (2026-11-15, the owner: *"cancel my rule and remove the press action on the
+ * orbit"*) no press tilts. ⛔ (2026-11-16, step 2.5) the press's swing (`swingDir`) and the roll back off the facet (`rollStep`, `tiltExits`) of the game
+ * before the charts deleted: the charts' one transition (`tiltOff`, `crossTurn`) is the only way out.
  */
-function tiltFrame(st: SceneState, dtMs: number, stack: number, surface: Vec3): void {
+function tiltFrame(st: SceneState, stack: number, surface: Vec3): void {
   const tl = st.asmTilt;
   if (tl === null) return;
-  if (tl.swingMs !== null) {
-    tl.swingMs += dtMs;
-    // ⭐⭐⭐ (2026-11-11) the automatic tilt's swing: held while the camera is pending, then by the finger's travel (`blendShare`); the blend whole at a
-    // crossing (or no blend): the rest at the tilts' one speed (`rollStep`), the gizmo held
-    if (tl.byMm) {
-      if (st.asmTiltPending) {
-        // held: the camera keeps its orientation while the approach goes on
-      } else if (st.asmBlend !== null) tl.swingE = Math.max(tl.swingE, blendShare(st.asmBlend.mm, st.cfg.tiltBlendMm));
-      else tl.swingE = rollStep(tl.swingE, 1, dtMs, tl.swingDurMs);
-    }
-    const e = tl.byMm ? tl.swingE : tl.swingDurMs > 0 ? swingEase(tl.swingMs / tl.swingDurMs) : 1;
-    tl.dir = swingDir(tl.map, tl.delta, e);
-    if (e >= 1) tl.swingMs = null;
-  }
-  // ⭐⭐⭐ (2026-11-10, THE REBUILD — the owner: *"once the tilt starts, it cannot be rolled back … and shall complete"*, *"keep the edge, and not use any
-  // stretch"*, *"1-b"*, *"one speed for every tilt"*) THE ROLL BACK STARTS AS THE GIZMO CROSSES THE EDGE (off the tilted facet) — or out past the
-  // automatic tilt's threshold — and runs to the end on its own clock at `tiltRollDegS` (`rollDurationMs` of the turn's own angle); the gizmo HELD
-  // meanwhile (`tiltClampStep`, `tiltUnderWay`); whole: the world's frame (`tiltExits`, the swing over too)
-  // ⭐⭐⭐ (2026-11-15) ON THE TILTED FACET'S BORDER IS ON IT (`onTiltedFacet`: the place `surface`, in F, within a micrometre of the tilted facet — a tie,
-  // not a band) — ⛔ the stack alone: under the charts' layout a press with the gizmo on `Scene_0`'s ridge left the tilt at once (the place read on the
-  // neighbour), and the exit at the world's pole then rolled the view 157° in one frame (`tiltOff`)
+  // ⭐⭐⭐ (2026-11-15) ON THE TILTED FACET'S BORDER IS ON IT (`onTiltedFacet`: the place `surface`, in F, near the tilted facet) — ⛔ the stack alone: a
+  // press with the gizmo on `Scene_0`'s ridge left the tilt at once (the place read on the neighbour), and the exit at the world's pole then rolled the view
+  // 157° in one frame (`tiltOff`)
   const fmB = stack === tl.facet ? null : faceMapOf(st);
   const borderM = stack === tl.facet ? 0 : fmB === null ? Infinity : distanceToFacets(fmB, [tl.facet], surface);
-  // ⭐⭐⭐ (2026-11-16, `ORBIT_CHARTS.md` §12 2.4d) UNDER THE CHARTS' LAYOUT IN AT THE EDGE, OUT ONE BAND PAST IT: on the tilted facet within `edgeMarginM` of
-  // its border (the banded facet's own band and distance: the exit and its change on the same frame) — ⛔ the tie alone: a place wobbling ±3 mm across the
-  // entry edge made and left the tilt 21 times in 240 frames (measured, `Scene_1` close in: 1188° of view). Off: the tie, as before
-  const onFacet = st.cfg.chartLayout === 1 ? onTiltedFacet(stack, tl.facet, borderM, edgeMarginM(st)) : onTiltedFacet(stack, tl.facet, borderM);
-  // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4c) UNDER THE CHARTS' LAYOUT THE EXIT ASKED AT ONCE (`tiltLeavesNow`: off the tilted facet, or the tilt turned
-  // off) and made at the next frame's start (`tiltOff`: the one transition — its camera turn from the pose shown); the gizmo held until then
-  // (`tiltClampStep`). ⛔ The roll back inside F first (`finishing`, `k`, `frameMix`, `tiltExits`' wait): a second camera turn, by another code
-  if (st.cfg.chartLayout === 1) {
-    if (!tl.exit && tiltLeavesNow(onFacet, tl.off)) {
-      if (!onFacet) tl.exitAcross = (st.asmCalm?.wA ?? 0) > 0.5; // ⭐ over a `b` end: the calm carried out as today (`tiltOff`)
-      tl.exit = true;
-    }
-    return;
+  // ⭐⭐⭐ (2026-11-16, `ORBIT_CHARTS.md` §12 2.4d) IN AT THE EDGE, OUT ONE BAND PAST IT: on the tilted facet within `edgeMarginM` of its border (the banded
+  // facet's own band and distance: the exit and its change on the same frame) — ⛔ the tie alone (a micrometre, deleted at step 2.5): a place wobbling ±3 mm
+  // across the entry edge made and left the tilt 21 times in 240 frames (measured, `Scene_1` close in: 1188° of view)
+  const onFacet = onTiltedFacet(stack, tl.facet, borderM, edgeMarginM(st));
+  // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4c) THE EXIT ASKED AT ONCE (`tiltLeavesNow`: off the tilted facet, or the tilt turned off) and made at the
+  // next frame's start (`tiltOff`: the one transition — its camera turn from the pose shown); the gizmo held until then (`tiltClampStep`). ⛔ The roll back
+  // inside F first (`finishing`, `k`, `frameMix`, `tiltExits`' wait): a second camera turn, by another code — deleted at step 2.5
+  if (!tl.exit && tiltLeavesNow(onFacet, tl.off)) {
+    if (!onFacet) tl.exitAcross = (st.asmCalm?.wA ?? 0) > 0.5; // ⭐ over a `b` end: the calm carried out as today (`tiltOff`)
+    tl.exit = true;
   }
-  // ⭐⭐⭐ (2026-11-14, the owner: *"a sort of a flash of the scene with a very short jump of the camera"*) THE ROLL STEPPED FROM THE FRAME ITS ANGLE IS READ:
-  // the crossing's frame sets its target (the face crossed onto), the camera's stage reads the turn's angle (`tl.rollRad`) — ⛔ stepped at once by the
-  // angle read last frame, on the facet (its target the tilt's own heading there: ~0°, 0 ms): the half turn whole in ONE frame (probed: 180° at the ridge)
-  const crossing = !onFacet && !tl.finishing;
-  if (crossing) {
-    tl.finishing = true;
-    tl.exitAcross = (st.asmCalm?.wA ?? 0) > 0.5; // ⭐ (2026-11-10) over a `b` end: the reading toward the edge's line there
-    st.lastVerdict = "orbit: over the edge — the tilt back to upright (the gizmo held until it completes)";
-  }
-  tl.kT = tl.finishing || tl.off ? 1 : 0;
-  if (!crossing) tl.k = rollStep(tl.k, tl.kT, dtMs, rollDurationMs(tl.rollRad, st.cfg.tiltRollDegS));
-  tl.exit = tiltExits(onFacet, tl.k, tl.swingMs === null, tl.off);
 }
 
 /**
- * ⭐⭐⭐ (2026-11-10, the rebuild — the owner: *"1-b"*) AN ORBIT STEP WHILE A TILT IS UNDER WAY (`tiltUnderWay`: its swing, or its roll back not whole) — REFUSED:
+ * ⭐⭐⭐ (2026-11-10, the rebuild — the owner: *"1-b"*) AN ORBIT STEP WHILE A TILT IS UNDER WAY (its exit asked, not yet made; a camera turn) — REFUSED:
  * the gizmo held where the crossing left it until the tilt completes; then the finger has the orbit again. Returns whether it refused the step.
  */
 export function tiltClampStep(st: SceneState, yaw0: number, v0: number): boolean {
@@ -1705,25 +1717,18 @@ export function tiltClampStep(st: SceneState, yaw0: number, v0: number): boolean
   // ⭐⭐⭐ (`1.0.120b-`) …and while the square camera turns through an edge (`squareTurning`): every edge a frame change
   const turning = squareTurning(st.asmSquare.n, st.asmSquare.target, st.asmSquare.q);
   // ⭐⭐⭐ (2026-11-13, POLAR_ZONES.md D-Z7) …and while the camera turns into (or out of) a polar zone's frame: the gizmo held
-  // ⭐⭐⭐ (2026-11-15, §12 2.4c) …a PACED turn (the automatic tilt's entry made pending, `byMm`: `chartLayout` 1 only) as its swing was: never while pending
+  // ⭐⭐⭐ (2026-11-15, §12 2.4c) …a PACED turn (the automatic tilt's entry made pending, `byMm`) as its swing was: never while pending
   // or by the finger (`seamTurnHolds`); any other turn while short of whole, as ever
   const zm = st.asmZoneMix;
   // ⭐⭐⭐ (2026-11-16, step C3) …the way out paced by the finger (`out`) never (`turnHoldsGizmo`)
   const zoneTurning = zm !== null && turnHoldsGizmo(zm.out !== undefined, zm.byMm === true, st.asmTiltPending, st.asmBlend !== null, zm.k);
-  // ⭐⭐⭐ (2026-11-10, the owner: *"Build that one alone"*) …and from the roll's end TO THE EXIT itself (`finishing` / `off`: the tilt still here) — ⛔ held only
-  // while the roll was short of whole: one finger event slipped in the frame between the roll's end and the exit, the orbit a step ahead of the piece's
-  // solved angles through the frame change; they caught up during the square camera's turn — the gizmo moved one step while the camera turned (walked)
-  // ⭐⭐⭐ (2026-11-11) a swing pending or paced by the finger (`byMm`, the automatic tilt's blend) never holds the gizmo: it moves from the first millimetre
-  const swingTimed = tl !== null && tl.swingMs !== null && !(tl.byMm && (st.asmTiltPending || st.asmBlend !== null));
   if (zoneTurning && (st.orbit.yaw !== yaw0 || st.orbit.elevation !== v0)) {
     st.orbit.reset(yaw0, v0);
     return true;
   }
-  // ⭐⭐⭐ (2026-11-15, §12 2.4c) under the charts' layout no swing and no roll back: the tilt holds the gizmo only from its exit asked to its exit made
-  // (`exit`, `off` — the next frame's start), a finger event between the two frames never a step the transition then discards
-  if (st.cfg.chartLayout === 1) {
-    if (!turning && (tl === null || !(tl.exit || tl.off))) return false;
-  } else if (!turning && (tl === null || !(tiltUnderWay(swingTimed, tl.finishing || tl.off, tl.k) || tl.finishing || tl.off))) return false;
+  // ⭐⭐⭐ (2026-11-15, §12 2.4c) no swing and no roll back (⛔ deleted at step 2.5 with `tiltUnderWay`): the tilt holds the gizmo only from its exit asked to
+  // its exit made (`exit`, `off` — the next frame's start), a finger event between the two frames never a step the transition then discards
+  if (!turning && (tl === null || !(tl.exit || tl.off))) return false;
   if (st.orbit.yaw === yaw0 && st.orbit.elevation === v0) return false;
   st.orbit.reset(yaw0, v0);
   return true;
@@ -1803,40 +1808,23 @@ function tiltOn(st: SceneState, mouthHi: boolean | null = null): void {
   if (sh === null || g === null || wm === null) return;
   // ⭐⭐⭐ (2026-11-10, *"build b"*) held at a void's mouth (`asmMouth`): the face holding the pole it opens toward — the red has reached the floor's edge
   const capStack = mouthHi === null ? sh.t.stack : mouthHi ? wm.top : wm.bottom;
-  let top: boolean;
-  let cap: (typeof wm.facets)[number];
-  let q: { readonly yaw: number; readonly v: number };
-  let hs: number;
-  if (st.cfg.chartLayout === 1) {
-    // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4a) THE ATLAS DECIDES: a face tilts only if it is a CAP with a square layout (`capTiltHeading`), its heading
-    // one of the layouts' — ⛔ `holdsPole` (a side beyond 45°: `Scene_0`'s two top faces, D-C4) and the virtual cap of a pole held by an edge (not on the
-    // contour: no tilt — 2.4b gives that pole its own crossing)
-    const at = atlasOf(st);
-    const f = wm.facets[capStack];
-    if (at === null || f === undefined) return;
-    q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
-    const h = capTiltHeading(at.assign, at.contour, capStack, f.n, q.yaw);
-    if (h === null) return;
-    cap = f;
-    top = f.n[1] > 0;
-    hs = h;
-  } else {
-    // ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §3, F2b) a face HOLDS A POLE when it is the cap — or a side beyond 45° (`holdsPole`: a ridge's two faces, each
-    // from its own side); a box's sides are vertical: its caps alone, as before
-    const pole = holdsPole(wm, capStack);
-    if (pole === null) return;
-    top = pole === "TOP";
-    // ⭐⭐ (2026-11-10, the owner: *"fix the gap"*) ANY face holding a pole — level, slanted (tilted by its own angle, `capTilt`), or VIRTUAL (the pole held by
-    // an edge, no face beyond 45°: tilted as a level one, the gizmo then onto the real face nearest in F, eased) — ⛔ a real one only before
-    cap = wm.facets[capStack]!;
-    q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
-    // ⭐⭐⭐ (2026-11-12, F2c) a SLANTED face tilted toward ITS OWN heading (never past the vertical: ⛔ the camera's, a face leaning away needed 116° — the
-    // view upside down, 17 of 22 such tilts on the heptagon); a level one has none: the camera's, as before
-    hs = tiltHeading(cap.n, q.yaw);
-  }
+  // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4a) THE ATLAS DECIDES: a face tilts only if it is a CAP with a square layout (`capTiltHeading`), its heading
+  // one of the layouts' — ⛔ `holdsPole` (a side beyond 45°: `Scene_0`'s two top faces, D-C4; deleted at step 2.5 with the game before the charts) and the
+  // virtual cap of a pole held by an edge (not on the contour: no tilt — 2.4b gives that pole its own crossing)
+  const at = atlasOf(st);
+  const cap = wm.facets[capStack];
+  if (at === null || cap === undefined) return;
+  const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
+  // ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §16 — C2W, W5) ON A FREE FACE THE HEADING CARRIED IN BY ITS ENTRY EDGE (`freeEntry`, C4's own entry on
+  // the world's map: the side shared with the place before the one shown; no edge — the gizmo already on the cap — the layout nearest the up shown) —
+  // ⛔ the snapped yaw's nearest alone: a quarter off on a cap turned off the world's axes (§15 F2). A pole held at a mouth (the gizmo not on the cap,
+  // W9): the yaw's, as before — the study before step B
+  const en = capStack === sh.t.stack && isFreeFace(cap.n, WORLD_UP) ? freeEntry(st, wm, IDENTITY3, at, capStack, st.asmPlaceWas) : null;
+  const hs = capTiltHeading(at.assign, at.contour, capStack, cap.n, q.yaw, en?.heading ?? null);
+  if (hs === null) return;
+  const top = cap.n[1] > 0;
   const delta = Math.atan2(Math.sin(hs - q.yaw), Math.cos(hs - q.yaw));
   const R1 = capTilt(hs, cap.n);
-  const D0 = swingDir(R1, delta, 0);
   // ⭐⭐⭐ (2026-11-10, the owner: *"the tilt seems to catch up what the calm prevented"*) THE CAMERA SWINGS FROM THE HEADING SHOWN: the calm carried over the
   // edge (`shownDirAcross`) shows the piece at the calmed heading, not the orbit's — the camera's swing turns THAT to square (the directions' frame by
   // `deltaShown`); the orbit's angles are turned by their own (`D0`, `delta`: the gizmo and the solver exact). ⛔ By the orbit's `delta`: 20° off square, the
@@ -1848,19 +1836,14 @@ function tiltOn(st: SceneState, mouthHi: boolean | null = null): void {
   const deltaShown = hSh !== null ? Math.atan2(Math.sin(hs - hSh), Math.cos(hs - hSh)) : Math.hypot(sw[0], sw[2]) > 1e-3 ? Math.atan2(Math.sin(hs - Math.atan2(sw[2], sw[0])), Math.cos(hs - Math.atan2(sw[2], sw[0]))) : delta;
   // ⭐ (2026-11-10, *"one speed for every tilt"*) the swing's duration: its angle at `tiltRollDegS`
   const swingDurMs = rollDurationMs(deltaShown, st.cfg.tiltRollDegS);
-  // ⭐⭐⭐ (2026-11-11) made as the automatic tilt switched on (the camera pending): the swing held, then by the finger's travel (`swingE`)
+  // ⭐⭐⭐ (2026-11-11) made as the automatic tilt switched on (the camera pending): the camera turn held, then by the finger's travel (`seamTurnStart`)
   const byMm = st.asmTiltPending;
-  // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4c) UNDER THE CHARTS' LAYOUT THE ONE TRANSITION: the direction drawn before the change (the piece's ease starts
-  // from it), read before anything moves
-  const chart = st.cfg.chartLayout === 1;
-  const uWas = chart ? drawnDir(st) : null;
-  st.asmTilt = { id: ++TILT_SEQ, map: R1, dir: swingDir(R1, deltaShown, 0), facet: -1, delta: deltaShown, swingMs: 0, byMm, swingE: 0, swingDurMs, k: 0, kT: 0, off: false, finishing: false, rollRad: Math.PI, axis: null, exit: false, exitAcross: false, heading: hs };
-  // ⭐⭐⭐ (§12 2.4c) 1. the frame set AT ONCE — `R1` from its first frame, no swing (the heading's swing is part of the one camera turn, below)
-  if (chart) {
-    st.asmTilt.dir = R1;
-    st.asmTilt.swingMs = null;
-    st.asmTilt.swingE = 1;
-  }
+  // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4c) THE ONE TRANSITION: the direction drawn before the change (the piece's ease starts from it), read before
+  // anything moves
+  const uWas = drawnDir(st);
+  // ⭐⭐⭐ (§12 2.4c) 1. the frame set AT ONCE — `R1` from its first frame, no swing (the heading's swing is part of the one camera turn, below). ⛔ (step
+  // 2.5) the swing's state of the game before the charts (`dir` turned by `swingDir`, its clock, share and duration; the roll back's) deleted
+  st.asmTilt = { id: ++TILT_SEQ, map: R1, facet: -1, off: false, exit: false, exitAcross: false, heading: hs };
   const map = faceMapOf(st);
   if (map === null) {
     st.asmTilt = null;
@@ -1869,16 +1852,14 @@ function tiltOn(st: SceneState, mouthHi: boolean | null = null): void {
   const gF = mulT(R1, g);
   const fi = facetOfNormal(map, mulT(R1, cap.n), gF);
   st.asmTilt.facet = fi;
-  if (!chart) turnAngles(st, (d) => mulT(D0, d));
-  else if (st.asmCalm !== null) st.asmCalm = { ...st.asmCalm, n: mulT(R1, st.asmCalm.n) }; // ⭐ (2.4c) the calm's normal into F, as `turnAngles` turned it
+  if (st.asmCalm !== null) st.asmCalm = { ...st.asmCalm, n: mulT(R1, st.asmCalm.n) }; // ⭐ (2.4c) the calm's normal into F, as `turnAngles` turned it
   // ⭐⭐⭐ (`1.0.120b-`) the square camera into F (the directions' frame): turned there from where it is, never jumped
   const sqB = st.asmSquare;
-  if (sqB.n !== null) sqB.n = mulT(st.asmTilt.dir, sqB.n);
-  if (sqB.target !== null) sqB.target = mulT(st.asmTilt.dir, sqB.target);
+  if (sqB.n !== null) sqB.n = mulT(st.asmTilt.map, sqB.n);
+  if (sqB.target !== null) sqB.target = mulT(st.asmTilt.map, sqB.target);
   const mq = mapAngles(map, gF, fi, mapOpts(st));
   // ⭐⭐⭐ (§12 2.4c) 2. – 3. the gizmo KEPT, F's angles read at its exact place — EVERY angle state SET to them (`seamRebase`; ⛔ each turned as a direction)
-  if (chart) seamRebase(st, mq);
-  else st.asmMapQ = mq;
+  seamRebase(st, mq);
   const m = mapGizmo(st, mq.yaw, mq.pitch);
   st.asmGOff = null;
   if (m !== null) {
@@ -1896,10 +1877,8 @@ function tiltOn(st: SceneState, mouthHi: boolean | null = null): void {
   st.asmFree = null; // ⭐⭐⭐ (2026-11-16, step C4) a tilt: no free face carried (never in a zone — `tiltOn` refuses one), no turn of its own
   // ⭐⭐⭐ (§12 2.4c) 4. the picture carried from the pose SHOWN by ONE camera turn, paced as the swing was (made pending: `byMm` — held, then by the finger,
   // then by time; else by time, the gizmo held), and the piece's shown direction eased on the same clock
-  if (uWas !== null) {
-    seamTurnStart(st, byMm);
-    seamEase(st, uWas);
-  }
+  seamTurnStart(st, byMm);
+  seamEase(st, uWas);
   st.lastVerdict = `orbit: the tilted pole (automatic) — the face holding the ${top ? "top" : "bottom"} pole is a side (heading ${Math.round((hs * 180) / Math.PI)}°, swing ${Math.round((delta * 180) / Math.PI)}°)`;
   st.hudDirty = true;
 }
@@ -1922,25 +1901,6 @@ function shownHeading(st: SceneState, u: Vec3): number | null {
   return Math.hypot(hx, hz) > 1e-6 ? Math.atan2(hz, hx) : null;
 }
 
-/**
- * ⭐⭐⭐ (2026-11-14) WHAT FOLLOWS THE EXIT onto the face of normal `nX` (world): the tilt `tiltOn` makes there at once — the automatic tilt on, no zone,
- * the face HOLDING A POLE (`holdsPole`, `tiltOn`'s own test) — its heading (`tiltHeading`, `tiltOn`'s own); `null`: none (the world's camera follows).
- * The roll back turns to the frame that will be shown next: one turn from the glass to what follows, whatever the face (a ridge, a slanted cap).
- */
-function nextTiltHeading(st: SceneState, nX: Vec3 | null, yaw: number): number | null {
-  if (st.cfg.tiltedPole !== 1 || !st.asmTiltAuto || st.asmZone !== null || nX === null || st.asmG === null) return null;
-  const wm = worldFaceMap(st);
-  if (wm === null) return null;
-  const i = facetOfNormal(wm, nX, st.asmG);
-  const f = wm.facets[i];
-  // ⭐⭐⭐ (2026-11-15, §12 2.4a) under the charts' layout the atlas's test and heading (`capTiltHeading`, `tiltOn`'s own) — ⛔ `holdsPole`
-  if (st.cfg.chartLayout === 1) {
-    const at = atlasOf(st);
-    return f === undefined || at === null ? null : capTiltHeading(at.assign, at.contour, i, f.n, yaw);
-  }
-  return f === undefined || holdsPole(wm, i) === null ? null : tiltHeading(f.n, yaw);
-}
-
 /** ⭐⭐⭐ (2026-11-11) the normal of the face the gizmo is on, out of the tilted frame (off the tilted facet: the face it exits onto) — none: no tilt / no place. */
 function exitNormal(st: SceneState): Vec3 | null {
   const tl = st.asmTilt;
@@ -1956,25 +1916,22 @@ function exitNormal(st: SceneState): Vec3 | null {
 function tiltOff(st: SceneState): void {
   const tl = st.asmTilt;
   if (tl === null) return;
-  const D = tl.dir;
+  const D = tl.map;
   const byTime = tl.off; // ⭐ (2026-11-10) turned off by distance: the relocation eased by time
   const g = st.asmG;
   const nW = exitNormal(st);
-  // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4c) UNDER THE CHARTS' LAYOUT THE ONE TRANSITION (a place to keep and the world's map there): the direction
-  // drawn before the change read before anything moves (the piece's ease starts from it)
-  const seam = st.cfg.chartLayout === 1 && g !== null && worldFaceMap(st) !== null;
+  // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4c) THE ONE TRANSITION (a place to keep and the world's map there): the direction drawn before the change
+  // read before anything moves (the piece's ease starts from it)
+  const seam = g !== null && worldFaceMap(st) !== null;
   const uWas = seam ? drawnDir(st) : null;
   // ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8 — the owner: *"just give an hysteresis of the dy"*) left over the edge AWAY from the tilt's heading (the camera
-  // turns round): the dy that crossed held until the gizmo is `edgeHoldMm` deep in the face beyond (`edgeHoldAt`) — the cube's far edges, the heptagon's ridge
+  // turns round): the dy that crossed held until the gizmo is `edgeHoldMm` deep in the face beyond — the cube's far edges, the heptagon's ridge
   const fmT = faceMapOf(st);
   const nT = fmT !== null && fmT.facets[tl.facet] !== undefined ? mulM(tl.map, fmT.facets[tl.facet]!.n) : null;
-  if (!byTime && nW !== null && nT !== null && g !== null) {
-    const hold = edgeHoldAt(tl.heading, nT, nW, g, st.asmDySign);
-    if (hold !== null) {
-      st.asmEdgeHold = hold;
-      st.orbitInertia.stop(); // a coast would push on against it
-    }
-  }
+  // ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §13, step C5) THE ONE EVENT's hold (`crossingEvent`): the up shown the tilt's own (upright in the tilted
+  // frame: `map · y`), the dy that pushed the gizmo out over the edge AND would bring it back — set with the turn (`crossTurn`). ⛔ (step 2.5) the old
+  // hold by the tilt's heading (`edgeHoldAt`) deleted with the game before the charts
+  const held: 1 | -1 | 0 = !byTime && nW !== null && nT !== null && g !== null ? crossingEvent(mulM(tl.map, [0, 1, 0]), nT, nW, WORLD_UP, st.asmDySign).hold : 0;
   // ⭐⭐⭐ (2026-11-15) LEFT WITH THE ORBIT AT THE WORLD'S POLE (straight above or below: no heading in its direction) its yaw is the heading the camera
   // SHOWS (`shownHeading`; none drawn yet: the tilt's own) — ⛔ none handed: yaw 0, the view rolled there in ONE frame (probed: 90° on `Scene_1`'s top —
   // the automatic tilt on, then off, by the approach; 157° on `Scene_0`'s ridge)
@@ -1997,32 +1954,30 @@ function tiltOff(st: SceneState): void {
   st.asmFaceBand = null; // ⭐⭐⭐ (2026-11-16, §12 2.4d) a change of frame: the banded facet read afresh at the place's facet in the new map (never held by the band)
   st.asmGOff = null;
   const wm = faceMapOf(st);
-  if (wm !== null && g !== null) {
-    const mq0 = mapAngles(wm, g, facetOfNormal(wm, nW, g), mapOpts(st));
-    // ⭐⭐⭐ (§12 2.4c) the gizmo KEPT, the world's angles read at its exact place — at a pole of the world's map (a cap's centre: any yaw) the yaw keeping the
-    // heading SHOWN (`poleYawKept`, `hP`) — and EVERY angle state SET to them (`seamRebase`; ⛔ `turnAngles`, each state turned as a direction)
-    const mq = seam ? poleYawKept(mq0, ORBIT_PITCH_MAX_RAD, hP) : mq0;
-    if (seam) seamRebase(st, mq);
-    else st.asmMapQ = mq;
-    const m = mapGizmo(st, mq.yaw, mq.pitch);
-    if (m !== null) {
-      const v: Vec3 = [g[0] - m.hit.point[0], g[1] - m.hit.point[1], g[2] - m.hit.point[2]];
-      if (Math.hypot(v[0], v[1], v[2]) > 1e-6) st.asmGOff = { v, left: 1, timeMs: 0, durMs: rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS) };
-      // ⭐⭐⭐ (2026-11-14, the same flash) the map's place in the world AT ONCE (the gizmo's own, just put there): a tilt that follows the exit (a ridge's
-      // far face, close in) is made THIS frame (`tiltOn` reads the place) — ⛔ left none: one frame of the world's camera between the two tilts, its
-      // heading not the roll's target (probed after a dx: −18° then +19.5° back)
-      st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch };
-      if (st.cfg.chartLayout === 1) faceBandRead(st, m.t); // ⭐⭐⭐ (2026-11-16, §12 2.4d) the banded facet afresh in the world's map (cleared above)
-    }
-  } else st.asmMapQ = null;
-  // ⭐⭐⭐ (§12 2.4c) the picture carried from the pose SHOWN by ONE camera turn (timed, the gizmo held — as a zone's), the piece's shown direction eased on it
-  // (⭐ no place to keep — unreachable while a tilt holds one: the turn alone, the angles turned as today)
-  // ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §8, step C3 — D-T1) LEFT BY DISTANCE (`off`, the automatic tilt's latch off — `seamOutPaced`) with
-  // `tiltOutBlendMm` over 0: the same turn paced by the approach finger's travel outward, the gizmo free (`seamOutStart`); an edge's exit, a zone's, or 0: timed
-  if (st.cfg.chartLayout === 1) {
-    if (seamOutPaced(st.cfg.chartLayout, tl.off, st.asmTiltAuto, st.cfg.tiltOutBlendMm)) seamOutStart(st);
-    else seamTurnStart(st, false);
-    if (uWas !== null) seamEase(st, uWas);
+  // ⭐⭐⭐ (§12 2.4c) the gizmo KEPT, the world's angles read at its exact place — at a pole of the world's map (a cap's centre: any yaw) the yaw keeping the
+  // heading SHOWN (`poleYawKept`, `hP`) — and EVERY angle state SET to them, the place shown there AT ONCE (`crossTurn`; ⛔ `turnAngles`, each state turned
+  // as a direction). ⭐⭐⭐ (2026-11-14, the same flash) the map's place at once: a tilt that follows the exit (a ridge's far face, close in) is made THIS
+  // frame (`tiltOn` reads the place) — ⛔ left none: one frame of the world's camera between the two tilts (probed after a dx: −18° then +19.5° back)
+  const mq0 = wm !== null && g !== null ? mapAngles(wm, g, facetOfNormal(wm, nW, g), mapOpts(st)) : null;
+  const paced = seamOutPaced(tl.off, st.asmTiltAuto, st.cfg.tiltOutBlendMm);
+  if (seam && mq0 !== null && g !== null) {
+    // ⭐⭐⭐ (2026-11-16, §13, step C5) THE ONE EVENT (`crossTurn`): the rebase, ONE camera turn from the pose shown — ⭐⭐⭐ (§8, step C3, D-T1) LEFT BY
+    // DISTANCE (`off`, `seamOutPaced`) with `tiltOutBlendMm` over 0 paced by the approach finger's travel outward, the gizmo free; an edge's exit, a
+    // zone's, or 0: timed, the gizmo held — the piece's shown direction eased from the one drawn, the coast stopped, the hold
+    crossTurn(st, { at: { mq: poleYawKept(mq0, ORBIT_PITCH_MAX_RAD, hP), g }, uWas, carry: false, paced, hold: held });
+  } else {
+    if (mq0 !== null && g !== null) {
+      st.asmMapQ = mq0;
+      const m = mapGizmo(st, mq0.yaw, mq0.pitch);
+      if (m !== null) {
+        const v: Vec3 = [g[0] - m.hit.point[0], g[1] - m.hit.point[1], g[2] - m.hit.point[2]];
+        if (Math.hypot(v[0], v[1], v[2]) > 1e-6) st.asmGOff = { v, left: 1, timeMs: 0, durMs: rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS) };
+        st.asmShown = { t: m.t, yaw: mq0.yaw, pitch: mq0.pitch };
+        faceBandRead(st, m.t); // ⭐⭐⭐ (2026-11-16, §12 2.4d) the banded facet afresh in the world's map (cleared above)
+      }
+    } else st.asmMapQ = null;
+    // ⭐ (no place to keep — unreachable while a tilt holds one: the turn alone, the angles turned as today)
+    crossTurn(st, { at: null, uWas, carry: false, paced, hold: held });
   }
   st.lastVerdict = byTime ? "orbit: the tilt off (out past the threshold) — the world's frame again" : "orbit: off the tilted face — the world's frame again";
   st.hudDirty = true;
@@ -2066,6 +2021,45 @@ function seamRebase(st: SceneState, mq: { readonly yaw: number; readonly pitch: 
 }
 
 /**
+ * ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §13 — step C5) **THE ONE HALF-TURN EVENT** — the wiring every crossing that turns the
+ * camera calls (the tilt's exit, the ridge crossed close in, the spit's change of side, a free face's exit); the site keeps its trigger, its frame and its
+ * views (the calm, the square camera, the held heading, the spit's side, the free face's state), and hands:
+ * * `at` — the chart's angles read at the gizmo `g` kept (a change of frame; none: the frame unchanged): EVERY angle state set to them (`seamRebase`), the
+ *   place shown there at once with its relocation eased if the map's place is not the gizmo, the band read afresh (`faceBandRead`);
+ * * ONE camera turn from the pose SHOWN (`asmZoneMix`; none before the first camera frame) — `paced`: the way out of close in paced by the finger
+ *   (`seamOutStart`, step C3), else timed at the tilts' one speed, the gizmo held meanwhile (`tiltClampStep`);
+ * * the piece's shown direction eased on that turn from the one drawn before the change (`uWas`, `seamEase`) — or, the frame unchanged, the ease running
+ *   carried onto it by its rest (`carry`, `easeCarry`);
+ * * the coast stopped; `hold` — the dy held (`crossingEvent`, `exitHoldSign`: the one rule; the spit's side: `crossingHold`, §13.3), 0: none (a hold already on is left as it is).
+ * ⭐ Everything in the MODEL's space (the map, `g`); the camera's pose read only to start the turn from the picture on the glass.
+ */
+function crossTurn(st: SceneState, c: { readonly at: { readonly mq: { readonly yaw: number; readonly pitch: number }; readonly g: Vec3 } | null; readonly uWas: Vec3 | null; readonly carry: boolean; readonly paced: boolean; readonly hold: 1 | -1 | 0 }): void {
+  // ⭐⭐⭐ (2026-11-16 night, package A) a carried turn's direction drawn BEFORE anything changes — its ease read once the view is set (`seamEaseRead`)
+  const uCarry = c.uWas === null && c.carry ? drawnDir(st) : null;
+  if (c.at !== null) {
+    const { mq, g } = c.at;
+    seamRebase(st, mq);
+    st.asmShown = null;
+    st.asmFaceBand = null; // ⭐⭐⭐ (2026-11-16, §12 2.4d) a change of frame: the banded facet read afresh at the place's facet in the new map (never held by the band)
+    st.asmGOff = null;
+    const m = mapGizmo(st, mq.yaw, mq.pitch);
+    if (m !== null) {
+      const v: Vec3 = [g[0] - m.hit.point[0], g[1] - m.hit.point[1], g[2] - m.hit.point[2]];
+      if (Math.hypot(v[0], v[1], v[2]) > 1e-6) st.asmGOff = { v, left: 1, timeMs: 0, durMs: rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS) };
+      st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch };
+      faceBandRead(st, m.t);
+    }
+  }
+  const mixWas = st.asmZoneMix;
+  if (c.paced) seamOutStart(st);
+  else if (st.asmCamLast !== null) seamTurnStart(st, false);
+  if (c.uWas !== null) seamEase(st, c.uWas);
+  else if (uCarry !== null) easeCarry(st, mixWas, uCarry);
+  st.orbitInertia.stop();
+  if (c.hold !== 0) st.asmEdgeHold = { sign: c.hold, back: 0 };
+}
+
+/**
  * ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4b, §4.1, §1 "the top and the bottom") OVER A POLE HELD BY AN EDGE OR A POINT — THE ONE TRANSITION, in the
  * world's frame (the trigger `poleCrossingDue`, in `assemblyFrame`): 1. the gizmo KEPT (`asmG`); 2. the far facet at the map's place on the pole
  * (`farFacetAt` — none: no crossing, the orbit stops there as before); 3. the far chart coordinates read there (`poleSeam`, `mapAngles`); 4. every angle state set to
@@ -2088,30 +2082,21 @@ function poleCross(st: SceneState): boolean {
   const seam = poleSeam(wm, cur, S, mapOpts(st));
   if (n0 === undefined || seam === null) return false;
   const nFar = wm.facets[seam.far]!.n;
-  const heading = st.orbit.yaw;
-  const mq1 = { yaw: seam.yaw, pitch: seam.pitch };
   const uWas = drawnDir(st); // ⭐ (2.4c) the direction drawn before the crossing: the piece's ease starts from it
-  seamRebase(st, mq1);
-  st.asmShown = null;
-  st.asmFaceBand = null; // ⭐⭐⭐ (2026-11-16, §12 2.4d) a change of frame: the banded facet read afresh at the place's facet in the new map (never held by the band)
-  st.asmGOff = null;
-  const m = mapGizmo(st, mq1.yaw, mq1.pitch);
-  if (m !== null) {
-    const v: Vec3 = [P[0] - m.hit.point[0], P[1] - m.hit.point[1], P[2] - m.hit.point[2]];
-    if (Math.hypot(v[0], v[1], v[2]) > 1e-6) st.asmGOff = { v, left: 1, timeMs: 0, durMs: rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS) };
-    st.asmShown = { t: m.t, yaw: mq1.yaw, pitch: mq1.pitch };
-    faceBandRead(st, m.t); // ⭐⭐⭐ (2026-11-16, §12 2.4d) the banded facet afresh at the far face (cleared above; a crossing is under the charts' layout only)
-  }
+  // ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §13, step C5) the hold by the one rule (`crossingEvent`): the up shown the face left's own (a bound face is
+  // upright on the glass) — ⛔ `edgeHoldAt` (the far face's level normal over 120° from the yaw, the finger's last dy sign whatever it was)
+  const upL = faceOwnUp(n0, WORLD_UP);
+  const hold = upL === null ? 0 : crossingEvent(upL, n0, nFar, WORLD_UP, st.asmDySign).hold;
+  // the views, the far face's: the world camera's held zenith heading read afresh, the calm carried over the edge, the square camera's target
   st.asmHeadO = null;
   st.asmHeadW = 1;
   st.asmHeadYaw = null;
   const c = st.asmCalm;
   if (c !== null) st.asmCalm = { n: nFar, sH: c.sH, sV: 1, wA: 1, ...(c.poleFade !== undefined ? { poleFade: c.poleFade } : {}) };
   st.asmSquare.target = nFar;
-  if (st.asmCamLast !== null) st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0 };
-  seamEase(st, uWas); // ⭐⭐⭐ (2026-11-15, §12 2.4c) the piece's shown direction eased on the turn (here the gap ~0)
-  const hold = edgeHoldAt(heading, n0, nFar, P, st.asmDySign);
-  if (hold !== null) st.asmEdgeHold = hold;
+  // THE ONE EVENT: every angle state set to the far face's (the gizmo kept), one camera turn from the pose shown, the piece's direction eased on it (here
+  // the gap ~0), the hold
+  crossTurn(st, { at: { mq: { yaw: seam.yaw, pitch: seam.pitch }, g: P }, uWas, carry: false, paced: false, hold });
   st.lastVerdict = "orbit: over the pole's edge — the camera turned to the far side (the gizmo held until it completes), then the dy that crossed held";
   st.hudDirty = true;
   return true;
@@ -2121,37 +2106,23 @@ function poleCross(st: SceneState): boolean {
 
 let ZONE_SEQ = 0;
 
-/** ⭐ The zones' knobs from the sliders. */
-function zoneOptsOf(st: SceneState): ZoneOpts {
-  const c = st.cfg;
-  return { valenceMin: c.zoneValenceMin, facetMinRatio: c.zoneFacetMinRatio, snapDeg: c.zoneSnapDeg, uprightMaxDeg: c.zoneUprightMaxDeg, spitMinDeg: c.zoneSpitMinDeg, wholeShare: c.zoneWholeShare };
-}
-
 /** ⭐⭐⭐ (D-Z1) THE PLACED SET'S ZONES — on the WORLD's face map, recomputed when the placed set (or a knob) changes: the assembly as it stands. */
 function zonesOf(st: SceneState): readonly PolarZone[] {
   const wm = worldFaceMap(st);
   if (wm === null || st.cfg.zoneOn !== 1) return [];
-  // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4a) under the charts' layout the zones are the frames the ATLAS takes (`chartZones`, §3 3. – 4.) — ⛔
-  // `polarZones`' detectors; the key its own (the atlas's), never the detectors'
-  if (st.cfg.chartLayout === 1) {
-    const at = atlasOf(st);
-    if (at === null) return [];
-    const keyA = `atlas#${at.key}`;
-    if (st.asmZones !== null && st.asmZones.key === keyA) return st.asmZones.zones;
-    const zonesA = chartZones(at.assign, at.contour);
-    st.asmZones = { key: keyA, zones: zonesA };
-    return zonesA;
-  }
-  const o = zoneOptsOf(st);
-  const key = `${st.asmWorldMap?.key ?? ""}#${o.valenceMin}#${o.facetMinRatio}#${o.snapDeg}#${o.uprightMaxDeg}#${o.spitMinDeg}#${o.wholeShare}`;
-  if (st.asmZones !== null && st.asmZones.key === key) return st.asmZones.zones;
-  const zones = polarZones(wm, o);
-  st.asmZones = { key, zones };
-  return zones;
+  // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4a) the zones are the frames the ATLAS takes (`chartZones`, §3 3. – 4.) — ⛔ `polarZones`' detectors
+  // (deleted at step 2.5, 2026-11-16, with the game before the charts); the key the atlas's
+  const at = atlasOf(st);
+  if (at === null) return [];
+  const keyA = `atlas#${at.key}`;
+  if (st.asmZones !== null && st.asmZones.key === keyA) return st.asmZones.zones;
+  const zonesA = chartZones(at.assign, at.contour);
+  st.asmZones = { key: keyA, zones: zonesA };
+  return zonesA;
 }
 
 /**
- * ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §3, §12 2.4a — read under `chartLayout` 1 only) THE PLACED SET'S ATLAS: the WORLD face map's contour
+ * ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §3, §12 2.4a) THE PLACED SET'S ATLAS: the WORLD face map's contour
  * (`chartContour` — the map is built from the parts' MODEL poses, `placedFaces`: never the swayed meshes) and its assignment (`assignCharts`, the
  * defaults with the three zone knobs from the sliders, as `zoneOptsOf`), cached per the world map's key and those knobs — ⭐ computed once per placed set
  * or knob change, never per frame (≈ 10 ms on `Scene_0bis`). `null`: no map.
@@ -2178,21 +2149,26 @@ function sameZone(a: PolarZone, b: PolarZone): boolean {
  * zone it was in), a change made when no tilt is under way (one under way is turned off first: a zone has none); the camera's turn advanced.
  */
 function zoneStep(st: SceneState, dtMs: number): void {
+  // ⭐⭐⭐ (package A, the audit's blocker) a turn whose clock reached its whole last frame and that no camera stage drew (`zoneMixPose` ends a turn drawn
+  // whole): ended here, as its clock ended it before
+  if (st.asmZoneMix !== null && st.asmZoneMix.k >= 1) st.asmZoneMix = null;
   const zm = st.asmZoneMix;
   // ⭐ (2026-11-14) from the frame its angle is known (`zoneMixPose` read it: its axis) — ⛔ by the placeholder's 90° first: 20° in the first frame, then 8.5°
   // ⭐⭐⭐ (2026-11-14, the owner's play recording: one-frame rolls of 60 – 100° inside the turns, very fast input) THE TURN BY ANGLE at the tilts' one speed:
   // the angle turned so far (`done`) over the turn's whole angle as it is NOW — ⛔ a share stepped by the angle of the moment: the first frame read 17°, the
   // share leapt to 0.49, the next frame the turn was 167° — 80° in one frame. If the whole grows, the camera keeps its speed toward the new whole
-  // ⭐⭐⭐ (2026-11-15, §12 2.4c) a PACED turn (the automatic tilt's entry made pending, `chartLayout` 1 only) advances in `seamTurnFrame`, by its own pace
+  // ⭐⭐⭐ (2026-11-15, §12 2.4c) a PACED turn (the automatic tilt's entry made pending) advances in `seamTurnFrame`, by its own pace
   // ⭐⭐⭐ (2026-11-16, step C3) …and the way out paced by the fingers (`out`) in `seamOutFrame`
-  if (zm !== null && zm.axis !== null && zm.byMm !== true && zm.out === undefined) {
+  // ⭐⭐⭐ (2026-11-16 night, package A) …and from the frame its ease is read once the view is set (`seamEaseRead`: `dirFrom` gone) — ONE clock for both
+  if (zm !== null && zm.axis !== null && zm.dirFrom === undefined && zm.byMm !== true && zm.out === undefined) {
     const degS = st.cfg.tiltRollDegS;
     // ⭐⭐⭐ (2026-11-15, §12 2.4c, the auditor's find) over the transition's WHOLE angle (`turnWhole`: the camera's plus the piece's direction's gap
     // eased on this turn; no ease: the camera's own, as ever)
+    // ⭐⭐⭐ (package A) the step less the camera's angle's growth with the ease in the frame (`seamStepRad`; no ease: the step, as before)
     const whole = turnWhole(st, zm);
-    zm.done = degS > 0 ? Math.min(whole, zm.done + (degS * Math.PI / 180) * (dtMs / 1000)) : whole;
+    zm.done = degS > 0 ? Math.min(whole, zm.done + seamStepRad((degS * Math.PI / 180) * (dtMs / 1000), zm.rad, turnEase(st, zm))) : whole;
     zm.k = whole > 1e-9 ? Math.min(1, zm.done / whole) : 1;
-    if (zm.k >= 1) st.asmZoneMix = null;
+    // ⭐⭐⭐ (package A, the audit's blocker) whole: ended once DRAWN, in the camera's stage (`zoneMixPose`) — the last step capped there as every other
   }
   const zones = zonesOf(st);
   const cur = st.asmZone;
@@ -2229,10 +2205,10 @@ function zoneSwitch(st: SceneState, next: PolarZone | null): void {
   const B0 = baseFrame(st);
   const g = st.asmG;
   const n0 = st.gizmoNormal ?? null;
-  // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4c) UNDER THE CHARTS' LAYOUT, WITH A PLACE SHOWN, THE ONE TRANSITION: the direction drawn before the change
-  // read before anything moves (the piece's ease starts from it). ⛔ No place yet (the first frame: `Scene_0bis`'s whole zone entered before any gizmo):
-  // as today — there is no second state to disagree with
-  const chart = st.cfg.chartLayout === 1 && g !== null;
+  // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4c) WITH A PLACE SHOWN, THE ONE TRANSITION: the direction drawn before the change read before anything
+  // moves (the piece's ease starts from it). ⛔ No place yet (the first frame: `Scene_0bis`'s whole zone entered before any gizmo): the angles turned
+  // (`turnAngles`) — there is no second state to disagree with
+  const chart = g !== null;
   const uWas = chart ? drawnDir(st) : null;
   const hW = uWas === null ? null : shownHeading(st, uWas);
   st.asmZone = next === null ? null : { id: ++ZONE_SEQ, zone: next };
@@ -2301,9 +2277,33 @@ function contourOfFacet(map: FaceMap, B: Mat3, contour: readonly ChartFace[], fi
   return contourFaceAt(contour, mulM(B, f.n), mulM(B, [c[0] * k, c[1] * k, c[2] * k]));
 }
 
+/** ⭐ (C2W) the identity: the world's map turned into the world (`contourOfFacet` on it turns nothing) */
+const IDENTITY3: Mat3 = [
+  [1, 0, 0],
+  [0, 1, 0],
+  [0, 0, 1],
+];
+
+/**
+ * ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §16 — package C2W: ONE rule for a free face whatever its zone) THE ENTRY ONTO A FREE FACE — the facet
+ * `stack` of `map` (built in the frame `B` → world: a spit zone's, or the world's own, `IDENTITY3`) found on the atlas's contour (`contourOfFacet`), and
+ * the heading carried in: over the side shared with the place before (`prev`, the map it indexed — another map: none) (`freeEntryHeading` →
+ * `entryHeading`: the picture does not turn), else the layout nearest the up SHOWN (the camera drawn last; none drawn: the face's normal — nothing in its
+ * plane, the first layout). null: not on the contour, or no layout. Read by a spit's free face (`freeFaceFrame`) and gravity's cap (`tiltOn`). ⭐ The
+ * MODEL's coordinates — the maps' facets, the contour; never a drawn mesh.
+ */
+function freeEntry(st: SceneState, map: FaceMap, B: Mat3, at: { readonly contour: readonly ChartFace[] }, stack: number, prev: { readonly map: FaceMap; readonly stack: number } | null): { readonly ci: number; readonly from: number; readonly heading: Vec3 } | null {
+  const ci = contourOfFacet(map, B, at.contour, stack);
+  const F = at.contour[ci];
+  if (F === undefined) return null;
+  const from = prev !== null && prev.map === map ? contourOfFacet(map, B, at.contour, prev.stack) : -1;
+  const heading = freeEntryHeading(freeEdges(at.contour, ci, WORLD_UP), from, st.asmCamLast?.up ?? F.n, F.n);
+  return heading === null ? null : { ci, from, heading };
+}
+
 /**
  * ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §3.4 — the owner's D-T2: *"a spit's level faces follow the same rule — no turn in the middle of the bottom
- * face, the half turn at its far edge, the picture unchanged when coming in from a tip"*; step C4, `chartLayout` 1 only) ONE FRAME OF A SPIT'S FREE FACE,
+ * face, the half turn at its far edge, the picture unchanged when coming in from a tip"*; step C4) ONE FRAME OF A SPIT'S FREE FACE,
  * at the map's place `t` just set (`assemblyFrame`, after the band's reading), `prev` the place of the frame before with the map it indexed:
  * * no spit zone (none, upright, a tilt): none carried;
  * * a map of another identity (a seat): none, no turn of its own;
@@ -2336,21 +2336,19 @@ function freeFaceFrame(st: SceneState, t: MapTarget, prev: { readonly map: FaceM
   if (fr !== null) {
     const d = t.stack === fr.facet ? 0 : distanceToFacets(map, [fr.facet], t.surface);
     if (onTiltedFacet(t.stack, fr.facet, d, edgeMarginM(st))) return;
-    freeFaceExit(st, z, fr, at.contour, contourOfFacet(map, B, at.contour, t.stack));
+    freeFaceExit(st, fr, at.contour, contourOfFacet(map, B, at.contour, t.stack));
     return;
   }
   const f = map.facets[t.stack];
   if (f === undefined || !isFreeFace(mulM(B, f.n), WORLD_UP)) return;
-  const ci = contourOfFacet(map, B, at.contour, t.stack);
-  const F = at.contour[ci];
-  if (F === undefined) return;
-  const from = prev !== null && prev.map === map ? contourOfFacet(map, B, at.contour, prev.stack) : -1;
-  const heading = freeEntryHeading(freeEdges(at.contour, ci, WORLD_UP), from, st.asmCamLast?.up ?? F.n, F.n);
-  if (heading === null) return;
+  const en = freeEntry(st, map, B, at, t.stack, prev);
+  if (en === null) return;
+  const { ci, from, heading } = en;
   st.asmFree = { map, facet: t.stack, ci, heading };
   const mixWas = st.asmZoneMix;
+  const uWas = drawnDir(st); // ⭐⭐⭐ (package A) the direction drawn before the turn: its ease read once the view is set (`seamEaseRead`)
   if (st.asmCamLast !== null) st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0 };
-  easeCarry(st, mixWas);
+  easeCarry(st, mixWas, uWas);
   st.lastVerdict = `orbit: onto the spit's level face — the heading carried in ${from >= 0 && from !== ci ? "over its edge" : "from the picture shown"}`;
   st.hudDirty = true;
 }
@@ -2363,24 +2361,17 @@ function freeFaceFrame(st: SceneState, t: MapTarget, prev: { readonly map: FaceM
  * never a "crossing" on the next frame); the dy held when the turn is over a quarter AND the finger's dy is the one that pushed the gizmo out over that
  * side (`exitHoldSign`, §10 — D-T4; `crossingHold`, its side the face beyond's); none carried.
  */
-function freeFaceExit(st: SceneState, z: PolarZone, fr: NonNullable<SceneState["asmFree"]>, contour: readonly ChartFace[], to: number): void {
+function freeFaceExit(st: SceneState, fr: NonNullable<SceneState["asmFree"]>, contour: readonly ChartFace[], to: number): void {
   const edges = freeEdges(contour, fr.ci, WORLD_UP);
   const turn = exitTurnRad(fr.heading, edges, to);
   // ⭐⭐⭐ (`TILTED_POLE_CLOSE_IN.md` §10, D-T4) the dy held: the finger's, only if it is the one that pushed the gizmo out over this side (`exitHoldSign`)
-  const held = exitHoldSign(fr.heading, edges, to, contour[fr.ci]?.c ?? [0, 0, 0], st.asmDySign);
+  // ⭐⭐⭐ (step C5, §13) through the one rule (`crossingHoldSign`) — over a free face's level side exactly §10's; the gizmo placed (none: no hold, as before)
+  const held = st.asmG === null ? 0 : exitHoldSign(fr.heading, edges, to, contour[fr.ci]?.c ?? [0, 0, 0], st.asmDySign);
   st.asmFree = null;
   st.asmSpitSide = 0;
   st.asmSpitU = null;
-  const mixWas = st.asmZoneMix;
-  if (st.asmCamLast !== null) st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0 };
-  easeCarry(st, mixWas);
-  st.orbitInertia.stop();
-  const nTo = contour[to]?.n ?? null;
-  const g = st.asmG;
-  if (held !== 0 && nTo !== null && g !== null) {
-    const hold = crossingHold(g, nTo, z.axis, spitSide(nTo, z.axis, 0), held);
-    if (hold !== null) st.asmEdgeHold = hold;
-  }
+  // THE ONE EVENT (`crossTurn`): the frame unchanged, one camera turn from the pose shown, the ease running carried, the coast stopped, the hold
+  crossTurn(st, { at: null, uWas: null, carry: true, paced: false, hold: held });
   st.lastVerdict = `orbit: off the spit's level face — the camera turned ${turn === null ? "(no layout known)" : `${Math.round((turn * 180) / Math.PI)}°`} (the gizmo held until it completes)`;
   st.hudDirty = true;
 }
@@ -2406,7 +2397,7 @@ export function zoneFinger(st: SceneState, dx: number, fdy: number): { readonly 
   st.asmZoneAlpha = r.alpha;
   // ⭐⭐⭐ (2026-11-16, step C4) on a free face the carried heading puts the axis exactly up or across the glass: `fingerInFrame`'s own answer at every pitch
   // — ⛔ the swap (`fingerSwapped`, written for the axis ACROSS the glass): coming in from a tip it sent the dy sideways, across the face's middle
-  if (st.cfg.chartLayout === 1 && st.asmFree !== null) return { dx: r.dx, fdy: r.dy };
+  if (st.asmFree !== null) return { dx: r.dx, fdy: r.dy };
   // ⭐⭐⭐ looking down (from `SPIT_CROSSING_PITCH_RAD`): the swap itself, one finger axis to one of F's (`fingerSwapped`) — a dx never back over the edge
   const uC = cf.dir;
   if (Math.asin(Math.min(1, Math.abs(uC[1]) / Math.max(1e-12, Math.hypot(uC[0], uC[1], uC[2])))) >= SPIT_CROSSING_PITCH_RAD) {
@@ -2433,7 +2424,7 @@ export function spitStep(st: SceneState, cp: OrbitAt): void {
   }
   // ⭐⭐⭐ (2026-11-16, step C4) on a free face no side: no side change, no crossing, no hold in the middle of the face — its exit is the turn
   // (`freeFaceFrame`, which reads the side afresh there)
-  if (st.cfg.chartLayout === 1 && st.asmFree !== null) return;
+  if (st.asmFree !== null) return;
   // ⭐⭐⭐ (2026-11-14, the owner: *"dy or dx when the gizmo hit the zenith edge or the middle of the bottom face create hard-to-control movements"*) the
   // side of the axis the camera's direction is on — the SHOWN rule (`dirAt`: the calm's, the square camera's — the camera's heading and the finger's
   // mapping are read off it) at the ORBIT's own angles, the finger's: ⛔ at the piece's (`pieceQ`, its spring): a frame late, the gizmo 14 – 30 mm past the
@@ -2461,13 +2452,15 @@ export function spitStep(st: SceneState, cp: OrbitAt): void {
     st.asmEdgeHold = null;
     return;
   }
-  const mixWas = st.asmZoneMix;
-  if (st.asmCamLast !== null) st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0 };
-  easeCarry(st, mixWas); // ⭐⭐⭐ (2026-11-15, §12 2.4c — an ease runs under `chartLayout` 1 only) the piece's shown direction's ease carried by its rest
-  st.orbitInertia.stop();
   const g = st.asmG;
-  const hold = g === null ? null : crossingHold(g, st.gizmoNormal ?? null, z.axis, side, st.asmDySign);
-  if (hold !== null) st.asmEdgeHold = hold;
+  // §8's hold: the dy that crossed — the finger's last sign (`crossingHold`). ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §13.3, step C5) KEPT under the
+  // charts' layout too: the one rule needs the next up the picture turns to, and the side's turn is read off the CAMERA's place, not an edge — the mirror
+  // view as that up (built, measured, withdrawn): arrived along the top ridge from a tip the picture turns ~110°, not a mirror; the dy that crossed was
+  // judged not to push, was not held, and brought the gizmo straight back over the ridge — a second half turn (the view 124° → 343° in the drag)
+  const hold = g === null ? null : crossingHold(st.gizmoNormal ?? null, z.axis, side, st.asmDySign);
+  // ⭐⭐⭐ (step C5) THE ONE EVENT (`crossTurn`): the frame unchanged, one camera turn from the pose shown, the ease running carried, the coast stopped, the
+  // hold. ⛔ (step 2.5) the old turn and hold of the game before the charts deleted
+  crossTurn(st, { at: null, uWas: null, carry: true, paced: false, hold: hold === null ? 0 : hold.sign });
   st.lastVerdict = "orbit: the spit over the edge — the camera turned to the other side (the gizmo held until it completes), then the dy that crossed held";
   st.hudDirty = true;
 }
