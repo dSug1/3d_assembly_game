@@ -559,22 +559,8 @@ swapped above 60° of pitch, `spitCameraHeading`'s side bias) — a fault measur
 a change of the rule for the finger's axes is the owner's. ⛔ Not in it: a mouth as a concave edge (W9, moved to the study before step B), the free
 face's layout rule, C3's way out, the calm.
 
-### 13.1 The four, as they stand (read on `1190db2`)
-
-| | (1) the tilt's exit | (2) the ridge crossed close in | (3) the spit's change of side | (4) a free face's exit |
-|---|---|---|---|---|
-| the trigger | the place one band past the tilted facet (`tiltFrame` → `exit`, made at the next frame's start) — or the latch off by distance (`off`) | close in, the map's angles at ±90°, the finger asking beyond (`poleCrossingDue`) | the camera's shown direction crossing the vertical plane through the axis, steeply (`crossingPitch` ≥ 60°) — in the CAMERA's stage, read off the camera's place | the place one band past the free face (`freeFaceFrame`) |
-| the frame | gravity's (the tilt dropped) | gravity's, unchanged | the zone's, unchanged | the zone's, unchanged |
-| the angles | `seamRebase` at the gizmo (the world map's; at its pole the heading shown kept) | `seamRebase` at the far face's (`poleSeam`) | — | — |
-| the camera's turn | `seamTurnStart` from the pose shown (by distance: C3's `seamOutStart`), the ease from the direction drawn (`seamEase`) | the same turn written out, `seamEase` | the same turn written out, the ease running carried (`easeCarry`) | the same, `easeCarry` |
-| the hold — who | `edgeHoldAt(tl.heading, nT, nW, g, dySign)` (never by distance) | `edgeHoldAt(orbit.yaw, n0, nFar, P, dySign)` | `crossingHold(g, gizmoNormal, axis, side, dySign)` | `exitHoldSign` → `crossingHold(…, held)` |
-| its threshold | the face beyond's level normal more than 120° from the heading | the same | none: every crossing | the turn over 90° |
-| its sign | the finger's LAST dy sign, whatever crossed | the same | the same | the dy that pushed the gizmo out over that side (D-T4) |
-| its side | — (the field `d`, into the face beyond: never read) | the same | the same | the same |
-| **dead** | `EdgeHold.g0`, `EdgeHold.d` — written by `edgeHoldAt` and `crossingHold`, read by nothing (the hold reads `sign`, `back`; the play recorder too) | ← | ← | ← |
-
-The hold ends the same way for all four: the finger the other way for `edgeHoldMm` (`edgeHoldFinger`), the gesture's end (`gestureOver`), the
-assembly's orbit off; (3) also when the side changes round a tip. The gizmo is held while any of these turns runs (`tiltClampStep`), but C3's paced way out.
+### 13.1 The four, as they stood — MOVED (2026-11-17, word for word, to make room)
+The table of the four sites read on `1190db2` → [2026-11-17_c5_four_sites_and_as_built.md](../history/2026-11-17_c5_four_sites_and_as_built.md).
 
 ### 13.2 The design
 
@@ -598,41 +584,9 @@ assembly's orbit off; (3) also when the side changes round a tip. The gizmo is h
 * **Expected**: `Scene_1`'s cube as today (the far edge crossed by its dy: held; a side edge: not); on the heptagon's scenes a difference only where
   the last dy sign was not the one that pushed — each measured below.
 
-### 13.3 As built (2026-11-16, an Opus agent)
-
-* **Pure** (`src/input/free_face.ts`): `crossingHoldSign` (the rule of §13.2, its floor `CROSSING_PUSH_MIN` 1e-9), `faceOwnUp`, `unfoldAcross`,
-  `edgeOut`, `crossingEvent` (the turn and the hold); `exitHoldSign` now through `crossingHoldSign` (the same answers on a free face's level sides).
-* **ONE wiring function** (`crossTurn`, `assembly_wiring.ts`), called by the four sites under `chartLayout` 1: `tiltOff` (twice: with a place to keep
-  and without), `poleCross`, `spitStep`, `freeFaceExit`. What each keeps: `tiltOff` its frame, the calm and the square camera out of F, the paced way
-  out's flag (C3); `poleCross` the far face's views (the held heading, the calm, the square camera's target); `spitStep` its side and its trigger;
-  `freeFaceExit` the free face's state and the side read afresh (its unused zone argument removed).
-* **The hold**: the tilt's exit and the ridge by `crossingEvent` (`T` = `map · y`; the face left's own up); a free face's exit by `exitHoldSign` (as
-  built, through the rule); with the switch off `edgeHoldAt` and `crossingHold` as before.
-* ⛔ **The spit's change of side keeps §8's hold** (the finger's last dy sign, `crossingHold`), through the one event. The mirror view as its next up
-  was built and measured, then WITHDRAWN: arrived along the top ridge from a tip (`ridge_check.mjs`, close in) the picture turns ~110°, not a mirror;
-  the dy that had crossed was judged not to push (the gizmo crossed by the tip triangle's fall line, not by the finger's way on the glass), was not
-  held, and brought the gizmo straight back over the ridge — a second half turn: the view 124° → 343° in the drag, from both tips. The rule needs the
-  up the picture turns TO, which a side read off the camera's place does not give (§13.4).
-* **The dead fields**: `EdgeHold.g0` and `.d` deleted; `edgeHoldAt` and `crossingHold` lose their `g0` argument (their `null` cases kept — the switch
-  off bit for bit).
-* **Vectors**: `tests/crossing_event.test.ts` (13; **2071 vectors**, 163 files); the source pins of seven files moved to the event; red on 11 mutants (the come-back test dropped,
-  the push test dropped, the push floor at 0, the unfolding reversed, the outward direction reversed, the own up not laid in the plane, the hold not
-  set by the event, the tilt's exit back on `edgeHoldAt`, the rebase skipped, the spit's hold dropped, `exitHoldSign` on the last sign).
-
-**The gates** (against `scripts/probes/ORBIT_GATES.md` §6, the baseline at `276a6c2`):
-
-| gate | result |
-|---|---|
-| the replays, `chartLayout=0&chartCalm=0` | `Scene_0` identical; `Scene_1`, `Scene_0bis` 2.0e-11 / 2.9e-9 from frame 3 (`1e-6: never`) — the baseline's own noise |
-| the replays, the default | the three scenes IDENTICAL in every frame (2794 / 2794): the seeded play never crosses an exit turning 90° – 120°, nor a far edge or a ridge with another dy sign |
-| `tilt_check` default, `chartLayout` 0, `out` (1 and 4 px), `ridge`, `press`, `rim`, `pole` | every number equal to the baseline (default 8.7 / 673, 8.8 / 2149, 8.9 / 3627 with 13 holds; the way out 180° at 6.0° a frame; the ridge's holds 54 / 54, 45 / 45, 51 / 51, 36 / 36) |
-| `mid_check`, `across_check` (default and off) | equal: the middle reached, 76° / 6.2°; across 241° / 6.6°, the half turn past the far edge, 936 frames held |
-| `edge_noise` (top ±2.5 mm, three scenes; side ±10 mm) | equal: the tilt made / left 0, the view 0° |
-| `ridge_check` (new), 8 runs | equal to the code before in every run (once the spit's hold was kept) |
-
-**Where the rule changes what the player feels** (vectored; no gate run reaches it): a tilt's exit or the ridge crossed with the finger's last dy
-the OTHER way (an edge crossed by a dx with an old dy sign): no hold — before, that old sign was held; an exit turning between 90° and 120° (a free
-face that is not a rectangle — none takes a layout yet, D-T5): held for the dy that pushed — before, free.
+### 13.3 As built (2026-11-16, an Opus agent) — MOVED (2026-11-17, word for word, to make room)
+`crossingHoldSign`, `crossingEvent`, `crossTurn` and the four sites, the vectors, the gates → [2026-11-17_c5_four_sites_and_as_built.md](../history/2026-11-17_c5_four_sites_and_as_built.md).
+⛔ Its spit's hold (the finger's last dy sign, the side off the camera) replaced by R1 (§19).
 
 ### 13.4 The top ridge arrived at from a tip (`Scene_0bis`) — measured, nothing built
 
@@ -663,7 +617,7 @@ no swap under the finger.
 
 ✅ **The owner, 2026-11-16 (evening): *"2- R1"*** — **R1**, to BUILD on branch `1.0.147-`; R2 not taken. **The ridge arrived at from a tip**
 (the table above): *"3- I don't want to change what is currently built: it looks good on the screen. Record and do nothing. We may reopen if we need
-when we build game scenes later on."* — **KEPT AS BUILT**, nothing changed for it (§17).
+when we build game scenes later on."* — **KEPT AS BUILT**, nothing changed for it (§17). ⭐ R1 built (§19): the turn fires there at the rim, its size, its hold and the walk's stop as before.
 
 ## 14. PACKAGE T1 — THE TEST SCENES, as briefed — MOVED (2026-11-16, word for word, to make room)
 The six test shapes, what was run on each and what was flagged → [TILTED_POLE_TEST_SCENES.md](TILTED_POLE_TEST_SCENES.md) §14.
@@ -738,7 +692,7 @@ the results."* And that night: *"Progress as much as you can without asking me q
 | # | the question | his answer | what follows |
 |---|---|---|---|
 | 1 | W11, the tilt's entry under a fast dy (§12.4) | *"1- A"* | **BUILD** option A — the one turn truly one — on `1.0.147-` |
-| 2 | the spit's half turn (§13.4) | *"2- R1"* | **BUILD** R1 — the turn at the gizmo's edge — on `1.0.147-` |
+| 2 | the spit's half turn (§13.4) | *"2- R1"* | **BUILD** R1 — the turn at the gizmo's edge — on `1.0.147-`; ✅ built `1038a29` (§19) |
 | 3 | `Scene_0bis`'s top ridge reached from a tip (§13.4) | *"I don't want to change what is currently built: it looks good on the screen. Record and do nothing. We may reopen if we need when we build game scenes later on."* | **KEPT AS BUILT**; may be reopened when game scenes are built |
 | 4 | a level top that is not a rectangle (W8; D-T5, §5) | *"Maintain D-T5. This kind of geometry probably means that the piece has a rotation symetry axis around the gravity axis so D-T5 makes sense. Just record as we may reopen if we need when we build game scenes later on."* | **D-T5 MAINTAINED** (polar at every distance on such a cap); nothing built; may be reopened when game scenes are built |
 | 5 | RINGS ([`TILTED_POLE_TEST_SCENES.md`](TILTED_POLE_TEST_SCENES.md) §15, F5) | *"Record and do nothing. We may reopen if we need when we build game scenes later on."* | **NOTHING BUILT**; may be reopened when game scenes are built |
@@ -793,3 +747,51 @@ audit's measures): `across_check`'s walk 6.6 → 6.7 → **6.0°** in a frame (b
 turn 541 → 613, the whole turn 3476 → 3544°; the spit's free-face entry and exit turns ~10 frames longer; `ridge_check`'s walk back 58 frames in a turn
 (40 before). ⚠ One frame of 6.36° left at share 0 — a spit turn's first frame: the end pose's own motion under a drag, not the turn's share. Open,
 the owner's → [`RND5.md`](../../00_CORE/queue_notes/RND5.md) (package A, its list).
+
+## 19. PACKAGE R1 — THE SPIT'S HALF TURN AT THE GIZMO'S EDGE (2026-11-17, an Opus agent; branch `1.0.147-`, base `a1a52f0`)
+
+**As briefed** (§13.4 R1, the owner's *"2- R1"*): on a face of a spit zone that is not level, the half turn fires when the GIZMO crosses the edge — one
+band past it, as every other crossing — the hold by the one rule (`crossingHoldSign`); the spit's camera heading on those faces rebuilt accordingly (W3's
+second half), so that far out the turn no longer lands 55 – 60 mm into the face beyond the ridge. Bound by decision 3: the top ridge reached from a tip
+keeps its turn's size, the direction held and whether the walk goes on — only WHERE it fires may move. Unchanged: C4's level faces, `Scene_1`, the tilt.
+
+**As built — `1038a29` (`git revert 1038a29` undoes R1)**:
+* **The side is the gizmo's** (`spitFaceStep`, once a frame after the band's reading and a free face's frame): on a bound face of a spit the side its
+  WORLD normal leans to (`faceSide` — none within the side's 2° of square: the triangle under a tip's end). The band (2.4d) keeps the face left until the
+  gizmo is one band past the edge, so the change is read there. A side where none was (the zone's switch, a free face's exit — whose own turn is the
+  one): set silently. A CHANGE, only at a crossing (the banded facet changed this frame) over an EDGE: THE ONE EVENT (`crossTurn`), the hold by
+  `crossingEvent` (the up drawn last frame, the face left — `asmSpitN`, the face beyond); no hold to set: a hold of another crossing ended.
+* **Two faces met only at a tip's apex** (`metAtPoleOnly`: both have a corner at the zone's pole, fewer than two corners shared) are no edge: the side
+  waits for the next edge. ⛔ Read as an edge (the first build): in `Scene_0bis`'s seeded replay (drag 21) the gizmo passed over the apex from the top
+  triangle to one two places round; the turn's end pose swung half round the tip with the calm, the piece and its aim swapped places on the glass (the
+  two-target framing's separation at 179°) and the picture rolled the long way — 60.6° in one frame. That framing (`poseFramingTwo` at a separation
+  near 180°) is not changed here: no edge crossing reaches it in the gates below.
+* **The heading on a bound face** read on the side's view (`spitSideView`): the camera's direction as it is on the gizmo's side (today's heading, exactly),
+  MIRRORED across the vertical plane through the axis while the camera lags on the other — the heading keeps the side's sign, continuous across the plane.
+  ⛔ The camera's own direction with the gizmo's side: below ~73° its level part outweighs the side's bias, the heading passed through its zero as the
+  camera came over (half a turn in a few degrees of path — vectored).
+* **Deleted**: the side read off the camera (`spitStep` only reads one where none is known), `crossingPitch`, `overAxisPitch`, `SPIT_OVER_AXIS_MIN`,
+  `crossingHold`, `asmSpitU` (→ `asmSpitN`, the face left). Their 9 vectors (`polar_zone.test.ts`: the hold on the last sign; the five of the crossing
+  over / under the axis; the three on the camera's path). **New**: `spit_face_side.test.ts` (16), 6 pins moved; red on 14 mutants; **2088 vectors** (166).
+
+**The gates** (baseline: every gate at `a1a52f0`, then R1; the outputs in the session's scratchpad `r1/base`, `r1/after2`):
+
+| gate | result |
+|---|---|
+| the replays | `Scene_1` and `Scene_0`: IDENTICAL in every frame (2794 / 2794). `Scene_0bis`: another play from drag 4 (frame 254, its first change of side); the view's largest turn a frame 13.4 → 11.8°, its roll 14.4 → 13.1°, frames over 10° 36 → 23, none over 20°; no gizmo step over 150 mm |
+| `tilt_check` (default, `ridge`, `rim`, `out`, `press`, `pole`) | `Scene_1`, `Scene_0`: every output line identical. `Scene_0bis`: holds equal (13, 2, 12, 8), the largest frame equal or lower (7.6, 6.0, 5.8, 7.0), the turns in all lower (3544 → 3326°, 660 → 604°, 2580 → 2284°, 1799 → 1634°); `rim`, `press` identical |
+| `across_check` (±1), `edge_noise` (top, side) | identical walks (the free face's exit unchanged: 245° / 242°, 6.0°, the hold 932 / 933 frames); `edge_noise` identical outputs |
+| `mid_check` (its setup mended — `ORBIT_GATES.md` §4) | the walk as at the base: the middle reached, the side changed 0 times, one turn (the entry), 72°, 6.2° at most |
+| `ridge_check` across the ridge (close in / far out, both sides) | **far out the turn 60.0 → 4.5 mm and 54.7 → 9.3 mm past the ridge**, then held as close in (320 / 318 frames; before: the hold ended 3 frames after, 60 mm deep); close in 30.8 → 16.2 and 21.4 → 6.8 mm; the view's turn a frame ≤ 6.0° (6.6, 6.7 before) |
+
+**Decision 3 — the ridge from a tip, before → after** (`ridge_check MODE=tip`): close in (+x / −x tip) the turn fires 20 / 11 mm earlier along the axis
+(231 → 251, −218 → −229 mm: at the rim instead of 16 mm past it), to the SAME end pose (the axis across the glass, 66° looking down), the same dy held,
+the walk blocked as before (313 → 316, 313 → 315 frames); the view 125 → 118° and 121 → 114° in all, at most 6.6 → 4.6° and 6.6 → 4.1° a frame. ⚠ Far
+out from the −x tip the gizmo drifts over the ridge the OTHER way (the finger's mapping follows the side now read from the gizmo's triangle, not the
+camera's): one turn 12.5 mm past the ridge (30 mm before), the walk's dy held and the walk blocked as before (311 frames both); the turn the mirror of
+the one before — the axis on the glass 92° → 6° (93° → 169° before), the view 166° in all (151°); 7.4 → 10.3° in one frame, a drag frame before the
+turn: the bias of `spitCameraHeading` (60° → 75°) fading in under a fast climb (no turn running, the camera on the gizmo's side). From the +x tip (the
+gizmo round the body, the view never steep): a turn of one frame at the tip's ridge line, no hold, the walk goes on as before (106° in all). The walks
+back: the same events and numbers. Judged within decision 3 (the size of the turn, the dy held, the walk blocked: as before); the far −x drift's side
+is the owner's to see on the device.
+⚠ Not measured: the owner's records of 2026-11-14 (not replayed); a device. ⛔ No device look.

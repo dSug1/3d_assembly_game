@@ -129,6 +129,11 @@ Both climb the gizmo by 6-frame direction probes (undone) — slow but sure — 
   places reached; THE WALK (reached the middle or not); **the walk's line**: the side changed n times, timed camera turns, the view's turn in all and
   at most in one frame, frames in a turn, frames with the dy hold; the path every 12 frames (along mm / off the middle mm / side); the verdicts.
   `bash scripts/probes/mid_batch.sh "idleOrbitOn=0|2|0"` — about 45 s a run (the first field: any tunables to set in the URL).
+  ⭐ (2026-11-17, package R1) its setup mended: since package A the 6-frame direction probes, pressed at the glass's centre, landed on a quad of the
+  held piece — each read as a quad's TAP (a roll of the piece), the orbit never moved, the gizmo was never parked (`S0` 24 – 27 mm instead of 2). Now
+  they press at (300, 600), off the piece, and the climb ends with a FINE PARK by the orbit's own yaw (a secant, within 1 mm of `S0`; far out one drag
+  moves the gizmo ~16 mm across). Its line: `at 2 mm from the middle: true (the climb …, then n fine steps of the orbit's yaw)`. At `a1a52f0`: parked
+  3.0 mm off; the walk reaches the middle, the side changed 0 times, one turn (the free face's entry, 5 frames), 72° in all, 6.2° at most a frame.
 * **across_check** (`SCRIPT=across_check.mjs`): from the rectangle beside the bottom face (`FROM_SIDE` +1, or −1), ONE drag round the axis across
   the bottom face toward the rectangle beyond (the face's edges at ±94 mm off the middle).
   `SCRIPT=across_check.mjs PX=1 bash scripts/probes/mid_batch.sh "idleOrbitOn=0|0|0"` — about 50 s a run.

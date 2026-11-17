@@ -392,3 +392,22 @@ runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press
   3. **The cap under a fast finger** — a turn paced by the finger adds nothing in the frames where the finger itself moves the picture over 6°, and
      finishes once it slows or lifts: to judge on the device.
   4. **A turn started with no world map still reads no ease** — unchanged from before A.
+
+## 2026-11-17 (night) — PACKAGE R1, the spit's half turn at the gizmo's edge (an Opus agent; base `a1a52f0`; the code commit `1038a29`)
+
+* **As briefed** (the owner's *"2- R1"*): the spit's change of side triggered by the GIZMO crossing an edge, one band past it, the hold by the one rule,
+  the heading on bound faces rebuilt (W3's second half); decision 3 binding (the ridge from a tip: only where the turn fires may move).
+* **As built** (`git revert 1038a29` undoes it): the side from the banded face's world normal (`faceSide`), changed only at a crossing over an edge — not
+  over a tip's apex (`metAtPoleOnly`: its first build turned the picture the long way there, 60.6° in one frame, `Scene_0bis`'s replay); the hold by
+  `crossingEvent`; the heading on the side's view (`spitSideView`, the camera mirrored onto the gizmo's side while it lags). Deleted: the side off the
+  camera (`crossingPitch`, `overAxisPitch`, `crossingHold`, `asmSpitU`) and their 9 vectors; 16 new, 14 mutants; **2088 vectors** (166 files).
+* **Measured**: far out the ridge's turn 55 – 60 → 4.5 – 9.3 mm past the ridge, then held as close in; `Scene_1` and `Scene_0` replays identical in every
+  frame and every `tilt_check` / `edge_noise` line of theirs identical; `across_check` and `mid_check` walks as before; `Scene_0bis`'s replay another play
+  from its first side change (the largest turn a frame 13.4 → 11.8°, roll 14.4 → 13.1°). Decision 3: close in the turn at the rim (16 mm earlier), the
+  same end pose, the same dy held, the walk blocked as before. → [`TILTED_POLE_CLOSE_IN.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) §19.
+* **`mid_check` mended** (its setup, not the game): since A its direction probes, pressed at the glass's centre, hit a quad of the held piece (a quad tap
+  each: the orbit never moved); now pressed off the piece, then a fine park by the orbit's yaw → [`ORBIT_GATES.md`](../../../scripts/probes/ORBIT_GATES.md) §4.
+* **FOR THE OWNER — not decided, nothing built**: (1) far out from the −x tip the gizmo now drifts over the ridge the other way (the finger's mapping read
+  from the gizmo's side): the turn is the mirror of the one before — to see on the device; (2) the two-target framing (`poseFramingTwo`) rolls the long
+  way when a turn's end pose swings half round the piece–aim line (separation near 180°): no edge crossing reaches it in the gates, an apex crossing did;
+  (3) the side's bias (60° → 75° of the view) fading in under a fast climb turns a drag frame 10.3° (far out, near a tip). ⛔ No device look.
