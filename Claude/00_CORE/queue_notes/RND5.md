@@ -586,3 +586,13 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   At the base those moments fall inside held turns. The fallback (F14) was not needed. Figures and options: [`FAST_ORBIT.md`](../../40_RENDER_SCENE/spec/FAST_ORBIT.md) §8.
 * **What stays**: the turns' recorder records each turn's hold and the pose built / drawn (`0c885d1`); the circle's check, `turn_circle.mjs` (`a46b5a7`).
 * **Next**: test 3 (fix round 2) is the last; a third failure is the abort, back to `1.0.147-`.
+
+## 2026-11-18 — fix round 2 of the fast orbit (test 3, the last): three realisations measured, NOT BUILT — the abort
+
+* **The result**: test 3 failed, so by the owner's rule the fast orbit is aborted, back to `1.0.147-`. The game is the base's again (`1b6b1a7`
+  built, `3ad84da` its revert). Fix round 1's blockers had one root cause: with the start carried, the picture turned as fast as the target, which at
+  30 px a frame turns up to 21 – 52° in a frame — stretches the base never draws (held turns drop the finger's steps there).
+* **Tried**: one follower from the pose drawn (v1); the same capped at the one speed (v2, committed: every free frame within 6.0°, the 20 px walks
+  better on everything but reversals); the gap never growing (v3). At 30 px each fails G6: the picture shows the target's fastest frames, or it lags,
+  the next turn holds and its drawing jumps 55 – 130°. G5's `Scene_0bis` replay: 14.1° → 49.6°. Figures and options: [`FAST_ORBIT.md`](../../40_RENDER_SCENE/spec/FAST_ORBIT.md) §9.
+* **What stays**: the reading `scripts/probes/turn_where.mjs` (`e3a924a`); the recordings `<scratchpad>/fo1c`.

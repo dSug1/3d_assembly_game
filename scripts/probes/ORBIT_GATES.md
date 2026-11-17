@@ -391,6 +391,11 @@ node scripts/probes/fast_walk_table.mjs <base>/fw_f_edge_px20.json <new>/<tag>_f
   the TARGET's own turn in it. Read the worst frame against the target's: a free turn whose start is carried turns as its target does.
   ⚠ Never edit a file under `src` while a batch runs: Vite reloads the page and that walk's recording is lost (`Cannot read properties of undefined`).
   The second build's figures (reverted): `FAST_ORBIT.md` §8; its recordings `<scratchpad>/fo1b` (`fw_*`, `rep_*`, `tr_rep_*`, `g6_table.txt`).
+* **Where the worst frame falls** (2026-11-18, fix round 2 — `FAST_ORBIT.md` §9): `node scripts/probes/turn_where.mjs <rec.json> …` (a fast walk or a
+  replay's DUMP): the picture's largest frame inside a FREE turn, a HELD turn and with NO turn, each with the target's own turn on that frame; the
+  largest gap of a free turn; the target's own speed in free turns (median, 90th, largest; a turn's first frame left out — the change of frame's jump).
+  Read: a free turn's worst frame equal to the target's = the picture carried with the target; a held turn's huge first frame = a turn held from a
+  lagging pose. The third build's three realisations (reverted): `FAST_ORBIT.md` §9; recordings `<scratchpad>/fo1c` (v1), `fo1c/v2`, `fo1c/v3`.
 
 ### 9.1 The base (the code of `892b6a3` = the live `c343c4f`'s; recorded at `8997e45`, docs only after it) — `<scratchpad>/fo1/base`
 

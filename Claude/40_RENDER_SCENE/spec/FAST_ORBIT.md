@@ -1,6 +1,6 @@
 # A fast orbit over many edges — one follower instead of a train of turns (2026-11-17)
 
-> **STATUS** · ✅ **THE OWNER'S GO, the night of 2026-11-17** — the build as briefed: §1 – §5 (branch `1.0.148-`, from `1dac167`); as built: after §5 — ⛔ FO1's first build measured and reverted (§6); ⭐ the fix rounds on the contract amended (§7); ⛔ fix round 1 (test 2) built on §7, measured, NOT BUILT — reverted (§8)
+> **STATUS** · ✅ **THE OWNER'S GO, the night of 2026-11-17** — the build as briefed: §1 – §5 (branch `1.0.148-`, from `1dac167`); as built: after §5 — ⛔ FO1's first build measured and reverted (§6); ⭐ the fix rounds on the contract amended (§7); ⛔ fix round 1 (test 2) built on §7, measured, NOT BUILT — reverted (§8); ⛔ fix round 2 (test 3, the last) — three realisations measured, NOT BUILT — reverted (§9): the abort, back to `1.0.147-`
 > **OWNS** · how a camera turn behaves when the gizmo crosses edges fast: which turns hold the gizmo, a running turn redirected, the pace of a turn that
 > does not hold · **READ WITH** · [`LEVEL_FACE_ENTRY.md`](LEVEL_FACE_ENTRY.md) §14 (the proposal: the turns counted, the literature, why nothing
 > drifts), [`TILTED_POLE_CLOSE_IN.md`](TILTED_POLE_CLOSE_IN.md) §1 (the rules T1 – T12), `scripts/probes/ORBIT_GATES.md` (the gates). The dossier:
@@ -192,3 +192,40 @@ reach 90° and hold again (51 frames on `f_ccw_p_far_px30`).
 cure as built passes that; (b) a free turn held again while the target turns faster than the one speed (a hold decided inside a turn: §2 1. forbids
 it); (c) smooth the finger's own orbit where it turns fastest (the map's poles, the spit's axis) — a change to what drives the camera: out of bounds;
 (d) keep today's game (the limit 0). Test 3 is the last: a third failure is the abort, back to `1.0.147-`. Recordings: `<scratchpad>/fo1b`.
+
+## 9. Fix round 2 (test 3, the last) as measured — NOT BUILT (2026-11-18, the builder of fix round 2)
+
+**The result first.** Test 3 failed: by the owner's rule this is the abort, back to `1.0.147-`. The third build (`1b6b1a7`) was measured and
+**reverted** (`3ad84da`): `src` and `tests` are `892b6a3`'s again. Nothing to look at on the phone. To look at the build: `git revert 3ad84da`.
+
+**Fix round 1's blockers, their root cause** (read on `<scratchpad>/fo1b`, `scripts/probes/turn_where.mjs`): every worst frame was INSIDE a free turn
+and equal to the target's own turn there (43.0° / target 41.3°, 29.6° / 29.7°, 28.9° / 28.9°; the `Scene_0bis` replay 32.3° / 32.8°). With the start
+carried, the picture turns as fast as the target. At 30 px a frame the target itself turns up to 21 – 52° in a frame during a free turn (90th
+percentile 15 – 25°, the third build's walks). At the base those stretches fall inside HELD turns: the gizmo is held, the finger's steps are dropped, they are never drawn.
+
+**What was tried — three ways to realise F10 – F11** (each built, its 23 fast walks measured; recordings `<scratchpad>/fo1c`):
+
+| realisation | free turn's worst frame | 20 px walks | 30 px walks | flags (G6) |
+|---|---|---|---|---|
+| v1: one follower — the picture from the pose DRAWN last frame toward the newest target, one speed's share, the two framed | 20.8° (the two framed carry the camera round with the piece) | WORST+ 1.0 – 1.4° on 3 loops, REV+ on 4 | holds ≥ 90° (38 – 43 frames), WORST+ up to 7° | 22 |
+| **v2 (committed `1b6b1a7`)**: v1, the picture's turn capped at the one speed — about the piece when the two framed would turn more | **6.0°** | turning −45 % to −58 %, worst 6.0 – 9.8° (base 12.6 – 14.8°), fewer frames; ⚠ REV+ on 5 loops (2 → 3, 0 → 2; the edge 0 → 1) | the gap grows to 80 – 137°; the next turn holds and its first frame jumps 55 – 130° | 33 |
+| v3: v2, but the gap never grows (the brief's circle check) | 17 – 42° (= the target's) | WORST+ 2° on 2 loops, REV+ on 4 (up to 2 → 9) | WORST+ up to 42°, holds ≥ 90° | 38 |
+
+**The gates on v2** (base → now): G0 — `npm run verify` not run on `1b6b1a7` (its typecheck and the 8 touched test files green; 25 vectors in
+`tests/fast_orbit.test.ts`, 16 mutants each red: the share, the step, the target reached, the step bound, the about-piece frame, the angles left, the
+start drawn, the free turn drawn as held, the end, the readers, the latch); at `3ad84da` green. G5 — `Scene_0`, `Scene_1` identical to the base on
+all 2794 frames; `Scene_0bis` another play from frame 314: the largest view turn **14.1° → 49.6°** (f482, a HELD turn started from a lagging free
+turn's pose), roll 18.9° → 16.1° ❌. G6 ❌ (above). G1 – G4: NOT MEASURED (stopped at G6 and G5, the brief's rule).
+
+**Why it cannot pass, in plain words.** Without the hold, a fast finger drives the camera's target through stretches where it turns 30 – 50° in one
+frame. The picture can follow it (v1, v3, round 1: frames far over the base's worst), or lag behind it at the one speed (v2: every free frame within
+6°). But a lag past 90° makes the next turn a held one, and the held turn's own drawing then starts far from its target and jumps. Every way to remove
+that needs one of: a hold decided inside a turn (§2 1.), a change to a held turn's drawing (forbidden), or a slower finger orbit at those stretches
+(a change to what drives the camera). None is in this chain's contract.
+
+**What a hand would feel with v2** (not deployed): at 20 px a frame the loops in about half the frames, the picture turning half as much, never more
+than 6° a frame inside a turn; at 30 px a frame the picture falls behind the finger, then a long held turn and a jump.
+
+**The owner's options** (none built): (a) v2 with a hold decided again when a free turn's gap reaches the limit (changes §2 1.); (b) the gates judged
+at 20 px only, with 30 px read as "beyond the one speed" (changes G6); (c) the held turn's drawing fixed for a start far from its target (§5, row 1 of
+`LEVEL_FACE_ENTRY.md` §13's table); (d) keep today's game — the abort, `1.0.147-`.
