@@ -314,6 +314,10 @@ workflow once the scene is built in blender"*)
    occlusion into its OPAQUE meshes' vertex colours (`AO` → `COLOR_0`) and, per pair of parts within reach at their goals, what one casts on the other →
    `<scene>_contact.json`; the glass neither receives nor occludes. Checks: darkens only (absolute, within the noise), the product = a full bake PER TERM
    (⛔ a global percentile was blind — its control proved it), every baked mesh exported with `COLOR_0`; control ⑬ the darkest term dropped.
+8. ⭐⭐ **THE EXPORTED FILE CHECKED — *can every part reach its seat?*** (the owner, 2026-11-17: *"I want to do that systematically for any new
+   scene I will create"*): `npx vite-node scripts/surface/check_parts_reach_their_seat.ts -- <the .glb>` — every part's ways in at its stage of
+   the plan, from the file's `UCX_` pieces, seat markers and ghosts. FAIL: a goal shut, or a named way in blocked; a NARROW part warns (it needs
+   its ghost and the plunge). How to run and read it: `SCENE_WORKFLOW.md` §8.
 
 ## 5. A scene's own reference animation
 
@@ -328,7 +332,9 @@ Blender; Blender previews it. Each moving piece's PIVOT is authored where the fo
 ## 6. ⭐⭐ THE PLAYABILITY CHECKS AND CHECKLIST (2026-11-16) — ⭐ **Approved by the owner 2026-11-16 — TO BE TESTED, may be reversed**
 
 > The owner's aim (2026-11-16): *"we shall amend the blender object building workflow to make sure that any surface built in blender is built with consideration of the playability of the game, therefore in consideration with the rules we are specifying here."* — and his approval of the recommendation (2026-11-16, [ORBIT_SURFACE.md](../../40_RENDER_SCENE/spec/ORBIT_SURFACE.md) §8 Q7): *"I agree with the recommendations, although they shall be later tested and could be reversed if the testing shows they need to be reversed."*
-> ⛔ **SPECIFIED, NOT BUILT**: no Blender script and no game-side check below exists yet. **First**: B1, B2, B4; **once the landing map exists** (the
+> ⛔ **SPECIFIED, NOT BUILT**: no Blender script and no game-side check below exists yet — ⭐ but **B4's computation, BUILT 2026-11-17** as a
+> script run on the exported `.glb`, for any scene (`scripts/surface/check_parts_reach_their_seat.ts` → `SCENE_WORKFLOW.md` §8; its colours in
+> Blender and *"a direction starts at a place"* are not built). **First**: B1, B2, B4; **once the landing map exists** (the
 > game's L2, [ORBIT_SURFACE.md](../../40_RENDER_SCENE/spec/ORBIT_SURFACE.md) §5.1): B3, B5; B6 beside them. The brief they read: [`../../20_GAME_RULES/spec/SCENE_WORKFLOW.md`](../../20_GAME_RULES/spec/SCENE_WORKFLOW.md) §7.1.
 > The rule numbers (S…, P…) are [ORBIT_SURFACE.md](../../40_RENDER_SCENE/spec/ORBIT_SURFACE.md)'s.
 

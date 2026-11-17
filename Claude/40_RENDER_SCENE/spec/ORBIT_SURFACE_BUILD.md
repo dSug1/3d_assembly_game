@@ -31,6 +31,9 @@ with what was proposed to him (this record, then the landing map launched as an 
 * ⛔ **THE RULE: until `orbit_charts` is merged into `3d_assembly_game`, this branch ADDS NEW FILES ONLY.** It edits no existing file but its own
   documents (`ORBIT_SURFACE*.md`). Where a test demands a one-line registration in an existing file, that line is the only exception, and it is
   listed in §6.
+* ⭐ **One exception, asked by the owner (2026-11-17)**: the check *can every part reach its seat?* kept as a permanent script and written into
+  the scene workflow — `SCENE_WORKFLOW.md` and `PART_AUTHORING.md` edited (§6, §7). Measured before the edit: the charts' branch has changed
+  neither file since the fork.
 * **The PC carries one heavy job at a time** and the charts' chain is running its headless gates: here no headless run, no dev server, no Blender
   run; single-process offline scripts (`npx vite-node`, under 3 minutes) and single test files; `npm run verify` once per package.
 * **What waits for the merge** (each edits files the charts' work is changing): the READOUT beside today's depth on `Scene_1`; the mouth's hold
@@ -73,11 +76,19 @@ like `Scene_1`'s), as a figure for the wiring step. A new file under `src`, a ne
 * **S1 — a copy of the study for the tests**: `tests/helpers/surface_shapes.ts` copies the study's shapes and its brute-force reading
   (`scripts/probes/surface_study/`) — a test does not import from `scripts/`. `scripts/surface/landing_compare.ts` checks the copy against the study
   bit for bit: rerun it if either changes.
+* **The reach check — its three files RENAMED** (`scripts/surface/`, the owner 2026-11-17): `scene2_entries.ts` →
+  `check_parts_reach_their_seat.ts`, `entry_geom.ts` → `check_parts_reach_their_seat_geom.ts`, `entry_selfcheck.ts` →
+  `check_parts_reach_their_seat_selfcheck.ts`. They import the study's sphere size and shapes from `scripts/probes/surface_study/`: that folder
+  stays with them.
+* **The reach check — two workflow documents EDITED** (the owner's request, §3): `Claude/20_GAME_RULES/spec/SCENE_WORKFLOW.md` (§8 new; one
+  line each in its status, §1's W4 row, §2.3 rule 2, §6.3 item 5, §7's note) and `Claude/30_OBJECTS_3D/spec/PART_AUTHORING.md` (§4.4 item 8,
+  §6's note). Both were already edited on this branch (2026-11-16, the playability amendments); the charts' branch touches neither (measured
+  2026-11-17). At a merge where another branch edited them: keep both sides.
 
 ## 7. As built (filled by the packages)
 
 * **S0 — MEASURED 2026-11-17** (the builder; ✅ audited: PASS) → [ORBIT_SURFACE_SCENE2_ENTRIES.md](ORBIT_SURFACE_SCENE2_ENTRIES.md).
-  Files ADDED only: `scripts/surface/scene2_entries.ts` (the run), `entry_geom.ts` (exact: a ray against each pair's Minkowski difference, the
+  Files ADDED only: `scripts/surface/scene2_entries.ts` (the run; ⭐ renamed since with the two below — §6), `entry_geom.ts` (exact: a ray against each pair's Minkowski difference, the
   game's contact rule and skin), `entry_selfcheck.ts` (14 known answers, the study's own L05 / L03 / Q07 / L19 among them), and that document.
   **The result: no goal of `Scene_2` is shut; the plan's way in is free for all sixteen; the six pistons are NARROW (1.9° – 2.7° round their bore,
   as the plan's ONE axis); the ghosts differ from the collision pieces by each part's seat marker's offset from its `UCX_` pieces, to 0.1 mm (pistons
@@ -113,3 +124,12 @@ like `Scene_1`'s), as a figure for the wiring step. A new file under `src`, a ne
   `replay_probe_profile_B1_s0_28168`, started 14:26, the processes that owned it dead) stayed 82 minutes and used 18 700 s of processor time —
   about four cores on average: the TIMES measured by both builders above were taken beside it. Stopped at 15:50, its profile folder removed; the
   charts' own running gate untouched.
+* ⭐ **THE REACH CHECK MADE PERMANENT, FOR ANY SCENE (Fable, 2026-11-17, the owner's request)** → `SCENE_WORKFLOW.md` §8. S0's script, renamed
+  `check_parts_reach_their_seat.ts` (§6), takes any scene's `.glb`: the order from each part's `step`, the frozen parts pre-placed, each part's
+  way in from its seat pair or from the plunge ghost authored for it (no hand-written list; a plan file optional), a VERDICT with an exit code,
+  a control per part (pushed past its seat: BLOCKED). **Measured:** on `Scene_2` with no plan file, all 16 rows identical to S0's audited run in
+  every figure, the cross-checks and self-checks identical; PASS, 0 failures, 19 warnings, controls 16 of 16, 52 s. The planted failure (a plan
+  file placing the head E13 before its bank's pistons): FAIL, exit 1 — E07, E08, E09 SHUT, blocked by E13; the other bank still passes.
+  The three files typecheck clean (the project's settings; the only errors reported are two older ones in the study's own
+  `scripts/probes/surface_study/shapes.ts`, which they import). ⚠ Built and checked by Fable alone, no second agent's audit; scripts are
+  outside `npm run verify`.

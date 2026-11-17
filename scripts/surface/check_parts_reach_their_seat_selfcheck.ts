@@ -1,11 +1,12 @@
-// THE ENTRY-SET CHECK — its self-checks (package S0): known answers on boxes and a slanted hull, the contact at the seat, the tunnelling case, and the
+// CAN EVERY PART REACH ITS SEAT? (check_parts_reach_their_seat.ts; SCENE_WORKFLOW.md §8) — the check's SELF-CHECKS (first written as package S0):
+// known answers on boxes and a slanted hull, the contact at the seat, the tunnelling case, and the
 // study's own answers (ORBIT_SURFACE_SHAPES.md §3.3: L05 0.8 % and +y, +z exactly; L03 +y alone; Q07 EMPTY) computed by the STUDY's code
 // (`goalCheck`, the box-only implementation) and by this one. Every check returns its expected and measured figures; the run exits 1 on a failure.
 import { ENTRY_SPHERE_N, goalCheck } from "../probes/surface_study/checks";
 import { buildCtx } from "../probes/surface_study/readings";
 import { LIBRARY } from "../probes/surface_study/shapes";
 import { gapBetween } from "../../src/core/collision_shape";
-import { type Piece, type V, entrySet, makePiece, mouthAlong } from "./entry_geom";
+import { type Piece, type V, entrySet, makePiece, mouthAlong } from "./check_parts_reach_their_seat_geom";
 
 const AXES: { label: string; d: V }[] = [
   { label: "+x", d: [1, 0, 0] }, { label: "-x", d: [-1, 0, 0] }, { label: "+y", d: [0, 1, 0] },

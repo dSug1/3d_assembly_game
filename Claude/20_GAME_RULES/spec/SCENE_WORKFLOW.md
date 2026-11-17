@@ -4,6 +4,7 @@
 > decides at each gate, and the template of the ASSEMBLY PLAN
 > **READ IF** · you are starting a new scene, or about to model, import or script the parts of one
 > **LAST VERIFIED** · 2026-11-12 (branch `1.0.124from1.0.121-Added_scene_2`) · ⭐ §7 (the playability amendments) APPROVED 2026-11-16, to be tested
+> ⭐ §8 — the check *can every part reach its seat?* — ✅ BUILT 2026-11-17 as a script for ANY scene's `.glb`, run on `Scene_2`
 
 > *"I think we first need to draft an assembly plan how the player would build the assembly. That will determine how to geometrize the parts, how to
 > draw them and their supporting surfaces in blender, etc. Propose a workflow which could be adopted for any new scene and which will be captured in
@@ -24,7 +25,7 @@ every later stage uses those names.
 | **W1** | ⭐⭐ **THE ASSEMBLY PLAN** (§2) | the parts catalogue and the steps, on paper, in the scene's spec (§5); a sketch per step where needed | Claude drafts, the owner decides | ⛔ **the owner's approval** — nothing after it starts before |
 | **W2** | **The geometry spec** | per part, DERIVED from the plan: what the render mesh shows, its collision pieces, its flat faces (the face proxy), its connectors, its goal; the naming | Claude, from the plan | the owner's approval (the conventions once for all scenes; a scene's sheet each time) |
 | **W3** | **The Blender build** | ⭐ STEP BY STEP: a RE-RUNNABLE script (`Assets/Blender/scripts/build_<scene>.py -- --step N`) rebuilding the `.blend` up to the plan's step N, then the FINISH PASS (hidden faces, duplicates, auto smooth — every object), a preview render and the CHECKS each run (§3; `PART_AUTHORING.md` §4) | Claude builds a step; the owner looks; changes go into the script | ⛔ each step's checks clean AND the owner's look in Blender before the next step; ⭐ once the scene is built, BEFORE the export, the three checks of `PART_AUTHORING.md` §4.3 — the geometry review, the motion run (with `animation_golden.json`), and ⛔ the OWNER's review of the face proxies and ghosts for playability |
-| **W4** | **The export and the import** | the `.glb` — the build's last step, READ BACK (`PART_AUTHORING.md` §4.4: one file, every part's subtree, `extras`, +Y up, one-sided); the loader reads it and REFUSES, named, what breaks a convention (`3D4`) | Claude | vectors on the loader; the import of the slice |
+| **W4** | **The export and the import** | the `.glb` — the build's last step, READ BACK (`PART_AUTHORING.md` §4.4: one file, every part's subtree, `extras`, +Y up, one-sided); the loader reads it and REFUSES, named, what breaks a convention (`3D4`) | Claude | ⭐ the check *can every part reach its seat?* PASSES on the exported file (§8); vectors on the loader; the import of the slice |
 | **W5** | **The level data** | the scene file (`src/content/<scene>.ts`): the boot layout, the plan's steps as DATA, the rig, the lights | Claude | vectors: the plan's rules (§2.3) checked on the data |
 | **W6** | **The headless proof** | probes walking EVERY step: the orbit from the boot to the goal, the seat, the capture, the solver's budget per frame, screenshots | Claude | every step reached, budget kept |
 | **W7** | **The device look** | — | the owner | ⛔ **closes the scene** (rule 5) |
@@ -90,7 +91,7 @@ the checks B1 – B6 (failing the run); W4 / W5 re-verify them at import.
    INSIDE what is already closed. ⛔ Checked ON THE REFERENCE's NUMBERS at W1, not on the picture — the WHOLE part's sweep along its approach, every
    end of it (`Scene_2`, 2026-11-12: an approved plan slid each piston in sideways at its bank's split; the numbers showed the rods' other ends inside
    the crankcase, below its split — `30_OBJECTS_3D/spec/SCENE_2_ASSEMBLY.md` §2.7). ⭐ (2026-11-16, §7) Run as a script: B4, the goal's ENTRY SET at
-   its stage — empty fails, small warns.
+   its stage — empty fails, small warns. ✅ (2026-11-17) BUILT, run on the exported `.glb`: §8.
 3. **A seat for every step** — a flat face on the part and one on the host, anti-parallel at the goal.
 4. **The gizmo can reach it** — every face of the route is an exposed face of the assembly at that step (the face map is built from the EXPOSED faces —
    `POLAR_ORBIT_CLEANUP.md`, R1). ⭐ (2026-11-16, §7) "Exposed" = reachable from outside, on the parts taken together (S22) — B2 run as a script.
@@ -226,7 +227,9 @@ says WHEN. ⛔ Each ⛔ GATE is the owner's — nothing after it starts before i
    mistake written into `PART_AUTHORING.md` §3's list (ⓐ … ⓜ) — so it is caught by the script next time, not by the owner.
 4. **Before the export** — the three checks of `PART_AUTHORING.md` §4.3: the geometry review, the motion run (`animation_golden.json` if the object
    moves at the end), ⛔ **GATE: the owner's review of the face proxies and ghosts** (`review_proxies.py`, the review `.blend`).
-5. **The export** — the last step: one `.glb`, read back by the script (§4.4). Commit the `.blend`, the script, the `.glb`, the previews.
+5. **The export** — the last step: one `.glb`, read back by the script (§4.4). ⭐⭐ Then **the check *can every part reach its seat?*** on
+   that file (§8: one command, about a minute, no Blender) — ⛔ **GATE: PASS, and each warning read with the owner** (a NARROW part is an
+   insertion: it has its ghost and the plunge, or it is widened). Commit the `.blend`, the script, the `.glb`, the previews.
 
 ### 6.4 W4 – W7: into the game — ⭐ a VERTICAL SLICE first (§1)
 
@@ -293,7 +296,8 @@ says WHEN. ⛔ Each ⛔ GATE is the owner's — nothing after it starts before i
 ## 7. ⭐⭐ THE PLAYABILITY AMENDMENTS (2026-11-16) — ⭐ **Approved by the owner 2026-11-16 — TO BE TESTED, may be reversed**
 
 > The owner's aim (2026-11-16): *"we shall amend the blender object building workflow to make sure that any surface built in blender is built with consideration of the playability of the game, therefore in consideration with the rules we are specifying here."* — and his approval of the recommendation (2026-11-16, [ORBIT_SURFACE.md](../../40_RENDER_SCENE/spec/ORBIT_SURFACE.md) §8 Q7): *"I agree with the recommendations, although they shall be later tested and could be reversed if the testing shows they need to be reversed."*
-> ⛔ **SPECIFIED, NOT BUILT**: neither the Blender scripts nor the game-side checks below exist yet. The rules they serve and their reasons:
+> ⛔ **SPECIFIED, NOT BUILT**: neither the Blender scripts nor the game-side checks below exist yet — ⭐ but B4's computation, BUILT 2026-11-17
+> as a script run on the exported `.glb` (§8; its colours in Blender and its vector per scene are not). The rules they serve and their reasons:
 > [ORBIT_SURFACE.md](../../40_RENDER_SCENE/spec/ORBIT_SURFACE.md) §2.5 (the entry set), §2.7, §7bis; the checks in full: [`../../30_OBJECTS_3D/spec/PART_AUTHORING.md`](../../30_OBJECTS_3D/spec/PART_AUTHORING.md) §6.
 
 ### 7.1 W1 — the PLAYABILITY BRIEF each part carries from the plan
@@ -337,3 +341,88 @@ function. Each new vector shown failing first (`CLAUDE.md` rule 2).
 ### 7.4 The design-for-playability checklist (whoever draws a part)
 
 → `PART_AUTHORING.md` §6.3 (ten lines, each traced to its rule).
+
+## 8. ⭐⭐ THE CHECK *CAN EVERY PART REACH ITS SEAT?* (2026-11-17) — ✅ BUILT as a script, for ANY scene; first run on `Scene_2`
+
+> *"can you keep the scripts you used to check Scene_2: can every part reach its seat? I want to do that systematically for any new scene I will
+> create. Therefore, this should be part of the blender workflow. Can you integrate this check in the workflow md file, and keep the scripts as
+> permanent so they can be re-used later on next time I create objects and scene in blender ?"* — and: *"instead of "scene2_...", rename the
+> script as "check_parts_reach_their_seat..." so we know what the script is about when we re-use it later on"* — the owner, 2026-11-17.
+
+### 8.1 What it answers, and when it is run
+
+For every part the player places, at its stage of the plan (the pre-placed parts and every part placed before it, all at their goals): **is there
+a straight way for the part into its seat?** It computes the goal's ENTRY SET (§7.1): the directions along which the part, withdrawn from its
+seat, never sinks into a placed part. It is rule 2 of §2.3 (Access) and the check B4 (`PART_AUTHORING.md` §6), run on the scene's exported
+`.glb` — on its `UCX_` collision pieces, with the game's own readers and the game's own contact rule. Nothing of the game is changed by it.
+
+**When:** ⛔ at the end of W3, on the `.glb` just exported and read back (§6.3 item 5), BEFORE anything is imported in the game; and again
+after ANY change of a part's collision pieces, seat markers or ghosts, or of the order of the steps. ⭐ A failure goes back to W1 (the order,
+the plan) or to W2 / W3 (the geometry) — never patched in the game (§1: *going back is normal*).
+
+### 8.2 How to run it
+
+```
+npx vite-node scripts/surface/check_parts_reach_their_seat.ts -- Assets/Blender/<the scene's folder>/<the scene>.glb
+npx vite-node scripts/surface/check_parts_reach_their_seat.ts -- <the scene>.glb <a plan file>.json     # with a plan file (8.3)
+SENS=1 npx vite-node scripts/surface/check_parts_reach_their_seat.ts -- <the scene>.glb                 # + the contact tolerance at 0.3 m and 3 m of camera
+SELF=1 npx vite-node scripts/surface/check_parts_reach_their_seat.ts                                    # the check's own self-checks alone, a few seconds
+```
+
+One process, one core, no browser, no Blender; `Scene_2` (17 parts): 50 – 85 s. It prints a table, each part's detail and a **VERDICT**, and
+saves them (`parts_reach_their_seat.txt` and `.json`, in the system's temp folder or in `OUT=<folder>`). Its exit code: **0 PASS** (warnings
+allowed), **1 FAIL**, 2 no file given — so a build script or a gate can call it.
+
+### 8.3 What it reads — the `.glb` says everything; a plan file is optional
+
+| what | read from the `.glb` | a plan file may override it |
+|---|---|---|
+| the ORDER the parts are placed in | each part's `step`, then its id; each placement is its own stage (parts of one step: in id order) | `"order": ["P02", "P03", …]` — every placeable part, once |
+| the PRE-PLACED parts | `frozen` (the anchor, rule 9): placed from the start | — |
+| each part's shape | its `UCX_` collision pieces, at its goal pose | — |
+| each part's WAY IN | the normal of its own seat marker — the `MC_` marker that MEETS a placed part's marker (a seat pair: the two coincident and anti-parallel); where a ghost with a PLUNGE is authored for the part, the marker that ghost lands on | `"parts": { "P03": { "marker": "MC_P03_rest", "says": "down its bore" } }` |
+| its ghosts | every ghost authored for the part with a plunge: its axis and depth, compared with what the collision pieces say | — |
+
+⭐ So for a new scene nothing is typed by hand: the conventions of `PART_AUTHORING.md` §3 (the `step`, the seat markers in pairs, the ghosts)
+are what the check reads. A plan file is needed only (a) to try ANOTHER order, or (b) when a part has several seats on placed parts in
+different directions and no ghost — the check then warns *"its way in is not named"*.
+
+### 8.4 How to read the result
+
+Per part: its **flag** (`open`, `NARROW`, `EMPTY`), the share of all directions that are free, its widest opening in degrees, whether its way in
+is free, and its ghosts' authored plunge against the computed one. Then the verdict's lines:
+
+| the line | what it means | what to do |
+|---|---|---|
+| **FAIL — SHUT** | no straight direction out of the seat is free at that stage: the part cannot be placed in that order | change the order (W1) or the geometry (W2) |
+| **FAIL — its way in is BLOCKED** | the way in the scene names (the seat marker, a ghost's plunge, the plan file) runs into a placed part, though other directions are free | the marker, the ghost or the order is wrong: W2 / W3 |
+| WARN — NARROW | the part enters only within a few degrees of one axis (its widest opening under 10°) | meant (a bore, a keyed slot): it needs a ghost at the opening and the PLUNGE (§3) — the line says when none is authored; not meant: widen it |
+| WARN — its ghost plunges A mm, the pieces clear after C mm | the authored plunge and the collision pieces disagree by more than 1 mm | look at the seat marker, the ghost and the `UCX_` pieces against the drawn part |
+| WARN — free, but only N° from a blocked direction | a tight approach on a part that is not an insertion | the owner's look |
+| WARN — touches no placed part / sits INSIDE a placed piece | at its goal the part floats, or its collision pieces overlap a placed part's | the goal pose or the pieces |
+| WARN — its way in is not named | several seats, no ghost | name one in a plan file |
+| WARN — CONTROL | pushed past its seat, the part meets nothing | a through opening — else the check does not see this seat |
+
+⭐ **The control** (*a check never seen failing is not trusted*, `PART_AUTHORING.md` §4.2): at every run each part is also pushed PAST its seat
+along its way in, and that must read BLOCKED — the verdict line counts them (`Scene_2`: 16 of 16).
+⚠ The thresholds are the check's own, NOT decided constants of the game: NARROW under 10°, a piece "beside" the way out within 10 mm, a
+ghost off by more than 1 mm (the owner's word on the first two is owed, `ORBIT_SURFACE_BUILD.md` §2).
+
+### 8.5 What it does not check, and where it lives
+
+**Not checked** (the script says so at every run): whether the GIZMO can bring the part to where its way in starts (it needs the landing map
+wired: B3, B5); the DRAWN meshes — only the `UCX_` pieces are read (B1); ways in that need a TURN (straight withdrawals only, the part at its
+goal's orientation); other orders than the one run; the floor and the play volume.
+
+**`Scene_2`'s result** (2026-11-17): PASS — no goal shut, every way in free, the six pistons NARROW, 19 warnings →
+[ORBIT_SURFACE_SCENE2_ENTRIES.md](../../40_RENDER_SCENE/spec/ORBIT_SURFACE_SCENE2_ENTRIES.md). ⭐ Shown failing: with a head placed BEFORE its
+bank's pistons (a plan file's `order`), the run FAILS — those three pistons SHUT, blocked by the head.
+
+**The code** — `scripts/surface/`: `check_parts_reach_their_seat.ts` (the run and the verdict), `check_parts_reach_their_seat_geom.ts` (the
+geometry: exact, no time step), `check_parts_reach_their_seat_selfcheck.ts` (14 known answers). They import the surface study's sphere and
+shapes from `scripts/probes/surface_study/`: that folder stays with them. ⚠ `npm run verify` does not cover scripts: after any change to
+these three, run `SELF=1` and rerun `Scene_2` (its figures are in the document above).
+
+⏳ **Still owed** (§7): the check at EACH build step — the `.glb` exists only at the export, so the build script of the next scene must write a
+provisional `.glb` per step for it; its result painted on the faces in the review `.blend`; a vector per scene at W5; and *"a direction starts
+at a place the gizmo reaches"*, once the landing map is wired.

@@ -133,15 +133,25 @@ millimetres, so how much sinking the game tolerates decides how far off the vert
 ## 5. How to rerun
 
 ```
-npx vite-node scripts/surface/scene2_entries.ts                        # one skin (camera 1 m), about 85 s
-SENS=1 OUT=<folder> npx vite-node scripts/surface/scene2_entries.ts     # + the skins at 0.3 m and 3 m, 150 – 170 s
-SELF=1 npx vite-node scripts/surface/scene2_entries.ts                 # the self-checks alone, a few seconds
+npx vite-node scripts/surface/check_parts_reach_their_seat.ts -- Assets/Blender/World0_Scene2_engine/world0_scene_2_engine.glb   # camera 1 m, 50 – 85 s
+SENS=1 OUT=<folder> npx vite-node scripts/surface/check_parts_reach_their_seat.ts -- <the same .glb>    # + the skins at 0.3 m and 3 m
+SELF=1 npx vite-node scripts/surface/check_parts_reach_their_seat.ts                                   # the self-checks alone, a few seconds
 ```
 
-`OUT` defaults to the system's temp folder (`scene2_entries/`): `scene2_entries.json` (everything) and `scene2_entries.txt` (the table, each
-part's detail). `CAM_M=<metres>` changes the camera the skin is read at. The code: `scripts/surface/entry_geom.ts` (the geometry),
-`entry_selfcheck.ts` (the self-checks), `scene2_entries.ts` (the run). It imports the study's sphere size, its shapes and its `goalCheck` from
-`scripts/probes/surface_study/` (imports only: nothing there is run by path).
+⭐ **2026-11-17 — the script made permanent, for ANY scene, and renamed** (the owner: *"keep the scripts as permanent so they can be re-used"*;
+*"rename the script as "check_parts_reach_their_seat...""*): `scene2_entries.ts` → `check_parts_reach_their_seat.ts`, `entry_geom.ts` →
+`check_parts_reach_their_seat_geom.ts`, `entry_selfcheck.ts` → `check_parts_reach_their_seat_selfcheck.ts` (the names this document uses above
+are the old ones). The `.glb` is now its argument; the hand-written list of §2 (each part's seat marker, the `PLAN` table) is gone — each
+part's way in is found from the file's seat pairs and plunge ghosts; it ends with a VERDICT and an exit code, and pushes each part past its
+seat as a control. How to run and read it for any scene: [SCENE_WORKFLOW.md](../../20_GAME_RULES/spec/SCENE_WORKFLOW.md) §8.
+**Checked against this document's run (2026-11-17):** all 16 rows identical in every figure (shares, openings, regions, free normals, mouths,
+ghosts, seat contacts), the cross-checks and the self-checks identical; the way in found from the file is §2's for all 16 (for E08 and E12
+through their `_pin` marker, which stands at the same point with the same normal as their `_rest`). Its verdict: PASS, 0 failures, 19 warnings
+(§6's findings), controls 16 of 16.
+
+`OUT` defaults to the system's temp folder (`check_parts_reach_their_seat/<the file's name>/`): `parts_reach_their_seat.json` (everything) and
+`.txt` (the table, each part's detail, the verdict). `CAM_M=<metres>` changes the camera the skin is read at. The code imports the study's
+sphere size, its shapes and its `goalCheck` from `scripts/probes/surface_study/` (imports only: nothing there is run by path).
 
 ## 6. THE FINDINGS FOR THE OWNER
 

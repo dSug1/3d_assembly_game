@@ -1,4 +1,5 @@
-// THE ENTRY-SET CHECK — the geometry (ORBIT_SURFACE.md §2.5, B4; package S0 of ORBIT_SURFACE_BUILD.md). Offline, engine-free, millimetres in the
+// CAN EVERY PART REACH ITS SEAT? (check_parts_reach_their_seat.ts; SCENE_WORKFLOW.md §8) — the check's GEOMETRY, for any scene: the ENTRY SET of a
+// goal (ORBIT_SURFACE.md §2.5, B4; first written as package S0 of ORBIT_SURFACE_BUILD.md). Offline, engine-free, millimetres in the
 // MODEL's (scene) frame. A goal's ENTRY SET at a stage: the directions d along which the part, withdrawn from its seated pose, never sinks into a
 // placed part's collision piece by more than the contact tolerance.
 //
