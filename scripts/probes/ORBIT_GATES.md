@@ -345,3 +345,59 @@ out and at 0.736 every entry 6 – 7 → 15 – 16 frames, the far edge's half t
 LF3's drawing); the replays: `Scene_1` identical, `Scene_0` another play from frame 1398 (the way out), `Scene_0bis` from frame 315 (the largest view
 turn 14.1° → 11.8°). With `EXTRA="&tiltMinMs=0&tiltMaxMs=0"` the three replays are identical to `0ab1f9f` in every frame. The recordings: the session
 scratchpad's `lf2/base`, `lf2/def` (a scratch folder).
+
+## 9. Gate (h) — the FAST walks (`fast_walk_*`, package FO1 — `Claude/40_RENDER_SCENE/spec/FAST_ORBIT.md` §4, §6)
+
+The fast orbit's gate (G4, G6): a fast finger crossing many edges. `fast_walk_check.mjs` (one walk a run, every frame recorded), `fast_walk_analyse.mjs`
+(the reading), `fast_walk_table.mjs` (base against new), `fast_walk_drift.mjs` (no drift), run by `fast_walk_batch.sh`.
+
+```bash
+OUT=<folder> EXTRA="" bash scripts/probes/fast_walk_batch.sh <tag> all               # 23 walks, about 15 minutes
+OUT=<folder> REC=1 DRIFT=1 bash scripts/probes/fast_walk_batch.sh <tag> all          # + each walk replayed for G4 (ii): about 30 minutes
+node scripts/probes/fast_walk_table.mjs <base>/fw_f_edge_px20.json <new>/<tag>_f_edge_px20.json   # pairs: base, new [, …]
+```
+
+* **The steering.** The gizmo is steered to targets round the heptagon's long axis (x along it, the angle round it) — the level-entry gate's corner
+  targets (§7) — so the route is the targets' whatever the pace. A leg goes at `LPX` px a frame toward its target, read on the gizmo's raw point
+  (`asmG`) led by its last step × 2.5 (the raw point trails a fast finger by the map's catch-up and the piece's spring: 2 – 3 frames), until the led
+  place has PASSED the target and the gizmo is on the target's face; the legs are CHAINED (the finger stays down from target to target, lifted only at the
+  glass's border and at the end, each lift after 6 still frames: no coast). The start leg is slow (2 px a frame) and is read apart (`to-start`).
+* ⚠ **What the pace means.** Far out one px of finger is about 2 – 3 mm of surface: at 20 px a frame a corner loop (about 90 mm a leg) is 2 – 4 frames a
+  leg, and the route is the targets' only to within a frame's travel — the faces crossed are printed per loop (`F B T U F` is the loop as meant; a
+  loop that cuts or overshoots a face shows it). At 30 px a frame the last loop of some walks wanders (e.g. `f_ccw_p_far_px30` loop 2). The zigzag's
+  targets are 10 mm each side of the edge and `:pass` (reached once crossed, never slowed): at 20 px a frame it overshoots to 30 – 40 mm.
+* **The walks.** `f_<ccw|cw>_<p|m>_<far|d736>_px<20|30>` — `Scene_0bis`, the corner loops (rectangle → bottom → bottom triangle → front triangle, and
+  back the other way), three loops, at the +x / −x tip, far out / approach 0.736; `f_edge_px<2|8|20>` — the bottom face's long edge at its middle (x 0),
+  six crossings 10 mm each side (R1, `POLAR_ORBIT_CLEANUP.md` §9.7: no oscillation at an edge); `f_far_p_px20` — across the bottom to its far edge and
+  back; `f_ridge_px20` — over the top ridge and back (a half turn); `f_s0_up_px20` (`Scene_0`) and `f_s1_over_px20` (`Scene_1`, the cube up over its top
+  and down its back face, and back) — far out, two edges and back.
+* **The reading** (per walk `WALK` and per loop): frames; `still <90 / ≥90` — the frames the gizmo stood still (under 0.05 mm) while a turn ran, by the
+  turn's size at its first known frame (`LIMIT`, 90); the picture's TOTAL TURNING (each frame's rotation summed); its REVERSALS (the roll on the glass
+  changing side with over 1° a frame on both sides); the WORST frame; the faces crossed. Then every turn by its own object (`mix.id`): its size, frames,
+  ONE ROTATION, PATH, ratio, largest frame, HELD / free (the build's decision — `hold`; a build without it: every timed turn held), REPLACED (the next frame
+  runs another turn: a change of frame arrived before it was whole).
+* **G4, no drift** (`REC=1 DRIFT=1`): the walk records its inputs (the events at their frames, the orbit's angles, its clamp's carry and the approach as each
+  frame began), then is REPLAYED from them with `&tiltRollDegS=0` (every turn whole at once) and compared frame by frame (`fast_walk_drift.mjs`): (i) the
+  pose drawn equals the camera stage's target on every frame with no turn (the build's readout `probeCamPose`; at the base: not recorded); (ii) the zone,
+  the tilt, the free face and its heading, the spit's side, the map's angles; the camera on every frame where neither run turns; the last frame's camera.
+  Measured at the base on two walks: the discrete state identical, the numbers within 5e-10 (the replays' last-digit noise) — the replay itself is sound.
+
+### 9.1 The base (the code of `892b6a3` = the live `c343c4f`'s; recorded at `8997e45`, docs only after it) — `<scratchpad>/fo1/base`
+
+| walk | frames | still <90 / ≥90 | turning ° | reversals | worst ° | turns (all held) / replaced |
+|---|---|---|---|---|---|---|
+| f_ccw_p_far_px20 / px30 | 220 / 256 | 50 / 0 · 71 / 0 | 653 / 962 | 6 / 8 | 14.8 / 24.8 | 8 / 3 · 9 / 4 |
+| f_cw_p_far_px20 / px30 | 178 / 233 | 26 / 0 · 51 / 0 | 437 / 803 | 5 / 10 | 13.6 / 17.3 | 4 / 1 · 12 / 7 |
+| f_ccw_p_d736_px20 / px30 | 335 / 346 | 49 / 0 · 35 / 22 | 650 / 1123 | 6 / 4 | 14.8 / 30.5 | 8 / 3 · 8 / 3 |
+| f_cw_p_d736_px20 / px30 | 293 / 337 | 26 / 0 · 46 / 0 | 450 / 788 | 5 / 10 | 13.6 / 25.3 | 4 / 1 · 10 / 6 |
+| f_ccw_m_far_px20 / px30 | 225 / 266 | 56 / 0 · 65 / 2 | 609 / 849 | 8 / 8 | 12.6 / 16.8 | 12 / 5 · 9 / 3 |
+| f_cw_m_far_px20 / px30 | 187 / 1013 | 25 / 0 · 59 / 21 | 471 / 932 | 6 / 11 | 14.1 / 18.0 | 6 / 3 · 14 / 8 |
+| f_ccw_m_d736_px20 / px30 | 340 / 396 | 55 / 0 · 83 / 2 | 624 / 1009 | 8 / 6 | 13.6 / 25.9 | 12 / 5 · 9 / 3 |
+| f_cw_m_d736_px20 / px30 | 302 / 430 | 25 / 0 · 60 / 63 | 477 / 1523 | 6 / 15 | 13.6 / 19.8 | 6 / 3 · 18 / 10 |
+| f_edge_px2 / px8 / px20 | 166 / 159 / 220 | 0 / 0 · 3 / 0 · 44 / 0 | 125 / 183 / 469 | 0 / 0 / 0 | 5.7 / 7.7 / 16.9 | 6 / 0 each |
+| f_far_p_px20 | 190 | 34 / 15 | 651 | 2 | 17.2 | 7 / 3 |
+| f_ridge_px20 | 137 | 0 / 28 | 270 | 0 | 7.4 | 1 (the half turn, 180°) / 0 |
+| f_s0_up_px20 (`Scene_0`) | 134 | 0 / 0 | 180 | 0 | 13.5 | 0 |
+| f_s1_over_px20 (`Scene_1`) | 168 | 0 / 0 | 611 | 1 | 22.5 | 0 |
+
+Deterministic as every probe here (the virtual clock). The figures per loop: `fw_analysis.txt` beside the recordings.
