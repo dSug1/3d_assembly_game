@@ -734,3 +734,32 @@ trigger to forecast); fewer frames at speed (reopens what drives the orbit).
 **Before any build:** his word; then a throwaway prototype (parts 1 – 2 are one predicate), measured headless on the three scenes with FAST walks
 added to the gate (20 – 30 px a frame: round the corner, along an edge, over the ridge), read with the path gate and the free roll; his look; then
 part 3.
+
+**No drift — the owner's question** (2026-11-17: *"The newest target wins: how is it done. How do you make sure that after an orbit moving the gizmo,
+the final transform of the camera of today's built will be the final transform of the camera with your new build i.e. no drift will happen by
+redirecting the running turn instead of queuing the turns."*), answered from the code:
+
+* **How a turn is made** (the camera's stage in `green_box_wiring.ts` → `zoneMixPose`): every frame the TARGET pose is built from the state alone
+  (`cameraFrameNow`: the frame the orbit is in, its angles, the heading carried on a free face, the spit's side, the calm, the square camera). A turn
+  (`asmZoneMix`) is a fade laid over it: a snapshot of the pose shown at its start (`from`) and a share `k` 0 → 1; the pose drawn lies between the
+  snapshot and THIS frame's target. At `k` = 1 the turn is deleted and the pose drawn is the target itself (`zm === null → return to`). A turn writes
+  nothing into the state. Redirecting = the turn replaced by a new one whose snapshot is the pose shown at that instant (`from: poseShown(st)`, `k` 0
+  — `zoneSwitch`, `seamTurnStart`, `freeFaceFrame` today).
+* **So nothing is summed.** The final camera is not the start plus the turns played: it is the target of the final state. Three turns one after the
+  other, or one turn redirected twice, end on the same pose to the last bit — IF the state is the same. A change of frame SETS every angle from the
+  map at the gizmo's exact place (`seamRebase`); it adds nothing to them.
+* **What must hold: the state never reads the fade.** What reads it today (every use of `asmCamLast`, `cameraPrev`, `drawnDir`, `dirAt` read): (1) the
+  finger (`zoneFinger`: the picture drawn — the rule, the gizmo goes the finger's way on the glass); (2) a free face entered with NO entry edge — a
+  pick-up on it, or the gizmo over a whole face in one frame (`freeEntryHeading`'s fallback: the layout nearest the up drawn); (3) a zone's switch
+  exactly at a pole of the world's map (`poleYawKept`: the heading of the direction drawn, eased with the turn). ⭐ `shownHeading` already reads the
+  TARGET's frame (`cameraPrev`, set before the fade). Today the gizmo is held, so (2) and (3) nearly always read a settled picture. In the proposal
+  (2) and (3) read the TARGET (`cameraPrev`'s up, the direction without its ease) — the value today's settled picture gives. (1) stays: it is why the
+  gizmo's ROUTE under a fast finger will differ from today's (today that travel is dropped) — the camera for a given route does not.
+* **Route, not drift.** For one end place the camera depends on the ROUTE already, by the owner's rules (the heading carried onto a level face by its
+  entry edge, the spit's side, the tilt's latch and bands). The claim: the same route of faces to the same place → the same camera as today's,
+  exactly. ⛔ NOT claimed: the same finger gesture → the same end place (today's hold drops finger travel; that is what goes).
+* **How it is checked, in the prototype's gate:** (i) on every frame with no turn running, the pose drawn equals the target, to the last bit; (ii) a
+  fast walk recorded in the prototype (the orbit's angles, frame by frame), then the SAME angles replayed with every turn whole at once
+  (`tiltRollDegS` 0 — no fade at all): on every frame the state identical (the zone, the tilt's frame, the heading carried, the spit's side, the map's
+  angles), and at the end the camera's transform identical to the last bit. A difference names a reader of the fade — found and corrected before any
+  build.
