@@ -228,15 +228,15 @@ describe("⭐⭐⭐ the wiring (source pins, comments stripped)", () => {
     expect(f).toContain("if (zm === null || zm.out === undefined) return;");
     expect(f).toContain("const whole = turnWhole(st, zm);");
     expect(f).toContain("const target = seamOutTarget(o.outMm, o.orbitMm, st.cfg.tiltOutBlendMm, st.cfg.tiltBlendMm, st.router.all().length > 0);");
-    expect(f).toContain("o.p = seamOutStep(o.p, target, dtMs, whole, st.cfg.tiltRollDegS, zm.axis !== null && zm.dirFrom === undefined); zm.k = seamOutShare(o.p);"); // ⭐ (package A) …and its ease read
-    expect(f).not.toContain("st.asmZoneMix = null"); // ⭐ (package A, the audit's blocker) whole: ended once DRAWN, in the camera's stage (`zoneMixPose`)
+    expect(f).toContain("o.p = seamOutStep(o.p, target, dtMs, whole, st.cfg.tiltRollDegS, zm.axis !== null); zm.k = seamOutShare(o.p);");
+    expect(f).toContain("if (o.p >= 1) st.asmZoneMix = null;");
     const a = fnCode(W, "export function assemblyFrame(");
     before(a, "seamTurnFrame(st, dtMs);", "seamOutFrame(st, dtMs);");
     before(a, "seamOutFrame(st, dtMs);", "const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };");
   });
   it("⭐ the timed clock leaves it alone (`zoneStep`), and `tiltClampStep` does not hold for it (`turnHoldsGizmo`)", () => {
     const z = fnCode(W, "function zoneStep(");
-    expect(z).toContain("if (zm !== null && zm.axis !== null && zm.dirFrom === undefined && zm.byMm !== true && zm.out === undefined) {"); // ⭐ (package A) …and its ease read
+    expect(z).toContain("if (zm !== null && zm.axis !== null && zm.byMm !== true && zm.out === undefined) {");
     const h = fnCode(W, "export function tiltClampStep(");
     expect(h).toContain("const zoneTurning = zm !== null && turnHoldsGizmo(zm.out !== undefined, zm.byMm === true, st.asmTiltPending, st.asmBlend !== null, zm.k);");
   });

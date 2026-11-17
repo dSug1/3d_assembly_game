@@ -143,9 +143,7 @@ describe("⭐⭐⭐ the turn's pace — today's swing rule on the one camera tur
               expect(seamTurnHolds(paced, pending, blend !== null, 1)).toBe(false);
               // the share: today's swing (paced) — by time at the turn's angle's duration
               const r = seamTurnStep({ k: k0, done: k0 * RAD, rad: RAD, axisKnown: true }, pace, blend === null ? 1 : blendShare(blend, span), 16, DEG_S);
-              const e0 = paced ? swingE(k0, pending, blend, span, 16, rollDurationMs(RAD, DEG_S)) : rollStep(k0, 1, 16, rollDurationMs(RAD, DEG_S));
-              // ⭐⭐⭐ (2026-11-16 night, package A — the owner's *"1- A"*) by the finger: the swing's share, but never over the one speed's step a frame (⛔ at once)
-              const e = pace === "FINGER" ? Math.min(e0, k0 + ((DEG_S * Math.PI) / 180) * 0.016 / RAD) : e0;
+              const e = paced ? swingE(k0, pending, blend, span, 16, rollDurationMs(RAD, DEG_S)) : rollStep(k0, 1, 16, rollDurationMs(RAD, DEG_S));
               expect(r.k).toBeCloseTo(e, 12);
               expect(r.done).toBeCloseTo(r.k * RAD, 12);
             }
@@ -159,12 +157,11 @@ describe("⭐⭐⭐ the turn's pace — today's swing rule on the one camera tur
           expect(seamTurnHolds(false, pending, blend, k)).toBe(k < 1);
         }
   });
-  it("⭐ by time AND by the finger (package A) only from the frame the turn's angle is read (`axisKnown`, `zoneStep`'s wait); held needs none; `degS` 0 whole at once", () => {
+  it("⭐ by time only from the frame the turn's angle is read (`axisKnown`, `zoneStep`'s wait); held and by the finger need none; `degS` 0 whole at once", () => {
     const t = { k: 0, done: 0, rad: Math.PI / 2, axisKnown: false };
     expect(seamTurnStep(t, "TIME", 1, 16, 360)).toEqual({ k: 0, done: 0 });
     expect(seamTurnStep({ ...t, k: 0.3, done: 0.3 }, "HELD", 0.9, 16, 360)).toEqual({ k: 0.3, done: 0.3 });
-    expect(seamTurnStep(t, "FINGER", 0.4, 16, 360).k).toBe(0); // ⭐ (package A) held: the cap needs the whole angle (⛔ 0.4 at once)
-    expect(seamTurnStep({ ...t, axisKnown: true }, "FINGER", 0.04, 16, 360).k).toBe(0.04); // under the cap: the finger's share
+    expect(seamTurnStep(t, "FINGER", 0.4, 16, 360).k).toBe(0.4);
     expect(seamTurnStep({ ...t, axisKnown: true }, "TIME", 1, 16, 0)).toEqual({ k: 1, done: Math.PI / 2 });
     // the finger's share never back (today's `max`)
     expect(seamTurnStep({ k: 0.5, done: 0.5, rad: 1, axisKnown: true }, "FINGER", 0.2, 16, 360).k).toBe(0.5);
@@ -287,7 +284,7 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): ONE STATE (⛔ the
     expect(f).toContain("crossingEvent(mulM(tl.map, [0, 1, 0]), nT, nW, WORLD_UP, st.asmDySign).hold"); // the one rule (⛔ `edgeHoldAt`: step 2.5)
     const c = fnSource(W, "function crossTurn(");
     expect(c).toContain("seamRebase(st, mq);");
-    before(c, "seamRebase(st, mq);", "if (c.paced) seamOutStart(st); else if (st.asmCamLast !== null) seamTurnStart(st, false); if (c.uWas !== null) seamEase(st, c.uWas); else if (uCarry !== null) easeCarry(st, mixWas, uCarry);");
+    before(c, "seamRebase(st, mq);", "if (c.paced) seamOutStart(st); else if (st.asmCamLast !== null) seamTurnStart(st, false); if (c.uWas !== null) seamEase(st, c.uWas); else if (c.carry) easeCarry(st, mixWas);");
     expect(f).toContain("if (nW !== null) sqO.target = nW;");
     expect(f.match(/turnAngles\(/g)?.length).toBe(1);
   });
@@ -309,7 +306,7 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): ONE STATE (⛔ the
     expect(t).toContain("const pace = seamTurnPace(true, st.asmTiltPending, bl !== null);");
     expect(t).toContain("bl === null ? 1 : blendShare(bl.mm, st.cfg.tiltBlendMm)");
     const z = fnSource(W, "function zoneStep(");
-    expect(z).toContain("if (zm !== null && zm.axis !== null && zm.dirFrom === undefined && zm.byMm !== true && zm.out === undefined) {"); // ⭐ (package A) …and its ease read // ⭐ (2026-11-16, step C3) the way out paced in `seamOutFrame`
+    expect(z).toContain("if (zm !== null && zm.axis !== null && zm.byMm !== true && zm.out === undefined) {"); // ⭐ (2026-11-16, step C3) the way out paced in `seamOutFrame`
     const a = fnSource(W, "export function assemblyFrame(");
     before(a, "if (st.asmBlend !== null) st.asmBlend.mm += fingerMm;", "seamTurnFrame(st, dtMs);");
     before(a, "if (st.asmTiltAuto && st.asmTilt === null) tiltOn(st,", "seamTurnFrame(st, dtMs);");
@@ -380,8 +377,8 @@ describe("⭐⭐⭐ the transition's whole angle: the camera's turn PLUS the pie
   it("wired: `zoneStep`'s clock and a paced turn's both run over `turnWhole` — this turn's eased direction, else the camera's own", () => {
     const aw = readFileSync("src/render/assembly_wiring.ts", "utf8").replace(/\s+/g, " ");
     expect(aw).toContain("function turnWhole(st: SceneState, zm: NonNullable<SceneState[\"asmZoneMix\"]>): number { const e = st.asmDirEase; return seamWholeRad(zm.rad, e !== null && e.mix === zm ? e.angle : 0); }");
-    expect(aw).toContain("const whole = turnWhole(st, zm); zm.done = degS > 0 ? Math.min(whole, zm.done + seamStepRad((degS * Math.PI / 180) * (dtMs / 1000), zm.rad, turnEase(st, zm))) : whole; zm.k = whole > 1e-9 ? Math.min(1, zm.done / whole) : 1;"); // ⭐ (package A) the step less the camera's growth with the ease
-    expect(aw).toContain("seamTurnStep({ k: zm.k, done: zm.done, rad: turnWhole(st, zm), axisKnown: zm.axis !== null && zm.dirFrom === undefined }, pace,"); // ⭐ (package A) …and its ease read
+    expect(aw).toContain("const whole = turnWhole(st, zm); zm.done = degS > 0 ? Math.min(whole, zm.done + (degS * Math.PI / 180) * (dtMs / 1000)) : whole; zm.k = whole > 1e-9 ? Math.min(1, zm.done / whole) : 1;");
+    expect(aw).toContain("seamTurnStep({ k: zm.k, done: zm.done, rad: turnWhole(st, zm), axisKnown: zm.axis !== null }, pace,");
     expect(aw).not.toContain("Math.min(zm.rad, zm.done +");
   });
 });

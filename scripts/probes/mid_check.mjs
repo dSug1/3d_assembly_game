@@ -13,6 +13,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 const URL = process.env.URL;
 const S0 = +(process.env.S0 ?? 0) / 1000, A = +(process.env.A ?? 0), PX = +(process.env.PX ?? 3), PERIOD = +(process.env.PERIOD ?? 40), IN = !!process.env.IN;
 const RIM = +(process.env.RIM ?? 0.2475);
+const PROBE_AT = [300, 600]; // (package R1) where the direction probes press: off the held piece, above the HUD (y < 740)
 const port = 9300 + Math.floor(Math.random() * 600);
 const prof = join(tmpdir(), `replay_probe_profile_mid_${process.pid}`);
 const profTmp = join(prof, "tmp");
@@ -94,13 +95,16 @@ try {
   const startOf = (d) => [d[0] > 0 ? 200 : d[0] < 0 ? 1000 : 600, d[1] > 0 ? 150 : d[1] < 0 ? 700 : 400];
   const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
   // the finger's way that raises `obj` the most here (6-frame probes, each undone)
+  // ⭐ (2026-11-17, package R1) the 6-frame probes pressed OFF the held piece (`PROBE_AT`, the lower left of the glass) — ⛔ at the glass's centre (600, 400):
+  // since package A the climb lands where a quad of the held piece is drawn there, every probe was read as a quad's TAP (a roll of the piece, the
+  // verdict "quad tapped … roll 90°"), the orbit never moved (every gain 0) and the gizmo was never parked
   const bestDir = async (leg, obj, px) => {
     let best = null;
     for (const d of DIRS) {
       const o0 = obj(await state());
-      await drag(`${leg}-probe`, 600, 400, [d[0] * px, d[1] * px], 6, false, null);
+      await drag(`${leg}-probe`, PROBE_AT[0], PROBE_AT[1], [d[0] * px, d[1] * px], 6, false, null);
       const o1 = obj(await state());
-      await drag(`${leg}-probe`, 600, 400, [-d[0] * px, -d[1] * px], 6, false, null);
+      await drag(`${leg}-probe`, PROBE_AT[0], PROBE_AT[1], [-d[0] * px, -d[1] * px], 6, false, null);
       if (best === null || o1 - o0 > best.gain) best = { d, gain: o1 - o0 };
     }
     return best;
@@ -149,9 +153,23 @@ try {
   const s2 = await state();
   console.log(`  on the triangle under the tip: ${onTip} — the gizmo (${f3(s2.g)}) mm, normal [${s2.n.map((x) => x.toFixed(2))}], side ${s2.side}, off the middle ${(off(s2.g) * 1000).toFixed(1)} mm`);
   const atS0 = await climb("to-s0", (s) => -Math.abs(off(s.g) - S0) - 4 * Math.max(0, RIM + 0.02 - along(s.g)), (s) => Math.abs(off(s.g) - S0) < 0.003 && along(s.g) > RIM + 0.005 && s.n !== null && s.n[1] < -0.4, 12, 2, 0.002);
+  // ⭐ (2026-11-17, package R1) THE FINE PARK by the orbit's own angle (ORBIT_GATES.md: "park by small steps of the orbit's angle, never by pixels"): a
+  // secant on the yaw (round the axis here) until the gizmo is within 1 mm of S0 — ⛔ by drags alone: far out one drag's least step is ~16 mm across,
+  // the climb went back and forth over the middle and stopped 5 – 25 mm off it
+  const nudY = async (d, n) => { await ev(`(() => { const s = window.__st; s.orbit.reset(s.orbit.yaw + (${d}), s.orbit.elevation); return true; })()`); await step(n); };
+  let fine = 0;
+  { let o0 = off((await state()).g), d = 0.01;
+    for (let i = 0; i < 30 && !(Math.abs(o0 - S0) < 0.001); i++) {
+      await ev(`window.__leg = "fine"`); await nudY(d, 30); fine++;
+      const o1 = off((await state()).g);
+      const sl = (o1 - o0) / d;
+      if (Math.abs(sl) > 1e-4) d = Math.max(-0.05, Math.min(0.05, -(o1 - S0) / sl));
+      o0 = o1;
+    } }
   await ev(`window.__leg = "settle"`); await step(60);
   const s3 = await state();
-  console.log(`  at ${(S0 * 1000).toFixed(0)} mm from the middle: ${atS0} — the gizmo (${f3(s3.g)}) mm, normal [${s3.n.map((x) => x.toFixed(2))}], side ${s3.side}, off the middle ${(off(s3.g) * 1000).toFixed(1)} mm, hold ${s3.hold}`);
+  const parked = Math.abs(off(s3.g) - S0) < 0.003 && along(s3.g) > RIM + 0.005 && s3.n !== null && s3.n[1] < -0.4;
+  console.log(`  at ${(S0 * 1000).toFixed(0)} mm from the middle: ${parked} (the climb ${atS0}, then ${fine} fine steps of the orbit's yaw) — the gizmo (${f3(s3.g)}) mm, normal [${s3.n.map((x) => x.toFixed(2))}], side ${s3.side}, off the middle ${(off(s3.g) * 1000).toFixed(1)} mm, hold ${s3.hold}`);
   // 4. THE WALK: one drag along the axis toward the body's middle, a wobble of A px across the finger's way
   const b = await bestDir("walk", (s) => -along(s.g), 3);
   const perp = [b.d[1], b.d[0]];
