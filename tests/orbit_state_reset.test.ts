@@ -43,7 +43,7 @@ const RESET: Record<string, unknown> = {
   asmDirEase: null,
   asmCamLast: null,
   asmSpitSide: 0,
-  asmSpitN: null,
+  asmSpitU: null,
   asmZoneAlpha: 0,
   asmDySign: 0,
   asmHeadO: null,

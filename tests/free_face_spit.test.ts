@@ -339,7 +339,7 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): the carried headin
     const g = "if (st.asmFree !== null) return offsetFrame(uW, freeHeadingAngle(st.asmFree.heading, uW), o.yawRad, o.pitchRad);";
     expect(c).toContain(g);
     before(c, "const uW = mulM(B, sF);", g);
-    before(c, g, "return offsetFrame(uW, spitCameraHeading(spitSideView(uW, st.asmZone!.zone.axis, side), st.asmZone!.zone.axis, side), o.yawRad, o.pitchRad);"); // ⭐ (R1) on the side's view
+    before(c, g, "return offsetFrame(uW, spitCameraHeading(uW, st.asmZone!.zone.axis, side), o.yawRad, o.pitchRad);");
     expect(c.match(/freeHeadingAngle\(/g)?.length).toBe(1);
   });
   it("⭐ `zoneFinger`: `fingerInFrame`'s own answer with `asmFree` set — before the swap", () => {
@@ -349,15 +349,12 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): the carried headin
     before(z, "st.asmZoneAlpha = r.alpha;", g);
     before(z, g, "const sw = fingerSwapped(dx, dy, r.alpha);");
   });
-  it("⭐ `spitStep` and `spitFaceStep` (R1): return with `asmFree` set before any side is read or changed", () => {
+  it("⭐ `spitStep`: returns with `asmFree` set before any side change", () => {
     const s = fnCode(W, "export function spitStep(");
-    const g = "if (st.asmFree !== null || st.asmSpitSide !== 0) return;";
+    const g = "if (st.asmFree !== null) return;";
     expect(s).toContain(g);
-    before(s, g, "st.asmSpitSide = spitSide(");
-    const f = fnCode(W, "function spitFaceStep(");
-    const h = "if (z === null || st.asmFree !== null) return;";
-    expect(f).toContain(h);
-    before(f, h, "st.asmSpitSide = s;");
+    before(s, g, "const side = spitSide(u, z.axis, prev);");
+    before(s, g, "st.asmSpitSide = side;");
   });
   it("⭐ read once a frame in `assemblyFrame`, after the place and its band — the previous place with the map it indexed", () => {
     const a = fnCode(W, "export function assemblyFrame(");
@@ -376,7 +373,7 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): the carried headin
     const f = fnCode(W, "function freeFaceFrame(");
     expect(f).toContain("const z = spitZone(st);");
     expect(f).toContain("if (z === null || map === null || B === null || at === null) { st.asmFree = null; return; }");
-    expect(f).toContain("if (st.asmFree !== null && st.asmFree.map !== map) { st.asmFree = null; st.asmSpitSide = 0; st.asmSpitN = null; }");
+    expect(f).toContain("if (st.asmFree !== null && st.asmFree.map !== map) { st.asmFree = null; st.asmSpitSide = 0; st.asmSpitU = null; }");
     expect(f).toContain("if (onTiltedFacet(t.stack, fr.facet, d, edgeMarginM(st))) return;");
     expect(f).toContain("const d = t.stack === fr.facet ? 0 : distanceToFacets(map, [fr.facet], t.surface);");
     expect(f).toContain("if (f === undefined || !isFreeFace(mulM(B, f.n), WORLD_UP)) return;");
@@ -388,10 +385,10 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): the carried headin
     expect(f).not.toContain("asmEdgeHold"); // no dy hold at an entry
     const x = fnCode(W, "function freeFaceExit(");
     expect(x).toContain("const turn = exitTurnRad(fr.heading, edges, to);");
-    expect(x).toContain("st.asmFree = null; st.asmSpitSide = 0; st.asmSpitN = null;");
+    expect(x).toContain("st.asmFree = null; st.asmSpitSide = 0; st.asmSpitU = null;");
     // ⭐⭐⭐ (2026-11-16, step C5) the turn, the ease carried, the coast stopped and the hold through the one event (`crossTurn`)
     expect(x).toContain("const held = st.asmG === null ? 0 : exitHoldSign(fr.heading, edges, to, contour[fr.ci]?.c ?? [0, 0, 0], st.asmDySign);");
-    expect(x).toContain("st.asmFree = null; st.asmSpitSide = 0; st.asmSpitN = null; crossTurn(st, { at: null, uWas: null, carry: true, paced: false, hold: held });");
+    expect(x).toContain("st.asmFree = null; st.asmSpitSide = 0; st.asmSpitU = null; crossTurn(st, { at: null, uWas: null, carry: true, paced: false, hold: held });");
     expect(x).not.toContain("crossingHold(");
     const c = fnCode(W, "function crossTurn(");
     expect(c).toContain("const mixWas = st.asmZoneMix; if (c.paced) seamOutStart(st); else if (st.asmCamLast !== null) seamTurnStart(st, false); if (c.uWas !== null) seamEase(st, c.uWas); else if (uCarry !== null) easeCarry(st, mixWas, uCarry); st.orbitInertia.stop(); if (c.hold !== 0) st.asmEdgeHold = { sign: c.hold, back: 0 };");
@@ -411,10 +408,10 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): the carried headin
     expect(q).toContain("const qT = st.asmTiltPending ? sq.q : st.asmTiltAuto || freeSq !== undefined ? 1 : 0;"); // ⭐ (package A) the share's target, one place
     expect(q).toContain(": wholeShareStep(sq.q, qT, dtMs, rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS));");
   });
-  it("⭐ the reads of `asmFree`: six (⛔ each under `chartLayout === 1` before step 2.5 — the switch deleted; ⭐ 2026-11-17, R1: `spitFaceStep`'s)", () => {
+  it("⭐ the reads of `asmFree`: five (⛔ each under `chartLayout === 1` before step 2.5 — the switch deleted)", () => {
     const code = codeOnly(raw(W));
     const reads = [...code.matchAll(/[^\n]*st\.asmFree !== null[^\n]*/g)].map((m) => m[0]);
-    expect(reads.length).toBe(6);
+    expect(reads.length).toBe(5);
     // the only writes: the start, the clears, the entry
     expect(code.match(/st\.asmFree = /g)?.length).toBe(6);
   });

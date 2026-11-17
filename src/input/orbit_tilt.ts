@@ -83,7 +83,7 @@ export const TILT_SLANT_MIN = 1e-3;
  * cube of scene 1"*) **THE HOLD AFTER A POLE-HOLDING FACE'S FAR EDGE**: the dy SIGN that crossed (`sign`, the finger's) is held until the finger has gone
  * `band` mm the other way (`edgeHoldFinger`; ⛔ 2026-11-14 the gizmo's depth in the face beyond) — dx and the other dy free. ⛔ Without it a finger still
  * pushing the same way went straight back over the edge in the turned frame: the heptagon's ridge bounced the gizmo between its two top faces (60
- * back-and-forths in the walks). Set by the one event (`crossTurn`'s hold: `crossingEvent`, `exitHoldSign` — ⛔ (2026-11-17, R1) `crossingHold` deleted) — ⛔ (2026-11-16, step 2.5) `edgeHoldAt` (left
+ * back-and-forths in the walks). Set by the one event (`crossTurn`'s hold: `crossingEvent`, `crossingHold`) — ⛔ (2026-11-16, step 2.5) `edgeHoldAt` (left
  * over the edge away from the tilt's snapped heading) deleted with the game before the charts.
  */
 export interface EdgeHold {

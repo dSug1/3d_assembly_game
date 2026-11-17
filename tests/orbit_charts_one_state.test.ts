@@ -340,8 +340,8 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): ONE STATE (⛔ the
     const x = fnSource(W, "function poleCross(");
     // ⭐⭐⭐ (2026-11-16, step C5) the crossing's rebase, turn and ease through the one event (`crossTurn`), the direction drawn read before it
     before(x, "const uWas = drawnDir(st);", "crossTurn(st, { at: { mq: { yaw: seam.yaw, pitch: seam.pitch }, g: P }, uWas, carry: false, paced: false, hold });");
-    const sp = fnSource(W, "function spitFaceStep("); // ⭐ (2026-11-17, R1) the spit's change of side at the gizmo's edge
-    expect(sp).toContain("crossTurn(st, { at: null, uWas: null, carry: true, paced: false, hold });"); // the one event, the ease carried
+    const sp = fnSource(W, "export function spitStep(");
+    expect(sp).toContain("crossTurn(st, { at: null, uWas: null, carry: true, paced: false, hold: hold === null ? 0 : hold.sign });"); // the one event, the ease carried
     expect(sp).not.toContain("easeCarry(st, mixWas)"); // ⛔ the switch off's own turn: step 2.5
     // ⛔ the sway: nothing of a drawn mesh, a pick or the camera read by the ease (the pose shown only starts a turn, in `seamTurnStart`)
     for (const sig of ["function seamEase(", "function drawnDir(", "function easeCarry(", "function seamTurnFrame("]) expect(fnSource(W, sig)).not.toMatch(/getBoundingInfo|pickWithRay|absolutePosition|st\.camera\.|cameraPrev|modelCast/);

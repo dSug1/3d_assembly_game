@@ -144,19 +144,18 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): ONE function the f
     expect(code.match(/crossTurn\(st, /g)?.length).toBe(5);
     expect(fn("function tiltOff(").match(/crossTurn\(st, /g)?.length).toBe(2);
     expect(fn("function poleCross(").match(/crossTurn\(st, /g)?.length).toBe(1);
-    expect(fn("function spitFaceStep(").match(/crossTurn\(st, /g)?.length).toBe(1); // ⭐ (2026-11-17, R1) the spit's side at the gizmo's edge
-    expect(fn("export function spitStep(")).not.toContain("crossTurn(");
+    expect(fn("export function spitStep(").match(/crossTurn\(st, /g)?.length).toBe(1);
     expect(fn("function freeFaceExit(").match(/crossTurn\(st, /g)?.length).toBe(1);
   });
   it("⭐⭐ the hold by the one rule at each site (⛔ the old tests of the switch off — `edgeHoldAt`, the spit's own turn and hold — deleted at step 2.5)", () => {
     expect(fn("function tiltOff(")).toContain("const held: 1 | -1 | 0 = !byTime && nW !== null && nT !== null && g !== null ? crossingEvent(mulM(tl.map, [0, 1, 0]), nT, nW, WORLD_UP, st.asmDySign).hold : 0;");
     expect(fn("function poleCross(")).toContain("const hold = upL === null ? 0 : crossingEvent(upL, n0, nFar, WORLD_UP, st.asmDySign).hold;");
-    const sp = fn("function spitFaceStep(");
-    // ⭐⭐⭐ (2026-11-17, R1) the spit's change of side by the one rule too: the face left, the face beyond, the up drawn last (⛔ §8's hold on the finger's
-    // last sign, `crossingHold`: the side was read off the camera, the next up unknown — §13.3)
-    expect(sp).toContain("const hold = st.asmG === null || up === null || nPrev === null ? 0 : crossingEvent(up, nPrev, n, WORLD_UP, st.asmDySign).hold; if (hold === 0) st.asmEdgeHold = null; crossTurn(st, { at: null, uWas: null, carry: true, paced: false, hold });");
+    const sp = fn("export function spitStep(");
+    // the spit's change of side: §8's hold kept (the finger's last sign) — the next up is not known at a side read off the camera (§13.3); the event on
+    expect(sp).toContain("const hold = g === null ? null : crossingHold(st.gizmoNormal ?? null, z.axis, side, st.asmDySign); crossTurn(st, { at: null, uWas: null, carry: true, paced: false, hold: hold === null ? 0 : hold.sign });");
+    expect(sp).not.toContain("st.asmEdgeHold = hold");
     expect(code).not.toMatch(/edgeHoldAt\(/);
-    expect(code).not.toMatch(/crossingHold\(/);
+    expect(code.match(/crossingHold\(/g)?.length).toBe(1);
   });
   it("⭐⭐ the event: the rebase (the angle states, the place shown, its relocation, the band) only with angles handed; one turn from the pose shown; the ease from the direction drawn or carried; the coast stopped; a hold set, never cleared", () => {
     const i0 = code.indexOf("function crossTurn(");

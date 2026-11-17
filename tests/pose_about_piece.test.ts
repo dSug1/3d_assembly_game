@@ -119,8 +119,7 @@ describe("the camera turned about the piece (a polar zone's turn)", () => {
     // ⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4c) over the turn's WHOLE angle (`turnWhole`: the camera's own with no eased direction — as before)
     expect(aw).toContain("const whole = turnWhole(st, zm);");
     expect(aw).toContain("zm.k = whole > 1e-9 ? Math.min(1, zm.done / whole) : 1;");
-    // ⭐ (2026-11-17, R1) the camera's place read only for a side where none is known yet — its change the gizmo's (`spitFaceStep`)
-    expect(aw).toContain("st.asmSpitSide = spitSide(mulM(baseFrame(st)!, calmDir(st, orbitDir(cp.yaw, cp.v))), z.axis, 0);");
+    expect(aw).toContain("const u = mulM(baseFrame(st)!, calmDir(st, orbitDir(cp.yaw, cp.v)));");
     // ⭐⭐⭐ (2026-11-14, the owner's records) the side read at THIS frame's camera place, in the camera stage just before its frame (⛔ the assembly's step: a frame late)
     expect(aw).toContain("export function spitStep(st: SceneState, cp: OrbitAt): void {");
     expect(aw).not.toContain("  spitStep(st);");

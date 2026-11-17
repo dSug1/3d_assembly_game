@@ -36,7 +36,7 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { CORNER_TOL_M, distanceToFacets, faceSide, fingerInFrame, metAtPoleOnly, fingerSwapped, SPIT_CROSSING_PITCH_RAD, spitCameraHeading, spitSide, spitSideView, zoneAt, type PolarZone } from "../input/polar_zone";
+import { crossingHold, crossingPitch, distanceToFacets, fingerInFrame, fingerSwapped, SPIT_CROSSING_PITCH_RAD, spitCameraHeading, spitSide, zoneAt, type PolarZone } from "../input/polar_zone";
 import { assignCharts, capTiltHeading, chartContour, chartZones, DEFAULT_CHART_OPTS, type ChartAssignment, type ChartFace } from "../input/orbit_charts";
 import { poseAboutPiece, poseFramingTwo, type CamPose } from "../input/orbit_tilt";
 import { poleCrossingDue, poleSeam } from "../input/pole_crossing";
@@ -108,7 +108,7 @@ export function ensureAssembly(st: SceneState): void {
 type OrbitStateStart = Pick<
   SceneState,
   | "asmGizmo" | "asmSupport" | "asmSupportLevel" | "pieceHold" | "pieceHoldPrev" | "asmLook" | "asmFacePoint" | "asmG" | "asmPrevQ" | "asmShown" | "asmFaceBand" | "asmFree" | "asmPlaceWas" | "asmMapQ"
-  | "asmEdgeHold" | "asmZone" | "asmZoneMix" | "asmPieceDrawn" | "asmDirEase" | "asmCamLast" | "asmSpitSide" | "asmSpitN" | "asmZoneAlpha" | "asmDySign" | "asmHeadO"
+  | "asmEdgeHold" | "asmZone" | "asmZoneMix" | "asmPieceDrawn" | "asmDirEase" | "asmCamLast" | "asmSpitSide" | "asmSpitU" | "asmZoneAlpha" | "asmDySign" | "asmHeadO"
   | "asmHeadW" | "asmHeadYaw" | "asmTilt" | "asmGOff" | "asmTiltAuto" | "asmTiltPending" | "asmOrbitMm" | "asmBlend" | "asmCalmWhole" | "asmCalmWholeV"
   | "asmSquare" | "asmCalm" | "asmMouth" | "asmRawPrev" | "asmGizmoAt" | "asmGizmoLag"
 >;
@@ -143,7 +143,7 @@ export function orbitStateStart(): OrbitStateStart {
     asmDirEase: null,
     asmCamLast: null,
     asmSpitSide: 0,
-    asmSpitN: null,
+    asmSpitU: null,
     asmZoneAlpha: 0,
     asmDySign: 0,
     asmHeadO: null,
@@ -1142,7 +1142,7 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   //  ⭐ (2026-11-14) the spit's side itself at the camera's place, in the camera stage (`spitStep`)
   if (spitZone(st) === null) {
     st.asmSpitSide = 0;
-    st.asmSpitN = null;
+    st.asmSpitU = null;
   }
   zoneHighlightFrame(st);
   // ⭐⭐⭐ (2026-11-10, the owner: *"at close distance … it toggles on automatically therefore the tilt occurs each time the gizmo crosses a face's edge"*) —
@@ -1260,8 +1260,6 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
       const placeWas = sh0 !== null && fbWas !== null ? { map: fbWas.map, stack: sh0.t.stack } : null;
       st.asmPlaceWas = placeWas;
       freeFaceFrame(st, m.t, placeWas);
-      // ⭐⭐⭐ (2026-11-17, `TILTED_POLE_CLOSE_IN.md` §19 — R1) the spit's side from the gizmo's banded face: a change of side IS the half turn, one band past the edge
-      spitFaceStep(st);
       // ⭐⭐⭐ (§9.4) a frame change that moves the gizmo: its relocation, eased (`asmGOff`)
       gOffStep(st, dtMs);
       hit = { ...hit, point: withGOff(st, hit.point) };
@@ -1633,11 +1631,8 @@ function assemblyCameraFrameRaw(st: SceneState, cam: OrbitAt, off?: CameraAngleO
     // ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §3.4, step C4) ON A FREE FACE (a level face of the spit): the camera's up the heading CARRIED in at the entry
     // (`freeHeadingAngle`) — ⛔ the side's heading (`spitCameraHeading`): it turned the picture in the middle of the face
     if (st.asmFree !== null) return offsetFrame(uW, freeHeadingAngle(st.asmFree.heading, uW), o.yawRad, o.pitchRad);
-    // ⭐⭐⭐ (2026-11-17, §19 — R1, W3's second half) on a bound face the side the GIZMO's (`spitFaceStep`), the heading read on the side's view
-    // (`spitSideView`: the camera's direction mirrored onto that side while it lags on the other) — ⛔ on the camera's own direction: with the side set by
-    // the gizmo and the camera still beyond the plane the heading passed through its zero as the camera came over
     const side = st.asmSpitSide !== 0 ? st.asmSpitSide : spitSide(uW, st.asmZone!.zone.axis, 0);
-    return offsetFrame(uW, spitCameraHeading(spitSideView(uW, st.asmZone!.zone.axis, side), st.asmZone!.zone.axis, side), o.yawRad, o.pitchRad);
+    return offsetFrame(uW, spitCameraHeading(uW, st.asmZone!.zone.axis, side), o.yawRad, o.pitchRad);
   }
   // ⭐⭐⭐ (2026-11-10, §9.4) THE TILTED POLE: the camera upright IN F (the pressed cap a side), turned into the world
   // ⭐⭐⭐ (2026-11-15, §12 2.4c) no roll back inside F: the camera upright in F to the exit, then ONE turn (`asmZoneMix`) — ⛔ (step 2.5, 2026-11-16) the
@@ -2035,7 +2030,7 @@ function seamRebase(st: SceneState, mq: { readonly yaw: number; readonly pitch: 
  *   (`seamOutStart`, step C3), else timed at the tilts' one speed, the gizmo held meanwhile (`tiltClampStep`);
  * * the piece's shown direction eased on that turn from the one drawn before the change (`uWas`, `seamEase`) — or, the frame unchanged, the ease running
  *   carried onto it by its rest (`carry`, `easeCarry`);
- * * the coast stopped; `hold` — the dy held (`crossingEvent`, `exitHoldSign`: the one rule; the spit's side: `crossingEvent`, R1 §19), 0: none (a hold already on is left as it is).
+ * * the coast stopped; `hold` — the dy held (`crossingEvent`, `exitHoldSign`: the one rule; the spit's side: `crossingHold`, §13.3), 0: none (a hold already on is left as it is).
  * ⭐ Everything in the MODEL's space (the map, `g`); the camera's pose read only to start the turn from the picture on the glass.
  */
 function crossTurn(st: SceneState, c: { readonly at: { readonly mq: { readonly yaw: number; readonly pitch: number }; readonly g: Vec3 } | null; readonly uWas: Vec3 | null; readonly carry: boolean; readonly paced: boolean; readonly hold: 1 | -1 | 0 }): void {
@@ -2227,7 +2222,7 @@ function zoneSwitch(st: SceneState, next: PolarZone | null): void {
   if (sq.n !== null) sq.n = turn(sq.n);
   if (sq.target !== null) sq.target = turn(sq.target);
   st.asmSpitSide = 0;
-  st.asmSpitN = null;
+  st.asmSpitU = null;
   st.asmShown = null;
   st.asmFaceBand = null; // ⭐⭐⭐ (2026-11-16, §12 2.4d) a change of frame: the banded facet read afresh at the place's facet in the new map (never held by the band)
   st.asmFree = null; // ⭐⭐⭐ (2026-11-16, step C4) a zone's switch: no free face carried, no turn of its own (the switch's is the one)
@@ -2335,7 +2330,7 @@ function freeFaceFrame(st: SceneState, t: MapTarget, prev: { readonly map: FaceM
     // a seat (another map): none carried, no turn of its own — the side read afresh (as at the exit), never a "crossing" against the side before the entry
     st.asmFree = null;
     st.asmSpitSide = 0;
-    st.asmSpitN = null;
+    st.asmSpitU = null;
   }
   const fr = st.asmFree;
   if (fr !== null) {
@@ -2362,9 +2357,9 @@ function freeFaceFrame(st: SceneState, t: MapTarget, prev: { readonly map: FaceM
  * ⭐⭐⭐ (2026-11-16, step C4) OFF A SPIT'S FREE FACE onto the contour's face `to` (−1: not found): the turn (`exitTurnRad`: the heading carried against
  * that side's layout — 0 back over the entry side, a quarter at a side, a half at the far side; null — not a neighbour: no turn known, it still leaves);
  * ONE camera turn from the pose shown (`asmZoneMix`, at `tiltRollDegS`, the gizmo held meanwhile by `tiltClampStep`) to the spit's own upright camera
- * beyond, the coast stopped; the spit's side read AFRESH there (`asmSpitSide` 0, `asmSpitN` none: `spitFaceStep` reads the face beyond's side, silently —
+ * beyond, the coast stopped; the spit's side read AFRESH there (`asmSpitSide` 0, `asmSpitU` none: `spitStep` reads the camera's side as with `prev` 0 —
  * never a "crossing" on the next frame); the dy held when the turn is over a quarter AND the finger's dy is the one that pushed the gizmo out over that
- * side (`exitHoldSign`, §10 — D-T4); none carried.
+ * side (`exitHoldSign`, §10 — D-T4; `crossingHold`, its side the face beyond's); none carried.
  */
 function freeFaceExit(st: SceneState, fr: NonNullable<SceneState["asmFree"]>, contour: readonly ChartFace[], to: number): void {
   const edges = freeEdges(contour, fr.ci, WORLD_UP);
@@ -2374,7 +2369,7 @@ function freeFaceExit(st: SceneState, fr: NonNullable<SceneState["asmFree"]>, co
   const held = st.asmG === null ? 0 : exitHoldSign(fr.heading, edges, to, contour[fr.ci]?.c ?? [0, 0, 0], st.asmDySign);
   st.asmFree = null;
   st.asmSpitSide = 0;
-  st.asmSpitN = null;
+  st.asmSpitU = null;
   // THE ONE EVENT (`crossTurn`): the frame unchanged, one camera turn from the pose shown, the ease running carried, the coast stopped, the hold
   crossTurn(st, { at: null, uWas: null, carry: true, paced: false, hold: held });
   st.lastVerdict = `orbit: off the spit's level face — the camera turned ${turn === null ? "(no layout known)" : `${Math.round((turn * 180) / Math.PI)}°`} (the gizmo held until it completes)`;
@@ -2413,70 +2408,60 @@ export function zoneFinger(st: SceneState, dx: number, fdy: number): { readonly 
 }
 
 /**
- * ⭐⭐⭐ (2026-11-13, the owner: *"replicate the behavior of scene 0 when crossing the zenith edge"*) ONE FRAME OF THE SPIT'S SIDE in the camera's stage
- * (`cp`, this frame's camera place — the camera stage calls this just before it builds the frame, `green_box_wiring.ts`): ONLY a side read where none is
- * known yet — no bound face with a side read since the zone's switch or a free face's exit (the triangle under a tip's end has none, `faceSide`): the side
- * of the axis the SHOWN direction is on (`spitSide`, `calmDir` at the camera's place), kept until the gizmo's face changes it. ⭐⭐⭐ (2026-11-17,
- * `TILTED_POLE_CLOSE_IN.md` §19 — R1, the owner's *"2- R1"*) the side's CHANGE is the gizmo's (`spitFaceStep`) — ⛔ read here off the camera's direction
- * crossing the vertical plane through the axis (`spitSide` with its 2° band, steeply: `crossingPitch`) with §8's hold on the finger's last dy sign
- * (`crossingHold`): far out the calm keeps the camera near the face's middle and the half turn landed 55 – 60 mm into the face beyond the ridge.
+ * ⭐⭐⭐ (2026-11-13, the owner: *"the dy hold happens after the crossing, not before the crossing … replicate the behavior of scene 0 when crossing the
+ * zenith edge"*) ONE FRAME OF THE SPIT'S SIDE, before the gizmo: the side of the axis the SHOWN direction is on (`spitSide`); changed — the camera has
+ * passed over the axis (the zenith edge, the bottom face's, any): ONE timed turn from the frame shown to the new side's upright one at the tilts' one
+ * speed (`asmZoneMix`, `frameMix` — one axis: over a ridge, the ridge's own line), the gizmo held meanwhile (`tiltClampStep`), the coast stopped; and
+ * `Scene_0`'s §8 HOLD AFTER THE CROSSING: the dy that crossed held until the gizmo is `edgeHoldMm` deep in the face beyond (`crossingHold`), dx and the
+ * other dy free. ⛔ The hold before it (`zoneViewCheck`, the view held at 80°, 2026-11-13 earlier): the gizmo stopped on the ridge, never across.
  */
 export function spitStep(st: SceneState, cp: OrbitAt): void {
   const z = spitZone(st);
   if (z === null) {
     st.asmSpitSide = 0;
-    st.asmSpitN = null;
+    st.asmSpitU = null;
     return;
   }
-  // ⭐⭐⭐ (2026-11-16, step C4) on a free face no side (its exit reads the face beyond's)
-  if (st.asmFree !== null || st.asmSpitSide !== 0) return;
-  st.asmSpitSide = spitSide(mulM(baseFrame(st)!, calmDir(st, orbitDir(cp.yaw, cp.v))), z.axis, 0);
-}
-
-/**
- * ⭐⭐⭐ (2026-11-17, `TILTED_POLE_CLOSE_IN.md` §13.4 R1, §19 — the owner: *"2- R1"*) THE SPIT'S HALF TURN AT THE GIZMO'S EDGE, once a frame at the place just
- * set (`assemblyFrame`, after the band's reading and a free face's frame): on a BOUND face of a spit (no free face carried, the band's facet not level) the
- * side is the side its normal leans to (`faceSide` — none: kept). The band (`asmFaceBand`, 2.4d) keeps the face left until the gizmo is one band past
- * the edge, so a change of side is read there, as every other crossing (the tilt's exit, a free face's exit) — only AT a crossing (the banded facet
- * changed) over an EDGE: two faces met only at a tip's apex (`metAtPoleOnly` — the orbit through its pole, round the tip) change nothing, the side
- * waiting for the next edge. A side read where none was (the zone's
- * switch, a free face's exit — whose own turn is the one): set silently. A CHANGE: THE ONE EVENT (`crossTurn` — the frame unchanged, one camera turn from
- * the pose shown to the new side's view, `spitSideView`; the gizmo held meanwhile), the dy held by the one rule (`crossingEvent`: the up drawn last frame,
- * the face left `asmSpitN`, the face beyond — held when that dy pushed the gizmo out over the edge and would bring it straight back after the turn); no
- * hold to set: a hold of another crossing ended (round a tip, as the camera's side change did). ⭐ The MODEL's coordinates: the zone's map (its facets
- * turned into the world by `baseFrame`), never a drawn mesh; the camera's up read only for the rule's "up shown".
- */
-function spitFaceStep(st: SceneState): void {
-  const z = spitZone(st);
-  if (z === null || st.asmFree !== null) return;
-  const map = faceMapOf(st);
-  const B = baseFrame(st);
-  const fb = st.asmFaceBand;
-  if (map === null || B === null || fb === null || fb.map !== map) return;
-  const f = map.facets[fb.facet];
-  if (f === undefined) return;
-  const n = mulM(B, f.n);
-  if (isFreeFace(n, WORLD_UP)) return;
-  const was = st.asmSpitN;
-  const nPrev = was === null ? null : was.n;
-  st.asmSpitN = { n, facet: fb.facet, map };
-  const s = faceSide(n, z.axis);
-  if (s === 0) return;
+  // ⭐⭐⭐ (2026-11-16, step C4) on a free face no side: no side change, no crossing, no hold in the middle of the face — its exit is the turn
+  // (`freeFaceFrame`, which reads the side afresh there)
+  if (st.asmFree !== null) return;
+  // ⭐⭐⭐ (2026-11-14, the owner: *"dy or dx when the gizmo hit the zenith edge or the middle of the bottom face create hard-to-control movements"*) the
+  // side of the axis the camera's direction is on — the SHOWN rule (`dirAt`: the calm's, the square camera's — the camera's heading and the finger's
+  // mapping are read off it) at the ORBIT's own angles, the finger's: ⛔ at the piece's (`pieceQ`, its spring): a frame late, the gizmo 14 – 30 mm past the
+  // ridge far out; ⛔ the orbit's bare direction (the same day): close in the square camera turned the view over the ridge while the orbit stood 0.17°
+  // past it — no side change, no turn, no hold, the next dy mapped back on the turned view: the gizmo bounced between the ridge's two faces every frame
+  // ⭐⭐⭐ (2026-11-14, the owner's play recording) …at the CAMERA's own place (`cameraLagged`: the one its heading is built from — `assemblyCameraFrameRaw`):
+  // ⛔ at the orbit's (the finger's), a fast finger flipped the side while the camera still looked from the old one — the heading summed the new side's bias
+  // with the old side's direction, passed through nothing and flipped: 99 – 102° in one frame mid-turn
+  // ⭐⭐⭐ (2026-11-14, the owner's records 1 – 10: "a jump … toward the end of each recording") …at THIS frame's camera place (`cp`: the camera stage calls
+  // this just before it builds the frame, `green_box_wiring.ts`) — ⛔ called from the assembly's step, before the camera's orbit step: last frame's place;
+  // the camera passed over the axis in the frame, was drawn with the old side's heading (137 – 171° in ONE frame), and the turn began a frame later
+  const u = mulM(baseFrame(st)!, calmDir(st, orbitDir(cp.yaw, cp.v)));
   const prev = st.asmSpitSide;
-  // the side changes only AT A CROSSING (the band's facet changed this frame) over an edge: not over a tip's apex (`metAtPoleOnly`), not on the facet
-  // itself after one (the side kept by an apex's crossing waits for the next edge)
-  if (prev !== 0 && prev !== s) {
-    if (was === null || was.map !== map || was.facet === fb.facet) return;
-    const pw = map.facets[was.facet];
-    if (pw !== undefined && z.poles.some((p) => metAtPoleOnly(pw.poly, f.poly, mulT(B, p), CORNER_TOL_M))) return;
+  const side = spitSide(u, z.axis, prev);
+  const u0 = st.asmSpitU;
+  st.asmSpitSide = side;
+  st.asmSpitU = u;
+  if (prev === 0 || side === prev) return;
+  // ⭐⭐⭐ (2026-11-14) a CROSSING only where the orbit passes OVER or UNDER the axis (`overAxisPitch`, the part of its direction square to the axis steep:
+  // the zenith edge, the bottom face's middle); round a tip the side changes silently — and a crossing's hold ends there (it held the way back over an edge
+  // the gizmo has now left round the body: the finger's mapping turned with the side)
+  // ⭐⭐⭐ (2026-11-14, the owner's records) read on the camera's PATH this frame (`crossingPitch`) — ⛔ at its end alone: a fast finger passed straight under
+  // the body and was read 70° beyond, "round a tip" — the side flipped with no turn: 100 – 170° in one frame
+  if (crossingPitch(u0, u, z.axis) < SPIT_CROSSING_PITCH_RAD) {
+    st.asmEdgeHold = null;
+    return;
   }
-  st.asmSpitSide = s;
-  if (prev === 0 || prev === s) return;
-  const up = st.asmCamLast?.up ?? null;
-  const hold = st.asmG === null || up === null || nPrev === null ? 0 : crossingEvent(up, nPrev, n, WORLD_UP, st.asmDySign).hold;
-  if (hold === 0) st.asmEdgeHold = null;
-  crossTurn(st, { at: null, uWas: null, carry: true, paced: false, hold });
-  st.lastVerdict = `orbit: the spit over the edge — the camera turned to the other side (the gizmo held until it completes)${hold === 0 ? "" : ", then the dy that crossed held"}`;
+  const g = st.asmG;
+  // §8's hold: the dy that crossed — the finger's last sign (`crossingHold`). ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §13.3, step C5) KEPT under the
+  // charts' layout too: the one rule needs the next up the picture turns to, and the side's turn is read off the CAMERA's place, not an edge — the mirror
+  // view as that up (built, measured, withdrawn): arrived along the top ridge from a tip the picture turns ~110°, not a mirror; the dy that crossed was
+  // judged not to push, was not held, and brought the gizmo straight back over the ridge — a second half turn (the view 124° → 343° in the drag)
+  const hold = g === null ? null : crossingHold(st.gizmoNormal ?? null, z.axis, side, st.asmDySign);
+  // ⭐⭐⭐ (step C5) THE ONE EVENT (`crossTurn`): the frame unchanged, one camera turn from the pose shown, the ease running carried, the coast stopped, the
+  // hold. ⛔ (step 2.5) the old turn and hold of the game before the charts deleted
+  crossTurn(st, { at: null, uWas: null, carry: true, paced: false, hold: hold === null ? 0 : hold.sign });
+  st.lastVerdict = "orbit: the spit over the edge — the camera turned to the other side (the gizmo held until it completes), then the dy that crossed held";
   st.hudDirty = true;
 }
 
