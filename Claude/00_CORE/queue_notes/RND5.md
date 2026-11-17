@@ -455,3 +455,17 @@ starting value. The rule finalized without §5's cliff at 2° (the least duratio
 Opus auditor each: **LF1** (A) + (iv′) and the study's walks as a gate · **LF2** the timing rule · **LF3** (v), root cause first →
 [`LEVEL_FACE_ENTRY.md`](../../40_RENDER_SCENE/spec/LEVEL_FACE_ENTRY.md) §9. Not in this build: the 27° left back over the entry edge near an end (a
 study of its own). Then: the deploy on his word, his look, step 3 once, the merge.
+
+## 2026-11-17 — LF1 built (an Opus agent): the gate, (A) built; (iv′) built then REVERTED — 21° in one frame far out
+
+* **The gate** (`92f0878`): the study's walks in `scripts/probes` (`level_entry_*`; `ORBIT_GATES.md` §7) — `Scene_0` close in (6 walks), `Scene_0bis`
+  round the corner at BOTH tips at four distances (27 walks); every timed turn's path against its one rotation, and the largest roll in one frame
+  outside the timed turns. The study's figures reproduced exactly. New: the close-in long way round at the −x tip too (+257° for 112.6°), for LF3.
+* **(A)** (`3ef7ba7`): `Scene_0` close in near an end, the roll before the bottom edge −11.1° → 0.0°, the edge's turn 13.2° → 2.3°, down off a top
+  face −13.1° → 0.0°; `Scene_0bis` and `Scene_1` unchanged (`Scene_1` 11 frames in the last digits, as the study). 4 vectors, 4 mutants red.
+* **(iv′)** (`069682a`, behind `freeEntryUpright`): the entry silent (+45° → 0°), a ccw loop one turn (83°), the cw loop 69° → 32°, close in
+  untouched, the switch at 0 identical to (A) — but far out at 2 px a frame the picture now rolls **up to 21° in ONE frame** outside any timed turn
+  (today ≤ 4.4°): the fade by the view's elevation (70° – 80°) sits where the bottom is seen far out, and the depth's blend has no bound per frame.
+  **Reverted** (`fa72bab`). The study's prototype had the same (its timed-turn gates could not see it). Options for the owner → [`LEVEL_FACE_ENTRY.md`](../../40_RENDER_SCENE/spec/LEVEL_FACE_ENTRY.md) §10.3:
+  the fade by the square camera's share; a bound per frame at the one speed; a longer band; or no (iv′).
+* **Next:** his choice on (iv′); LF2 (the timing rule) and LF3 (the long way round) on `3ef7ba7`'s code. No device look.

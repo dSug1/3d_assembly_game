@@ -14,6 +14,7 @@
 //   turn, the largest roll in a frame, the LARGEST FRAME (the whole camera frame's turn in one frame), THE ONE ROTATION (the angle of the single
 //   rotation from the camera's orientation the frame before the turn to the one at its last frame), THE PATH (the sum of each frame's rotation angle),
 //   their ratio; ⚠ PATH when the path is over 1.15 × the one rotation + 5°. Per loop (`loopN-…` legs): turns, |roll| summed, net, frames, gizmo held.
+// * FREE ROLL — the largest roll in ONE frame outside every timed turn (a picture turned by the finger's place: no turn gate sees it).
 import { readFileSync } from "node:fs";
 
 const NY = +(process.env.NY ?? -0.85);
@@ -103,5 +104,9 @@ for (const file of process.argv.slice(2)) {
     const L = loops.get(m[1]) ?? { n: 0, abs: 0, net: 0, fr: 0, held: 0, small: 0 }; L.n++; L.abs += Math.abs(t.roll); L.net += t.roll; L.fr += t.e - t.s + 1; L.held += t.held; if (Math.abs(t.roll) < 30) L.small++; loops.set(m[1], L);
   }
   for (const [k, L] of loops) console.log(`  LOOP ${k}: ${L.n} turns (${L.small} under 30°), |roll| ${L.abs.toFixed(0)}°, net ${L.net.toFixed(0)}°, ${L.fr} frames, gizmo held ${L.held}`);
+  // ⭐ (LF1, the lesson again) OUTSIDE the timed turns: the largest roll in ONE frame (the up's turn about the look) — a picture turned by the finger's
+  // place (a calm, a blend) is no timed turn and no turn gate sees it (LF1's (iv′): 20° in one frame far out at 2 px a frame)
+  { let br = 0, bi = -1; for (let i = 1; i < C.length; i++) { if (C[i].mix || C[i - 1].mix) continue; const r = Math.abs(rollPart(i)); if (r > br) { br = r; bi = i; } }
+    console.log(`  FREE ROLL the largest roll in one frame outside the timed turns ${br.toFixed(1)}°${bi >= 0 ? ` (f${bi} ${C[bi].leg})` : ""}`); }
   console.log(`  TURNS ${turns.length} (${turns.filter((t) => Math.abs(t.roll) >= MIN || t.view >= MIN || t.one >= MIN).length} listed), path over 1.15 × one + 5°: ${nPath}`);
 }

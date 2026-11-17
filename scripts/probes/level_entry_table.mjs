@@ -1,7 +1,8 @@
 // ⭐⭐⭐ (2026-11-17, package LF1) THE LEVEL FACE'S ENTRY GATE — one line per walk from `level_entry_batch.sh`'s <tag>_analysis.txt files, side by side:
 //   node scripts/probes/level_entry_table.mjs <base_analysis.txt> [<other_analysis.txt> ...]
 // Per walk and per file: the timed turns with 2° of roll or more as roll°/frames, in order (the others counted); on a dy walk the entry's turn and the drift;
-// the walk's largest frame (°) and its worst path ratio; "⚠n" the turns whose path is over 1.15 × the one rotation + 5° (n of them). Then the
+// the walk's largest frame (°) and its worst path ratio; "⚠n" the turns whose path is over 1.15 × the one rotation + 5° (n of them); the free roll
+// (the largest roll in one frame outside the timed turns). Then the
 // PATH GATE: every turn listed with its ratio in each file, "worse" where a later file's ratio is over the first's by more than 0.02 (turns paired
 // in order within a walk; a walk whose turns differ in number is said so).
 import { readFileSync } from "node:fs";
@@ -19,6 +20,8 @@ const parse = (file) => {
     if (e) w.ev.push({ kind: e[1].trim(), leg: e[3], roll: e[6] === undefined ? 0 : +e[6], fr: e[5] === undefined ? 0 : +e[5], before: +(/before edge: roll (-?[\d.]+)/.exec(line)?.[1] ?? NaN) });
     const d = /DRIFT .*drift from the entry (-?\d+) mm(?:, from TX -?\d+: (-?\d+) mm)?/.exec(line);
     if (d) w.drift = { entry: +d[1], tx: d[2] === undefined ? NaN : +d[2] };
+    const fr = /FREE ROLL .* ([\d.]+)°/.exec(line);
+    if (fr) w.free = +fr[1];
   }
   return walks;
 };
@@ -38,7 +41,7 @@ for (const n of names) {
     const nb = w.turns.filter((t) => t.bad).length;
     const inn = w.ev.find((x) => x.kind === "IN" && x.leg === "down-to-bottom");
     const dy = w.drift ? ` · entry ${inn ? `${inn.roll.toFixed(1)}°/${inn.fr}, before ${inn.before.toFixed(1)}°` : "-"} · drift ${w.drift.entry} (TX ${w.drift.tx}) mm` : "";
-    return `${ts || "none"}${dy} · max ${big.toFixed(1)}° · ratio ${worst.toFixed(2)}${nb ? ` ⚠${nb}` : ""}`;
+    return `${ts || "none"}${dy} · max ${big.toFixed(1)}° · ratio ${worst.toFixed(2)}${nb ? ` ⚠${nb}` : ""}${w.free !== undefined ? ` · free roll ${w.free.toFixed(1)}°` : ""}`;
   });
   console.log(`${n} | ${cells.join(" | ")}`);
 }

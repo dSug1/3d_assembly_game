@@ -246,7 +246,8 @@ The study's walks (2026-11-17, `LEVEL_FACE_ENTRY.md` §3, §4), ported: `level_e
 `level_entry_analyse.mjs` (per walk: the crossings into / out of the level face with their timed turn and the roll in the 20 frames before the edge; the
 drift of a straight dy; EVERY timed turn — roll on the glass, frames, largest frame, THE ONE ROTATION from the frame before the turn to its last frame,
 THE PATH summed frame by frame, their ratio, ⚠ PATH when the path is over 1.15 × the one rotation + 5°: package A's lesson,
-`BOTTOM_FACE_CIRCLE_REGRESSION.md` §5), `level_entry_table.mjs` (one line per walk, several runs side by side, then the path gate turn by turn:
+`BOTTOM_FACE_CIRCLE_REGRESSION.md` §5; and the FREE ROLL — the largest roll in ONE frame outside every timed turn: a picture turned by the finger's
+place is no timed turn, and LF1's (iv′) was reverted on it, 21° in a frame), `level_entry_table.mjs` (one line per walk, several runs side by side, then the path gate turn by turn:
 "← WORSE" where a later run's ratio is over the first's by more than 0.02).
 
 ```bash
@@ -305,3 +306,14 @@ Turns as roll on the glass / frames, in order; the study's figures (`LEVEL_FACE_
 The other gates at `a9b061f`, for the record: the replays identical frame for frame to the study's (`e252d0f`); `tilt_check` "1 0 4" 8.7° / 8.8° /
 8.9° at most a frame; the ridge "0 4" 8.5° / 8.1°; `mid_check` the middle reached, 1 turn (2 frames), 76°, 6.2° at most a frame (9.3° in the whole
 run); `across_check` 2 turns (31 frames), 241°, 6.6° at most a frame, the half turn past the far edge then the hold.
+
+### 7.2 At `3ef7ba7` ((A), LF1 — `LEVEL_FACE_ENTRY.md` §10.2): the next packages' base
+
+**Mode a** (`Scene_0` close in) — every walk: the roll before the edge 0.0° (before: −11.1° / 11.8° near the ends, 0.4° in the middle, −13.1° / 14.0°
+off a top face; 2.2° at 3 px a frame), the edge's turn 2.3° (9 frames), the far edge's half turn 181° in 31 frames (path 201.5° for 180.0°, 1.12),
+the picture after it −1.9° off upright; the largest free roll 1.2° (before: 1.2° – 5.3°). **Mode b** (`Scene_0bis`): all 27 walks identical frame
+for frame to `a9b061f` (the table of §7.1 stands). The free roll at `a9b061f` = at `3ef7ba7`, mode b: 0.3° (in and back close in) – 4.4° (close in,
+0.515); far out 0.9° – 3.3°. The replays: `Scene_0bis` identical, `Scene_1` 11 frames in the last digits (≤ 4.3e-7), `Scene_0` another play from
+frame 1143 (drag 17; the largest view turn 15.4°, roll 18.2°). `tilt_check` 8.7° / 8.8° / 8.9°, the ridge 8.5° / 8.1°; `mid_check` and
+`across_check` NOT rerun at `3ef7ba7` (`Scene_0bis` is untouched by (A): its replay and its 27 walks identical).
+⛔ (iv′) (`069682a`, reverted `fa72bab`): its runs are recorded in `LEVEL_FACE_ENTRY.md` §10.3 — read the FREE ROLL column first (21.4° there).

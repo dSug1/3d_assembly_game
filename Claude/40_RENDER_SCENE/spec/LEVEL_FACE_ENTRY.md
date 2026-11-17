@@ -307,8 +307,8 @@ in and back near the end 27° (today +32° then −32°), in near the end and ou
 
 | piece | files | vectors | gates |
 |---|---|---|---|
-| (A) the level reading with the square camera's share | `src/input/orbit_calm.ts`, `src/render/assembly_wiring.ts` | `tests/zenith_roll.test.ts`: the share 0 equal to today bit for bit, the share 1 = the face's own heading; RED against today's formula first | the replays (`Scene_1`, `Scene_0bis` identical; `Scene_0` another play from its first close-in leg, explained); `tilt_check` "1 0"; the ridge "0 4"; this study's walk (the roll before the edge ≤ 0.5°) |
-| (iv′) the picture's upright continued near the entry edge, the layout by the middle | `src/input/free_face.ts`, the wiring's `freeFaceFrame` | the blend: depth ≤ 0 = the view's level heading, the centre's depth = the layout, monotone, faded by the view's elevation (70° – 80°); a mutant per term | `mid_check`, `across_check`; the corner loops (one turn a loop, ≤ the corner's angle + 10°); the replays (`Scene_0bis` another play, `Scene_0`/`Scene_1` identical) |
+| (A) the level reading with the square camera's share — ✅ BUILT `3ef7ba7` (§10) | `src/input/orbit_calm.ts`, `src/render/assembly_wiring.ts` | `tests/zenith_roll.test.ts`: the share 0 equal to today bit for bit, the share 1 = the face's own heading; RED against today's formula first | the replays (`Scene_1`, `Scene_0bis` identical; `Scene_0` another play from its first close-in leg, explained); `tilt_check` "1 0"; the ridge "0 4"; this study's walk (the roll before the edge ≤ 0.5°) |
+| (iv′) the picture's upright continued near the entry edge, the layout by the middle — ⛔ built `069682a`, REVERTED `fa72bab` (§10: 21° in one frame) | `src/input/free_face.ts`, the wiring's `freeFaceFrame` | the blend: depth ≤ 0 = the view's level heading, the centre's depth = the layout, monotone, faded by the view's elevation (70° – 80°); a mutant per term | `mid_check`, `across_check`; the corner loops (one turn a loop, ≤ the corner's angle + 10°); the replays (`Scene_0bis` another play, `Scene_0`/`Scene_1` identical) |
 | (v) one rotation where the framing would go the long way | the wiring's `zoneMixPose` | the drawing's choice (the framing's path against the one rotation) | the corner loops close in (no turn over 110°, no frame over 9°); the ridge close in (`MODE=ridge`, not worse than 8.5°); `tilt_check` on the three scenes (⛔ the prototype's 12°: not worse than 8.8°); the replays |
 | the timing rule | `src/input/orbit_tilt.ts`, `zoneStep`, two sliders in the menu's ORBIT section | the function's table (2° → the speed; 30° → 15 frames; 180° → T_max) | every replay changes at every turn by design: the largest step a frame not worse than the half turn's 9°; `view_jumps` no frame over 45° |
 
@@ -367,3 +367,101 @@ timed turn on the gates' walks is also judged by the path drawn against the one 
 left back over the entry edge near an end (the calm's look on the two faces, §4.3 — a study of its own first); the first-frame peaks of
 `TILTED_POLE_CLOSE_IN.md` §12; anything on a level top (no scene has one). **Then:** the deploy only on his word, his look on the phone (§7), step 3
 once on the final code, the merge.
+
+## 10. LF1 as built (2026-11-17, an Opus agent — base `a9b061f`): the gate, (A) built, (iv′) built then REVERTED
+
+**In one paragraph.** The gate is in the repo (`92f0878`). (A) is built (`3ef7ba7`): on `Scene_0` close in the roll before the bottom edge near an end
+is gone (−11.1° → 0.0°) and the edge's take-back is the pitch's own (13.2° → 2.3°); nothing else moved. (iv′) was built behind its switch
+(`069682a`); the gates the brief named passed but three (one half turn drawn the long way, LF3's; a 2-frame −4° at one entry a ccw loop; `mid_check`'s
+whole run, 9.3° → 21.6° in a frame), and a reading the brief did not name failed: **far out, at a slow finger (2 px a frame), the picture rolls up to
+21° in ONE frame outside any timed turn (today at most 4.4°)**. A timed turn of 32° in 7 frames was traded for
+an untimed roll of 20° in one. It is reverted (`fa72bab`); what to do is the owner's (§10.3).
+
+### 10.1 The gate (`92f0878`)
+
+`scripts/probes/level_entry_check.mjs` (the study's `walk2.mjs`, unchanged but its header), `level_entry_analyse.mjs` (the study's `events.mjs` and
+`loopan.mjs` in one, plus every timed turn's ONE ROTATION, PATH and ratio — package A's lesson — and the FREE ROLL: the largest roll in one frame
+outside every timed turn), `level_entry_table.mjs` (runs side by side), `level_entry_batch.sh` (mode a: 6 walks on `Scene_0`; mode b: 27 walks on
+`Scene_0bis`, both tips) → `scripts/probes/ORBIT_GATES.md` §7. **The study's figures reproduced exactly** (its recordings and the gate's at
+`a9b061f` are identical frame for frame; the code is `e252d0f`'s). Found at the −x tip (the study walked +x only): close in, the cw loop's exit onto
+the rectangle rolls the long way too — **+257° in 17 frames for a 112.6° rotation** (path 270°) — for LF3.
+
+### 10.2 (A) — built (`3ef7ba7`), as §3; the figures against the study's
+
+`calmLevelHeading(yaw, calm, kH, squareShare)`: the calm's share × (1 − the square camera's share); the wiring passes the share the square camera
+SHOWS (`squareShareShown`: 0 without its normal — the share `calmDir` blends by), at `calmFrame` and `levelHeadingOf`. 4 vectors
+(`tests/level_square_share.test.ts`), red on 4 mutants: the share ignored; × the share (the wrong way round); the share applied before the fade
+behind the face; the share unclamped above 1. Measured (mode a, `Scene_0` close in, 1 px a frame):
+
+| | base `a9b061f` | (A) | the study's (A) |
+|---|---|---|---|
+| near +x: the roll in the 20 frames before the edge / the edge's turn | −11.1° / 13.2° (9 fr) | **0.0° / 2.3°** (9 fr) | 0.0° / 2.3° |
+| near −x | 11.8° / −9.4° | 0.0° / 2.3° | 0.0° / 2.3° |
+| the middle | 0.4° / 1.9° | 0.0° / 2.3° | 0.0° / 2.3° |
+| the picture after the far edge's half turn (off upright), +x / −x | −12.3° / 9.3° | −1.9° / −1.9° | −1.9° |
+| the far edge's half turn, +x: path / one rotation | 208.5° / 172.3° (⚠ 1.21), 29 fr | 201.5° / 180.0° (1.12), 31 fr | — |
+| down off a top face near +x / −x: the roll before the edge | −13.1° / 14.0° | 0.0° / 0.0° | 0.0° |
+| fast finger (3 px), +x: before / in the turn | 2.0° / 2.5° | 2.2° / 2.3° | 2.2° / 2.3° |
+| the largest free roll in a frame (6 walks) | 1.2° – 5.3° | 1.2° | — |
+
+**Nothing else moved**: `Scene_0bis` replay identical in every frame and its 27 gate walks identical; `Scene_1` replay: 11 frames differ by at most
+4.3e-7 (1e-6: never — the study's same 11); `Scene_0` identical to frame 1143 (drag 17, close in at 0.611), another play after: the view's largest
+turn in a frame 15.4° both, the roll's 17.9° → 18.2°, frames with a roll over 10°: 48 → 50, health clean. Far out the formula multiplies by exactly
+1, so a frame can differ only once the square camera shows. `tilt_check` "1 0 4": `Scene_1` and `Scene_0bis` identical, `Scene_0` the same events,
+8.8° at most a frame both, 2149° → 2162° in all (its ups more upright); the ridge "0 4" identical.
+
+### 10.3 (iv′) — built (`069682a`), measured, REVERTED (`fa72bab`)
+
+**What was built** (the patch is the commit): `entryBlendHeading(viewLevel, layout, depth, centreDepth, viewElevation, upright)` as §4.2; the depth
+signed, read at the gizmo's place (the MODEL's: `t.surface` through `baseFrame`); the switch `freeEntryUpright` (default 1; a slider in POLAR ZONES;
+a URL override). **What differs from the study's prototype, and why** (each measured): the view's level direction is read on the camera's direction
+BEFORE the owner's offsets, turned by the picture's offset read ONCE at the entry (`pictureOffset`, `viewLevelTurned`) — the prototype's level part
+of the drawn camera gave the entry a 3° – 4° turn (the offsets 2.5° / 2° and the spit's side bias), and reading the bound camera's picture every
+frame swung close in by 24° in one frame; its sign is kept — turned to the layout's side (the prototype) it flips near a tip; the fade is a
+smoothstep of the elevation's angle (the prototype's: of its cosine). 11 vectors, red on 11 mutants (depth ignored, the centre's depth doubled, a
+linear depth, no fade, the elevation signed, the flip to the layout's side, the switch ignored, the share reversed, the offset 0, the picture's sign
+by the view, the view not turned).
+
+**What passed** (against `3ef7ba7`): the switch at 0 — the three replays and the 27 walks identical frame for frame. At 1 — `Scene_1` and `Scene_0`
+replays identical; `Scene_0bis` another play from frame 315 (the view's largest turn in a frame 14.1° → 12.4°, the roll's 18.9° → 18.7°, frames
+over 10° of roll 27 → 26; health clean; frames with the camera's up below level 32 → 75 in that other play); `tilt_check` and the ridge identical;
+`across_check` identical; close in (0.651) and at 0.515 every timed turn as at (A), turn for turn. Mode b far out (+x; −x alike):
+
+| walk | (A) | (iv′) | the study's (iv′) |
+|---|---|---|---|
+| ccw corner loop | +32 / 7 fr, −83 / 15 a loop | **−83 / 15 a loop** (and a 2-frame −4° at the second loop's entry: the picture's roll on the glass across it −5.3° → −4.7°) | 0, −83 |
+| cw corner loop | +69 / 13 | **+32 / 7** (−x: −62 → −28 / 6) | +56 / 11 |
+| a straight dy near the end: the entry / the drift | +45° (9 fr) / −8 mm | **0.0° / −94 mm** (−x +92) | 0° / −112 mm (from x 190) |
+| in and back near the end | +32, −32 | 0, **+8 / 2 fr** | 0, +27 |
+| in near the end, out in the middle | +32, +1.4 | 0, −2 / 2 fr | 0, −2.4 |
+| across to the far edge and back | +32, 208, −24, 143 | 0, 207, 0, **−210** (path 217° for 149°: the long way, ⚠ — LF3's drawing; a 1° change of the pose flipped its side) | 0, 207, −4, −210 |
+| `freeFaceSquare` 1 (N1): the dy's entry / a ccw loop | +44° / +24, −16, −67 | 0.1° / −16, −72 (the fade leaves the layout as the square camera climbs; the 3-frame −16° stays) | — |
+
+**What failed — the FREE ROLL** (the largest roll in ONE frame outside every timed turn, 2 px a frame unless said):
+
+| walk | base / (A) | (iv′) |
+|---|---|---|
+| cw loop +x / −x (far out and 0.736) | 2.0° / 1.3° | **21.4° / 17.1°** |
+| ccw loop | 2.3° – 2.5° | 7.2° – 7.3° |
+| in and back near the end (far, 0.736; both tips) | 1.1° – 1.5° | **11.7° – 11.8°** (66° in the 20 frames before the exit) |
+| the corner loop at 4 px a frame | 3.3° | **19.4°** |
+| `mid_check`'s whole run (its climb: a fast drag along the bottom toward the tip) | 9.3° | **21.6°** |
+| a straight dy, the largest frame of the leg, at 2 / 4 / 6 px a frame | 10.9° / 9.5° / 10.0° | 8.0° / **12.1° / 19.7°** |
+
+**The two causes** (read off the frames): (1) the fade by the view's elevation, 70° – 80°, lies where `Scene_0bis`'s bottom is seen far out (71° –
+75° on the cw loop): the elevation moves 4° in a frame and the fade's share with it — the heading 20° in one frame (the cw loop, the frame before the
+exit; `mid_check` f603). (2) the depth's blend has no bound per frame: its pace is the gizmo's travel × the smoothstep's slope (45° over half a face),
+so a fast finger, or the calm swinging the view on the way back to the entry edge, turns the picture 12° – 20° in a frame. ⚠ The study's prototype
+had both (its own recording of the way back: −80° in 20 frames, 12.3° in one) — its gates read timed turns only. **Package A's lesson in another
+form: a gate on the timed turns does not see a turn that is not timed.**
+
+**The options (the owner's; nothing built):** (a) fade by the square camera's share instead of the view's elevation (close in it is whole, far out
+none: "close in nothing changes" exactly; cause 1 gone) — not prototyped; (b) bound the heading's change per frame at the tilts' one speed (6° a
+frame) — time enters a rule decided "by the place only"; (c) a longer depth band (the whole face) halves cause 2's rate and bounds nothing; (d) leave
+(iv′) out — today's entry, its 25° – 45° turn then stretched by LF2's least duration (15 frames). (a) + (b) together is the one that would answer
+every reading measured here; it is not measured.
+
+### 10.4 What is left
+
+(iv′): the owner's choice above, then a builder (`069682a` is the starting point). LF2 (the timing rule) and LF3 (the long way round: now seen at both
+tips — +263° at +x ccw, +257° at −x cw close in, +273° with 128° in one frame at 0.515) as briefed in §9, on `3ef7ba7`'s code. No device look (rule 5).
