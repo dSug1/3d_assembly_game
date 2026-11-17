@@ -112,6 +112,7 @@ const PENDING: Record<string, string> = {
   // ⭐ `D170`: run at BUILD time, not in the product — `scripts/gen_demo_plan.ts` writes the committed plan the
   // product plays, and `d170_regenerate.test.ts` regenerates it to prove the data is still the generator's.
   generateDemoPlan: "build-time only — `scripts/gen_demo_plan.ts` writes `content/scene1_demo_plan.ts` (D170)",
+  buildLandingMap: "S1 (`ORBIT_SURFACE_BUILD.md`) — the landing map L2, pure and vectored, NOT wired until orbit_charts is merged: first a readout beside today's depth on Scene_1",
   // ✅ `qAngle` LEFT THIS LIST 2026-09-22 — `RotationFollower` reads it to decide a body has
   // ARRIVED at its detent, so it is wired and the guard reddened until this line was deleted.
   // ⭐ That is the second direction the list is asserted in: *a stale allowlist is the same lie
