@@ -6,7 +6,7 @@
 > although they shall be later tested and could be reversed if the testing shows they need to be reversed"*); **[PROPOSED]** is this study's reading,
 > NOT his decision until he says so. ⛔ **WHAT HAPPENS NEXT (the owner, 2026-11-16): NOTHING HERE IS BUILT before the build chain and the orbit
 > charts are finished and `orbit_charts` (`1.0.146-Orbit-charts`) is merged into `3d_assembly_game` (`1.0.145-`); this branch is merged after it**
-> — his sentence and the notes for those merges: §0, end; what to ask him again when the surface work starts: §8, end.
+> — his sentence and the notes for those merges: §0, end; what to ask him again when the surface work starts: §8, end. ⭐ **AMENDED BY HIM 2026-11-17: the OFFLINE part starts in parallel (new files only, nothing wired) → [ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md).**
 >
 > **The owner's request (2026-11-16, verbatim):** *"In the meantime, write the specifications for my review regarding the surface definition. What
 > does the surface aim at. What are the rules. What geometries, topologies, singularities shall be considered. What obstacles to overcome. What to
@@ -70,7 +70,7 @@ any rebuild work on the orbit’s surface is started."* So nothing of this speci
 finished and `orbit_charts` (`1.0.146-Orbit-charts`) is merged into `3d_assembly_game` (`1.0.145-`); this branch (`1.0.146s-`) is merged after it.
 **For whoever does those merges:** this branch also changes `SCENE_WORKFLOW.md` (§7) and `PART_AUTHORING.md` (§6) (§7bis.5); two findings are handed
 to queues with no row yet — F17 and the mouth's lip to the ORBIT's, the drop into a slot in contact range to the CONTACT's (§2.2 P1, P5): their rows
-are to be written in `Claude/00_CORE/QUEUE.md` at that merge (that file is at its size budget). What to ask him again then: §8, end.
+are to be written in `Claude/00_CORE/QUEUE.md` at that merge (that file is at its size budget). What to ask him again then: §8, end. ⭐ **2026-11-17, amended by him:** the offline part (the entry-set check on `Scene_2`'s real pieces, the landing map as a pure function) starts now, in parallel, on new files only; everything wired still waits for that merge → [ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md).
 
 ---
 
@@ -586,7 +586,7 @@ principle answers it.
 
 ### 5.1 The layers
 
-[PROPOSED] Six layers, each a pure function in `src/core` or `src/input`, in model coordinates, deterministic (ties broken by a stated key,
+[ACCEPTED by the owner 2026-11-17 — to be tested] Six layers, each a pure function in `src/core` or `src/input`, in model coordinates, deterministic (ties broken by a stated key,
 never by array order). L0 – L1 depend neither on the orbit's frame nor on the held piece; L3 – L4 are built in the frame from L1 alone; L2
 depends on the held piece (P2) and takes L3's facet directions — so the order is L1 → L3 → L2, with no loop. *(alignment)* **L3 and L4 are the
 ORBIT's layers** (the contour, the atlas): described here only as what the gizmo's travel reads, not specified here (§1.3).
@@ -769,11 +769,11 @@ round's decisions each answered: [ORBIT_SURFACE_AUDIT.md](ORBIT_SURFACE_AUDIT.md
 | **Q9** | The first round's open points? | (a), all as recommended: D-S4 (a) the rebuild events; D-S7 a tread a place of the facet that faces it; D-S9 (a) render faces for box scenes, proxies where authored; D-S11 (a) the first build on `Scene_0`, `0bis`, `1` and the study's shapes; D-S20 (a) a strongly non-convex assembly measured by B5 and warned; S29 | **ACCEPTED** |
 | **Q10** | In contact range, crossing a slot it fits — does the piece drop in? | **(b), in his words: *"the piece shall not drop"*** — D3 stands at every distance: the gizmo reads the depth; the piece enters a recess only by A + dy. The recommendation (a) (today's drop) is NOT taken; today's code departs (§2.2 P5) | **DECIDED** |
 
-**TO ASK THE OWNER AGAIN when the surface work starts** — on the first, his words (2026-11-16): *"Not sure I understand the question. Capture the
+**TO ASK THE OWNER AGAIN when the surface work starts** (✅ ASKED 2026-11-17: 1, 2 and the layers of 3 answered — *"Agree on all three."* → [ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md) §2) — on the first, his words (2026-11-16): *"Not sure I understand the question. Capture the
 question in the md file and ask again when we work on the orbit surface later on."*
-1. **A goal's way in: is "a free direction exists" enough, or must the player be able to get there?** Check B4 answers *"can this part slide into its seat along at least one direction without touching a placed part?"* Not yet *"can the player bring the piece to where that slide starts?"* Example: a seat open only from under an overhang — the slide upward is free, but the gizmo may never reach a place under the overhang (no face there is a place of the orbit). Accept a level only when, for every goal, a free direction starts at a place the gizmo reaches (needs the landing map B3 and the coverage B5 first; §2.5 already writes it so) — or is the first test enough for now?
-2. **The entry-set check was run on boxes only** (the study's shapes): run it on the real parts' collision pieces (`UCX_`, `Scene_2`) before the first surface build?
-3. Still [PROPOSED], his word owed: §3.0 the catalogue derived from a grid of questions; §5.1 the six layers L0 – L5; §5.2 "nothing to land on" (the gizmo on the facet's plane, marked) and "approached".
+1. **A goal's way in: is "a free direction exists" enough, or must the player be able to get there?** Check B4 answers *"can this part slide into its seat along at least one direction without touching a placed part?"* Not yet *"can the player bring the piece to where that slide starts?"* Example: a seat open only from under an overhang — the slide upward is free, but the gizmo may never reach a place under the overhang (no face there is a place of the orbit). Accept a level only when, for every goal, a free direction starts at a place the gizmo reaches (needs the landing map B3 and the coverage B5 first; §2.5 already writes it so) — or is the first test enough for now? ✅ **2026-11-17: the first test is enough for now; the second once the landing map exists.**
+2. **The entry-set check was run on boxes only** (the study's shapes): run it on the real parts' collision pieces (`UCX_`, `Scene_2`) before the first surface build? ✅ **2026-11-17: yes — package S0.**
+3. Still [PROPOSED], his word owed: §3.0 the catalogue derived from a grid of questions; §5.1 the six layers L0 – L5; §5.2 "nothing to land on" (the gizmo on the facet's plane, marked) and "approached". ✅ **2026-11-17: the six layers ACCEPTED, to be tested; the catalogue's grid and §5.2's two words still owed.**
 4. Still ⏳ open (§5.2): C22 very long flat shapes; a piece wider than its facet (C24); C38 free-form; the layout's events at a pole (C41).
 
 ---
