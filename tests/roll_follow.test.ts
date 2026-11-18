@@ -148,6 +148,10 @@ describe("the gap: the critically damped follower (rollFollowMs 200)", () => {
     const g = run((i) => (i === 0 ? 51 * DEG : 0), 91, 60);
     expect(g[90]!).toBe(0);
     expect(gapStep(GAP_ZERO, 16.7, 200)).toBe(GAP_ZERO);
+    // a gap closing while a turn that stays draws (SKIP): exactly 0 too
+    let k: RollGap = { gap: 51 * DEG, speed: 0 };
+    for (let i = 0; i < 90; i++) k = followStep(k, 0, 1000 / 60, 200, "SKIP");
+    expect(k).toBe(GAP_ZERO);
   });
   it("the same picture at 60 and at 143 frames a second (the closed form: exact over any step)", () => {
     const g60 = run((i) => (i === 0 ? 51 * DEG : 0), 61, 60);
@@ -171,6 +175,13 @@ describe("the gap: the critically damped follower (rollFollowMs 200)", () => {
     let most = 0;
     for (let i = 2; i < g2.length; i++) most = Math.max(most, Math.abs(g2[i]!));
     expect(most).toBeLessThan(5); // measured 4.9°: a 40° change and its undo two frames later (0.033 s)
+  });
+  it("at rest the ghost's own rounding (a twist of 1e-16 – 1e-7 rad a frame, measured on the shadow) leaves the gap exactly 0 (R5)", () => {
+    let g: RollGap = GAP_ZERO;
+    for (let i = 0; i < 200; i++) {
+      g = followStep(g, (i % 2 ? -1 : 1) * 1e-7 + 3e-16, 1000 / 60, 200, "TAKE");
+      expect(g).toBe(GAP_ZERO);
+    }
   });
   it("a twist taken the short way round; the speed kept (the newest target wins)", () => {
     const a = gapTake({ gap: 170 * DEG, speed: 3 }, -20 * DEG);

@@ -156,7 +156,10 @@ export type FollowMode = "TAKE" | "SKIP" | "ZERO";
 export function followStep(g: RollGap, twist: number, dtMs: number, followMs: number, mode: FollowMode): RollGap {
   if (mode === "ZERO") return GAP_ZERO;
   const s = gapStep(g, dtMs, followMs);
-  return mode === "TAKE" ? gapTake(s, twist) : s;
+  if (mode !== "TAKE") return s;
+  const t = gapTake(s, twist);
+  // ⭐ (FO3 S0, measured: the ghost at rest still reads a twist of 1e-16 – 1e-7 rad a frame, its own rounding) at rest after the take too: exactly 0 (R5)
+  return Math.abs(t.gap) < GAP_REST_DEG * DEG && Math.abs(t.speed) < GAP_REST_DEG_S * DEG ? GAP_ZERO : t;
 }
 
 /** ⭐ A point's place on the glass (x, y in half-glasses, the centre 0) seen from a pose: `fovY` the vertical field (rad), `aspect` width / height. */
