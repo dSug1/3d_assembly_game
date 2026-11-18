@@ -503,3 +503,133 @@ named above; FO3 built after the charts' audit — on its own branch, so the mer
 
 ✅ **The owner** (2026-11-18, on the design, the estimate, the price and these choices as relayed): *"Agreed"*. The build is S0 – S2 as written here;
 ⛔ still nothing deployed without his word.
+
+## 13. FO3 S0 — the shadow, measured: section 12 CONFIRMED on the corner loops, REFUTED on his own hand (A7, O6) — S1 waits for a decision (the builder, 2026-11-18)
+
+**The result first.** The follower was computed on every frame of the game and recorded, never drawn (the replays: the camera and the gizmo identical
+to the base, bit for bit). Where the lead sized it — the steered corner loops — it does what §12.4 says: the roll shown per metre of gizmo travel is
+**half or less of today's** at 240 – 1 200 px a second, the gap at most **17 – 59°**. **On his own hand it does not hold**: replayed on `Scene_0bis`,
+far out at his paces, the gap passes **90° in 9 of his 10 stretches** (up to 178°, 3 – 23 frames a stretch at 60 frames a second). The cause is in the
+logic, not the follower: **inside a tip's spit, as the camera nears the tip's axis, the ghost turns about the framed line WITH THE GIZMO FREE by up to
+42° a frame** (249 – 746° in one 15 s stretch), always the same way, and a crossing's turns under 90° add to it. On `Scene_1` the same happens over
+the cube's top (the upright camera's half turn: 161° of gap at 1 200 px a second), and there no spit reads the finger off the picture.
+⛔ So A7 (*"the gap never over 90° on (H)"*) and O6's premise (*"never on the routes walked at ≤ 1 200 px a second"*) are false on his hand.
+**S1 is not started**: the decision is the owner's (§13.6).
+
+### 13.1 What was built (S0, nothing drawn changes)
+
+* `src/input/roll_follow.ts` (engine-free): the framed line (`framedLine`; the piece and the look point closer than **3 mm**: the view's direction
+  through the piece — O4); the ghost's twist about it (`twistAbout`); the gap and its critically damped step (`gapStep`, `followStep`: ω = 2 / 200 ms,
+  the closed form — exact at any frame rate; under 0.01° and slower than 0.01° a second: exactly 0); the picture (`poseRolled`); a place on the glass
+  (`onGlass`). **16 vectors** (`tests/roll_follow.test.ts`), **15 mutants all red** (the twist's sign, ω, a plain exponential, no rest snap, the twist
+  read about the view, the axis through the eye, not the short way, no degenerate line, the line's orientation, gap 0 not the pose itself, the take
+  before the step, ZERO ignored, no rest after the take, the speed dropped).
+* `src/render/roll_shadow.ts`: each frame at the camera's stage (`green_box_wiring.ts`, just before `zoneMixPose`) the ghost, its twist, two gaps —
+  **held** (§12.4.2 as written: the twist taken only with the gizmo free today) and **free** (as S1 would on this route: also during a timed turn that
+  S1 makes free — a zone's turn whose twist at its first frame is under 90°, not `byMm`, not `out`; a turn that stays: the gap 0) — the picture, A2's
+  error; stored on `st.asmRollShadow` (reset with the orbit's state, O11). The recorders read it (`SHADOW_REC`).
+* **Checked**: the three seeded replays with the shadow against the base (`6f47219`): `Scene_1` and `Scene_0bis` identical bit for bit (2 794
+  frames); `Scene_0` within the replays' known last-digit noise (largest 1.8e-10 m, `1e-9: never`). His hand (two runs) and a steered walk: the camera
+  and the gizmo identical in every frame.
+
+### 13.2 His hand replayed (H) — `Scene_0bis`, his 1 536 × 742 glass, the virtual clock
+
+Ten stretches of his three sessions (`hand_replay.mjs`; whole presses, 10 – 15 s each; his pace in each: 384 – 865 px a second on average, fast
+stretches over 600 px a second 21 – 60 % of the time). The roll is about the view (`pace.mjs`'s split), per metre of gizmo travel; the free twist =
+frames where the ghost turns over 0.5° about the line with the gizmo free today (frames / largest / sum).
+
+| stretch (mean px a second) | gizmo m | roll a metre, today | worst frame today | free twist | the gap's largest | frames over 45° / 90° | held gap's largest |
+|---|---|---|---|---|---|---|---|
+| vyah_11s (631) | 15.4 | 177° | 26.9° | 43 / 25.8° / 146° | 85° | 12 / 0 | 36° |
+| vyah_42s (627) | 17.5 | 116° | 23.3° | 106 / 22.9° / 422° | 119° | 33 / 6 | 57° |
+| ogse_3s (384) | 13.3 | 186° | 20.5° | 116 / 20.9° / 340° | 98° | 35 / 4 | 57° |
+| ilmj_4s (538) | 16.4 | 149° | 29.7° | 118 / 19.5° / 404° | 122° | 53 / 13 | 63° |
+| ilmj_23s (865) | 18.2 | 138° | 42.2° | 126 / 42.5° / 746° | 178° | 84 / 23 | 108° |
+| ilmj_39s (695) | 17.8 | 182° | 26.1° | 83 / 25.7° / 288° | 178° | 78 / 14 | 68° |
+| ilmj_60s (609) | 18.3 | 171° | 55.5° | 180 / 25.0° / 585° | 120° | 107 / 21 | 76° |
+| ilmj_83s (690) | 16.1 | 129° | 35.1° | 104 / 33.8° / 344° | 132° | 34 / 9 | 63° |
+| ilmj_99s (833) | 15.6 | 153° | 43.0° | 117 / 42.4° / 479° | 133° | 78 / 23 | 122° |
+| ilmj_114s (553) | 9.4 | 138° | 15.8° | 98 / 12.9° / 249° | 97° | 38 / 3 | 34° |
+| ilmj_23s at **143** frames a second | 19.6 | 154° | 38.4° | 266 / 28.6° / 775° | 137° | 256 / 54 | 103° |
+| ogse_3s at 143 | 15.3 | 183° | 71.8° | 220 / 18.2° / 489° | 180° | 105 / 35 | 100° |
+| at **0.736**: ilmj_23s / ilmj_99s / vyah_11s | 17.0 / 15.8 / 15.0 | 157° / 145° / 200° | 34.9° / 45.6° / 48.5° | 126 / 140 / 40 frames | 152° / 145° / 174° | 58·15 / 110·32 / 29·16 | 53° / 115° / 29° |
+| **close in**: the same three | 8.1 / 8.2 / 6.9 | 157° / 115° / 54° | 11.7° / 26.0° / 10.1° | 12 / 19 / 4 frames, ≤ 6.7° | **7° / 4° / 3°** | 0 / 0 | 7° / 4° / 3° |
+
+* **Where**: every gap over 1° on his hand is **inside a spit** (0 frames outside, on every run): the frames before the crossing's half turn, the
+  camera near the tip's axis (e.g. `ilmj_99s` frames 90 – 95: 4°, 8°, 14°, 24°, 26°, **42°**, the gizmo free, the finger 7 – 30 px a frame; the
+  crossing's turn then starts). Close in it stays under 7.3°.
+* **A2 on the shadow**: the piece's and the look point's places, picture against ghost: at most **1.5e-15** of the half glass on every run. ✅
+* **A3**: with the rest after the take (`7473761`), the gap is **exactly 0** at the end of the 1.5 s settle on the runs re-made (`ilmj_23s`,
+  `vyah_42s`); before it the ghost's own rounding (1e-16 – 1e-7 rad a frame) kept it at 1e-12 – 1e-7 rad — the defect found here (R5).
+* **A6, today's own** (the finger's way against the gizmo's on the glass, outside turns, the finger ≥ 3 px): largest **38 – 178°**, 95th
+  percentile **28 – 114°** — today's game is far from straight on his hand already (a spit reads the finger in its own frame).
+
+### 13.3 The steered walks at his paces (S) — the corner loops of `Scene_0bis`, far out, 60 frames a second
+
+| px a second | ccw at +x: roll a metre today → S1 on the route | its gap's largest | cw at −x: today → S1 | its gap's largest |
+|---|---|---|---|---|
+| 240 | 140° → 49° | 34° | 61° → 32° | 17° |
+| 470 | 88° → 34° | 30° | 57° → 21° | 18° |
+| 571 | 76° → 35° | 36° | 53° → 18° | 45° |
+| 835 | 84° → 42° | 39° | 90° → 44° | 60° |
+| 1 050 | 98° → 51° | 41° | 53° → 26° | 56° |
+| 1 200 | 72° → 35° | 46° | 80° → 34° | 56° |
+| 1 800 (nothing breaks) | 90° → 84° | **135°** (9 frames over 90°) | 88° → 71° | 89° |
+| 2 000 (nothing breaks) | 109° → 93° | **139°** (9 frames over 90°) | 55° → 38° | 86° |
+
+* **This is §12.4's estimate, confirmed** (59 – 67° there): to 1 200 px a second the gap stays under 60° and the roll a metre is halved or better.
+* ⚠ "S1 on the route" is the shadow's picture where the gizmo is free or the turn would be, today's drawn picture where a turn stays — today's ROUTE
+  (the gizmo still held by today's turns); the frames where the two hand over are not a real picture (their "worst frame" is not reported).
+* The walks end 6 frames after the last move: their last gap (0.1 – 2.7°) is not a rest; A3 is read on his hand (13.2).
+
+### 13.4 The other recordings (the older gates — A9's list)
+
+* **The seeded replays** (random drags of up to 8 px a frame: ≤ 680 px a second): `Scene_1` the gap up to **121°** (65 frames over 90°), **1 478
+  frames with a gap over 1° outside a spit**; `Scene_0` 121° (69), 1 460 frames outside a spit; `Scene_0bis` 112° (8), none outside. The free twist:
+  3 743°, 3 812°, 1 385° in 21 – 23 m of gizmo travel — far out, the upright camera near the top of its orbit (e.g. `Scene_1` frames 246 – 260: 6 –
+  12° a frame for 15 frames, the camera 7.7 m up).
+* `f_s1_over_px20` (`Scene_1`, up over the cube's top and down its back, 1 200 px a second): free twist 372° in 41 frames, the gap **161°**, 26 frames
+  over 90°, **76 frames outside a spit**.
+* **Never a free twist** (over 0.5°): `f_edge_px2 / px8 / px20` (gap ≤ 0.4°, from their six turns under 90°), `f_s0_up_px20` (no turn, gap 0.1°),
+  `f_ridge_px20` (its one turn 180°: stays; gap 0), `tilt_check` on `Scene_1` (gap 0.2°). A few: `tilt_check` `Scene_0` (23 frames, ≤ 3.8°, gap 9.2°,
+  107 frames outside a spit), `Scene_0bis` (8 frames, ≤ 2.0°, gap 2.6°).
+* **For A9** (identical frame for frame): only the walks with no free twist AND no turn under 90° can be — `f_s0_up_px20`, `f_ridge_px20`. The edge
+  walks and `tilt_check` have turns under 90° that S1 makes free: they will differ, by those named turns.
+
+### 13.5 The obstacles read on the shadow
+
+* **O2 — where the change's angle is known**: at the camera's stage, the turn's first frame. ⚠ **The twist there understates a 90° change**: the square
+  camera's turns read **88.3 – 89.8°** of twist (89.9 – 90.2° of `zm.rad`) at their first frame; `zm.rad` itself grows after it (a turn read 21.7° of
+  twist, 32° then 59° of angle — §11.4's moving target). A limit read on the twist frees a 90° turn by rounding; the square camera's turn must stay by
+  its kind (O5), and the zone's turns be judged on their whole angle, with a stated tolerance.
+* **O7 — the readers of "a turn is under way"** (`asmZoneMix`), and what each sees once a change under 90° makes no turn: the piece's shown direction
+  (`shownDir`, `easedDir` at the turn's share — no turn: the ease whole at once, hence O3's own clock); the ease's start and carry (`easeCarry`, the
+  `asmDirEase.mix` link — no turn to hang on); `turnWhole`, `seamTurnFrame`, `seamOutFrame`, `seamOutFeed` (only `byMm` and `out`, which stay); the
+  pole's crossing (`poleCrossingDue`'s `turning`: no crossing while a turn runs — with none, one can be made the next frame); `zoneMixPose`;
+  `tiltClampStep` (the hold — none); `crossTurn`'s and the free entry's `mixWas` (a turn restarted — none to carry); `zoneStep` (the clock);
+  **`freeShownHeading`** (`asmFree.turning`: the silent entry's heading carried while a turn runs — with none it settles at the tilts' one speed a
+  frame by itself); the play recorder (`zm`) and the probes (`turn_rec`, `fast_walk_check`, `hand_replay`).
+* **O8 — where a gap exists outside a spit**: on `Scene_0bis`, nowhere (his hand, the walks). On `Scene_1` and `Scene_0` far out, near the top of the
+  orbit: up to 161°. There the finger is read as it is: **S2 is needed there** (R7), not on `Scene_0bis`.
+* **O4**: the framed line is close to the view on the frames that twist (the angle between them: median 4°, at most 9 – 23°), so the twist IS mostly
+  roll; the view itself then lags the ghost by up to 7.8 – 13.5° (the eye on its circle about the line) while the piece and the look point stay exact.
+
+### 13.6 What the frames refute, and the amendments
+
+* **Refuted — A7 and O6's premise**: the gap passes 90° at his paces on his own hand (13.2), from the logic's own near-half-turn roll with the gizmo
+  free (a spit's axis, the cube's top). **O6's fallback, sized offline on the recorded twists** (the follower re-run, `fo3/follow_sim.mjs`; it
+  reproduces the recorded gap to 6e-12°): 200 ms → 98 – 178°; 120 ms → 90 – 153°, 0 – 32 frames still over 90°; the time shortened over 60° (× 60/gap)
+  → 95 – 155°, 3 – 31 frames; (× (60/gap)²) → 90 – 145°, 0 – 17 frames, worst frame **13 – 41°**; a hard stop at 90° → worst frame **9.5 – 70°**. None
+  keeps A7 on every run without a frame of 38 – 70° on some run (five runs read: `ilmj_23s`, `ilmj_99s`, `ogse_3s` far, `ilmj_23s` at 143, `ilmj_99s` at 0.736).
+* **Amended in the code, measured** (§12.4's wording): (a) the twist is **Shoemake's twist of the whole rotation about THIS frame's line** — not *"the
+  swing taking last frame's line onto this one's"* first: the two agree when the line is fixed in the camera, and differ when the look point slides
+  (0.26° in a 5.7° turn), where the latter left the picture a turn about the line (vectored); (b) **the rest after a take too** (R5, 13.2).
+* **The smallest amendments that keep R1 – R10, for his decision** (the builder's reading; none built):
+  1. **Accept a gap over 90°** — drop A7's bound, keep the rest. Inside a spit the finger is read off the picture drawn (`zoneFinger`, R7 holds if
+     `asmCamLast` is the picture); outside one (`Scene_0`, `Scene_1` over a top) S2 turns the finger by the gap. R3, R5, R6, R8 untouched. The price:
+     for about half a second the picture is up to a half turn behind the logic's after a fast pass by a tip or over a top — the glass upside down
+     relative to the logic, then rolling back.
+  2. **A gap that would pass 90° hands its excess to today's timed turn** (from the pose shown, the gizmo held). ⛔ It bends R6: changes each under
+     90° would then stop the gizmo — **his word needed**.
+  3. O6 as written — measured above: it does not meet A7.
+* ⛔ Not decided here, not built: S1 waits for the lead and the owner.

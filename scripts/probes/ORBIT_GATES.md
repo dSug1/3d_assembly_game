@@ -467,3 +467,20 @@ node scripts/probes/hold_walk_analyse.mjs <rec.json> [SHOW=s3 FROM=0 TO=400]   #
   next press; no `STALE`.
 * The base (`892b6a3`'s code) and the fix's recordings: the session scratchpad's `dh/base`, `dh/new`; the band's sweep `dh/sweep`; the earlier commits
   `dh/old_<commit>`. Deterministic (the virtual clock).
+
+## 11. Gate (j) — the owner's hand replayed and the shadow read (`hand_replay.mjs`, `hand_batch.sh`, `shadow_read.mjs`, package FO3 — `Claude/40_RENDER_SCENE/spec/FAST_ORBIT.md` §12.5, §13)
+
+```bash
+STRETCHES=<stretches.json> OUT=<folder> bash scripts/probes/hand_batch.sh <tag> "ilmj_23s|60|far" "ilmj_23s|143|far" "ilmj_23s|60|half" "ilmj_23s|60|close"
+node scripts/probes/shadow_read.mjs <folder>/<tag>_*.json <a fast walk's OUTJSON> <a DUMP>     # JSON=1: one object a recording
+```
+
+* **His hand**: a stretch of a play recorder's session (its raw pointer events, read only on E:) sent at its recorded times on HIS glass (1 536 × 742,
+  the DevTools' metrics override) under the virtual clock — `FPS` 60 or 143 — so a run repeats bit for bit; `PRE=half` the approach first (0.736 on
+  `Scene_0bis`), `PRE=close` on until the automatic tilt latches. The stretches (whole presses, 10 – 15 s) are cut by the lead's kit
+  (`_saved_patches/orbit_chain_2026-11-18/fo3/cut_stretches.mjs` → `fo3/hand/stretches.json`). ⛔ His play is private: `OUT` never the repository.
+  About 30 – 50 s a stretch at 60, 70 s at 143.
+* **The shadow** (`st.asmRollShadow`, recorded as `sh` by every recorder through `SHADOW_REC`): `shadow_read.mjs` prints per recording the roll a
+  metre of gizmo travel today and as S1 would draw on the route, the gap (largest, frames over 45° / 90°), the free twists, the frames with a gap
+  outside a spit (O8), A2, the gap at the end (A3), the turns by their twist, and on the hand A6 (the finger's way against the gizmo's on the glass).
+* The figures at `580913f` – `aa1aa8f`: `FAST_ORBIT.md` §13; the recordings: `_saved_patches/orbit_chain_2026-11-18/fo3/runs` (`base` at `6f47219`).

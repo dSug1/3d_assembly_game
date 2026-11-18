@@ -686,3 +686,13 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   at `d6f9771`: FO3 is built there, by packets, from a fresh lead session (the handover:
   [`HANDOVER_2026-11-18.md`](HANDOVER_2026-11-18.md)). The night's branch of that name (the three reverted builds, `fa0e2a2`) is renamed
   `1.0.148-Fast-orbit-three-builds-reverted`, kept local.
+
+### 2026-11-18 (evening) — FO3 S0, the shadow: built and measured, nothing drawn changes — section 12 refuted on his hand (A7)
+
+* ✅ Built on `1.0.148-` (local commits): the follower's pure parts (`src/input/roll_follow.ts`, 16 vectors, 15 mutants red) and the shadow computed
+  at the camera's stage, recorded, never drawn (`src/render/roll_shadow.ts`); the probes `hand_replay.mjs`, `hand_batch.sh`, `shadow_read.mjs`.
+  The seeded replays identical to the base (`Scene_0` within its last-digit noise).
+* ✅ Confirmed on the steered corner loops: to 1 200 px a second the gap under 60°, the roll a metre halved or better.
+* ⛔ **Refuted on his own hand** (`Scene_0bis`, far out and at 0.736): the gap over 90° in 9 of 10 stretches (up to 178°) — the ghost turns up to 42°
+  a frame with the gizmo free near a tip's axis; `Scene_1` over its top: 161°, outside any spit. O6's fallback sized offline does not meet A7.
+  **S1 not started**: the amendments for the owner's decision → [`FAST_ORBIT.md`](../../40_RENDER_SCENE/spec/FAST_ORBIT.md) §13.6.
