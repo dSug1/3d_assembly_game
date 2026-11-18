@@ -8,7 +8,7 @@
 // pose the camera's stage built and the one drawn (`pose`, the build's `probeCamPose`; null before FO1) — the circle's check (FAST_ORBIT.md §8).
 import { writeFileSync } from "node:fs";
 
-export const TURN_REC = `(() => { const st = window.__st; window.__turnRec = []; const f0 = window.__frame; const ids = new WeakMap(); let nid = 0;
+export const TURN_REC = () => `(() => { const st = window.__st; window.__turnRec = []; const f0 = window.__frame; const ids = new WeakMap(); let nid = 0;
   window.__frame = () => { if (f0) f0(); try {
     const g = st.asmGizmoAt, n = st.gizmoNormal, m = st.asmZoneMix, sq = st.asmSquare, t = st.camera.getTarget(), e = st.asmDirEase, cp = st.probeCamPose;
     let mid = 0; if (m) { if (!ids.has(m)) ids.set(m, ++nid); mid = ids.get(m); }
@@ -17,12 +17,12 @@ export const TURN_REC = `(() => { const st = window.__st; window.__turnRec = [];
       mix: m ? { id: mid, k: m.k, rad: m.rad, whole: m.rad + (e && e.mix === m ? e.angle : 0), known: m.axis !== null, rule: m.rule, byMm: !!m.byMm, out: !!m.out, hold: m.hold === undefined ? null : m.hold, rt: !!m.readTarget } : null,
       sqq: sq ? sq.q : -1, sqn: sq && sq.n ? [sq.n[0], sq.n[1], sq.n[2]] : null, sqt: sq && sq.target ? [sq.target[0], sq.target[1], sq.target[2]] : null,
       tilt: st.asmTilt ? st.asmTilt.id : 0, zone: st.asmZone ? st.asmZone.zone.orientation : null, ap: st.approach, auto: !!st.asmTiltAuto, pend: !!st.asmTiltPending, eh: st.asmEdgeHold ? 1 : 0, free: st.asmFree ? 1 : 0,
-      pose: cp ? { to: [cp.to.eye, cp.to.look, cp.to.up], drawn: [cp.drawn.eye, cp.drawn.look, cp.drawn.up] } : null });
+      pose: cp ? { to: [cp.to.eye, cp.to.look, cp.to.up], drawn: [cp.drawn.eye, cp.drawn.look, cp.drawn.up] } : null, sh: ${SHADOW_REC} });
   } catch (e) { window.__recErr = String(e); } }; return true; })()`;
 
 /** after the probe's own recorder is set: the recorder wrapped round it (DUMP set only) */
 export async function turnRecStart(ev) {
-  if (process.env.DUMP) await ev(TURN_REC);
+  if (process.env.DUMP) await ev(TURN_REC());
 }
 
 /** at the run's end: the frames written to DUMP (DUMP set only) */

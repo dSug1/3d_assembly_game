@@ -15,6 +15,7 @@
 //   REPLAY=<inputs.json> (no TGT): the same events at the same frames, the orbit's angles and the approach SET as recorded before each frame (the URL
 //   should carry `&tiltRollDegS=0`: every turn whole at once); OUTJSON the frames, compared by `fast_walk_drift.mjs`.
 import { guardProbe } from "./probe_guard.mjs";
+import { SHADOW_REC } from "./turn_rec.mjs"; // (FO3 S0) the shadow per frame (`sh`)
 import { spawn, spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -54,7 +55,7 @@ const RECORD = `(() => { const st = window.__st; window.__cam = []; window.__leg
       tilt: st.asmTilt ? st.asmTilt.id : 0, zone: st.asmZone ? st.asmZone.zone.orientation + "#" + st.asmZone.id : null, ap: st.approach, auto: !!st.asmTiltAuto, eh: st.asmEdgeHold ? 1 : 0,
       free: fr ? [fr.facet, fr.heading[0], fr.heading[1], fr.heading[2]] : null, spit: st.asmSpitSide ?? null, mq: mq ? [mq.yaw, mq.pitch] : null,
       sqn: st.asmSquare && st.asmSquare.n ? [st.asmSquare.n[0], st.asmSquare.n[1], st.asmSquare.n[2]] : null, sqq: st.asmSquare ? st.asmSquare.q : -1,
-      pose: cp ? { to: [cp.to.eye, cp.to.look, cp.to.up], drawn: [cp.drawn.eye, cp.drawn.look, cp.drawn.up] } : null });
+      pose: cp ? { to: [cp.to.eye, cp.to.look, cp.to.up], drawn: [cp.drawn.eye, cp.drawn.look, cp.drawn.up] } : null, sh: ${SHADOW_REC} });
   } catch (e) { window.__recErr = String(e); } }; return true; })()`;
 
 try {
