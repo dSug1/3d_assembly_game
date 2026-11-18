@@ -61,7 +61,8 @@ for (const s of subs) {
       // honoured: the gizmo moving TOWARD the edge two frames running (a spring's leftover is not a dy honoured)
       const toward = (k) => edge !== null && rows[k].g && rows[k - 1].g && Math.abs(dphi(phiOf(rows[k].g), edge)) < Math.abs(dphi(phiOf(rows[k - 1].g), edge)) - 1e-4 && step(k) >= STILL;
       if (first < 0 && r.f[1] !== 0 && !r.mix && toward(i) && toward(i + 1)) first = i;
-      if (recross < 0 && ((r.h && (!hb || hb[0] !== r.h[0] || (r.h[1] ?? 0) < (hb[1] ?? 0)) && i > come[0]) || (r.mix && !rows[i - 1].mix))) recross = i;
+      // a second crossing: a turn starting, or a hold appearing or changing sign (⛔ its `back` going down: the hysteresis paying it off, 2026-11-18)
+      if (recross < 0 && ((r.h && (!rows[i - 1].h || rows[i - 1].h[0] !== r.h[0]) && i > come[0]) || (r.mix && !rows[i - 1].mix))) recross = i;
     }
     let fAll = 0, fOther = 0, gPath = 0;
     const end = first >= 0 ? first : come[come.length - 1];
@@ -75,7 +76,8 @@ for (const s of subs) {
   if (wob.length) {
     let turns = 0, sets = 0, f = 0; for (const i of wob) { if (rows[i].mix && !rows[i - 1].mix) turns++; const h = rows[i].h, h0 = rows[i - 1].h; if (h && (!h0 || h0[0] !== h[0])) sets++; f += fmm(rows[i]); }
     const he = rows[wob[wob.length - 1]].h;
-    line += ` WOBBLE ${wob.length} fr (${f.toFixed(0)} mm of finger): turns started ${turns}, holds set ${sets}, hold at the end ${he ? `[${he[0]}, back ${he[1]?.toFixed?.(1)}]` : "none"}, the gizmo ${pastMm(wob[wob.length - 1]).toFixed(0)} mm from the edge`;
+    const bMax = wob.reduce((m, i) => Math.max(m, rows[i].h ? rows[i].h[1] ?? 0 : 0), 0);
+    line += ` WOBBLE ${wob.length} fr (${f.toFixed(0)} mm of finger): turns started ${turns}, holds set ${sets}, the hold's back at most ${bMax.toFixed(1)} mm, hold at the end ${he ? `[${he[0]}, back ${he[1]?.toFixed?.(1)}]` : "none"}, the gizmo ${pastMm(wob[wob.length - 1]).toFixed(0)} mm from the edge`;
   }
   const tdx = idx(s, "tri-dx");
   if (tdx.length) {
