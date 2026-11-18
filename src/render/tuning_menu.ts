@@ -223,7 +223,7 @@ export function installTuningMenu(st: SceneState): void {
             // ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §8, step C3) the way out of close in, blended
             tunable(st, "tilted pole: on the way out, the camera's turn spread over this much approach finger (mm; 0: timed)", "tiltOutBlendMm", 0, 60, 1),
             // ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8) the owner's hysteresis
-            tunable(st, "past an edge that turns the camera round, the dy that crossed held until the finger goes this far the other way (mm)", "edgeHoldMm", 0, 100, 5),
+            tunable(st, "past an edge that turns the camera round, the dy that crossed held until the finger goes this far the other way (mm)", "edgeHoldMm", 0, 100, 1), // ⭐ (2026-11-18, DH) step 1 mm: the default 8
           ],
         },
         {

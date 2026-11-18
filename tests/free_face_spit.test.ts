@@ -391,7 +391,7 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): the carried headin
     expect(x).toContain("st.asmFree = null; st.asmSpitSide = 0; st.asmSpitU = null; crossTurn(st, { at: null, uWas: null, carry: true, paced: false, hold: held });");
     expect(x).not.toContain("crossingHold(");
     const c = fnCode(W, "function crossTurn(");
-    expect(c).toContain("const mixWas = st.asmZoneMix; if (c.paced) seamOutStart(st); else if (st.asmCamLast !== null) seamTurnStart(st, false); if (c.uWas !== null) seamEase(st, c.uWas); else if (c.carry) easeCarry(st, mixWas); st.orbitInertia.stop(); if (c.hold !== 0) st.asmEdgeHold = { sign: c.hold, back: 0 };");
+    expect(c).toContain("const mixWas = st.asmZoneMix; if (c.paced) seamOutStart(st); else if (st.asmCamLast !== null) seamTurnStart(st, false); if (c.uWas !== null) seamEase(st, c.uWas); else if (c.carry) easeCarry(st, mixWas); st.orbitInertia.stop(); st.asmEdgeHold = holdAtCrossing(c.hold);");
     // ⛔ the sway: nothing drawn, picked or seen by the camera decides — the pose shown and the up shown only continue the picture
     for (const s of [f, x]) expect(s).not.toMatch(/getBoundingInfo|pickWithRay|absolutePosition|computeWorldMatrix|cameraPrev|modelCast|gizmoNormal/);
     const cf = fnCode(W, "function contourOfFacet(");

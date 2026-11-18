@@ -414,7 +414,7 @@ export interface GestureConfig {
    * the charts) THE WAY OUT OF CLOSE IN: the camera's turn after the automatic tilt is left BY DISTANCE spread over this much of the approach finger's
    * travel outward (mm on the glass; never faster than `tiltRollDegS`; the gizmo free) — 0: the timed turn, the gizmo held, as before (0 … 60) */
   tiltOutBlendMm: number;
-  /** ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8) after an edge that turns the camera round, the dy that crossed held until the FINGER has gone this far the other way (mm; ⛔ 2026-11-14 the gizmo's depth in the face beyond) */
+  /** ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8) after an edge that turns the camera round, the dy that crossed held until the FINGER is this far back the other way from the farthest point it reached (mm, a hysteresis — 2026-11-18; ⛔ 2026-11-14 the gizmo's depth in the face beyond) */
   edgeHoldMm: number;
   /** ⭐⭐⭐ (2026-11-13, the pinch is the approach) the approach per mm of the two fingers' spread (× the two-finger dy it replaces — 1 the same pace) */
   approachPinchGain: number;
@@ -867,7 +867,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   zoneWholeShare: 0.5, // ⭐⭐⭐ (D-Z5)
   zoneExitMm: 10, // ⭐⭐⭐ (D-Z7) a guess with a slider
   freeFaceSquare: 0, // ⭐⭐⭐ (2026-11-16, step C4) N2, the calm kept, until the owner judges the two on the device
-  edgeHoldMm: 30, // ⭐⭐⭐ (2026-11-12, §8, the owner's hysteresis: *"until a certain band is reached in the face beyond"*) a guess with a slider
+  edgeHoldMm: 8, // ⭐⭐⭐ (2026-11-12, §8, the owner's hysteresis: *"until a certain band is reached in the face beyond"*) ⭐⭐⭐ (2026-11-18, `DY_HOLD_REVERSAL.md` §6) 30 → 8 mm of finger, a true hysteresis: over a ±2.5 mm wobble's 5 mm swing by 3 mm (30 mm far out was 1.3 – 1.8 faces of surface)
   orbitGainFullM: 0.6, // ⭐⭐⭐ (2026-11-12, step 3) a guess with a slider: the automatic tilt's distance (`tiltAutoM`)
   orbitContactMmPerMm: 4, // ⭐⭐⭐ (2026-11-12, step 3; the owner on the device: "set ... to 4 mm" — 1 was the slide's 1 : 1)
   tiltBlendMm: 10, // ⭐⭐⭐ (2026-11-11, the owner: *"set a faster alignment per mm as the one you previously chose required a lot of delta position mm"*) the automatic tilt's blend by the orbit's first 10 mm of finger (30 before) — a guess until a hand sets it

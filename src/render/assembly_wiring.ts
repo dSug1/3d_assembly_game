@@ -38,7 +38,7 @@ import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { crossingHold, crossingPitch, distanceToFacets, fingerInFrame, fingerSwapped, SPIT_CROSSING_PITCH_RAD, spitCameraHeading, spitSide, zoneAt, type PolarZone } from "../input/polar_zone";
 import { assignCharts, capTiltHeading, chartContour, chartZones, DEFAULT_CHART_OPTS, type ChartAssignment, type ChartFace } from "../input/orbit_charts";
-import { poseAboutPiece, poseFramingTwo, type CamPose } from "../input/orbit_tilt";
+import { holdAtCrossing, poseAboutPiece, poseFramingTwo, type CamPose } from "../input/orbit_tilt";
 import { poleCrossingDue, poleSeam } from "../input/pole_crossing";
 import { dirGap, easedDir, easeRest, poleYawKept, seamOutPaced, seamOutShare, seamOutStep, seamOutTarget, seamTurnPace, seamTurnStep, seamWholeRad, tiltLeavesNow, turnHoldsGizmo } from "../input/seam_turn";
 import { bandedFacet } from "../input/face_band";
@@ -1912,7 +1912,8 @@ function seamRebase(st: SceneState, mq: { readonly yaw: number; readonly pitch: 
  *   (`seamOutStart`, step C3), else timed at the tilts' one speed, the gizmo held meanwhile (`tiltClampStep`);
  * * the piece's shown direction eased on that turn from the one drawn before the change (`uWas`, `seamEase`) — or, the frame unchanged, the ease running
  *   carried onto it by its rest (`carry`, `easeCarry`);
- * * the coast stopped; `hold` — the dy held (`crossingEvent`, `exitHoldSign`: the one rule; the spit's side: `crossingHold`, §13.3), 0: none (a hold already on is left as it is).
+ * * the coast stopped; `hold` — the dy held (`crossingEvent`, `exitHoldSign`: the one rule; the spit's side: `crossingHold`, §13.3), 0: none — ⭐⭐⭐ (2026-11-18,
+ *   `DY_HOLD_REVERSAL.md` §5.3) a hold still on ended too (`holdAtCrossing`: the hold guards the LAST edge crossed; ⛔ left as it was).
  * ⭐ Everything in the MODEL's space (the map, `g`); the camera's pose read only to start the turn from the picture on the glass.
  */
 function crossTurn(st: SceneState, c: { readonly at: { readonly mq: { readonly yaw: number; readonly pitch: number }; readonly g: Vec3 } | null; readonly uWas: Vec3 | null; readonly carry: boolean; readonly paced: boolean; readonly hold: 1 | -1 | 0 }): void {
@@ -1936,7 +1937,7 @@ function crossTurn(st: SceneState, c: { readonly at: { readonly mq: { readonly y
   if (c.uWas !== null) seamEase(st, c.uWas);
   else if (c.carry) easeCarry(st, mixWas);
   st.orbitInertia.stop();
-  if (c.hold !== 0) st.asmEdgeHold = { sign: c.hold, back: 0 };
+  st.asmEdgeHold = holdAtCrossing(c.hold); // ⭐⭐⭐ (2026-11-18, `DY_HOLD_REVERSAL.md` §5.3) it REPLACES any hold still on — ⛔ a 0 left the last edge's on
 }
 
 /**

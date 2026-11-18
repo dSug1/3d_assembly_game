@@ -35,7 +35,7 @@ import { type SceneState } from "./scene_state";
 import { applyCamera, retargetGizmo, syncCentre } from "./camera_rig";
 import { sampleOf } from "./hud_paint";
 import { nudgeOthersWorld, swingBlock } from "./sway_pass";
-import { edgeHoldDy, edgeHoldFinger } from "../input/orbit_tilt"; // ⭐ (2026-11-12, ORBIT_ANY_SHAPE.md §8) the dy hold
+import { dySignPushing, edgeHoldDy, edgeHoldFinger } from "../input/orbit_tilt"; // ⭐ (2026-11-12, ORBIT_ANY_SHAPE.md §8) the dy hold
 
 export function installPointerHandler(st: SceneState): void {
   // ⭐⭐ (2026-10-29, *"A should replace shift"*) THE APPROACH KEY held (`isApproachKey`): its release ends the approach (its coast); a lost window forgets it
@@ -262,10 +262,13 @@ export function installPointerHandler(st: SceneState): void {
  * rectangle faces, there are times I cannot reverse … the input is blocked: I can only go in one dy direction"*) — and §8's HOLD ENDED WITH IT
  * (`asmEdgeHold`): the hold belongs to the gesture that crossed (its finger still pushing the way it crossed — no ping-pong over the edge); within it, it
  * ends by `edgeHoldMm` of the finger the other way. ⛔ Kept across presses: a new press the way the last one crossed was held whole — 4 – 8 s of dy moving
- * nothing (13 of 116 dy segments of the reversal walks far out), until 30 mm the other way.
+ * nothing (13 of 116 dy segments of the reversal walks far out), until 30 mm the other way. ⭐⭐⭐ (2026-11-18, `DY_HOLD_REVERSAL.md` §5.2) and the dy pushing
+ * none (`asmDySign`): a hold SET after the lift (the spit's side read at the camera's place a frame later, the coast) belonged to no gesture and blocked the
+ * next press from its first frame.
  */
 function gestureOver(st: SceneState): void {
   st.asmEdgeHold = null;
+  st.asmDySign = 0; // ⭐⭐⭐ (2026-11-18, `DY_HOLD_REVERSAL.md` §5.2) no finger, no dy pushing: a crossing after the lift (the camera's lag, the coast) holds nothing
   st.episodes.gestureEnded(endGesture(st));
 }
 
@@ -332,7 +335,8 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     // ⭐⭐⭐ (2026-11-04) around the assembly the dy with the finger (`orbitDy`: finger down, the gizmo down)
     const fdy0 = orbitDy(db.dy, asmOn);
     // ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8) the finger's dy sign remembered; after a pole-holding face's far edge, the sign that crossed HELD (`edgeHoldDy`)
-    if (asmOn && fdy0 !== 0 && !shiftApproach) st.asmDySign = Math.sign(fdy0);
+    // ⭐⭐⭐ (2026-11-18, `DY_HOLD_REVERSAL.md` §5.3) …the dy that pushes NOW (`dySignPushing`: a sideways step none) — ⛔ the last dy sign for ever
+    if (asmOn && !shiftApproach) st.asmDySign = dySignPushing(st.asmDySign, db.dx, fdy0);
     const fdy1 = asmOn ? edgeHoldDy(st.asmEdgeHold, fdy0) : fdy0;
     // ⭐⭐⭐ (2026-11-14) …and released by the finger the other way past `edgeHoldMm` (`edgeHoldFinger` — the owner's hysteresis, a finger's, at any distance)
     if (asmOn && st.asmEdgeHold !== null && fdy0 !== 0 && !shiftApproach) st.asmEdgeHold = edgeHoldFinger(st.asmEdgeHold, fdy0 / mmToPx(1), st.cfg.edgeHoldMm);

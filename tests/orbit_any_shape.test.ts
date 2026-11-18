@@ -12,6 +12,8 @@ import { describe, expect, it } from "vitest";
 import { blendThroughEdges, buildFaceMap, capCentre, chordAt, mapAngles, mapTarget, RIDGE_TIE_DEG, type FaceMap, type MapFace } from "../src/input/face_map";
 import type { Vec3 } from "../src/core/vec";
 import type { ShellBox } from "../src/input/orbit_shell";
+/** ⭐⭐⭐ (2026-11-18, package DH, `DY_HOLD_REVERSAL.md` §6) the dy hold's band, a finger's mm, as chosen from the walks */
+const EDGE_HOLD_DEFAULT_MM = 8;
 
 const D = Math.PI / 180;
 const opts = { edgeMm: 10, edgeDeg: 10 };
@@ -245,10 +247,9 @@ describe("⭐⭐⭐ §8 — THE DY HOLD after a pole-holding face's FAR edge (th
     expect(edgeHoldDy(null, 3)).toBe(3);
     // the held way pushes on: nothing gathered, still held
     expect(edgeHoldFinger(h, 10, 30)).toBe(h);
-    // the other way: gathered, the forward pushes in between change nothing; released at the band, not before
+    // the other way: gathered; released at the band, not before
     const a = edgeHoldFinger(h, -12, 30)!;
     expect(a.back).toBeCloseTo(12, 12);
-    expect(edgeHoldFinger(a, 50, 30)).toBe(a);
     const b = edgeHoldFinger(a, -17.9, 30)!;
     expect(b).not.toBeNull();
     expect(b.back).toBeCloseTo(29.9, 12);
@@ -258,7 +259,7 @@ describe("⭐⭐⭐ §8 — THE DY HOLD after a pole-holding face's FAR edge (th
     expect(edgeHoldFinger(n, -5, 30)).toBe(n);
     expect(edgeHoldFinger(n, 31, 30)).toBeNull();
     expect(edgeHoldFinger(h, 0, 30)).toBe(h);
-    expect(DEFAULT_CONFIG.edgeHoldMm).toBe(30);
+    expect(DEFAULT_CONFIG.edgeHoldMm).toBe(EDGE_HOLD_DEFAULT_MM);
   });
   it("⭐⭐⭐ wired: the tilt keeps its heading; `tiltOff` hands the hold of the dy that crossed to the one event (`crossingEvent`; ⛔ `edgeHoldAt`: step 2.5); released by the FINGER (2026-11-14); the drag's dy through it", () => {
     const a = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
@@ -269,7 +270,7 @@ describe("⭐⭐⭐ §8 — THE DY HOLD after a pole-holding face's FAR edge (th
     expect(a).not.toContain("edgeHoldDepth");
     const p = readFileSync(new URL("../src/render/pointer_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
     expect(p).toContain("const fdy1 = asmOn ? edgeHoldDy(st.asmEdgeHold, fdy0) : fdy0;");
-    expect(p).toContain("if (asmOn && fdy0 !== 0 && !shiftApproach) st.asmDySign = Math.sign(fdy0);");
+    expect(p).toContain("if (asmOn && !shiftApproach) st.asmDySign = dySignPushing(st.asmDySign, db.dx, fdy0);");
     expect(p).toContain("if (asmOn && st.asmEdgeHold !== null && fdy0 !== 0 && !shiftApproach) st.asmEdgeHold = edgeHoldFinger(st.asmEdgeHold, fdy0 / mmToPx(1), st.cfg.edgeHoldMm);");
   });
 });
@@ -280,9 +281,59 @@ describe("§8's hold: the gesture's own", () => {
   it("wired: ended at the gesture's end (the last finger up, the window lost) — and nowhere else by time", async () => {
     const { readFileSync } = await import("node:fs");
     const pw = readFileSync("src/render/pointer_wiring.ts", "utf8");
-    expect(pw).toContain("function gestureOver(st: SceneState): void {\n  st.asmEdgeHold = null;\n  st.episodes.gestureEnded(endGesture(st));\n}");
+    expect(pw).toContain("function gestureOver(st: SceneState): void {\n  st.asmEdgeHold = null;\n  st.asmDySign = 0;"); // ⭐⭐⭐ (2026-11-18, DH §5.2) and no dy pushing
+    expect(pw).toContain("st.episodes.gestureEnded(endGesture(st));\n}");
     expect(pw).toContain("if (st.gestureSpan.release(e.pointerId)) gestureOver(st);");
     expect(pw).toContain("if (st.gestureSpan.release(p.id)) gestureOver(st);");
     expect(pw).not.toContain("st.episodes.gestureEnded(endGesture(st));\n  });");
+  });
+});
+
+// ⭐⭐⭐ (2026-11-18, package DH — `DY_HOLD_REVERSAL.md` §5, §6; the owner: "I cannot revert the dy input … until I reach the opposite zenith edge or level
+// face", "if the travel ends up on a triangle face: the dy is hold there as well") the three root causes, each a pure rule
+describe("DH — the dy hold: a true hysteresis on the finger, the dy that pushes NOW, the last crossing's hold", () => {
+  it("5.1 — the release is a HYSTERESIS: the held way pays `back` off; a wobble under the band never ends the hold, a clear reversal does", async () => {
+    const { edgeHoldFinger } = await import("../src/input/orbit_tilt");
+    const B = 8;
+    let h: ReturnType<typeof edgeHoldFinger> = { sign: 1, back: 0 };
+    // a finger still pushing the crossing way with a ±2.5 mm wobble: 50 swings, back never past 5 mm, the hold still on
+    for (let k = 0; k < 50; k++) { h = edgeHoldFinger(h!, -5, B); expect(h).not.toBeNull(); h = edgeHoldFinger(h!, 5.5, B); expect(h).not.toBeNull(); }
+    expect(h!.back).toBe(0);
+    // the held way takes back off, never under 0
+    const a = edgeHoldFinger({ sign: 1, back: 0 }, -6, B)!;
+    expect(edgeHoldFinger(a, 2, B)!.back).toBeCloseTo(4, 12);
+    expect(edgeHoldFinger(a, 9, B)!.back).toBe(0);
+    // a clear reversal of the band from the farthest point: released
+    expect(edgeHoldFinger(a, -2, B)).toBeNull();
+    // the same for a nadir's hold (−1)
+    const n = edgeHoldFinger({ sign: -1, back: 0 }, 6, B)!;
+    expect(edgeHoldFinger(n, -3, B)!.back).toBeCloseTo(3, 12);
+    expect(edgeHoldFinger(n, 2, B)).toBeNull();
+  });
+  it("5.1 — the band's default (a finger's mm, chosen from the walks: over the wobble's 5 mm swing with a margin) and its slider kept", async () => {
+    const { DEFAULT_CONFIG } = await import("../src/input/gestureConfig");
+    expect(DEFAULT_CONFIG.edgeHoldMm).toBe(EDGE_HOLD_DEFAULT_MM);
+    expect(DEFAULT_CONFIG.edgeHoldMm).toBeGreaterThan(5);
+    expect(DEFAULT_CONFIG.edgeHoldMm).toBeLessThan(30);
+    const m = readFileSync(new URL("../src/render/tuning_menu.ts", import.meta.url), "utf8");
+    expect(m).toContain('"past an edge that turns the camera round, the dy that crossed held until the finger goes this far the other way (mm)", "edgeHoldMm"');
+  });
+  it("5.2 / 5.3 — the dy that pushes NOW: a dy step its sign, a sideways step none, a still step unchanged; none at the gesture's end", async () => {
+    const { dySignPushing } = await import("../src/input/orbit_tilt");
+    expect(dySignPushing(0, 0, 3)).toBe(1);
+    expect(dySignPushing(1, 2, -3)).toBe(-1);
+    expect(dySignPushing(1, 4, 0)).toBe(0);
+    expect(dySignPushing(-1, -4, 0)).toBe(0);
+    expect(dySignPushing(-1, 0, 0)).toBe(-1);
+    expect(dySignPushing(0, 0, 0)).toBe(0);
+  });
+  it("5.3 — a half-turn event's hold replaces any still on; an event that holds nothing ends the last one", async () => {
+    const { holdAtCrossing } = await import("../src/input/orbit_tilt");
+    expect(holdAtCrossing(0)).toBeNull();
+    expect(holdAtCrossing(1)).toEqual({ sign: 1, back: 0 });
+    expect(holdAtCrossing(-1)).toEqual({ sign: -1, back: 0 });
+    const a = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
+    expect(a).toContain("st.orbitInertia.stop(); st.asmEdgeHold = holdAtCrossing(c.hold);");
+    expect(a).not.toContain("if (c.hold !== 0) st.asmEdgeHold");
   });
 });
