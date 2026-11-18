@@ -382,3 +382,39 @@ no stop of the gizmo under 90° near the vertical either. Some frames still swin
 start of a timed turn. Close in as before. **Sliders** (☰ › ORBIT › UPRIGHT PICTURE, 7): the rest's pace `uprightMaxDegS` (1 440; 720 slower),
 `uprightBandFree` (1; 0 = the gizmo stopped in the band again). **Not run**: the stretches at 143 frames a second and at 0.736, the corner
 loops, the dy hold's walks; close in and the level entry not re-run after F3 (φ at most 1.4° there).
+
+## 8. The independent test, and fix round 2 as briefed (the lead, 2026-11-19, 02:35; ⭐ for his review)
+
+**The test** (one Opus auditor; its own runs and readers at `0816078` — the kit's `fo3/upright/audit`): **FAIL — one blocker.** What it measured again
+and confirms: the switches give the earlier games back frame for frame (U-G1); on his ten stretches gravity tilted over 20° in 7.1 % of the
+frames (`1.0.147-`: 35.4 %), gravity's roll 57.0° a metre (101.5°), no frame turning the camera by more than 90°; at 143 frames a second no error
+and no flip (over 20°: 5.8 and 15.3 % against 36.9 and 36.7 %); `Scene_1` over its top, the level entry's walks, the corner loops, the stretches
+at 0.736: pass.
+
+* ⛔ **THE BLOCKER — the dy hold is broken**: on the hold walks over `Scene_0bis`'s bottom face far out no hold is set on 6 sub-walks of 6
+  (`1.0.147-` sets it on 4), and the come-back is never honoured on two where `1.0.147-` honours it. **The root** (frames 66 – 98 of `b_far` s0):
+  the dy's sign that the hold reads (`asmDySign`, `edgeHoldDy`, `edgeHoldFinger` — `pointer_wiring.ts` l. 336 – 342) is the RAW glass dy, read
+  BEFORE the finger is turned from the picture onto the logic's glass (`zoneFinger`). With the picture and the logic's pose 143° apart, the hold's
+  rules (`exitHoldSign`, `crossingEvent`, `crossingHold` — written for the logic's glass) read the opposite sign.
+* **The finger (R7), measured through one frame's own camera**: away from the vertical, the angle between the finger's way and the gizmo's way —
+  median 16.3°, 95th percentile 92.7° (`1.0.147-`: 12.1° / 61.1°; the deployed build: 14.3° / 81.2°); near the vertical 20.5° / 102.9°
+  (11.6° / 52.2°); on the frames where the picture is turned 5° or more from the logic's pose (8 % of them) 41.7° / 156.8°. The finger steers
+  somewhat worse, mostly where the picture is turned away from the logic's pose.
+* **Minors**: close in, one stretch of three worse (`vyah_11s`: 48.4° a metre against 29.0°; with `uprightPicture` 0: 30.3°); the straight dy
+  1 – 3° further off straight down on the glass; 45 frames turning the camera 45 – 90° at once (`1.0.147-`: 5); one mutant alive (the finger in a
+  spit has no behavioural vector); a slider's label and two comments stale; F3 goes off with `uprightBandFree` 0.
+
+**Fix round 2** (UD8 amended; the lead's):
+
+* **UD8b — ONE conversion, at the entry.** The finger's step is turned from the picture onto the LOGIC's glass ONCE, in the pointer's step, BEFORE
+  anything reads it (`dySignPushing`, `edgeHoldDy`, `edgeHoldFinger`, `zoneFinger`); after it the logic reads its own pose everywhere, as in
+  `1.0.147-` (`zoneFinger` off `asmCamLast` again; `asmPicLast` for the recorder only). The logic then behaves exactly as `1.0.147-` does for a
+  finger drawn on its own glass: every rule written for that glass — the holds first — is right again, from the root. No second reading of the
+  picture anywhere.
+* **UD11 — a hold belongs to a turn the player SEES.** The dy hold exists because the picture turns half round under the finger: the same push
+  would then go back. Where the change of frame that set a hold is freed and the picture does not turn (fully upright at both its ends, nothing
+  left to close), that hold is dropped: the same push goes on, and a come-back is honoured at once.
+* **This round's gates**: the hold walks' verdicts as `1.0.147-`'s (the hold set where it sets it, the come-back honoured where it honours it),
+  and no re-crossing by itself under a steady push; R7 by the auditor's own reader — the median away from the vertical not over `1.0.147-`'s + 2°
+  on the ten stretches together; U-G1 to U-G4 as before; the cheap minors (the stale texts, a behavioural vector for the finger, F3 out of
+  `uprightBandFree`); `vyah_11s` close in looked at, its root said.
