@@ -4,7 +4,7 @@
 import { describe, expect, it } from "vitest";
 import type { Vec3 } from "../src/core/vec";
 import { rotateAbout, type CamPose } from "../src/input/orbit_tilt";
-import { framedLine, onGlass, poseRolled } from "../src/input/roll_follow";
+import { framedLine, onGlass, poseRolled, twistAbout } from "../src/input/roll_follow";
 import { gravityTilt, UPRIGHT_FROM_DEG, UPRIGHT_FULL_DEG, UPRIGHT_MAX_DEG_S, UPRIGHT_REST, uprightAngle, uprightStep, uprightWeight, viewFromVertical, type UprightState } from "../src/input/upright";
 
 const DEG = Math.PI / 180;
@@ -33,8 +33,8 @@ const pic = (s: UprightState, g: CamPose, dt = 1000 / 60, k = K, scale = 1) => {
 };
 
 describe("law U's defaults and its weight", () => {
-  it("the band 5 – 25°, no cap; w a smoothstep, 0 within 5°, 1 from 25°", () => {
-    expect([UPRIGHT_FROM_DEG, UPRIGHT_FULL_DEG, UPRIGHT_MAX_DEG_S]).toEqual([5, 25, 0]);
+  it("the band 5 – 25°, the rest at 720° a second (UD6b); w a smoothstep, 0 within 5°, 1 from 25°", () => {
+    expect([UPRIGHT_FROM_DEG, UPRIGHT_FULL_DEG, UPRIGHT_MAX_DEG_S]).toEqual([5, 25, 720]);
     expect(uprightWeight(4.99 * DEG, 5, 25)).toBe(0);
     expect(uprightWeight(25 * DEG, 5, 25)).toBe(1);
     expect(uprightWeight(15 * DEG, 5, 25)).toBeCloseTo(0.5, 12);
@@ -120,70 +120,160 @@ describe("continuity of φ", () => {
   });
 });
 
-describe("the cap (uprightMaxDegS)", () => {
-  it("exact at w = 1: the logic rolled 90° a frame, gravity still on the vertical", () => {
+describe("UD6b — law U in time (fix round 1, UPRIGHT_PICTURE.md §6): the carry at once, the rest at uprightMaxDegS everywhere", () => {
+  const K6 = { ...K, maxDegS: 720 };
+  const dt = 1000 / 60;
+  const cap = 12 * DEG; // 720° a second × 1/60 s
+  const carryOf = (s: UprightState, r: { w: number; alpha: number | null }): number => {
+    const c = Math.min(r.w, s.wp ?? 0);
+    return r.alpha !== null && s.ap !== null && c > 0 ? c * wrap(r.alpha - s.ap) : 0;
+  };
+  /** a rough path: the view in and out of the band in jumps, the logic's roll jumping too */
+  const path: [number, number][] = [[88, 0], [50, 170], [50, 175], [87, -60], [30, -60], [70, 140], [72, -170], [89, 10], [40, 10], [40, -175], [60, 90], [86, 90], [20, 90]];
+  it("(a) the picture never turns in one frame by more than the carry plus uprightMaxDegS × dt", () => {
     let s: UprightState = UPRIGHT_REST;
-    const k = { ...K, maxDegS: 720 };
-    for (let i = 0; i < 8; i++) {
-      const { r, p } = pic(s, poseAt(50, 10, i * 90), 1000 / 60, k);
+    for (let k = 0; k < 3; k++) {
+      for (const [el, roll] of path) {
+        for (let n = 0; n < 4; n++) {
+          const { r } = pic(s, poseAt(el, 20, roll), dt, K6);
+          expect(Math.abs(wrap(r.phi - s.phi - carryOf(s, r)))).toBeLessThanOrEqual(cap + 1e-12);
+          s = r.state;
+        }
+      }
+    }
+  });
+  it("(b) the carry is exact: through a rigid roll of the logic at w = 1 gravity stays on the vertical; a change of 180° at w = 1 leaves the picture where it was", () => {
+    let s: UprightState = UPRIGHT_REST;
+    for (let n = 0; n < 40; n++) s = pic(s, poseAt(50, 20, 30), dt, K6).r.state;
+    for (let i = 0; i < 20; i++) {
+      const { r, p } = pic(s, poseAt(50, 20, 30 + i * 37), dt, K6);
       s = r.state;
       expect(Math.abs(gravityTilt(p)!)).toBeLessThan(1e-9);
     }
-    // the view leaving the vertical at once (w 0 → 1 in a frame, the logic rolled 150°): exact, never capped
-    let s2: UprightState = pic(UPRIGHT_REST, poseAt(88, 10, 150), 1000 / 60, k).r.state;
-    const j = pic(s2, poseAt(30, 10, 150), 1000 / 60, k);
-    s2 = j.r.state;
-    expect(Math.abs(gravityTilt(j.p)!)).toBeLessThan(1e-9);
-  });
-  it("inside the band the logic rolling 30° a frame (w 0.5): carried — φ = w·ᾱ exactly, the cap never reached", () => {
-    const k = { ...K, maxDegS: 720 };
-    let s: UprightState = UPRIGHT_REST;
-    let u: UprightState = UPRIGHT_REST;
-    for (let i = 0; i < 10; i++) {
-      const g = poseAt(75, 10, i * 30);
-      const a = pic(s, g, 1000 / 60, k).r;
-      const b = pic(u, g).r;
-      s = a.state;
-      u = b.state;
-      if (i > 0) expect(a.phi).toBeCloseTo(b.phi, 9);
+    const before = pic(s, poseAt(50, 20, 30), dt, K6);
+    s = before.r.state;
+    const g0 = poseAt(50, 20, 30);
+    const after = pic(s, poseRolled(g0, framedLine(g0, piece), Math.PI), dt, K6); // the change: the logic turned half a turn about the framed line
+    for (const k of [0, 1, 2] as const) {
+      expect(Math.abs(after.p.eye[k] - before.p.eye[k])).toBeLessThan(1e-9);
+      expect(Math.abs(after.p.up[k] - before.p.up[k])).toBeLessThan(1e-9);
     }
   });
-  it("inside the band: the view crossing it at once (w 0 → 0.99, the logic rolled 150°) — φ at most 720° a second; then it reaches w·α exactly", () => {
-    const k = { ...K, maxDegS: 720 };
-    const dt = 1000 / 60;
-    let s: UprightState = UPRIGHT_REST;
-    let { r } = pic(s, poseAt(86, 10, 150), dt, k);
-    expect(r.phi).toBe(0);
-    s = r.state;
-    const g = poseAt(66, 10, 150);
-    let last = r.phi;
-    for (let i = 0; i < 30; i++) {
-      r = pic(s, g, dt, k).r;
-      s = r.state;
-      expect(Math.abs(r.phi - last)).toBeLessThanOrEqual(12 * DEG + 1e-12);
+  it("(c) the band crossed in ONE frame with α near 180°: the rest closes in 170 / 720 s, 12° a frame the short way — never a flip", () => {
+    let s = pic(UPRIGHT_REST, poseAt(88, 20, 170), dt, K6).r.state;
+    expect(s.phi).toBe(0);
+    const g = poseAt(50, 20, 170);
+    const goal = pic(UPRIGHT_REST, g, dt, K).r.phi;
+    let n = 0;
+    let last = 0;
+    let sign = 0;
+    while (n < 100) {
+      const { r } = pic(s, g, dt, K6);
+      const d = wrap(r.phi - last);
+      expect(Math.abs(d)).toBeLessThanOrEqual(cap + 1e-12);
+      if (Math.abs(d) > 0) {
+        if (sign === 0) sign = Math.sign(d);
+        expect(Math.sign(d)).toBe(sign);
+      }
       last = r.phi;
-    }
-    const free = pic(UPRIGHT_REST, g).r;
-    expect(r.phi).toBeCloseTo(free.phi, 12);
-  });
-});
-
-describe("the same at 60 and at 143 frames a second", () => {
-  const run = (hz: number, maxDegS: number): number => {
-    let s: UprightState = UPRIGHT_REST;
-    const n = Math.round(hz * 1.5);
-    let phi = 0;
-    for (let i = 0; i <= n; i++) {
-      const t = Math.min(1, i / hz);
-      const { r } = pic(s, poseAt(89 - 49 * t, 20, 100 * t), 1000 / hz, { ...K, maxDegS });
       s = r.state;
-      phi = r.phi;
+      n++;
+      if (Math.abs(wrap(r.phi - goal)) < 1e-12) break;
     }
-    return phi;
-  };
-  it("no cap: φ a function of the pose (and the unwrap) — equal; with the cap 720° a second: both reach the same w·α", () => {
-    expect(run(60, 0)).toBeCloseTo(run(143, 0), 12);
-    expect(run(60, 720)).toBeCloseTo(run(143, 720), 9);
+    expect(n).toBe(Math.ceil(Math.abs(goal) / cap - 1e-9));
+  });
+  it("(c') at 143 frames a second the same rest takes the same TIME: 720 / 143° a frame", () => {
+    const d143 = 1000 / 143;
+    let s = pic(UPRIGHT_REST, poseAt(88, 20, 170), d143, K6).r.state;
+    const g = poseAt(50, 20, 170);
+    const goal = pic(UPRIGHT_REST, g, d143, K).r.phi;
+    let n = 0;
+    while (n < 200) {
+      const { r } = pic(s, g, d143, K6);
+      s = r.state;
+      n++;
+      if (Math.abs(wrap(r.phi - goal)) < 1e-12) break;
+    }
+    expect(n).toBe(Math.ceil(Math.abs(goal) / ((720 / 143) * DEG) - 1e-9));
+  });
+  it("(c'') the 10 flips' cause: an α read just inside the band (w ≈ 0.01, where it is wild) is never carried at the weight after a one-frame crossing", () => {
+    let s = pic(UPRIGHT_REST, poseAt(84, 20, -100), dt, K6).r.state;
+    expect(s.wp).toBeGreaterThan(0);
+    expect(s.wp).toBeLessThan(0.02);
+    const { r } = pic(s, poseAt(40, 20, 170), dt, K6);
+    expect(Math.abs(wrap(r.phi - s.phi))).toBeLessThanOrEqual(cap + 2 * DEG);
+  });
+  it("(d) α crossing ±180° inside the band (w 0.5): no jump — at most the carry plus 12° a frame", () => {
+    let s: UprightState = UPRIGHT_REST;
+    for (let n = 0; n < 30; n++) s = pic(s, poseAt(75, 20, 160), dt, K6).r.state;
+    for (let i = 0; i <= 40; i++) {
+      const { r } = pic(s, poseAt(75, 20, 160 + i), dt, K6);
+      expect(Math.abs(wrap(r.phi - s.phi))).toBeLessThanOrEqual(cap + 1.1 * DEG);
+      s = r.state;
+    }
+  });
+  it("(e) the same picture at 60 and at 143 frames a second: within 3° on the way, exactly at the end", () => {
+    const run = (hz: number, until: number): number => {
+      let s: UprightState = UPRIGHT_REST;
+      let phi = 0;
+      for (let i = 0; i <= Math.round(hz * until); i++) {
+        const t = Math.min(1, i / hz);
+        const { r } = pic(s, poseAt(89 - 49 * t, 20, 100 + 80 * t), 1000 / hz, K6);
+        s = r.state;
+        phi = r.phi;
+      }
+      return phi;
+    };
+    expect(Math.abs(wrap(run(60, 0.5) - run(143, 0.5)))).toBeLessThan(3 * DEG);
+    expect(Math.abs(wrap(run(60, 1.5) - run(143, 1.5)))).toBeLessThan(1e-9);
+  });
+  it("(f) uprightMaxDegS 0: law U as first built — φ = w·ᾱ (ᾱ unwrapped in the band), the state without the carry's weight", () => {
+    let s: UprightState = UPRIGHT_REST;
+    let au: number | null = null;
+    for (const [el, roll] of path) {
+      const g = poseAt(el, 20, roll);
+      const { r } = pic(s, g, dt, K);
+      const a = r.w > 0 ? uprightAngle(g, framedLine(g, piece)) : null;
+      au = !(r.w > 0) ? null : a === null ? au : au === null || r.w >= 1 ? wrap(a) : au + wrap(a - au);
+      expect(r.phi).toBe(au === null ? 0 : r.w * au);
+      expect(r.state.wp).toBeUndefined();
+      s = r.state;
+    }
+  });
+  it("at the vertical the logic's continuous spin opens no rest: φ exactly 0, the picture is the logic's pose", () => {
+    let s: UprightState = UPRIGHT_REST;
+    for (let i = 0; i < 60; i++) {
+      const g = poseAt(88, i * 9, i * 13);
+      const { r, p } = pic(s, g, dt, K6);
+      expect(r.phi).toBe(0);
+      expect(p).toBe(g);
+      s = r.state;
+    }
+  });
+  it("UD4b: a freed change (its twist given) keeps the picture's roll across that frame, at w 0, 0.5 and 1", () => {
+    for (const el of [88, 75, 50]) {
+      let s: UprightState = UPRIGHT_REST;
+      for (let n = 0; n < 40; n++) s = pic(s, poseAt(el, 20, 30), dt, K6).r.state;
+      const g0 = poseAt(el, 20, 30);
+      const p0 = poseRolled(g0, framedLine(g0, piece), s.phi);
+      const g1 = poseAt(el, 20, 30 + 140);
+      const line = framedLine(g1, piece);
+      const tw = twistAbout(g0, g1, line.dir);
+      const r = uprightStep(s, g1, line, 0, K6, 1, tw);
+      const p1 = poseRolled(g1, line, r.phi);
+      expect(Math.abs(twistAbout(p0, p1, line.dir))).toBeLessThan(1e-9);
+      if (el === 88) {
+        // at the vertical the rest so opened closes to the logic's pose itself (φ exactly 0) at the rest's pace
+        let u = r.state;
+        let n = 0;
+        while (u.phi !== 0 && n < 60) {
+          u = pic(u, g1, dt, K6).r.state;
+          n++;
+        }
+        expect(u.phi).toBe(0);
+        expect(n).toBe(Math.ceil(Math.abs(r.phi) / cap - 1e-9));
+      }
+    }
   });
 });
 

@@ -105,8 +105,8 @@ describe("U3 — a change of frame freed only where the picture is fully upright
 });
 
 describe("law U's sliders (ORBIT › UPRIGHT PICTURE)", () => {
-  it("uprightPicture 1, uprightCloseIn 0, the band 5 – 25°, no cap; their ranges", () => {
-    expect([DEFAULT_CONFIG.uprightPicture, DEFAULT_CONFIG.uprightCloseIn, DEFAULT_CONFIG.uprightFromDeg, DEFAULT_CONFIG.uprightFullDeg, DEFAULT_CONFIG.uprightMaxDegS]).toEqual([1, 0, 5, 25, 0]);
+  it("uprightPicture 1, uprightCloseIn 0, the band 5 – 25°, the rest at 720° a second (UD6b); their ranges", () => {
+    expect([DEFAULT_CONFIG.uprightPicture, DEFAULT_CONFIG.uprightCloseIn, DEFAULT_CONFIG.uprightFromDeg, DEFAULT_CONFIG.uprightFullDeg, DEFAULT_CONFIG.uprightMaxDegS]).toEqual([1, 0, 5, 25, 720]);
     for (const k of ["uprightPicture", "uprightCloseIn"] as const) {
       for (const v of [0, 1]) expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, [k]: v })).not.toThrow();
       for (const v of [0.5, 2, Number.NaN]) expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, [k]: v })).toThrow();
