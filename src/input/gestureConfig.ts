@@ -867,7 +867,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitMode: 0, // ⭐⭐⭐ (2026-10-28) the orbit around the assembly
   assemblyLockDistM: 0.3, // ⭐ (2026-10-28) the look at the gizmo within 30 cm (the lock deleted 2026-11-04)
   orbitShellOffsetMm: 60, // ⭐⭐⭐ (2026-11-04, Step 2) the shell's offset
-  rollFollowMs: ROLL_FOLLOW_MS, // ⭐⭐⭐ (2026-11-18, FO3 S1) 200 ms, sized on the owner's pace (`FAST_ORBIT.md` §12.4)
+  rollFollowMs: ROLL_FOLLOW_MS, // ⭐⭐⭐ (2026-11-18, FO3 S1) 160 ms — the owner's word on the deployed build (`UPRIGHT_PICTURE.md` §0, UD7); 200 before
   freeTurnMaxDeg: FREE_TURN_MAX_DEG, // ⭐⭐⭐ (FO3 S1) 90: the changes under 90° free (R6); 0 = today's game
   gizmoEaseMs: 45, // ⭐⭐ (2026-11-04, the owner: *"update the lag the gizmo's position the piece follows to 45ms"*; 62, 55 before, the former GIZMO_TAU_MS 90)
   orbitSpringMs: 30, // ⭐⭐ (2026-11-04) the former boxSmoothMs / 2 for the orbit's spring

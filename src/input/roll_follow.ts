@@ -22,8 +22,8 @@ import { rotateAbout, type CamPose } from "./orbit_tilt";
 
 /** ⭐ the piece and the look point closer than this (m): the framed line is the view's own direction through the piece (O4) */
 export const ROLL_LINE_MIN_M = 0.003;
-/** ⭐ the follower's time (ms) — S0's default; S1's slider `rollFollowMs` (§12.4: 200) */
-export const ROLL_FOLLOW_MS = 200;
+/** ⭐ the follower's time (ms) — S1's slider `rollFollowMs` (§12.4: 200; ⭐ 2026-11-18 the owner: *"very good at 160 ms … set them as default"*) */
+export const ROLL_FOLLOW_MS = 160;
 /** ⭐ a change whose twist is this or more is today's timed turn (deg) — S0's default; S1's slider `freeTurnMaxDeg` (§12.4: 90) */
 export const FREE_TURN_MAX_DEG = 90;
 /** ⭐ the gap at rest: under this (deg) and slower than `GAP_REST_DEG_S` (deg a second) it is exactly 0 (R5) */

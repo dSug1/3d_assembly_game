@@ -89,9 +89,9 @@ describe("restShare — the piece's shown direction's rest on its own clock (O3)
   });
 });
 
-describe("the two sliders (FO3 S1): rollFollowMs 200 (60 – 600), freeTurnMaxDeg 90 (0 – 90)", () => {
+describe("the two sliders (FO3 S1): rollFollowMs 160 — the owner's word, UPRIGHT_PICTURE.md UD7 — (60 – 600), freeTurnMaxDeg 90 (0 – 90)", () => {
   it("the defaults and the bounds", () => {
-    expect(DEFAULT_CONFIG.rollFollowMs).toBe(200);
+    expect(DEFAULT_CONFIG.rollFollowMs).toBe(160);
     expect(DEFAULT_CONFIG.freeTurnMaxDeg).toBe(90);
     for (const v of [60, 600]) expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, rollFollowMs: v })).not.toThrow();
     for (const v of [59, 601, Number.NaN]) expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, rollFollowMs: v })).toThrow();
