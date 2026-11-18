@@ -192,6 +192,9 @@ export function installTuningMenu(st: SceneState): void {
             // ⭐⭐ (2026-11-04, the owner: *"add a slider for gizmo position and one for orbit angles"*) the piece's lag behind the ring, its two parts
             tunable(st, "lag: the gizmo's position the piece follows (ease, ms; 0 at once)", "gizmoEaseMs", 0, 500, 5),
             tunable(st, "lag: the orbit's angles (spring, ms; 0 at once)", "orbitSpringMs", 0, 500, 5),
+            // ⭐⭐⭐ (2026-11-18, `FAST_ORBIT.md` §14 — FO3 S1) the picture a follower of the logic: its roll's time; the changes of frame it frees
+            tunable(st, "lag: the camera's roll behind the orbit's (ms)", "rollFollowMs", 60, 600, 10),
+            tunable(st, "a change of frame under this angle makes no timed turn (deg; 0 = today's turns)", "freeTurnMaxDeg", 0, 90, 5),
             // ⭐ The TIME LAG on top of the leash (0 = none).
             tunable(st, "camera catch-up after release, from rest (ms)", "cameraCatchUpMs", 20, 1000, 10),
           ],

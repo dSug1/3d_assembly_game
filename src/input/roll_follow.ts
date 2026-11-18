@@ -14,7 +14,8 @@
  * * **The picture** (`poseRolled`): the ghost turned about the framed line by the gap. Gap 0: the ghost itself, the same object.
  *
  * ⛔ ENGINE-FREE. Rodrigues' formula, a quaternion's swing and twist, a critically damped spring — textbook, decades old; no licence, no patent.
- * ⚠ S0 (the shadow): computed and recorded, never drawn. The two defaults below become the sliders `rollFollowMs` and `freeTurnMaxDeg` at S1.
+ * ⚠ S0 (the shadow): computed and recorded, never drawn. ⭐ S1 (`FAST_ORBIT.md` §14): DRAWN — the sliders `rollFollowMs` and `freeTurnMaxDeg`
+ * (`gestureConfig.ts`; the two defaults below), a change judged free on its whole angle (`turnIsFree`),.
  */
 import { cross, dot, type Vec3 } from "../core/vec";
 import { rotateAbout, type CamPose } from "./orbit_tilt";
@@ -28,6 +29,9 @@ export const FREE_TURN_MAX_DEG = 90;
 /** ⭐ the gap at rest: under this (deg) and slower than `GAP_REST_DEG_S` (deg a second) it is exactly 0 (R5) */
 export const GAP_REST_DEG = 0.01;
 export const GAP_REST_DEG_S = 0.01;
+/** ⭐ (FO3 S1, §13.7 (d)) a change's whole angle within this (deg) of `freeTurnMaxDeg` is judged 90° or more: a quarter turn read 88.3 – 89.8° at its
+ *  first frame (§13.5, O2) stays today's timed turn */
+export const FREE_TURN_TOL_DEG = 2;
 
 const DEG = Math.PI / 180;
 const wrapPi = (a: number): number => {
@@ -169,4 +173,30 @@ export function onGlass(pose: CamPose, p: Vec3, fovY: number, aspect: number): r
   const z = dot(d, f);
   const t = Math.tan(fovY / 2);
   return [dot(d, s) / (z * t * aspect), dot(d, u) / (z * t)];
+}
+
+/** ⭐ (FO3 S1) The camera's WHOLE turn between two poses (rad, [0, π]): the angle of the rotation taking `prev`'s axes onto `next`'s (swing and twist). */
+export function poseTurnAngle(prev: CamPose, next: CamPose): number {
+  const q = quatOf(relRot(poseAxes(prev), poseAxes(next)));
+  const v = Math.hypot(q[1], q[2], q[3]);
+  return 2 * Math.atan2(v, Math.abs(q[0]));
+}
+
+/**
+ * ⭐⭐⭐ (FO3 S1, `FAST_ORBIT.md` §12.4 5., §13.7 (d)) A CHANGE OF FRAME DRAWN WITHOUT A TIMED TURN: its whole angle (`poseTurnAngle`, rad) under
+ * `maxDeg − FREE_TURN_TOL_DEG`. `maxDeg` 0 (or less): never — every change today's turn (R10).
+ */
+export function turnIsFree(angleRad: number, maxDeg: number): boolean {
+  if (!(maxDeg > 0)) return false;
+  return Number.isFinite(angleRad) && angleRad < (maxDeg - FREE_TURN_TOL_DEG) * DEG;
+}
+
+/**
+ * ⭐⭐⭐ (FO3 S1, O3) THE PIECE'S SHOWN DIRECTION'S REST ON A CLOCK OF ITS OWN (no timed turn carries it): the rest angle (rad) closed by the same
+ * critically damped law (`gapStep`, `followMs`) — its share of the whole `angle` shown (0 … 1); at rest (`GAP_ZERO`): 1, the ease over.
+ */
+export function restShare(rest: RollGap, angle: number): number {
+  if (rest.gap === 0 && rest.speed === 0) return 1;
+  if (!(angle > 0)) return 1;
+  return Math.min(1, Math.max(0, 1 - rest.gap / angle));
 }

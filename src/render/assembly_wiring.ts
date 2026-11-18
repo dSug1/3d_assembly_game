@@ -40,6 +40,7 @@ import { crossingHold, crossingPitch, distanceToFacets, fingerInFrame, fingerSwa
 import { assignCharts, capTiltHeading, chartContour, chartZones, DEFAULT_CHART_OPTS, type ChartAssignment, type ChartFace } from "../input/orbit_charts";
 import { holdAtCrossing, poseAboutPiece, poseFramingTwo, type CamPose } from "../input/orbit_tilt";
 import { poleCrossingDue, poleSeam } from "../input/pole_crossing";
+import { gapStep, restShare } from "../input/roll_follow";
 import { dirGap, easedDir, easeRest, poleYawKept, seamOutPaced, seamOutShare, seamOutStep, seamOutTarget, seamTurnPace, seamTurnStep, seamWholeRad, tiltLeavesNow, turnHoldsGizmo } from "../input/seam_turn";
 import { bandedFacet } from "../input/face_band";
 import { contourFaceAt, crossingEvent, entryBlendHeading, entryDepth, entryEdgeOf, exitHoldSign, headingStep, pictureOffset, transportUp, viewLevelTurned, exitTurnRad, faceOwnUp, freeEdges, freeEntryHeading, freeHeadingAngle, isFreeFace } from "../input/free_face";
@@ -276,7 +277,8 @@ function dirAt(st: SceneState, yaw: number, v: number): Vec3 {
   // whole) — ONE place, for the piece, its solver and the foot alike
   const e = st.asmDirEase;
   if (e === null) return s;
-  return easedDir(s, e, e.mix === st.asmZoneMix && st.asmZoneMix !== null ? st.asmZoneMix.k : 1);
+  // ⭐⭐⭐ (2026-11-18, `FAST_ORBIT.md` §14 — FO3 S1, O3) no turn carries it (a change made free): its rest on its own clock (`own`)
+  return easedDir(s, e, e.own !== undefined ? restShare(e.own, e.angle) : e.mix === st.asmZoneMix && st.asmZoneMix !== null ? st.asmZoneMix.k : 1);
 }
 
 /** ⭐⭐⭐ (2026-11-15, §12 2.4c) the direction the piece is DRAWN along now (the spring's angles — `greenBoxFrame`'s `shownOffset`): a change of frame's start. */
@@ -1041,6 +1043,12 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   // ⭐⭐⭐ (2026-11-12, F4) the elevation asked past a pole, read EVERY frame (never piled up while the assembly's orbit is off — a jump later)
   // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4b) consumed by a pole's crossing (`poleCross`): the map's step must not also push past the pole
   let beyondV = st.orbit.takeBeyond();
+  // ⭐⭐⭐ (2026-11-18, `FAST_ORBIT.md` §14 — FO3 S1, O3) the piece's shown direction's rest on its own clock (a change made free), stepped before it is read
+  const de = st.asmDirEase;
+  if (de !== null && de.own !== undefined) {
+    const r = gapStep(de.own, dtMs, st.cfg.rollFollowMs);
+    st.asmDirEase = r.gap === 0 && r.speed === 0 ? null : { ...de, own: r };
+  }
   // ⭐⭐⭐ (2026-11-18, ES) the spit's picture of the frame before (a free face's entry continues it); this frame's is set by the camera's frame
   st.asmSpitPicWas = st.asmSpitPic;
   st.asmSpitPic = null;
@@ -1770,6 +1778,7 @@ function tiltOn(st: SceneState, mouthHi: boolean | null = null): void {
   // then by time; else by time, the gizmo held), and the piece's shown direction eased on the same clock
   seamTurnStart(st, byMm);
   seamEase(st, uWas);
+  if (st.asmZoneMix !== null) st.asmZoneMix.tilt = true; // ⭐⭐⭐ (2026-11-18, FO3 S1, §13.7 (d)) a tilt's turn stays today's, by its kind
   st.lastVerdict = `orbit: the tilted pole (automatic) — the face holding the ${top ? "top" : "bottom"} pole is a side (heading ${Math.round((hs * 180) / Math.PI)}°, swing ${Math.round((delta * 180) / Math.PI)}°)`;
   st.hudDirty = true;
 }
@@ -1870,6 +1879,7 @@ function tiltOff(st: SceneState): void {
     // ⭐ (no place to keep — unreachable while a tilt holds one: the turn alone, the angles turned as today)
     crossTurn(st, { at: null, uWas, carry: false, paced, hold: held });
   }
+  if (st.asmZoneMix !== null) st.asmZoneMix.tilt = true; // ⭐⭐⭐ (2026-11-18, FO3 S1, §13.7 (d)) a tilt's exit stays today's turn, by its kind
   st.lastVerdict = byTime ? "orbit: the tilt off (out past the threshold) — the world's frame again" : "orbit: off the tilted face — the world's frame again";
   st.hudDirty = true;
 }
