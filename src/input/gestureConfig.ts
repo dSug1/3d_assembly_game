@@ -414,7 +414,7 @@ export interface GestureConfig {
    * the charts) THE WAY OUT OF CLOSE IN: the camera's turn after the automatic tilt is left BY DISTANCE spread over this much of the approach finger's
    * travel outward (mm on the glass; never faster than `tiltRollDegS`; the gizmo free) — 0: the timed turn, the gizmo held, as before (0 … 60) */
   tiltOutBlendMm: number;
-  /** ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8) after an edge that turns the camera round, the dy that crossed held until the FINGER has gone this far the other way (mm; ⛔ 2026-11-14 the gizmo's depth in the face beyond) */
+  /** ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8) after an edge that turns the camera round, the dy that crossed held until the FINGER is this far back the other way from the farthest point it reached (mm, a hysteresis — 2026-11-18; ⛔ 2026-11-14 the gizmo's depth in the face beyond) */
   edgeHoldMm: number;
   /** ⭐⭐⭐ (2026-11-13, the pinch is the approach) the approach per mm of the two fingers' spread (× the two-finger dy it replaces — 1 the same pace) */
   approachPinchGain: number;
@@ -433,6 +433,10 @@ export interface GestureConfig {
   /** ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §3.4, step C4) A SPIT'S LEVEL FACE (a free face, the heading carried): 0 — N2,
    * the camera's direction as built (the calm); 1 — N1, the camera square to the face at every distance (the square camera whole there) (0 or 1) */
   freeFaceSquare: number;
+  /** ⭐⭐⭐ (2026-11-18, `LEVEL_FACE_ENTRY.md` §15, §16 — package ES, the silent entry; (iv′) of 2026-11-17 with its two cures) A LEVEL FACE (a free
+   * face) entered over an edge: 0 — the entry edge's layout at once (as before); 1 — the picture kept at the entry, turned to the layout by the face's
+   * middle, at most the tilts' one speed a frame (the default) (0 or 1) */
+  freeEntryUpright: number;
   /** ⭐⭐⭐ (2026-11-12, CLOSE_IN_CONTACT.md step 3) THE CLOSE-IN GAIN (`closeInGain`): the orbit's full gain from this distance of the piece to the gizmo out (m),
    * falling linearly to the contact's */
   orbitGainFullM: number;
@@ -867,7 +871,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   zoneWholeShare: 0.5, // ⭐⭐⭐ (D-Z5)
   zoneExitMm: 10, // ⭐⭐⭐ (D-Z7) a guess with a slider
   freeFaceSquare: 0, // ⭐⭐⭐ (2026-11-16, step C4) N2, the calm kept, until the owner judges the two on the device
-  edgeHoldMm: 30, // ⭐⭐⭐ (2026-11-12, §8, the owner's hysteresis: *"until a certain band is reached in the face beyond"*) a guess with a slider
+  freeEntryUpright: 1, // ⭐⭐⭐ (2026-11-18, ES; the owner's order of 2026-11-17) the silent entry; 0 to compare with the entry before on the phone
+  edgeHoldMm: 8, // ⭐⭐⭐ (2026-11-12, §8, the owner's hysteresis: *"until a certain band is reached in the face beyond"*) ⭐⭐⭐ (2026-11-18, `DY_HOLD_REVERSAL.md` §6) 30 → 8 mm of finger, a true hysteresis: over a ±2.5 mm wobble's 5 mm swing by 3 mm (30 mm far out was 1.3 – 1.8 faces of surface)
   orbitGainFullM: 0.6, // ⭐⭐⭐ (2026-11-12, step 3) a guess with a slider: the automatic tilt's distance (`tiltAutoM`)
   orbitContactMmPerMm: 4, // ⭐⭐⭐ (2026-11-12, step 3; the owner on the device: "set ... to 4 mm" — 1 was the slide's 1 : 1)
   tiltBlendMm: 10, // ⭐⭐⭐ (2026-11-11, the owner: *"set a faster alignment per mm as the one you previously chose required a lot of delta position mm"*) the automatic tilt's blend by the orbit's first 10 mm of finger (30 before) — a guess until a hand sets it
@@ -1032,6 +1037,7 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.zoneWholeShare >= 0 && cfg.zoneWholeShare <= 1.01)) throw new Error(`zoneWholeShare (${cfg.zoneWholeShare}) must be in [0, 1.01].`);
   if (!(cfg.zoneExitMm >= 0 && cfg.zoneExitMm <= 200)) throw new Error(`zoneExitMm (${cfg.zoneExitMm}) must be in [0, 200] mm.`);
   if (cfg.freeFaceSquare !== 0 && cfg.freeFaceSquare !== 1) throw new Error(`freeFaceSquare (${cfg.freeFaceSquare}) must be 0 or 1.`);
+  if (cfg.freeEntryUpright !== 0 && cfg.freeEntryUpright !== 1) throw new Error(`freeEntryUpright (${cfg.freeEntryUpright}) must be 0 or 1.`);
   if (!(cfg.edgeHoldMm >= 0 && cfg.edgeHoldMm <= 200)) throw new Error(`edgeHoldMm (${cfg.edgeHoldMm}) must be in [0, 200] mm.`);
   if (!(cfg.approachPinchGain > 0 && cfg.approachPinchGain <= 10)) throw new Error(`approachPinchGain (${cfg.approachPinchGain}) must be in (0, 10].`);
   if (!(cfg.orbitGainFullM > 0 && cfg.orbitGainFullM <= 6)) throw new Error(`orbitGainFullM (${cfg.orbitGainFullM}) must be in (0, 6] m.`);

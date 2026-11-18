@@ -38,11 +38,11 @@ import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { crossingHold, crossingPitch, distanceToFacets, fingerInFrame, fingerSwapped, SPIT_CROSSING_PITCH_RAD, spitCameraHeading, spitSide, zoneAt, type PolarZone } from "../input/polar_zone";
 import { assignCharts, capTiltHeading, chartContour, chartZones, DEFAULT_CHART_OPTS, type ChartAssignment, type ChartFace } from "../input/orbit_charts";
-import { poseAboutPiece, poseFramingTwo, type CamPose } from "../input/orbit_tilt";
+import { holdAtCrossing, poseAboutPiece, poseFramingTwo, type CamPose } from "../input/orbit_tilt";
 import { poleCrossingDue, poleSeam } from "../input/pole_crossing";
 import { dirGap, easedDir, easeRest, poleYawKept, seamOutPaced, seamOutShare, seamOutStep, seamOutTarget, seamTurnPace, seamTurnStep, seamWholeRad, tiltLeavesNow, turnHoldsGizmo } from "../input/seam_turn";
 import { bandedFacet } from "../input/face_band";
-import { contourFaceAt, crossingEvent, exitHoldSign, exitTurnRad, faceOwnUp, freeEdges, freeEntryHeading, freeHeadingAngle, isFreeFace } from "../input/free_face";
+import { contourFaceAt, crossingEvent, entryBlendHeading, entryDepth, entryEdgeOf, exitHoldSign, headingStep, pictureOffset, transportUp, viewLevelTurned, exitTurnRad, faceOwnUp, freeEdges, freeEntryHeading, freeHeadingAngle, isFreeFace } from "../input/free_face";
 import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, capTilt, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, swingEase, tiltAutoLatch, frameBox, tiltDir, tiltFaces, onTiltedFacet, type Mat3 } from "../input/orbit_tilt";
 
 /** ⭐ The look point's ease (ms). */
@@ -108,7 +108,7 @@ export function ensureAssembly(st: SceneState): void {
 type OrbitStateStart = Pick<
   SceneState,
   | "asmGizmo" | "asmSupport" | "asmSupportLevel" | "pieceHold" | "pieceHoldPrev" | "asmLook" | "asmFacePoint" | "asmG" | "asmPrevQ" | "asmShown" | "asmFaceBand" | "asmFree" | "asmPlaceWas" | "asmMapQ"
-  | "asmEdgeHold" | "asmZone" | "asmZoneMix" | "asmPieceDrawn" | "asmDirEase" | "asmCamLast" | "asmSpitSide" | "asmSpitU" | "asmZoneAlpha" | "asmDySign" | "asmHeadO"
+  | "asmEdgeHold" | "asmZone" | "asmZoneMix" | "asmPieceDrawn" | "asmDirEase" | "asmCamLast" | "asmSpitSide" | "asmSpitU" | "asmSpitPic" | "asmSpitPicWas" | "asmZoneAlpha" | "asmDySign" | "asmHeadO"
   | "asmHeadW" | "asmHeadYaw" | "asmTilt" | "asmGOff" | "asmTiltAuto" | "asmTiltPending" | "asmOrbitMm" | "asmBlend" | "asmCalmWhole" | "asmCalmWholeV"
   | "asmSquare" | "asmCalm" | "asmMouth" | "asmRawPrev" | "asmGizmoAt" | "asmGizmoLag"
 >;
@@ -144,6 +144,8 @@ export function orbitStateStart(): OrbitStateStart {
     asmCamLast: null,
     asmSpitSide: 0,
     asmSpitU: null,
+    asmSpitPic: null,
+    asmSpitPicWas: null,
     asmZoneAlpha: 0,
     asmDySign: 0,
     asmHeadO: null,
@@ -1038,6 +1040,9 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   // ⭐⭐⭐ (2026-11-12, F4) the elevation asked past a pole, read EVERY frame (never piled up while the assembly's orbit is off — a jump later)
   // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4b) consumed by a pole's crossing (`poleCross`): the map's step must not also push past the pole
   let beyondV = st.orbit.takeBeyond();
+  // ⭐⭐⭐ (2026-11-18, ES) the spit's picture of the frame before (a free face's entry continues it); this frame's is set by the camera's frame
+  st.asmSpitPicWas = st.asmSpitPic;
+  st.asmSpitPic = null;
   // ⭐⭐⭐ (2026-11-12, §8) the dy hold released once the gizmo is deep enough in the face beyond — or the assembly's orbit off
   // ⭐⭐⭐ (2026-11-14) its release is the FINGER's (`edgeHoldFinger`, in the pointer's step) — here only with the assembly's orbit gone
   if (st.asmEdgeHold !== null && (!assemblyOn(st) || st.asmG === null)) st.asmEdgeHold = null;
@@ -1444,8 +1449,8 @@ export function approachRelease(st: SceneState): void {
 }
 
 /** ⭐ THE CAMERA'S FRAME: behind the piece along its direction (locked, the cone's), the owner's world offsets as ever, its up upright. */
-export function assemblyCameraFrame(st: SceneState, cam: OrbitAt, off?: CameraAngleOffset): RigCameraFrame {
-  const f = assemblyCameraFrameRaw(st, cam, off);
+export function assemblyCameraFrame(st: SceneState, cam: OrbitAt, off?: CameraAngleOffset, dtMs?: number): RigCameraFrame {
+  const f = assemblyCameraFrameRaw(st, cam, off, dtMs);
   // ⭐⭐⭐ (2026-11-14) a zone's switch / the spit's crossing turns the camera ABOUT THE PIECE, on its pose (`zoneMixPose`, the camera's stage) — the frame
   // here is the one turned to. ⛔ (2026-11-13) its up turned about the view here: the piece went round the glass's centre, after a jump to the opposite corner
   st.asmCamLast = { dir: f.dir, up: f.up };
@@ -1496,7 +1501,7 @@ function norm3(v: Vec3): Vec3 {
   return l > 1e-12 ? [v[0] / l, v[1] / l, v[2] / l] : [0, 0, 1];
 }
 
-function assemblyCameraFrameRaw(st: SceneState, cam: OrbitAt, off?: CameraAngleOffset): RigCameraFrame {
+function assemblyCameraFrameRaw(st: SceneState, cam: OrbitAt, off?: CameraAngleOffset, dtMs?: number): RigCameraFrame {
   const o = off ?? { yawRad: 0, pitchRad: 0 };
   // ⭐⭐⭐ (2026-11-13, POLAR_ZONES.md §3.5) IN A POLAR ZONE'S FRAME (no tilt there): S1 the camera upright IN F (its up the axis on the glass, as the tilted
   // pole's); S2 THE SPIT — upright in the WORLD (the axis across the glass): a dy turns the assembly about it; its heading the SIDE of the axis it is on
@@ -1512,9 +1517,12 @@ function assemblyCameraFrameRaw(st: SceneState, cam: OrbitAt, off?: CameraAngleO
     const uW = mulM(B, sF);
     // ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §3.4, step C4) ON A FREE FACE (a level face of the spit): the camera's up the heading CARRIED in at the entry
     // (`freeHeadingAngle`) — ⛔ the side's heading (`spitCameraHeading`): it turned the picture in the middle of the face
-    if (st.asmFree !== null) return offsetFrame(uW, freeHeadingAngle(st.asmFree.heading, uW), o.yawRad, o.pitchRad);
     const side = st.asmSpitSide !== 0 ? st.asmSpitSide : spitSide(uW, st.asmZone!.zone.axis, 0);
-    return offsetFrame(uW, spitCameraHeading(uW, st.asmZone!.zone.axis, side), o.yawRad, o.pitchRad);
+    // ⭐⭐⭐ (2026-11-18, ES — the silent entry) the heading SHOWN: entered over an edge, the picture the bound face's camera would show kept, turned to the
+    // layout by the face's middle at most the tilts' one speed a frame (`freeShownHeading`)
+    const hS = st.asmFree !== null ? freeHeadingAngle(freeShownHeading(st, uW, side, dtMs), uW) : spitCameraHeading(uW, st.asmZone!.zone.axis, side);
+    st.asmSpitPic = { u: uW, up: offsetFrame(uW, hS, 0, 0).up }; // ⭐ (ES) this frame's picture before the offsets (the next entry continues it)
+    return offsetFrame(uW, hS, o.yawRad, o.pitchRad);
   }
   // ⭐⭐⭐ (2026-11-10, §9.4) THE TILTED POLE: the camera upright IN F (the pressed cap a side), turned into the world
   // ⭐⭐⭐ (2026-11-15, §12 2.4c) no roll back inside F: the camera upright in F to the exit, then ONE turn (`asmZoneMix`) — ⛔ (step 2.5, 2026-11-16) the
@@ -1912,7 +1920,8 @@ function seamRebase(st: SceneState, mq: { readonly yaw: number; readonly pitch: 
  *   (`seamOutStart`, step C3), else timed at the tilts' one speed, the gizmo held meanwhile (`tiltClampStep`);
  * * the piece's shown direction eased on that turn from the one drawn before the change (`uWas`, `seamEase`) — or, the frame unchanged, the ease running
  *   carried onto it by its rest (`carry`, `easeCarry`);
- * * the coast stopped; `hold` — the dy held (`crossingEvent`, `exitHoldSign`: the one rule; the spit's side: `crossingHold`, §13.3), 0: none (a hold already on is left as it is).
+ * * the coast stopped; `hold` — the dy held (`crossingEvent`, `exitHoldSign`: the one rule; the spit's side: `crossingHold`, §13.3), 0: none — ⭐⭐⭐ (2026-11-18,
+ *   `DY_HOLD_REVERSAL.md` §5.3) a hold still on ended too (`holdAtCrossing`: the hold guards the LAST edge crossed; ⛔ left as it was).
  * ⭐ Everything in the MODEL's space (the map, `g`); the camera's pose read only to start the turn from the picture on the glass.
  */
 function crossTurn(st: SceneState, c: { readonly at: { readonly mq: { readonly yaw: number; readonly pitch: number }; readonly g: Vec3 } | null; readonly uWas: Vec3 | null; readonly carry: boolean; readonly paced: boolean; readonly hold: 1 | -1 | 0 }): void {
@@ -1936,7 +1945,7 @@ function crossTurn(st: SceneState, c: { readonly at: { readonly mq: { readonly y
   if (c.uWas !== null) seamEase(st, c.uWas);
   else if (c.carry) easeCarry(st, mixWas);
   st.orbitInertia.stop();
-  if (c.hold !== 0) st.asmEdgeHold = { sign: c.hold, back: 0 };
+  st.asmEdgeHold = holdAtCrossing(c.hold); // ⭐⭐⭐ (2026-11-18, `DY_HOLD_REVERSAL.md` §5.3) it REPLACES any hold still on — ⛔ a 0 left the last edge's on
 }
 
 /**
@@ -2210,7 +2219,11 @@ function freeFaceFrame(st: SceneState, t: MapTarget, prev: { readonly map: FaceM
   const fr = st.asmFree;
   if (fr !== null) {
     const d = t.stack === fr.facet ? 0 : distanceToFacets(map, [fr.facet], t.surface);
-    if (onTiltedFacet(t.stack, fr.facet, d, edgeMarginM(st))) return;
+    if (onTiltedFacet(t.stack, fr.facet, d, edgeMarginM(st))) {
+      // ⭐⭐⭐ (2026-11-18, ES) the gizmo's depth from the entry edge, re-read at its place — the MODEL's (`t.surface` through `B`)
+      if (fr.entry !== null) st.asmFree = { ...fr, depth: entryDepth(fr.entry, mulM(B, t.surface)) };
+      return;
+    }
     freeFaceExit(st, fr, at.contour, contourOfFacet(map, B, at.contour, t.stack));
     return;
   }
@@ -2219,12 +2232,54 @@ function freeFaceFrame(st: SceneState, t: MapTarget, prev: { readonly map: FaceM
   const en = freeEntry(st, map, B, at, t.stack, prev);
   if (en === null) return;
   const { ci, from, heading } = en;
-  st.asmFree = { map, facet: t.stack, ci, heading };
+  // ⭐⭐⭐ (2026-11-18, `LEVEL_FACE_ENTRY.md` §15, §16 — ES, the switch `freeEntryUpright`) entered over an edge: the picture kept there, the layout by the
+  // face's middle (the camera's frame, `freeShownHeading`); 0, or no edge: the layout at once (as before). Any free face, any outline, any edge
+  const entry = st.cfg.freeEntryUpright === 1 ? entryEdgeOf(at.contour, ci, from, WORLD_UP) : null;
+  st.asmFree = { map, facet: t.stack, ci, heading, layout: heading, entry, depth: entry === null ? 0 : entryDepth(entry, mulM(B, t.surface)), offset: null, side: 0, turning: false };
   const mixWas = st.asmZoneMix;
   if (st.asmCamLast !== null) st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0 };
   easeCarry(st, mixWas);
   st.lastVerdict = `orbit: onto the spit's level face — the heading carried in ${from >= 0 && from !== ci ? "over its edge" : "from the picture shown"}`;
   st.hudDirty = true;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-18, `LEVEL_FACE_ENTRY.md` §15, §16 — package ES, the silent entry) THE HEADING SHOWN on the free face, read by the camera's frame for its
+ * direction `uW` (centre → camera, BEFORE the owner's camera offsets), `dtMs` the frame's time: its TARGET `entryBlendHeading` of `uW`'s level part
+ * turned by the picture's offset read ONCE at the entry frame (`pictureOffset` of the picture of the frame before carried to this view, `transportUp`
+ * — so the entry continues the picture shown, not rolled; none recorded: the layout's), the layout, the gizmo's depth and (cure (a)) the
+ * square camera's share SHOWN (`squareShareShown`: close in the layout exactly, far out the blend whole); the heading shown turned toward it so that the
+ * picture turns by at most the tilts' one speed a frame (cure (b), `headingStep`) — at the entry frame the blend's value at the entry EDGE (the
+ * picture's own far out: the entry silent, a fast finger already deep included); no frame time: the target. Kept in `asmFree.heading` for the exit's turn. No entry edge (the switch 0, or no edge): the heading carried, as before — the step never
+ * called. ⛔ (`069682a`) faded by the view's elevation, unbounded a frame: 21° in one frame far out (§10.3). ⛔ The level part of the camera drawn last
+ * (as prototyped): the owner's camera offsets (2.5°, 2°) and the side bias made a 3° – 4° turn of the entry. ⛔ The bound camera's picture read every
+ * frame: close in its side bias swung the heading across the axis (24° in a frame).
+ */
+function freeShownHeading(st: SceneState, uW: Vec3, side: number, dtMs: number | undefined): Vec3 {
+  const fr = st.asmFree;
+  if (fr === null) return [1, 0, 0];
+  if (fr.entry === null) return fr.heading;
+  const share = squareShareShown(st);
+  // ⭐ the side the bound face's camera stood on at the entry, kept for the face (⛔ the side read each frame: it flips across the axis)
+  const side0 = fr.offset === null ? side : fr.side;
+  // the TARGET: the picture the ENTRY side's bound camera shows HERE (its offset read THIS frame — an exit back over the entry edge, anywhere along it,
+  // meets it), the layout by the face's middle
+  const offB = pictureOffset(uW, offsetFrame(uW, spitCameraHeading(uW, st.asmZone!.zone.axis, side0), 0, 0).up);
+  const target = entryBlendHeading(viewLevelTurned(uW, offB), fr.layout, fr.depth, fr.entry.centreDepth, share, st.cfg.freeEntryUpright);
+  let h: Vec3;
+  if (fr.offset === null) {
+    // ⭐ the entry's first frame: the picture SHOWN the frame before, carried to this view (`transportUp` — not rolled), at the entry EDGE's blend
+    const was = st.asmSpitPicWas;
+    const offP = was !== null ? pictureOffset(uW, transportUp(was.u, was.up, uW)) : offB;
+    h = entryBlendHeading(viewLevelTurned(uW, offP), fr.layout, Math.min(0, fr.depth), fr.entry.centreDepth, share, st.cfg.freeEntryUpright);
+  } else if (st.asmZoneMix !== null || fr.turning) {
+    // ⭐ a camera turn under way (the entry's own, from the pose shown), or ending this frame: the heading HELD — the turn draws toward a still picture
+    // (⛔ stepped meanwhile: the turn's target moved 7° a frame and its first frame showed 9.1°, the 4 px corner loop; ⛔ stepped on the frame the turn
+    // lands: its last share and the step in one frame, 9.8°); the step starts the frame after
+    h = fr.heading;
+  } else h = dtMs === undefined ? target : headingStep(fr.heading, target, dtMs, st.cfg.tiltRollDegS, uW);
+  st.asmFree = { ...fr, heading: h, offset: offB, side: side0, turning: st.asmZoneMix !== null };
+  return h;
 }
 
 /**

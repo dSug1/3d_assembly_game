@@ -323,7 +323,7 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`)", () => {
       "if (Math.hypot(v[0], v[1], v[2]) > 1e-6) st.asmGOff = { v, left: 1, timeMs: 0, durMs: rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS) };",
       "st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch }; faceBandRead(st, m.t);",
       "else if (st.asmCamLast !== null) seamTurnStart(st, false);",
-      "st.orbitInertia.stop(); if (c.hold !== 0) st.asmEdgeHold = { sign: c.hold, back: 0 };",
+      "st.orbitInertia.stop(); st.asmEdgeHold = holdAtCrossing(c.hold);",
     ];
     let at2 = -1;
     for (const s of order2) {

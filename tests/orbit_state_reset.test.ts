@@ -44,6 +44,8 @@ const RESET: Record<string, unknown> = {
   asmCamLast: null,
   asmSpitSide: 0,
   asmSpitU: null,
+  asmSpitPic: null, // ⭐ (2026-11-18, ES) the spit's picture this frame and the one before (a free face's entry continues it)
+  asmSpitPicWas: null,
   asmZoneAlpha: 0,
   asmDySign: 0,
   asmHeadO: null,
@@ -72,9 +74,9 @@ const KEPT = [
 ];
 
 describe("⭐⭐⭐ the orbit's starting state (`orbitStateStart`, `resetOrbitState`)", () => {
-  it("every `asm…` / `pieceHold…` field of the scene's state is decided: reset or kept (57)", () => {
+  it("every `asm…` / `pieceHold…` field of the scene's state is decided: reset or kept (59)", () => {
     const decl = [...raw("render/scene_state.ts").matchAll(/^ {2}((?:asm|pieceHold)\w*)\??:/gm)].map((m) => m[1]!);
-    expect(decl.length).toBe(57); // ⭐ (2026-11-16, C2W) + `asmPlaceWas`; ⛔ (step 2.5) − `asmZoneFacetsF` (`zoneFacetOf`'s memo, deleted with the old calm)
+    expect(decl.length).toBe(59); // ⭐ (2026-11-18, ES) + `asmSpitPic`, `asmSpitPicWas`; ⭐ (2026-11-16, C2W) + `asmPlaceWas`; ⛔ (step 2.5) − `asmZoneFacetsF` (`zoneFacetOf`'s memo, deleted with the old calm)
     expect([...Object.keys(RESET), ...KEPT].sort()).toEqual([...decl].sort());
   });
 

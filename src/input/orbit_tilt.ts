@@ -89,22 +89,46 @@ export const TILT_SLANT_MIN = 1e-3;
 export interface EdgeHold {
   /** the dy sign held (the finger's that crossed) — ⛔ (2026-11-16, step C5) `g0` (where it crossed) and `d` (into the face beyond) deleted: read by nothing */
   readonly sign: 1 | -1;
-  /** ⭐⭐⭐ (2026-11-14) the finger's travel THE OTHER WAY since the crossing (mm) — the hold ends at `edgeHoldMm` of it (`edgeHoldFinger`) */
+  /**
+   * ⭐⭐⭐ (2026-11-18, `DY_HOLD_REVERSAL.md` §5 – §6) how far the finger is BACK the other way from the farthest point it reached the held way (mm) — the
+   * hold ends at `edgeHoldMm` of it (`edgeHoldFinger`). ⛔ (2026-11-14) the finger's travel the other way SUMMED: a wobble added up (±2.5 mm → 21 mm in
+   * 6 swings, the finger never reversed)
+   */
   readonly back: number;
 }
 /** ⛔ (2026-11-14) `edgeHoldDepth` (the release by the gizmo's depth on the SURFACE) deleted — the release is the finger's (`edgeHoldFinger`). */
 /**
  * ⭐⭐⭐ (2026-11-14, the owner: *"the dy in the same direction is hold until the dy in the opposite direction hits the hysteresis threshold"*) THE HOLD'S
- * HYSTERESIS ON THE FINGER: a finger dy of `dyMm` (mm, signed as the hold's `sign`) — the held way adds nothing, the other way adds its length to `back`;
- * at `bandMm` the hold ends (`null`). ⛔ The gizmo's depth in the face beyond (`edgeHoldDepth` ≥ `edgeHoldMm` on the SURFACE): the same as the finger only
- * close in, where the contact's gain makes a finger mm a surface mm — far out a finger mm is ~9 mm of surface (Scene_0bis's spit, which holds at every
- * distance: the crossing's own overshoot 17 mm, a 12 px reverse 17 more — released, the next forward dy back over the ridge, the camera turned back:
- * the ping-pong probed 2026-11-14).
+ * HYSTERESIS ON THE FINGER: a finger dy of `dyMm` (mm, signed as the hold's `sign`). ⭐⭐⭐ (2026-11-18, `DY_HOLD_REVERSAL.md` §6) a TRUE hysteresis on the
+ * finger's place along its dy: the other way moves it back (`back` grows), the held way moves it forward again (`back` shrinks, never under 0); at
+ * `bandMm` back from its farthest point the hold ends (`null`) — a clear reversal, the same at every distance; a wobble swinging less than the band never
+ * ends it. ⛔ (2026-11-14) the other way only, summed, the forward pushes changing nothing: a wobble released it. ⛔ The gizmo's depth in the face beyond
+ * (`edgeHoldDepth`, 2026-11-12): the same as the finger only close in — far out a finger mm is 13 – 21 mm of surface.
  */
 export function edgeHoldFinger(h: EdgeHold, dyMm: number, bandMm: number): EdgeHold | null {
-  if (!(dyMm !== 0) || Math.sign(dyMm) === h.sign) return h;
+  if (!(dyMm !== 0)) return h;
+  if (Math.sign(dyMm) === h.sign) return h.back > 0 ? { ...h, back: Math.max(0, h.back - Math.abs(dyMm)) } : h;
   const back = h.back + Math.abs(dyMm);
   return back >= bandMm ? null : { ...h, back };
+}
+/**
+ * ⭐⭐⭐ (2026-11-18, `DY_HOLD_REVERSAL.md` §5.2, §5.3) THE DY THAT PUSHES NOW (`asmDySign`, the sign a crossing may hold — D-T4: only the dy that pushed the
+ * gizmo over the edge): a finger step with a dy — its sign; a step with a dx and no dy (the per-axis deadband: a sideways move) — none; a still step —
+ * unchanged (a finger resting keeps pushing). The gesture's end sets none (`gestureOver`): with no finger down nothing pushes. ⛔ The finger's LAST dy
+ * sign, kept for ever: a crossing made by a dx round a tip, by the coast, or read at the camera's place a frame after the lift held that old dy.
+ */
+export function dySignPushing(prev: number, dx: number, dy: number): number {
+  if (dy !== 0) return Math.sign(dy);
+  if (dx !== 0) return 0;
+  return prev;
+}
+/**
+ * ⭐⭐⭐ (2026-11-18, `DY_HOLD_REVERSAL.md` §5.3) THE HOLD AFTER A HALF-TURN EVENT (`crossTurn`): the event's own (`hold`: the sign that crossed, 0: none) —
+ * it REPLACES any hold still on: the hold guards the way back over the LAST edge crossed. ⛔ A hold of 0 left the older hold on: round a tip (a crossing
+ * made by the finger's dx) the zenith's hold went on blocking the dy on the tip's triangle.
+ */
+export function holdAtCrossing(hold: 1 | -1 | 0): EdgeHold | null {
+  return hold === 0 ? null : { sign: hold, back: 0 };
 }
 /** ⭐⭐⭐ (§8) the finger's dy under the hold: its held sign none, the other whole. */
 export function edgeHoldDy(h: EdgeHold | null, dy: number): number {

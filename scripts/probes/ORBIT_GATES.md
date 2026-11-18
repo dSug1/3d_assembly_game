@@ -320,6 +320,23 @@ frame 1143 (drag 17; the largest view turn 15.4°, roll 18.2°). `tilt_check` 8.
 `across_check` NOT rerun at `3ef7ba7` (`Scene_0bis` is untouched by (A): its replay and its 27 walks identical).
 ⛔ (iv′) (`069682a`, reverted `fa72bab`): its runs are recorded in `LEVEL_FACE_ENTRY.md` §10.3 — read the FREE ROLL column first (21.4° there).
 
+### 7.3 The free-roll gate of the silent entry (2026-11-18, package ES — `LEVEL_FACE_ENTRY.md` §15 gate 5, §16; not built, the base `bc867a0`)
+
+```bash
+OUT=<f> bash scripts/probes/level_entry_batch.sh <tag> b c                               # c: the straight dy at 4 and 6 px a frame, both ends
+node scripts/probes/level_entry_worst.mjs <base>/<t>_b_cw_p_far.json <new>/<t2>_b_cw_p_far.json  # any recording with t, c, up, mix (a mid DUMP too)
+node scripts/probes/level_entry_cmp.mjs   <base>/<t>_b_cw_p_far.json <new>/<t2>_b_cw_p_far.json  # frame for frame (the switch at 0)
+```
+
+`level_entry_worst.mjs` prints the FREE ROLL against the base's + 6° and the whole walk's WORST FRAME against the base's + 1°, and whether the worst
+frame falls in a timed turn. `mid_check`'s whole run: `DUMP=<f>/mid bash scripts/probes/mid_batch.sh "idleOrbitOn=0|2|0"`, then the reader on
+`<f>/mid_1.json`. The base at `bc867a0` (the session scratchpad's `es/base`): far out the free roll 1.1° – 2.5° on the loops and the walks back,
+3.3° at 4 px, 4.3° – 4.4° on the straight dy, 5.2° over `mid_check`'s run; the worst frame 6.9° – 7.9° on the loops, 9.3° `mid_check`, 9.0° – 10.9°
+the straight dy. ES's four versions against it: `LEVEL_FACE_ENTRY.md` §16 (recordings `es/def` = v1, `es/v2` … `es/v4`, `es/off` the switch at 0).
+Fix round 1 (v5 – v7, recordings `es2/v5` … `es2/v7`): read also the 4 px corner loop's `LOOP 0` line in the analysis (`awk '/^=== /{w=$2}
+w=="b_ccw_p_far_px4" && /LOOP/'`) — the number of turns, their |roll| in all and the frames the gizmo is held. Each frame can pass while the dither
+makes dozens of 6° turns (v7: 61 turns, 442°, 67 frames held; the base 118, 330°, 21).
+
 ## 8. Gate (g) — every timed turn, base against new (`turn_rec.mjs`, `turn_table.mjs`, package LF2 — `LEVEL_FACE_ENTRY.md` §11)
 
 Package A's lesson on every gate: a turn is judged by its path, not only by its speed. `DUMP=<prefix>` on any batch (`tilt_batch.sh`, `mid_batch.sh`,
@@ -345,3 +362,106 @@ out and at 0.736 every entry 6 – 7 → 15 – 16 frames, the far edge's half t
 LF3's drawing); the replays: `Scene_1` identical, `Scene_0` another play from frame 1398 (the way out), `Scene_0bis` from frame 315 (the largest view
 turn 14.1° → 11.8°). With `EXTRA="&tiltMinMs=0&tiltMaxMs=0"` the three replays are identical to `0ab1f9f` in every frame. The recordings: the session
 scratchpad's `lf2/base`, `lf2/def` (a scratch folder).
+
+## 9. Gate (h) — the FAST walks (`fast_walk_*`, package FO1 — `Claude/40_RENDER_SCENE/spec/FAST_ORBIT.md` §4, §6)
+
+The fast orbit's gate (G4, G6): a fast finger crossing many edges. `fast_walk_check.mjs` (one walk a run, every frame recorded), `fast_walk_analyse.mjs`
+(the reading), `fast_walk_table.mjs` (base against new), `fast_walk_drift.mjs` (no drift), run by `fast_walk_batch.sh`.
+
+```bash
+OUT=<folder> EXTRA="" bash scripts/probes/fast_walk_batch.sh <tag> all               # 23 walks, about 15 minutes
+OUT=<folder> REC=1 DRIFT=1 bash scripts/probes/fast_walk_batch.sh <tag> all          # + each walk replayed for G4 (ii): about 30 minutes
+node scripts/probes/fast_walk_table.mjs <base>/fw_f_edge_px20.json <new>/<tag>_f_edge_px20.json   # pairs: base, new [, …]
+```
+
+* **The steering.** The gizmo is steered to targets round the heptagon's long axis (x along it, the angle round it) — the level-entry gate's corner
+  targets (§7) — so the route is the targets' whatever the pace. A leg goes at `LPX` px a frame toward its target, read on the gizmo's raw point
+  (`asmG`) led by its last step × 2.5 (the raw point trails a fast finger by the map's catch-up and the piece's spring: 2 – 3 frames), until the led
+  place has PASSED the target and the gizmo is on the target's face; the legs are CHAINED (the finger stays down from target to target, lifted only at the
+  glass's border and at the end, each lift after 6 still frames: no coast). The start leg is slow (2 px a frame) and is read apart (`to-start`).
+* ⚠ **What the pace means.** Far out one px of finger is about 2 – 3 mm of surface: at 20 px a frame a corner loop (about 90 mm a leg) is 2 – 4 frames a
+  leg, and the route is the targets' only to within a frame's travel — the faces crossed are printed per loop (`F B T U F` is the loop as meant; a
+  loop that cuts or overshoots a face shows it). At 30 px a frame the last loop of some walks wanders (e.g. `f_ccw_p_far_px30` loop 2). The zigzag's
+  targets are 10 mm each side of the edge and `:pass` (reached once crossed, never slowed): at 20 px a frame it overshoots to 30 – 40 mm.
+* **The walks.** `f_<ccw|cw>_<p|m>_<far|d736>_px<20|30>` — `Scene_0bis`, the corner loops (rectangle → bottom → bottom triangle → front triangle, and
+  back the other way), three loops, at the +x / −x tip, far out / approach 0.736; `f_edge_px<2|8|20>` — the bottom face's long edge at its middle (x 0),
+  six crossings 10 mm each side (R1, `POLAR_ORBIT_CLEANUP.md` §9.7: no oscillation at an edge); `f_far_p_px20` — across the bottom to its far edge and
+  back; `f_ridge_px20` — over the top ridge and back (a half turn); `f_s0_up_px20` (`Scene_0`) and `f_s1_over_px20` (`Scene_1`, the cube up over its top
+  and down its back face, and back) — far out, two edges and back.
+* **The reading** (per walk `WALK` and per loop): frames; `still <90 / ≥90` — the frames the gizmo stood still (under 0.05 mm) while a turn that HOLDS it
+  ran, by the turn's size at its first known frame (`LIMIT`, 90; a free turn with the gizmo still — the finger's own stop — counted apart, `stillFree`;
+  `fast_walk_table.mjs` with `ALLOW_HELD=1` lists a hold under the limit without flagging it, for a build with a fallback that holds); the picture's TOTAL TURNING (each frame's rotation summed); its REVERSALS (the roll on the glass
+  changing side with over 1° a frame on both sides); the WORST frame; the faces crossed. Then every turn by its own object (`mix.id`): its size, frames,
+  ONE ROTATION, PATH, ratio, largest frame, HELD / free (the build's decision — `hold`; a build without it: every timed turn held), REPLACED (the next frame
+  runs another turn: a change of frame arrived before it was whole).
+* **G4, no drift** (`REC=1 DRIFT=1`): the walk records its inputs (the events at their frames, the orbit's angles, its clamp's carry and the approach as each
+  frame began), then is REPLAYED from them with `&tiltRollDegS=0` (every turn whole at once) and compared frame by frame (`fast_walk_drift.mjs`): (i) the
+  pose drawn equals the camera stage's target on every frame with no turn (the build's readout `probeCamPose`; at the base: not recorded); (ii) the zone,
+  the tilt, the free face and its heading, the spit's side, the map's angles; the camera on every frame where neither run turns; the last frame's camera.
+  Measured at the base on two walks: the discrete state identical, the numbers within 5e-10 (the replays' last-digit noise) — the replay itself is sound.
+  ⚠ (FO1, 2026-11-18) on `Scene_1` (`f_s1_over_px20`, no turn at all) the replay drifts by 5.6 mm from frame 20: the inputs recorded are not the whole
+  state there — read that walk's G4 as not meaningful. FO1's own figures (built, reverted): `FAST_ORBIT.md` §6; its recordings `<scratchpad>/fo1/def`, `fo1/off`.
+* **The circle's check** (2026-11-18, fix round 1 — `FAST_ORBIT.md` §8): `node scripts/probes/turn_circle.mjs <rec.json> …` on a fast walk or on a replay's
+  DUMP (`OUT=<f> DUMP=<f>/tr bash scripts/probes/replay_batch.sh rep` — `turn_rec.mjs` now records each turn's `id`, its `hold`, its readers `rt` and the
+  pose built / drawn `pose`; null on a build without `probeCamPose`). Per free turn: its angle (min..max), the gap drawn ↔ target (first, the most it
+  grew in a frame — GAP+ over 1° —, its decrements, at the end), its one rotation, path and the target's own path (PATH); per run the worst frame with
+  the TARGET's own turn in it. Read the worst frame against the target's: a free turn whose start is carried turns as its target does.
+  ⚠ Never edit a file under `src` while a batch runs: Vite reloads the page and that walk's recording is lost (`Cannot read properties of undefined`).
+  The second build's figures (reverted): `FAST_ORBIT.md` §8; its recordings `<scratchpad>/fo1b` (`fw_*`, `rep_*`, `tr_rep_*`, `g6_table.txt`).
+* **Where the worst frame falls** (2026-11-18, fix round 2 — `FAST_ORBIT.md` §9): `node scripts/probes/turn_where.mjs <rec.json> …` (a fast walk or a
+  replay's DUMP): the picture's largest frame inside a FREE turn, a HELD turn and with NO turn, each with the target's own turn on that frame; the
+  largest gap of a free turn; the target's own speed in free turns (median, 90th, largest; a turn's first frame left out — the change of frame's jump).
+  Read: a free turn's worst frame equal to the target's = the picture carried with the target; a held turn's huge first frame = a turn held from a
+  lagging pose. The third build's three realisations (reverted): `FAST_ORBIT.md` §9; recordings `<scratchpad>/fo1c` (v1), `fo1c/v2`, `fo1c/v3`.
+
+### 9.1 The base (the code of `892b6a3` = the live `c343c4f`'s; recorded at `8997e45`, docs only after it) — `<scratchpad>/fo1/base`
+
+| walk | frames | still <90 / ≥90 | turning ° | reversals | worst ° | turns (all held) / replaced |
+|---|---|---|---|---|---|---|
+| f_ccw_p_far_px20 / px30 | 220 / 256 | 50 / 0 · 71 / 0 | 653 / 962 | 6 / 8 | 14.8 / 24.8 | 8 / 3 · 9 / 4 |
+| f_cw_p_far_px20 / px30 | 178 / 233 | 26 / 0 · 51 / 0 | 437 / 803 | 5 / 10 | 13.6 / 17.3 | 4 / 1 · 12 / 7 |
+| f_ccw_p_d736_px20 / px30 | 335 / 346 | 49 / 0 · 35 / 22 | 650 / 1123 | 6 / 4 | 14.8 / 30.5 | 8 / 3 · 8 / 3 |
+| f_cw_p_d736_px20 / px30 | 293 / 337 | 26 / 0 · 46 / 0 | 450 / 788 | 5 / 10 | 13.6 / 25.3 | 4 / 1 · 10 / 6 |
+| f_ccw_m_far_px20 / px30 | 225 / 266 | 56 / 0 · 65 / 2 | 609 / 849 | 8 / 8 | 12.6 / 16.8 | 12 / 5 · 9 / 3 |
+| f_cw_m_far_px20 / px30 | 187 / 1013 | 25 / 0 · 59 / 21 | 471 / 932 | 6 / 11 | 14.1 / 18.0 | 6 / 3 · 14 / 8 |
+| f_ccw_m_d736_px20 / px30 | 340 / 396 | 55 / 0 · 83 / 2 | 624 / 1009 | 8 / 6 | 13.6 / 25.9 | 12 / 5 · 9 / 3 |
+| f_cw_m_d736_px20 / px30 | 302 / 430 | 25 / 0 · 60 / 63 | 477 / 1523 | 6 / 15 | 13.6 / 19.8 | 6 / 3 · 18 / 10 |
+| f_edge_px2 / px8 / px20 | 166 / 159 / 220 | 0 / 0 · 3 / 0 · 44 / 0 | 125 / 183 / 469 | 0 / 0 / 0 | 5.7 / 7.7 / 16.9 | 6 / 0 each |
+| f_far_p_px20 | 190 | 34 / 15 | 651 | 2 | 17.2 | 7 / 3 |
+| f_ridge_px20 | 137 | 0 / 28 | 270 | 0 | 7.4 | 1 (the half turn, 180°) / 0 |
+| f_s0_up_px20 (`Scene_0`) | 134 | 0 / 0 | 180 | 0 | 13.5 | 0 |
+| f_s1_over_px20 (`Scene_1`) | 168 | 0 / 0 | 611 | 1 | 22.5 | 0 |
+
+Deterministic as every probe here (the virtual clock). The figures per loop: `fw_analysis.txt` beside the recordings.
+
+## 10. Gate (i) — the dy hold's long walks (`hold_walk_*`, package DH — `Claude/40_RENDER_SCENE/spec/DY_HOLD_REVERSAL.md` §3, §5, §6)
+
+The hold after a half turn lives on the FINGER's path (`pointer_wiring.ts`): these walks use real mouse events, never the orbit's angles.
+`hold_walk_check.mjs` (one run = one distance and one crossing, every frame recorded), `hold_walk_analyse.mjs` (the reading), run by `hold_walk_batch.sh`.
+
+```bash
+OUT=<folder> EXTRA="" bash scripts/probes/hold_walk_batch.sh <tag> all        # 30 walks, about 70 minutes (run it in the background)
+OUT=<folder> bash scripts/probes/hold_walk_batch.sh <tag> base                 # z_far b_far z_close b_close zT_far zC_far, about 15 minutes
+OUT=<folder> bash scripts/probes/hold_walk_batch.sh <tag> z_far zT_far         # any walks by name
+node scripts/probes/hold_walk_analyse.mjs <rec.json> [SHOW=s3 FROM=0 TO=400]   # the reading again; SHOW: the frames of one sub-walk
+```
+
+* **A run** (`Scene_0bis` unless named): the approach (`far` 1.0, `d736` 0.736, `d515` 0.515, `close` the latch on, 0.651), then one SUB-WALK per N
+  (`NS`, default 3, 6, 12, 20, 30, 45 mm): steered to 8° before the edge (`START`) at x 80 mm (`X`), released; ONE press, a pure finger dy at 2 px a
+  frame (`PX`) toward the edge until the hold is set; 8 frames more (`PUSH`); N mm of finger the other way; the crossing's way again 60 mm (`COME`,
+  "come back"). The sub-walks alternate their side, so the crossings go both ways. `z_*` the zenith ridge, `b_*` the bottom face's far edges.
+* **Variants**: `zL_* / bL_*` the finger lifted before coming back; `zT_* / bT_*` after the crossing a pure dx onto a tip's triangle, then the dy both
+  ways (`tri-held`, `tri-other`, `tri-held2`, 30 mm each); `zC_far` the crossing made by the coast (released 6° before the edge at 8 px a frame), then a
+  new press; `zW_* / bW_far` a finger still pushing the crossing way at 0.5 px a frame with a ±2.5 mm wobble (`WAMP`, period 24 frames, 144 frames);
+  `*_px8` 8 px a frame; `s0_ridge_close`, `s0_bottom_close` (`Scene_0`); `s1_top_close` (`Scene_1`: ⚠ its steering does not reach the cube's top —
+  not meaningful, use `tilt_check` `MODE=ridge` there).
+* **Reading, per sub-walk**: the frame the hold was set, the site's verdict, its sign against the finger's dy that crossed (`⚠ NOT the crossing's` if
+  not); the surface per finger mm (frames with no turn running); `back` (finger mm → surface mm, the hold after it); `come`: **BLOCKED** frames (the
+  finger asks the held sign, the hold on, no turn, the gizmo still), the first dy back HONOURED (the gizmo going toward the edge two frames running) with
+  the finger's travel and the surface since the crossing, or NEVER; a second crossing in it. `STALE hold … after the steering` on a run's line: a hold
+  left on after the steering's release (a hold set with no finger down) — ended by a still press before the sub-walk.
+* **Good** (DH, `DY_HOLD_REVERSAL.md` §6): N under the band — the come-back blocked, no second crossing (no ping-pong); N over it — honoured with
+  0 blocked frames after the band; the wobble — the hold on, no turn; the triangle — no BLOCKED frame; the coast and the lift — no hold left for the
+  next press; no `STALE`.
+* The base (`892b6a3`'s code) and the fix's recordings: the session scratchpad's `dh/base`, `dh/new`; the band's sweep `dh/sweep`; the earlier commits
+  `dh/old_<commit>`. Deterministic (the virtual clock).

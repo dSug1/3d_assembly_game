@@ -490,3 +490,194 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   ratio 1.05 → 1.43; the entries 4° – 7° off their route), and the brief's answer to a path change was to build nothing. The code is `0ab1f9f`'s again;
   the gate's tools (`6236fb4`) stay. The owner's options (wait for LF3; time the entries after the ease settles; accept and `git revert cb89bdd`) →
   [`LEVEL_FACE_ENTRY.md`](../../40_RENDER_SCENE/spec/LEVEL_FACE_ENTRY.md) §11.2.
+
+## 2026-11-17 (evening) — (A) DEPLOYED; the owner's look; the chain STOPPED on his word; his question on the fast orbit
+
+* **Deployed** (the owner: *"deploy the fix"*): live `main` `c343c4f` = `1.0.147-` at `892b6a3` (20:46; `src` and `tests` equal to `3ef7ba7` — (A)
+  alone; 165 files, 2062 vectors).
+* **His look**: *"I am happy with the build as it is now. Is it necessary to continue the chain ?"* — no: only LF3 was left. Then: *"stop the chain
+  and clear its leftover processes … save the builder's unfinished prototype as a patch outside the project, then restore the folder to the deployed
+  commit … record in the documents the deploy, the stop on your word, and the open point … Do not audit yet. I want to check one thing before"*.
+* **Stopped** (21:13): LF3 in its step 2 — its root cause kept (`3553f79`, §12), its prototype never committed (its rule in words, its one reading and
+  the patch's place → [`LEVEL_FACE_ENTRY.md`](../../40_RENDER_SCENE/spec/LEVEL_FACE_ENTRY.md) §13). The worktree clean; `src`, `tests`, `scripts` =
+  `892b6a3`'s. ⚠ The stop left the builder's DRIVER script alive (its scratchpad `run_gates.sh`): the first batch killed, it launched the next one —
+  stop the driver FIRST, then the batch, the server, the browser, the guards, the profile folder (`ORBIT_GATES.md` §0's incident, one level up).
+* **Open, none owed** (§13's table): the close-in long way round (root cause known, not fixed — in the live build); the far-out entry turn ((iv′)
+  reverted); one rule for every tilt and the ridge *"50% faster"* (reverted); the 27° back over the entry edge.
+* **Step 3 NOT run** (*"Do not audit yet"*).
+* **His question** — a fast orbit on `Scene_0bis`: *"each crossing triggers a movement of the camera: orbiting fast creates a lot of rapid movements
+  of the camera. Is there a way to smoothen these movements … ignoring the intermediate quaternion … Do not build: check the patent-free
+  state-of-the-art literature, propose something."* (whole in §14). Measured from recordings on disk: the same scripted play, 22 transition turns on
+  `Scene_0bis` against 4 on `Scene_0` and 4 on `Scene_1`, 14 of the 22 within half a second of the one before. PROPOSED (§14, nothing built): one
+  follower — the newest target wins, the gizmo not held for a turn under 90°, the pace eased; it bends T5 (said there). His word before any prototype.
+
+## 2026-11-17 (night) — the owner's GO for the fast orbit, the audit and the merge's preparation; branch `1.0.148-`
+
+* **His words** (whole in [`FAST_ORBIT.md`](../../40_RENDER_SCENE/spec/FAST_ORBIT.md) §0): *"I will go to sleep. Therefore, proceed with the following
+  and do not stop or ask me question until you finish"* — (1) a new branch `1.0.148-`; (2) the fast orbit built and tested, no regression — a failed
+  test fixed and retested, twice at most, *"If the test fails a third time, abort and revert to the branch 1.0.147-. If the test pass, update the md
+  files, deploy"*; (3) *"the full audit of the orbit charts"* on the branch that stands, *"one round of fixes if required, test, make sure no
+  regression. If test fail, report and wait my instruction"*; (4) *"update the md files, prepare for the merge into worktree "3d_assembly_game". I
+  will then authorize the merge"*.
+* **Branch `1.0.148-`** created from `1dac167` in the worktree `../orbit_charts` (`npm run verify` there: 165 files, 2062 vectors). `1.0.147-` stays
+  at `1dac167` — the way back.
+* **The build as briefed** → `FAST_ORBIT.md` §1 – §5: the decisions taken for him to review (F1 – F8: two packages, FO1 the redirect and no hold under
+  the limit, FO2 the eased pace; only outside close in; the limit and the ease two sliders, each at 0 = today's game bit for bit; one deploy), the two
+  contracts, the gates that define "the test passes" (OFF frame for frame, close in turn for turn, the held turns, no drift, the slow walks, the
+  benefit on FAST walks), what is not in it.
+* **Then**: step 3 (the audit of the whole charts' diff from `510bbd8`, one round of fixes), the final documents, the merge's preparation. The merge
+  itself: his word.
+
+## 2026-11-17 (night, 22:45) — the job list MODIFIED by the owner: the silent entry built and tested before the audit; G3's note
+
+* **His words** (whole in [`LEVEL_FACE_ENTRY.md`](../../40_RENDER_SCENE/spec/LEVEL_FACE_ENTRY.md) §15): not happy with the entry turn (*"Why it cannot
+  keep the quaternion it inherited from the previous face ? Or … why can't we make the turn slower"*); then *"once you have successfully completed
+  branch 1.0.148- or you have reverted to 1.0.147-, insert the build and test of entry silent with "Kept at the entry, then turned to the face's
+  layout over its first half" before you perform the full audit"*; *"I assume this is valid for any level face"*; *"make sure that this can be done
+  after the fast orbit"*.
+* **The night's list now**: (1) the fast orbit FO1 / FO2 (running) → the deploy if it passes, or back to `1.0.147-`; (2) **the silent entry** = (iv′)
+  from `069682a` with its two cures, behind `freeEntryUpright` — built and tested, not deployed (§15: the decisions E1 – E7, the contract, the gates;
+  valid for any level face that carries a heading; independent of the fast orbit, built after it); (3) the full audit, one round of fixes; (4) the
+  final documents, the merge prepared.
+* **G3's note** ([`FAST_ORBIT.md`](../../40_RENDER_SCENE/spec/FAST_ORBIT.md) §1 F9, §4): a far edge's half turn coming out the other way round is
+  listed, not a failure — written by the lead while FO1 was being built, so that a defect of the two-target drawing that is at the base already cannot
+  undo the build.
+* **Room made**: `LEVEL_FACE_ENTRY.md` §11.1 (LF2 as built, reverted) moved word for word →
+  `Claude/40_RENDER_SCENE/history/2026-11-17_lf2_timing_rule_as_built.md`.
+
+## 2026-11-17 (night, 23:10) — the owner's report: after a half turn he cannot revert the dy; to fix before the audit
+
+* **His words** (whole in [`DY_HOLD_REVERSAL.md`](../../40_RENDER_SCENE/spec/DY_HOLD_REVERSAL.md) §0): on `Scene_0bis`, after a level face's far edge
+  (the 180° roll) or the zenith edge, *"most of the times I cannot revert the dy input (the green section travel) until I reach the opposite zenith
+  edge or level face … always present at far distance, not always at close in. It was not here before. Make long walks over the rectangle faces at
+  different distance to troubleshoot. Fix that before the full audit."*
+* **Read in the code, not measured yet** (§1 there): the hold after a half turn ends at `edgeHoldMm` = 30 mm of FINGER travel the other way (since
+  2026-11-14; a depth on the surface before) — far out that can be the way round to the opposite edge. To be confirmed or refuted by the long walks,
+  with the other causes listed there; *"It was not here before"* checked on earlier commits.
+* **The night's order now**: the fast orbit and its deploy → **the dy hold's fix** (root cause first, the decisions D1 – D5, the gates: the report's
+  case at every distance, no ping-pong, nothing worse elsewhere) → the silent entry (tested with these walks too) → the audit → the final documents,
+  the merge prepared. Built and tested, not deployed: his word.
+
+## 2026-11-18 — FO1 (the fast orbit's first package): built, measured, NOT BUILT — reverted
+
+* **The result**: the game is the base's again. FO1 (`45b0d2f`: no hold for a timed turn under 90° outside close in, the two readers on the target,
+  the back-and-forth fallback) reverted by `2a5a28b`. Why: with its fallback the 30 px fast loops reverse the picture more than at the base (4 → 14,
+  6 → 12, 10 → 16, 15 → 18), the worst frame is over the base + 1° on 5 walks, and the `Scene_0bis` replay shows a free turn that began at 59° and
+  chased the finger round a 342° path to end 113° away. The figures and the owner's options: [`FAST_ORBIT.md`](../../40_RENDER_SCENE/spec/FAST_ORBIT.md) §6.
+* **What passed**: the limit 0 is today's game bit for bit (replays, level entry a and b, the fast walks); close in untouched (every `tilt_check`
+  recording identical); on 20 px loops the turning 18 – 61 % lower and no stop at each edge.
+* **What stays**: the gate (`5401ad7`) — the fast walks, their reading, the no-drift replay, the base table: `scripts/probes/ORBIT_GATES.md` §9.
+
+## 2026-11-18 (00:30) — the fast orbit: one real test failed; the two fix rounds he ordered are run on an amended contract
+
+* **What the night's chain did**: FO1 built, measured, reverted by its builder ([`FAST_ORBIT.md`](../../40_RENDER_SCENE/spec/FAST_ORBIT.md) §6: a free
+  turn's picture circled — 113° drawn over 342° —, more reversals on the 30 px loops, the worst frame over the base's). Its two fix rounds changed
+  nothing (43 and 26 seconds): the cure was outside the contract the lead had written. ONE real test, not three.
+* **The lead's reading** (§7 there): his rule gives two fix rounds; they are run now. The root cause: the turn fades from a FIXED start pose, so a
+  moving target makes the picture swing round its start. The contract amended (F10 – F16, for him to review): the start carried with the target (only
+  the turn's own gap dissolves), the one speed as the picture's budget, the readers on the target in every timed turn, FO2 not run tonight. A failed
+  test 3 = the abort, back to `1.0.147-`.
+
+## 2026-11-18 — fix round 1 of the fast orbit (test 2): built on §7, measured, NOT BUILT — reverted
+
+* **The result**: the game is the base's again (`83a7713` built, `18787b9` its revert). The circle is cured — a free turn's angle stays its first
+  frame's, the gap drawn ↔ target never grows (≤ 1.13° a frame) — but the picture now follows the finger's own fastest turn while a free turn runs:
+  the worst frame over the base + 1° on 9 of 23 fast walks (up to 43.0° vs 25.9°), more reversals on 11, the `Scene_0bis` replay's roll 18.9° → 29.3°.
+  At the base those moments fall inside held turns. The fallback (F14) was not needed. Figures and options: [`FAST_ORBIT.md`](../../40_RENDER_SCENE/spec/FAST_ORBIT.md) §8.
+* **What stays**: the turns' recorder records each turn's hold and the pose built / drawn (`0c885d1`); the circle's check, `turn_circle.mjs` (`a46b5a7`).
+* **Next**: test 3 (fix round 2) is the last; a third failure is the abort, back to `1.0.147-`.
+
+## 2026-11-18 — fix round 2 of the fast orbit (test 3, the last): three realisations measured, NOT BUILT — the abort
+
+* **The result**: test 3 failed, so by the owner's rule the fast orbit is aborted, back to `1.0.147-`. The game is the base's again (`1b6b1a7`
+  built, `3ad84da` its revert). Fix round 1's blockers had one root cause: with the start carried, the picture turned as fast as the target, which at
+  30 px a frame turns up to 21 – 52° in a frame — stretches the base never draws (held turns drop the finger's steps there).
+* **Tried**: one follower from the pose drawn (v1); the same capped at the one speed (v2, committed: every free frame within 6.0°, the 20 px walks
+  better on everything but reversals); the gap never growing (v3). At 30 px each fails G6: the picture shows the target's fastest frames, or it lags,
+  the next turn holds and its drawing jumps 55 – 130°. G5's `Scene_0bis` replay: 14.1° → 49.6°. Figures and options: [`FAST_ORBIT.md`](../../40_RENDER_SCENE/spec/FAST_ORBIT.md) §9.
+* **What stays**: the reading `scripts/probes/turn_where.mjs` (`e3a924a`); the recordings `<scratchpad>/fo1c`.
+
+## 2026-11-18 (01:25) — the fast orbit: three real tests failed — THE ABORT done, the night goes on from `1.0.147-`
+
+* **The three tests**: the first build (`45b0d2f`: the circle), fix round 1 (`83a7713`: the circle cured, the picture follows the finger's fastest
+  turns — frames of 17 – 43°), fix round 2 (`1b6b1a7`: every free frame within 6°, but at 30 px a frame a lag of 80 – 137° then a held turn that
+  jumps). Each measured and reverted by its builder ([`FAST_ORBIT.md`](../../40_RENDER_SCENE/spec/FAST_ORBIT.md) §6, §8, §9).
+* **The abort** (his rule, the lead's step): the worktree back on `1.0.147-`; the night's documents and probes carried over (twelve commits picked,
+  the tree identical to `1.0.148-`'s tip, no commit past `892b6a3` touching `src` or `tests`); `1.0.148-` kept local, not pushed, as the record.
+  Nothing deployed. The lead's reading and proposal: §10 there.
+* **Next, in his order**: the dy hold's fix ([`DY_HOLD_REVERSAL.md`](../../40_RENDER_SCENE/spec/DY_HOLD_REVERSAL.md)), the silent entry
+  ([`LEVEL_FACE_ENTRY.md`](../../40_RENDER_SCENE/spec/LEVEL_FACE_ENTRY.md) §15), the audit — all on `1.0.147-`, without the fast orbit.
+
+### 2026-11-18 — package DH: the dy held after a half turn (the owner: *"I cannot revert the dy input"*) — built, not deployed
+
+* **Root cause** (measured first, `DY_HOLD_REVERSAL.md` §5, `0eb58f3`): three. (1) The release was 30 mm of FINGER summed: far out a finger mm is
+  13 – 21 mm of surface, so 30 mm = 430 – 450 mm (two faces of 221 mm, to the opposite level face); and a summed counter, not a hysteresis (a ±2.5 mm
+  wobble reached 21 mm). (2) A hold set with no finger down (the spit's crossing read a frame after the lift, the coast) blocked the next press from
+  its first frame — `asmDySign` never reset. (3) Round a tip a dx-made crossing set the hold again with the zenith's old dy: blocked on the triangle.
+  The same at `c7ac510`, `ef14420^` (identical frame for frame) and `a1a52f0`: *"not here before"* not reproduced.
+* **Built** (`1562bd1`, one commit, `git revert 1562bd1` undoes it): a true hysteresis, band 8 mm; the dy pushing now (none at the gesture's end, none on a
+  sideways step); each crossing's hold replaces the last. 7 mutants red. The probe: `scripts/probes/hold_walk_*` (`3013992`, `a96f382`; runbook
+  `ORBIT_GATES.md` §10).
+* **Gates** (§6 there): every come-back after 12 mm or more back — blocked 112 frames → 0, every distance and crossing; under the band still held, no
+  second crossing; the triangle 56 → 0 – 1 blocked; the coast and the lift leave no hold; the ridge / tilt / across / tip gates identical; the
+  replays identical (`Scene_0`: last digits); `npm run verify` 165 files, 2066 vectors. ⛔ No device look; ⛔ not deployed (D5: his word).
+* **For him to choose**: the band 8 mm (margin 3 mm over a ±2.5 mm wobble) — far out about 0.9 of a face before a dy back is honoured once the
+  turn is over; 6 mm also passed the walks (about 0.7 face, margin 1 mm). The slider: ☰ → TILTED POLE.
+* **Seen and not changed**: under the hold a finger wobbling ±2.5 mm while pushing walks the gizmo AWAY from the edge (the held half dropped, the
+  other half passed: 400 – 450 mm in 144 frames) — the hold's own rule, at the base too; the probe's `Scene_1` walk does not reach the cube's top.
+
+## 2026-11-18 — the silent entry (package ES): NOT BUILT — the free roll cured, the worst frame inside timed turns not
+
+* **Result**: nothing under `src` or `tests` changed (base `bc867a0`); four versions measured and undone, their patches in the session scratchpad
+  (`es/es_build_v1.diff` … `v4.diff`). THE FREE ROLL — `069682a`'s failure — passes everywhere (cw loop 21.4° → 4.8° – 5.3°; base 2.0°). What fails:
+  the whole walk's worst frame (base + 1°) by 0.2° – 1.5° on 2 – 4 walks, always in a timed turn's first frame (a turn advancing on its first, smaller
+  angle while the target moves — its pace is out of the brief's reach), and the exit in the middle of the entry edge 4° – 5° (gate 3°)
+  ([`LEVEL_FACE_ENTRY.md`](../../40_RENDER_SCENE/spec/LEVEL_FACE_ENTRY.md) §16, with the table).
+* **What held**: the switch at 0 bit for bit (the three replays, the 33 level-entry walks); close in every walk within 2.1e-8 of the base; `Scene_1`
+  and `Scene_0` replays identical at 1; v3's entries far out 0° (the ccw loop one turn a loop); the dy hold's blocked frames as at the base.
+* **For him**: accept the worst-frame margin (v3's patch), change the timed turns' pace (a package of its own), or keep today's entry.
+* **Probes** (`d535287`): `level_entry_cmp.mjs`, `level_entry_worst.mjs`, `level_entry_batch.sh` mode c ([`ORBIT_GATES.md`](../../../scripts/probes/ORBIT_GATES.md) §7.3).
+
+### 2026-11-18 — package ES, fix round 1: still NOT BUILT (one walk 0.3° over its limit)
+
+* **Result**: `src` and `tests` as at `bc867a0`; no code commit. Three more versions measured (v5 – v7, the session scratchpad's `es2/`): the
+  picture's target read every frame on the entry side's camera (the middle exit −5° / +4° → −0.2°), the heading held while a camera turn runs and on
+  the frame it lands (the 4 px loop's worst frame 9.1° → 8.0°, `mid_check` 10.8° → 9.7°).
+* **What fails**: the cw loop −x (far and at 0.736) — 8.8° in one frame against 8.5°, the first frame of a short exit turn whose angle grows while it
+  starts — the turns' pace, out of the brief's reach. And a wobble no gate reads: 61 exit turns of about 6° at the 4 px loop's dither (base 118
+  turns of about 3°; the gizmo held 67 frames, base 21).
+* **For him**: as before (accept, change the turns' pace, or keep today's entry); v7 the closest
+  ([`LEVEL_FACE_ENTRY.md`](../../40_RENDER_SCENE/spec/LEVEL_FACE_ENTRY.md) §16, its last paragraphs).
+
+### 2026-11-18 — package ES, fix round 2 (the last): still NOT BUILT — the silent entry left for the owner
+
+* **Result**: `src` and `tests` as at `bc867a0`; no code commit. One more version measured (v8 = v7 + the blend read at the deepest depth reached
+  since the entry, the session scratchpad's `es3/`): worse — the cw loop −x 8.8° → 9.4° (limit 8.5), +x 7.8° → 8.5° (limit 7.9).
+* **Why, read off the frames**: the exit turn there is short (13.6°, base 59°) because the picture kept is close to the face beyond's camera, and
+  in the turn's first frame that camera moves 7.5° with the finger's look (base 0.1°): 6° over 13.6° applied to 21.1° — the turns' pace. Every
+  silent picture makes this exit short; nothing on the free face reaches that frame.
+* **For him**: the timed turn advanced on its current angle (a package of its own), then v7 re-gated whole; or keep today's entry
+  ([`LEVEL_FACE_ENTRY.md`](../../40_RENDER_SCENE/spec/LEVEL_FACE_ENTRY.md) §16, its last paragraphs).
+
+### 2026-11-18 (morning) — the lead: the owner awake; why the fast orbit failed; his pace; FO3 agreed; the silent entry's chain stopped on his word
+
+* **His question** (*"analyze why the fast orbit failed … the specification and the logic behind the fast orbit was not properly drafted"*): he is
+  right — four errors of the lead's specification, read off the night's recordings split into the orbit itself and the roll
+  ([`FAST_ORBIT.md`](../../40_RENDER_SCENE/spec/FAST_ORBIT.md) §11). Like for like, today's game shows 93° of roll per metre of gizmo travel with the
+  gizmo stopped in 39 % of the frames; the second build of the night already showed 24° a metre.
+* **His pace** (*"Use the existing recordings to see the px per frame average and design from that. Then do 2 and 3."* — *"They are in the E:
+  drive"*): his play recorder's sessions of 2026-11-14 read — 571 px a second on average, 1 213 at the top tenth; the gizmo stopped by a turn during
+  31 – 39 % of his moving time (§12.1).
+* **FO3 — the picture a follower of the logic**, the study in his four parts (§12): the ghost's twist about the line through the piece and the look
+  point, one gap, a critically damped follower (200 ms), no stop under 90°; the test rewritten (his hand replayed, per metre of gizmo travel).
+  ✅ **The owner: *"Agreed"*.** To be built on `1.0.149-`, the shadow first, after the charts' audit. ⛔ Nothing built yet.
+* **The silent entry**: fix rounds 1 and 2 not built (v7 the best: one gate missed by 0.3°; v8 worse). ✅ **The chain stopped on his word before its
+  undo** (*"0.3degree failure does jot warrant reverting to previous build"*). The 0.3° read frame by frame: the timed turn's share is advanced on
+  the angle of the frame before and applied to this frame's — today's game has it too; the options (§11.4). v7 is a patch in the scratchpad;
+  `src` and `tests` are `bc867a0`'s.
+* ✅ **The owner (2026-11-18): *"Keep version 7. Continue."*** — the silent entry's v7 put in from its patch (the switch `freeEntryUpright`), the
+  8.8° frame accepted; every gate of §15 re-run on the commit and independently checked. ⛔ The charts' audit launched at 08:20 did NOT run: its
+  six readers stopped on the account's usage limit after ten minutes, nothing read — launched again.
+* ✅ **2026-11-18 (afternoon): the silent entry's v7 as committed (`3c66eb9`) gated** — verify 2091 vectors green; G1 – G6 of `LEVEL_FACE_ENTRY.md` §15
+  re-run on the commit, one headless run at a time, no profile or process left: all pass but the accepted 8.8° frame of the cw loop on −x
+  (§11.4 of `FAST_ORBIT.md`) → `LEVEL_FACE_ENTRY.md` §17.

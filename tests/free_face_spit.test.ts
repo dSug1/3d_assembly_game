@@ -336,10 +336,12 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): the carried headin
   const W = "render/assembly_wiring.ts";
   it("⭐ the camera's spit branch: `freeHeadingAngle` with `asmFree` set, `spitCameraHeading` otherwise", () => {
     const c = fnCode(W, "function assemblyCameraFrameRaw(");
-    const g = "if (st.asmFree !== null) return offsetFrame(uW, freeHeadingAngle(st.asmFree.heading, uW), o.yawRad, o.pitchRad);";
+    // ⭐ (2026-11-17, LF1 (iv′); 2026-11-18, ES) the heading SHOWN (`freeShownHeading`: the carried one, or the picture kept at the entry, stepped toward the layout)
+    // ⭐ (2026-11-18, ES) one heading for both: the free face's shown one, else the side's; the picture before the offsets kept for the next entry
+    const g = "const hS = st.asmFree !== null ? freeHeadingAngle(freeShownHeading(st, uW, side, dtMs), uW) : spitCameraHeading(uW, st.asmZone!.zone.axis, side);"; // ⭐ (v5) the side passed down: the entry keeps it
     expect(c).toContain(g);
     before(c, "const uW = mulM(B, sF);", g);
-    before(c, g, "return offsetFrame(uW, spitCameraHeading(uW, st.asmZone!.zone.axis, side), o.yawRad, o.pitchRad);");
+    before(c, g, "return offsetFrame(uW, hS, o.yawRad, o.pitchRad);");
     expect(c.match(/freeHeadingAngle\(/g)?.length).toBe(1);
   });
   it("⭐ `zoneFinger`: `fingerInFrame`'s own answer with `asmFree` set — before the swap", () => {
@@ -374,14 +376,15 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): the carried headin
     expect(f).toContain("const z = spitZone(st);");
     expect(f).toContain("if (z === null || map === null || B === null || at === null) { st.asmFree = null; return; }");
     expect(f).toContain("if (st.asmFree !== null && st.asmFree.map !== map) { st.asmFree = null; st.asmSpitSide = 0; st.asmSpitU = null; }");
-    expect(f).toContain("if (onTiltedFacet(t.stack, fr.facet, d, edgeMarginM(st))) return;");
+    // ⭐ (2026-11-17, LF1 (iv′)) kept on the face: the heading shown re-read there (`tests/free_entry_upright.test.ts`), nothing else
+    expect(f).toContain("if (onTiltedFacet(t.stack, fr.facet, d, edgeMarginM(st))) { if (fr.entry !== null) st.asmFree = { ...fr, depth: entryDepth(fr.entry, mulM(B, t.surface)) }; return; }");
     expect(f).toContain("const d = t.stack === fr.facet ? 0 : distanceToFacets(map, [fr.facet], t.surface);");
     expect(f).toContain("if (f === undefined || !isFreeFace(mulM(B, f.n), WORLD_UP)) return;");
     // ⭐ (2026-11-16, C2W) the entry through the one function a free face's entry calls whatever its zone (`freeEntry`; its body: `free_face_caps.test.ts`)
     expect(f).toContain("const en = freeEntry(st, map, B, at, t.stack, prev); if (en === null) return; const { ci, from, heading } = en;");
     expect(fnCode(W, "function freeEntry(")).toContain("const heading = freeEntryHeading(freeEdges(at.contour, ci, WORLD_UP), from, st.asmCamLast?.up ?? F.n, F.n);");
-    expect(f).toContain("st.asmFree = { map, facet: t.stack, ci, heading };");
-    before(f, "st.asmFree = { map, facet: t.stack, ci, heading };", turn);
+    expect(f).toContain("st.asmFree = { map, facet: t.stack, ci, heading, layout: heading, entry, depth: entry === null ? 0 : entryDepth(entry, mulM(B, t.surface)), offset: null, side: 0, turning: false };"); // ⭐ (LF1) + the layout, the entry edge, the depth, the offset; ⭐ (v5, v7) + the entry's side not yet read, no turn seen yet
+    before(f, "st.asmFree = { map, facet: t.stack, ci, heading, layout: heading, entry, depth: entry === null ? 0 : entryDepth(entry, mulM(B, t.surface)), offset: null, side: 0, turning: false };", turn);
     expect(f).not.toContain("asmEdgeHold"); // no dy hold at an entry
     const x = fnCode(W, "function freeFaceExit(");
     expect(x).toContain("const turn = exitTurnRad(fr.heading, edges, to);");
@@ -391,7 +394,7 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): the carried headin
     expect(x).toContain("st.asmFree = null; st.asmSpitSide = 0; st.asmSpitU = null; crossTurn(st, { at: null, uWas: null, carry: true, paced: false, hold: held });");
     expect(x).not.toContain("crossingHold(");
     const c = fnCode(W, "function crossTurn(");
-    expect(c).toContain("const mixWas = st.asmZoneMix; if (c.paced) seamOutStart(st); else if (st.asmCamLast !== null) seamTurnStart(st, false); if (c.uWas !== null) seamEase(st, c.uWas); else if (c.carry) easeCarry(st, mixWas); st.orbitInertia.stop(); if (c.hold !== 0) st.asmEdgeHold = { sign: c.hold, back: 0 };");
+    expect(c).toContain("const mixWas = st.asmZoneMix; if (c.paced) seamOutStart(st); else if (st.asmCamLast !== null) seamTurnStart(st, false); if (c.uWas !== null) seamEase(st, c.uWas); else if (c.carry) easeCarry(st, mixWas); st.orbitInertia.stop(); st.asmEdgeHold = holdAtCrossing(c.hold);");
     // ⛔ the sway: nothing drawn, picked or seen by the camera decides — the pose shown and the up shown only continue the picture
     for (const s of [f, x]) expect(s).not.toMatch(/getBoundingInfo|pickWithRay|absolutePosition|computeWorldMatrix|cameraPrev|modelCast|gizmoNormal/);
     const cf = fnCode(W, "function contourOfFacet(");
@@ -411,7 +414,7 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): the carried headin
     const code = codeOnly(raw(W));
     const reads = [...code.matchAll(/[^\n]*st\.asmFree !== null[^\n]*/g)].map((m) => m[0]);
     expect(reads.length).toBe(5);
-    // the only writes: the start, the clears, the entry
-    expect(code.match(/st\.asmFree = /g)?.length).toBe(6);
+    // the only writes: the start, the clears, the entry — ⭐ (2026-11-17, LF1 (iv′)) + the depth on the face and the heading shown (the camera's frame)
+    expect(code.match(/st\.asmFree = /g)?.length).toBe(8);
   });
 });

@@ -1,6 +1,6 @@
 # Entering a level face — why the picture shakes there, and what would stop it (2026-11-17)
 
-> **STATUS** · ✅ **APPROVED BY THE OWNER 2026-11-17** (*"Agreed to every recommendation. Proceed."*) — the build as briefed: §9; as built: after it. A study with measurements (an Opus agent, 2026-11-17), on the code of
+> **STATUS** · ✅ **APPROVED BY THE OWNER 2026-11-17** (*"Agreed to every recommendation. Proceed."*) — the build as briefed: §9; as built: after it; ⛔ **THE CHAIN STOPPED on his word 2026-11-17** (§13: (A) built and LIVE, (iv′) and the timing rule built then reverted, (v) stopped at its root cause §12); a fast orbit's turns merged: PROPOSED §14 — ✅ the owner's go the same night, the build → [`FAST_ORBIT.md`](FAST_ORBIT.md). ⛔ The silent entry (§15) NOT BUILT, 2026-11-18: §16 — ⭐ the chain stopped on the owner's word before its undo (*"0.3degree failure does jot warrant reverting"*), the 0.3° read frame by frame and the options → [`FAST_ORBIT.md`](FAST_ORBIT.md) §11.4; ✅ **the owner (2026-11-18): *"Keep version 7. Continue."*** — v7 PUT IN (the switch `freeEntryUpright`), its gates re-run on the commit. A study with measurements (an Opus agent, 2026-11-17), on the code of
 > `e252d0f` (= live `main` `6c0a165`). Every candidate was prototyped in a throwaway worktree and undone; nothing is committed under `src` or `tests`.
 > **OWNS** · the entry and the exit of a level face (the bottom of `Scene_0` / `Scene_0bis`, any level top) and the timing of every camera turn ·
 > **READ WITH** · [`TILTED_POLE_CLOSE_IN.md`](TILTED_POLE_CLOSE_IN.md) §1 – §3 (the rules T1 – T12, the carried heading),
@@ -490,74 +490,10 @@ path. Where the square camera turns BESIDE a transition's turn (close in: the ti
 the other could draw another path — that is measured first; what does not hold the contract keeps today's pace and is written here with the reason.
 The gate's instrument: `scripts/probes/turn_rec.mjs` (`DUMP=` on the probes) and `scripts/probes/turn_table.mjs` (every timed turn, base against new).
 
-### 11.1 As built (2026-11-17: the gate `6236fb4`, the rule `e7ff2ed` — ⛔ REVERTED by `cb89bdd`, §11.2; this section is the record)
+### 11.1 As built (2026-11-17: the gate `6236fb4`, the rule `e7ff2ed` — ⛔ REVERTED by `cb89bdd`, §11.2)
 
-**In one paragraph.** The rule is built as §9 states it (`turnDurationMs`, `turnStepRad` in `src/input/orbit_tilt.ts`; three dials `tiltMinMs` 250,
-`tiltMaxMs` 333, `tiltSmallDeg` 30, sliders after the speed in ORBIT › TILTED POLE, URL overrides). It paces `zoneStep`'s turns, the paced entry's
-time tail and the way out's ceiling. **One thing differs from the brief, measured first**: a turn with the square camera turning BESIDE it keeps the one
-speed (`turnDials`, `turnDialsOf`: kept for the turn's life). Built without it, the rule changed those turns' path. So close in nothing changes, and the
-52° entries close in stay 9 frames. Far out every timed turn follows the rule. With both durations at 0 the three replays are identical in every frame.
-
-**Why the exception (measured with the rule alone, before the build above).** Close in, a crossing runs two clocks: the transition's turn and the
-square camera's pitch (`TILTED_POLE_CLOSE_IN.md` §12). Slowing one and not the other drew another picture. The close-in half turns (`tilt_check` on
-`Scene_0` / `Scene_0bis`) ended 171.8° from where they began instead of 178° – 180°, 9° – 11° off the base's route on the way, up to 11.3° in a frame.
-On `Scene_1`'s dy onto the top, 12° in 2 frames then the square camera's own 72° became ONE turn of 99° of path for 89°, 72° off the base's route.
-Timing the square camera too would rebuild the two clocks (§12's option A, reverted with package A): not this package's.
-
-**Every timed turn on the gates** (the base `0ab1f9f` → now; frames at 60 a second; "rule": the frames the rule gives; "one / path": the one rotation
-and the path drawn, degrees; the largest frame in degrees). Like turns are grouped; the full tables: `node scripts/probes/turn_table.mjs` on the
-recordings in the session scratchpad's `lf2/base` and `lf2/def`.
-
-| where (the gate) | angle | frames | rule | one / path | largest frame |
-|---|---|---|---|---|---|
-| `Scene_0bis` far out and at 0.736, the entry onto the bottom (`level_entry` b, every walk) | 25° – 41° | 6 – 7 → **15 – 16** | 15 | 31.5 – 37.0 / 34.5 – 40.7 → 33.8 – 38.5 / 39.7 – 45.1 | 7.2 – 7.7 → 5.4 – 6.2 |
-| the same, the exit onto the triangle, ccw | 83° – 89° | 15 → 16 | 15 | 84.0 – 84.2 / 86.1 – 88.9 → 89.1 – 89.4 / 91.2 – 94.4 | 6.1 – 6.9 → 6.0 – 6.9 |
-| the same, the exit onto the rectangle, cw | 61° – 69° | 12 – 13 → 16 | 15 | 66.5 – 72.4 / 72.0 – 77.4 → 58.4 – 65.5 / 63.3 – 72.3 | 6.9 – 7.5 → 5.6 – 6.0 |
-| the same, back out over the entry edge | 32° – 41° | 7 → 15 | 15 | 36.7 – 37.0 / 40.1 – 40.7 → 39.7 – 40.4 / 44.5 – 44.8 | 6.6 – 7.3 → 4.9 – 5.5 |
-| the same, out in the face's middle | 11° → 23° (the end pose moves) | 2 → 12 | 12 | 10.6 / 10.8 → 23.2 / 23.3 | 5.9 → 5.9 |
-| the spit's far edge far out (`b_far`, `b_dy`, `across_check`, `ridge_check` across, `MODE=pole`) | 175° – 210° | 25 – 31 → **20 – 21** | 20 | 174.1 / 185.6 → 171.2 / 181.3 (pole); 174.2 / 182.6 → 171.3 / 178.5 (across) | 6.6 – 8.6 → 9.4 – 10.9 |
-| the way out of close in, 4 px a frame (`MODE=out`, `Scene_1`) | 180° | 37 → 25 (95 % in 35 → 24) | 20 | 179.9 / 189.7 → 179.9 / 187.4 | 6.0 → 9.0 |
-| the way out, 1 px a frame — PACED BY THE FINGER (gate 4) | 180° | 46 → 46 | — | identical | 6.0 → 6.0 |
-| close in, every turn with the square camera beside it: the tilt's entries and exits, the half turns, the 52° entries, the ridge (`tilt_check` every mode, `level_entry` a, the close-in walks of b) | 6° – 180° | identical | (the one speed) | identical (`Scene_1`'s ridge within 0.5°) | identical |
-| the square camera's own turns (no transition) | 6° – 90° | identical | (stays, §11) | identical | identical |
-
-**Against the contract.** (1) Start and end: within 2° of the base on every far-out turn that starts from the base's state (the first turn of each
-walk: 0.2° – 1.6°); a later turn starts from another state (the gizmo held longer before it) and is read by its shape only. (2) **The route on the way
-is NOT exactly the base's on the far-out entries: 4° – 7° off at the same fraction of the path, the path 3° – 6° longer (ratio 1.10 → 1.17 – 1.19).**
-Read frame by frame (`b_back_p_far`): the turn's first two frames carry the gizmo's own ease (13 mm a frame) and the piece's spring, which the rule does
-not time — 5.6° and 4.8° in those frames, then 2° a frame; at the base the same motion was inside its 6° a frame. The end pose moves while the turn
-runs (its whole 36.7° → 37.7°), and the brief's rule for that ("the pace read each frame from the whole as it is now") is kept. (3) The far-out half
-turns end 2.9° short of the base's end at their last frame; the picture then reaches the base's place, and the two recordings are identical from the
-base's last frame of the turn on (`MODE=pole`, read frame by frame). **The tolerance taken for "the same pose at the same fraction": 3°** — the far-out
-entries exceed it (4° – 7°): reported, not hidden.
-
-**Turns whose path is over 1.15 × the one rotation + 5°** (package A's gate). New, not so at the base: (a) `b_far_p_far`'s second far-edge half turn
-(the way back) — at the base 143° (one rotation 144.1°, path 150.7°), now **−208°** (151.4°, 216.3°, ratio 1.43, 12° in a frame): the flip of side LF1's
-(iv′) met (§10.3) — the half turn's two-target drawing (`poseFramingTwo`) goes the long way for a start pose a degree different; the root is LF3's;
-(b) the `Scene_0bis` replay at the defaults, another play from frame 315 (drag 31): 135° drawn with 235° of path (1.67, 13.8° in a frame), the same
-drawing. So at the base and still: `b_ccw_p_d515` 3.36, `b_ccw_p_close` 2.48, `b_cw_m_close` 2.40, `b_cw_m_d515` 1.38, `b_ccw_m_d515` 1.28,
-`b_cw_p_d515` 1.26, the first `b_far_p_far` half turn 1.42, `b_dy_x190`'s far edge 1.37 → 1.39, the close-in ridge half turns 1.20 (LF3's, or close in
-and untouched).
-
-**The other gates.** `view_jumps`: no frame over 45° (the `Scene_0bis` replay's largest 14.1° → 11.8°); `replay_health` clean (0 errors, no gizmo step
-over 150 mm; `Scene_0bis` the camera's up below level 32 → 34 frames, its other play); `Scene_1`'s replay identical at the defaults, `Scene_0`'s from
-frame 1398 (the way out, `A22`: 7 → 8 frames); `tilt_check` default "1 0 4" identical (8.7° / 8.8° / 8.9°), ridge identical, press and rim with no
-timed turn; `MODE=pole` `Scene_0bis` 8.6° → 10.9° a frame (its half turns at 9° a frame, the rule's); the tilts made and left and the holds as at the
-base in every `tilt_check` run; `across_check` the half turn then the hold as at the base, 7.4° → 9.9°; `mid_check` reaches the middle, the side
-changed 0 times, one turn (2 → 11 frames, 76° → 81°, 6.2° → 5.8° a frame) — its setup ran on another track (a turn of the climb held the gizmo 14
-frames instead of 2): parked elsewhere, the run's dy holds 1 → 4. `ridge_check` across, far out: 7.4° → 10.0° (its half turns). The free roll (LF1's
-gate): equal or lower on every walk (2.6° at most far out). Nothing else ends elsewhere than what a longer or shorter hold moves (the probes' finger
-goes on while the gizmo is held).
-
-**§9's expected table against the measured**: the far-out entries 6 – 9 → 15 – 16 frames ✓; the far-out half turns 25 – 31 → 20 – 21 ✓ (the owner's
-*"50% faster"*: `Scene_0bis`'s top ridge far out, `ridge_check` across, 30 → 20); the quarter turns 15 → 16 ✓; under 30° 2° a frame ✓ (the free face's
-exit in its middle, 11° → 12 frames). ⛔ **Not as expected: everything close in** — the 52° entries stay 9 frames, the close-in half turns 30 – 31, the
-first-frame peaks of `TILTED_POLE_CLOSE_IN.md` §12 — because of the exception above.
-
-**What is left — the owner's.** (1) Close in: to put those turns under the rule, the square camera's pitch must become part of the one turn (§12's
-option A), then the rule on that one clock; or keep them at the one speed. (2) The far-out entries' route 4° – 7° off the base's on the way (the gizmo's
-ease and the piece's spring, untimed, in the turn's first frames): accept it, or time the turn from the frame those settle. (3) The long way of a half
-turn's drawing, (a) – (b): LF3. No device look (rule 5).
+Moved WORD FOR WORD (2026-11-17, to make room for §15) → [`2026-11-17_lf2_timing_rule_as_built.md`](../history/2026-11-17_lf2_timing_rule_as_built.md):
+the rule as built, what was measured before building, the table of every timed turn base against new, what did not follow the rule, what was left.
 
 ### 11.2 Reverted (2026-11-17, `cb89bdd`): the rule changes the camera's path far out — the owner decides
 
@@ -584,3 +520,277 @@ Close in nothing had changed (the exception of §11.1). So what was left of the 
 4. Close in, unchanged: the rule there needs the square camera's pitch inside the one turn (`TILTED_POLE_CLOSE_IN.md` §12, option A).
 
 No device look (rule 5).
+
+## 12. LF3 — (v), the close-in roll the long way round: the root cause, measured (2026-11-17, an Opus agent — base `892b6a3`, the code of `0ab1f9f`)
+
+**The result first.** It is NOT a branch cut (R-a): the blend is exact and its kept branches never flip. It is the framing's geometry near its
+degenerate case (R-b): close in, at the side exit, the camera is 2° – 13° off the line from the piece to the aim and sees the two only 0.6° – 1.3°
+apart. There the two angles `poseFramingTwo` blends — the camera's place round that line (φ) and the separation's angle on the glass (q) — swing tens
+of degrees for a small move of the turn's end pose. The blend follows them, as it must, past the half turn. And when the two come under 0.5° apart
+mid-turn, the framing gives up (`null`) and `zoneMixPose` draws the other drawing (about the piece) for the turn's last frames: a jump. The one rotation
+about the piece draws the same turns straight (96° – 105° of path).
+
+**The base.** LF2's rule is reverted (`cb89bdd`): the base is the one speed (6° a frame), not the timing rule. Every gate recorded at `892b6a3` into the
+session scratchpad's `lf3/base`: identical to LF2's base (`0ab1f9f`'s code) in every frame and every line (the replays 2794 / 2794 frames, the 27 + 6
+level-entry walks, `tilt_check` every mode, `mid_check`, `across_check`, `ridge_check`).
+
+**How it was measured.** A throwaway probe (never committed) recorded, every frame of every turn drawn by `zoneMixPose`: the start pose, this frame's
+end pose, the piece, the share `k`, the angles kept (`FramingKeep`) before and after, the rule, whether the framing returned `null`, the pose drawn and
+the pose about the piece. A replica of `poseFramingTwo` with its internals exposed reproduced every drawn pose to 0.0000°. The recording itself changed
+nothing (every gate identical to the base).
+
+**The four walks** (`Scene_0bis`, mode b of the gate; "off the line" = the camera's angle off the line piece → aim; "apart" = the piece and the aim seen
+from the camera):
+
+| walk, turn | apart at the start / end pose | off the line | what the frames show | drawn: one rotation / path / largest frame | about the piece |
+|---|---|---|---|---|---|
+| `b_ccw_p_close` f492 | 1.3° / 2.0° | 4° – 6° | φ1 moves 38° → 111° in 9 frames (the kept `dphi` 160° → 233°), q1 nearly still: the end pose's φ crosses the half turn, the blend keeps its way | 112.5° / **278.5°** / 26.6° | 102.0° / 105.0° / 9.3° |
+| `b_ccw_p_d515` f442 | 0.73° / 1.19° | 7° – 12° | `dq` 168° at the first frame (near the cut), then 220° as q1 swings 50°; from frame 12 the two come under 0.5° apart: the framing `null`, the pose about the piece drawn for the 6 last frames | 102.0° / **342.7°** / **128.2°** | 102.0° / 105.0° / 9.3° |
+| `b_cw_m_close` f428 | 1.2° / 1.1° | 3° – 4° | `dphi` 141° → 196° while `dq` 129° → 74° | 112.6° / **270.0°** / 19.2° | 96.0° / 97.7° / 6.7° |
+| `b_cw_m_d515` f584 (and `b_cw_p_d515` f578) | 0.64° / 0.64° | 6° – 7° | the framing `null` from k 0.53 (0.77): the drawing switched inside the running turn | 96.0° / 132.0° (121.4°) / 23.8° (14.1°) | 96.0° / 97.7° / 6.7° |
+
+**Why not R-a.** The kept branches (`nearestTurn`, `FramingKeep`) do exactly their job: each angle continuous from frame to frame. Taking "the short
+way" again mid-turn would jump the picture by k × 360° — the very leap `FramingKeep` was built to stop (112° – 161° in one frame, 2026-11-14). The long
+way is what a continuous blend of φ and q MUST draw once the end pose's φ has crossed the half turn — and it crossed only because φ is ill-conditioned
+there: the end pose's one rotation from the start went 160° → 102° (closer), while its φ went 73° further.
+
+**Why it is the geometry (R-b), and where.** φ is the camera's place round the line piece → aim; q the direction from the piece to the aim on the
+glass. With the camera a few degrees off that line and the two under ~1.5° apart, both are angles of a very small circle: a millimetre of the end
+pose's eye (its square camera turning beside the turn, the piece's spring) is tens of degrees of φ or q. Far out (the two 10° – 20° apart) they are
+well conditioned. The drawing is decided ONCE, at the turn's first frame (`zm.rule`), from "not degenerate yet" (0.5° apart) — and these turns start at
+0.6° – 1.3°, then drift under 0.5°.
+
+**What is NOT this cause.** `b_ccw_m_d515` f446 (90.8° for 70.8°, ⚠ path) and the 4-frame first parts of the close-in side exits (12.1° – 12.2° in a
+frame) are the two clocks of `TILTED_POLE_CLOSE_IN.md` §12 (the square camera's pitch running beside the turn) — not in this chain.
+
+**Where the fix must go (step 2):** the choice of drawing at the turn's first frame, from the two end poses: about the piece where the framing is too
+close to its degenerate case to be trusted, or where its own path would exceed the one rotation. Never switched inside a running turn.
+
+## 13. The deploy, the owner's look, the chain stopped on his word (2026-11-17, evening)
+
+* **Deployed** (the owner: *"deploy the fix"*): live `main` `c343c4f` = `1.0.147-` at `892b6a3` (20:46) — `src` and `tests` equal to `3ef7ba7`: (A)
+  alone; 165 files, 2062 vectors.
+* **His look**: *"I am happy with the build as it is now. Is it necessary to continue the chain ?"* — it was not: only LF3 was left, for a defect he
+  had not reported. His word: *"stop the chain and clear its leftover processes. save the builder's unfinished prototype as a patch outside the
+  project, then restore the folder to the deployed commit. record in the documents the deploy, the stop on your word, and the open point. Do not audit
+  yet. I want to check one thing before"* (§14).
+* **Stopped at 21:13**: LF3 in its step 2. KEPT: §12 (the root cause, `3553f79`). NOT in the tree — its prototype, never committed, not audited:
+  `lf3Drawable(a, b, A)` in `src/input/orbit_tilt.ts`, asked ONCE at a turn's first frame from its two end poses (`zoneMixPose`: `zm.rule` 0 → 2, the
+  turn drawn about the piece, never switched inside a running turn): the framing's blend walked in 16 steps; about the piece when the framing gives up
+  on the way (`null`), when the piece and the aim come under **0.9°** apart, or when they come under **3°** apart AND the framing's path exceeds 1.15
+  × the one rotation + 5°. Its only reading (the builder's, the gate's nine close-in walks; not audited): the four long-way turns drawn straight —
+  `b_ccw_p_close` f492 278.5° → 105.0° of path for 102.0°, `b_ccw_p_d515` f442 342.7° → 105.0°, `b_cw_m_close` f428 270.0° → 97.7° for 96.0°,
+  `b_cw_m_d515` f584 132.0° → 97.7°; the two-clocks turn (`b_ccw_m_d515` f446, 90.8° for 70.8°) as before. NOT read: the replays, `tilt_check`,
+  `mid_check`, the far-out walks; no vector. The patch (97 lines): `orbit_charts_lf3_prototype_2026-11-17.patch` in the folder `_saved_patches` beside
+  the worktrees.
+* **The code now**: `src`, `tests`, `scripts` = `892b6a3`'s, byte for byte; the worktree clean.
+* **Step 3** (the audit of the whole diff, the final docs): NOT run — *"Do not audit yet"*.
+
+**Open — none is owed for the build the owner is happy with; each waits for his word:**
+
+| # | open point | where it stands |
+|---|---|---|
+| 1 | Close in on `Scene_0bis`, at a corner's side exits the picture rolls the long way round (262° – 274° for ~105°, up to 128° in one frame) — in the live build; not reported by the owner | the root cause §12, the prototype above; reopened if it shows on a game scene |
+| 2 | `Scene_0bis` far out: the entry turn onto the bottom near an end (25° – 45° in 6 – 9 frames), the two opposite turns of a corner loop | as built; (iv′) reverted — his options §10.3 |
+| 3 | One rule for every tilt (333 ms / 250 ms), with it the top ridge's half turn *"50% faster"* | reverted — his options §11.2; the ridge as built |
+| 4 | The 27° back over the entry edge near an end (the calm's look) | never studied (§8) |
+| 5 | A fast orbit over many edges: the turns merged | PROPOSED §14 |
+
+## 14. A fast orbit over many edges — one follower instead of a train of turns (PROPOSED 2026-11-17 — ✅ the owner's go that night: the build as briefed and as built → `FAST_ORBIT.md`)
+
+**The owner** (verbatim): *"when I orbit fast, the gizmo travels fast on the orbit's surface. This is not a problem for large surfaces such as the
+cube of scene 1 but this is an issue on the spit heptagon in scene 0bis because there are a lot of edges and corners and each crossing triggers a
+movement of the camera: orbiting fast creates a lot of rapid movements of the camera. Is there a way to smoothen these movements, for example by
+smoothing the curve of the camera movement between an initial quaternion and a final quaternion and ignoring the intermediate quaternion (this would
+avoid unecessary turns if the intermediate quaternions are caused by intermediate crossings of edges or corners) ? Do not build: check the patent-free
+state-of-the-art literature, propose something."*
+
+**Measured, from recordings already on disk** (the session scratchpad's `lf3/base` = the deployed code; the gates' scripted replay, the SAME finger on
+each scene, 2794 frames = 46.6 s; a transition's turn = the recorder's `mix`; no new run):
+
+| scene | a transition's turns | their frames (the gizmo held) | under 15° / 15° – 45° / 45° – 100° / over 100° |
+|---|---|---|---|
+| `Scene_0bis` | **22** | 229 (8.2 % of the play) | 4 / 6 / 9 / 3 |
+| `Scene_0` | 4 | 33 (1.2 %) | 2 / 0 / 2 / 0 |
+| `Scene_1` | 4 | 40 (1.4 %) | 2 / 0 / 1 / 1 |
+
+On `Scene_0bis` 14 of the 22 turns start within 30 frames (half a second) of the end of the one before, in 6 trains: 90° (16 frames), 5° (1), 174°
+(30) inside 1.08 s — 282° turned, the train's last picture 116° from its first; 55° (10), 91° (17) inside 0.50 s — 160° for 68°; 120° (21), 32° (6) —
+170° for 91°. The 6 trains together: 1034° turned, 688° first to last. ⚠ A crude upper reading of what merging could save: "first to last" includes
+the orbit's own motion between the turns, and with the gizmo free the walk itself would differ. ⚠ The square camera's own turns close in (they hold
+the gizmo too) are not counted. ⚠ No gate walks faster than 6 px a frame. At 4 px a frame the corner walk (`b_ccw_p_far_px4`) dithers across the
+bottom's edge: 119 turns of 2° – 4°, two frames each, the gizmo held each time — LF1's builder read it as the probe's steering; a finger running along
+an edge would do the same (not shown on a device).
+
+**Why today's game cannot merge them.** T5 (2026-11-10: *"once the tilt starts, it cannot be rolled back … and shall complete"*, the decision *"1-b"*,
+`POLAR_ORBIT_CLEANUP.md` §9.7): every turn runs to its end on its own clock and **the gizmo is held meanwhile** (`tiltClampStep` → `turnHoldsGizmo`:
+each orbit step refused, the finger's travel dropped, the coast stopped). So the next crossing can only come AFTER the turn has ended: there is never
+an intermediate target to skip, and a fast finger gets stop – turn – go – stop – turn. His idea needs T5 relaxed where it has no job. ✅ The other half
+exists already: a change of frame arriving while a turn runs starts the new turn FROM THE PICTURE SHOWN (`zoneSwitch`, `seamTurnStart`,
+`freeFaceFrame`: `from: poseShown(st)`) — the turn before is left where it was.
+
+**The literature** (the test applied for "patent-free": published in print over 20 years ago, or a patent listed as expired — ⚠ a reading of dates,
+not a lawyer's opinion):
+
+| technique | source | what it gives here |
+|---|---|---|
+| The one rotation between two orientations (slerp) | Shoemake, *Animating rotation with quaternion curves*, SIGGRAPH 1985 | the straight turn between two pictures — the game's `poseAboutPiece` already |
+| A critically damped follower: it chases a target that may move or be replaced, never overshoots, keeps its speed across a change of target | Lowe, *Critically Damped Ease-In/Ease-Out Smoothing*, Game Programming Gems 4, 2004, pp. 95 – 101 (the engines' "smooth damp"); second-order tracking in control theory, far older | the camera eases toward the NEWEST target; a target replaced before the ease has built up leaves almost no trace |
+| Arrive: full speed, then slowing so as to stop on the target; re-aimed every frame | Reynolds, *Steering Behaviors For Autonomous Characters*, GDC 1999; the trapezoid speed profile of motion control | a bounded speed (the one speed) with an eased end |
+| A band at a trigger (hysteresis) | classic | T11's band, already |
+| Moving round an object close to its surface: the camera turned EARLY at a corner by looking ahead along the motion, the motion clipped, an optional smoothing of the eye and the aim | Khan, Komalo, Stam, Fitzmaurice, Kurtenbach, *HoverCam*, I3D 2005; US 8,044,953 (priority 2002-06-28; listed expired, 2025-01-18) | the look-ahead — ⛔ NOT proposed: it changes what drives the camera (out of scope), and needs a forecast for each kind of trigger |
+| A transition as an offset on the new target, faded out | Bollo, *Inertialization*, GDC 2018 | the same result as Lowe's follower — ⛔ NOT used: recent, its patent status not established |
+| The survey | Christie, Olivier, Normand, *Camera Control in Computer Graphics*, Computer Graphics Forum 27(8), 2008 | where reactive (follower) methods stand against planned paths |
+
+**The proposal — ONE FOLLOWER, three parts, each measurable alone:**
+
+1. **The newest target wins** — as coded today when a turn is replaced: a crossing never queues a turn, it redirects the running one from the picture
+   shown. Nothing to build: it only shows once part 2 lets a second crossing happen.
+2. **The gizmo is not held for a turn under 90°** (`turnHoldsGizmo`): the finger goes on, read off the picture drawn (as a spit's `zoneFinger` reads
+   it today). Over 90° (a ridge's or a far edge's half turn, where the finger's reading flips) today's hold and T9's dy hold stay; the close-in
+   entries (T10) and the square camera's own turn stay.
+3. **The pace eased** (a critically damped follower, its speed capped at the one speed): the first frames of a turn are small, so a target replaced
+   within about a tenth of a second is almost never drawn (his *"ignoring the intermediate"*), and a small turn no longer reads as a jitter (his
+   criterion of 2026-11-17; what LF2's rule was for). ⚠ LF2's lesson binds it: a pace changes the PATH far out (the gizmo's ease, the piece's spring,
+   the two-target drawing) — so part 3 is measured after parts 1 – 2, alone, with the path gate.
+
+**What it bends, said before any build:** T5's *"the gizmo held while it runs"* (under 90°) and *"cannot be rolled back … shall complete"* (a turn may
+be REDIRECTED by a new crossing — never undone by the same crossing inside the band, T11). The reasons he gave for T5 (R1 no oscillation at an edge,
+R2 never left half done, R3 a bounded speed) are kept by: the band (R1), the follower always arriving at the newest target (R2), the cap (R3).
+
+**Obstacles, and the fallback for each:** (a) a finger running ALONG an edge — crossings in a row, the picture between the two frames' — the band; if
+it still shows, a turn redirected BACK within a few frames keeps the hold (today's rule there); (b) T6 — during a redirected turn the picture is not
+yet upright on the face under the gizmo: bounded by the turn's own time (≤ 0.25 s under 90°); (c) the two-target drawing restarted mid-turn near its
+degenerate case (§12): today's defect, not a new one — but more restarts; (d) close in, the square camera's pitch beside the turn (the two clocks):
+out of this proposal — far out and part way first.
+
+**Looked at and not proposed:** a wait before every turn (a lag at every slow crossing — against T4); a forecast of the next crossing (five kinds of
+trigger to forecast); fewer frames at speed (reopens what drives the orbit).
+
+**Before any build:** his word; then a throwaway prototype (parts 1 – 2 are one predicate), measured headless on the three scenes with FAST walks
+added to the gate (20 – 30 px a frame: round the corner, along an edge, over the ridge), read with the path gate and the free roll; his look; then
+part 3.
+
+**No drift — the owner's question** (2026-11-17: *"The newest target wins: how is it done. How do you make sure that after an orbit moving the gizmo,
+the final transform of the camera of today's built will be the final transform of the camera with your new build i.e. no drift will happen by
+redirecting the running turn instead of queuing the turns."*), answered from the code:
+
+* **How a turn is made** (the camera's stage in `green_box_wiring.ts` → `zoneMixPose`): every frame the TARGET pose is built from the state alone
+  (`cameraFrameNow`: the frame the orbit is in, its angles, the heading carried on a free face, the spit's side, the calm, the square camera). A turn
+  (`asmZoneMix`) is a fade laid over it: a snapshot of the pose shown at its start (`from`) and a share `k` 0 → 1; the pose drawn lies between the
+  snapshot and THIS frame's target. At `k` = 1 the turn is deleted and the pose drawn is the target itself (`zm === null → return to`). A turn writes
+  nothing into the state. Redirecting = the turn replaced by a new one whose snapshot is the pose shown at that instant (`from: poseShown(st)`, `k` 0
+  — `zoneSwitch`, `seamTurnStart`, `freeFaceFrame` today).
+* **So nothing is summed.** The final camera is not the start plus the turns played: it is the target of the final state. Three turns one after the
+  other, or one turn redirected twice, end on the same pose to the last bit — IF the state is the same. A change of frame SETS every angle from the
+  map at the gizmo's exact place (`seamRebase`); it adds nothing to them.
+* **What must hold: the state never reads the fade.** What reads it today (every use of `asmCamLast`, `cameraPrev`, `drawnDir`, `dirAt` read): (1) the
+  finger (`zoneFinger`: the picture drawn — the rule, the gizmo goes the finger's way on the glass); (2) a free face entered with NO entry edge — a
+  pick-up on it, or the gizmo over a whole face in one frame (`freeEntryHeading`'s fallback: the layout nearest the up drawn); (3) a zone's switch
+  exactly at a pole of the world's map (`poleYawKept`: the heading of the direction drawn, eased with the turn). ⭐ `shownHeading` already reads the
+  TARGET's frame (`cameraPrev`, set before the fade). Today the gizmo is held, so (2) and (3) nearly always read a settled picture. In the proposal
+  (2) and (3) read the TARGET (`cameraPrev`'s up, the direction without its ease) — the value today's settled picture gives. (1) stays: it is why the
+  gizmo's ROUTE under a fast finger will differ from today's (today that travel is dropped) — the camera for a given route does not.
+* **Route, not drift.** For one end place the camera depends on the ROUTE already, by the owner's rules (the heading carried onto a level face by its
+  entry edge, the spit's side, the tilt's latch and bands). The claim: the same route of faces to the same place → the same camera as today's,
+  exactly. ⛔ NOT claimed: the same finger gesture → the same end place (today's hold drops finger travel; that is what goes).
+* **How it is checked, in the prototype's gate:** (i) on every frame with no turn running, the pose drawn equals the target, to the last bit; (ii) a
+  fast walk recorded in the prototype (the orbit's angles, frame by frame), then the SAME angles replayed with every turn whole at once
+  (`tiltRollDegS` 0 — no fade at all): on every frame the state identical (the zone, the tilt's frame, the heading carried, the spit's side, the map's
+  angles), and at the end the camera's transform identical to the last bit. A difference names a reader of the fade — found and corrected before any
+  build.
+
+## 15. The silent entry ORDERED (the night of 2026-11-17) — (iv′) with its two cures: the build as briefed
+
+**The owner** (verbatim), after the entry turn was explained to him (§2): *"I am not happy with that: why does the level face have to align with a
+direction lying in the face within a tenth of a second ? i.e.: 1) Why it cannot keep the quaternion it inherited from the previous face ? Or 2) why
+can't we make the turn slower instead of a tenth of a second ?"* — answered with §4.3's table (kept for the whole face: the entry 0°, a straight dy
+370 mm aside; kept at the entry, then turned to the layout over the face's first half: 0°, 112 mm) and with the fast orbit's eased pace (his 2). Then:
+*"modify tonight's job list as follows: once you have successfully completed branch 1.0.148- or you have reverted to 1.0.147-, insert the build and
+test of entry silent with "Kept at the entry, then turned to the face's layout over its first half" before you perform the full audit."* · *"Kept at
+the entry, then turned to the face's layout over its first half: I assume this is valid for any level face"* · *"also, make sure that this can be done
+after the fast orbit (i.e. the fast orbit does not need the entry silent built beforehand"*.
+
+**The decisions taken for him to review** (Fable; he asked for no question):
+
+| # | decision | why |
+|---|---|---|
+| E1 | (iv′) rebuilt from `069682a` (§10.3) WITH the cures (a) AND (b): the layout's share by the square camera's share, not by the view's elevation; the heading's change bounded per frame at the tilts' one speed | §10.3: the two causes of the 21° frame; (a) + (b) is "the one that would answer every reading measured" |
+| E2 | Behind the switch `freeEntryUpright`: **1 the default; 0 = the entry edge's layout at once (today), bit for bit** | his approval of 2026-11-17 (§9) |
+| E3 | **Any level face — yes** (his assumption): the rule names no face. It acts wherever a face carries a heading (a FREE face: level, top or bottom, any outline, entered over any edge). Where it shows: a spit zone's level faces far out and part way — the only place the entry turn exists. Close in the camera is square to the face (the layout exactly, cure (a)); a level face at gravity's pole far out (`Scene_1`'s top and bottom) is the polar orbit's — no heading handed over, no entry turn (D-T3). ⚠ Measured on `Scene_0bis`'s bottom only (the one such face of the three scenes): a level TOP and other outlines by vectors | §2, §8 |
+| E4 | **After the fast orbit, as he ordered — and the fast orbit does not need it**: FO1 and FO2 are built and gated on a tree without it. Built after them, the entry reads the TARGET's picture while a free turn runs (the state never reads the fade, `FAST_ORBIT.md` §2 point 4), and the fast orbit's gates are rerun with it. After an abort of the fast orbit: built on `1.0.147-`, as it was at `069682a` | his order |
+| E5 | His three-failures rule, by analogy: a failed test fixed and retested, twice; a third failure = the silent entry ALONE undone (one `git revert`), the branch as it stood | his rule for the fast orbit |
+| E6 | Built and tested, NOT deployed: his list says *"build and test"*; the deploy on his word | each deploy is his |
+| E7 | On the branch that stands; ONE commit for the code and its vectors | a single revert undoes it |
+
+**The contract** = §4.2's (iv′) and §9, as built at `069682a` (§10.3: what was built, what differs from the study and why — all of it kept), with two
+changes: **(a)** the layout's share is the square camera's share shown (`squareShareShown`, (A)'s reading) — close in the layout exactly, far out the
+blend whole — ⛔ the fade by the view's elevation; **(b)** the heading shown turns toward the blend's value by at most the tilts' one speed a frame (a
+pure step; with the switch at 0 it is not used at all). Otherwise as (iv′): paced by the gizmo's PLACE, never fired at an edge, an exit's turn
+computed from the heading shown, the MODEL's coordinates, no face named.
+
+**The gates** (the base = the branch as it stands before this build): with the switch at 0 — FRAME FOR FRAME (the three replays, the level-entry
+walks, the fast walks). At 1: `Scene_1` and `Scene_0` replays frame for frame; `Scene_0bis` another play, its health clean; the level-entry mode b far
+out and part way, both tips — the entry 0° (2° at most) at every place, a ccw corner loop ONE turn a loop, the cw loop not over the base, in near the
+end and out in the middle 3° at most, the far edge one realignment; close in and at 0.515 every turn as at the base, turn for turn. ⭐ **THE FREE ROLL
+— the gate (iv′) failed**: outside the timed turns the picture's rotation in one frame never over the one speed's 6° plus that walk's own free roll at
+the base, on every walk of §10.3's table and on the fast walks; the whole walk's worst frame not over the base's + 1°. The no-drift check
+(`FAST_ORBIT.md` §4, G4) with the switch on; the fast orbit's benefit (G6) not worse. Recorded, not gated: the straight dy's curve (§4.3: about 100 mm
+— the price of a silent entry) and the way back over the entry edge near an end (27°, the calm's look, §8). The dy hold's long walks
+(`DY_HOLD_REVERSAL.md` §3 — built before this, its D1) not worse. Known, not a failure: a far edge's half turn coming out the other way round
+(`FAST_ORBIT.md` §4, G3's note).
+
+## 16. ES — the silent entry: NOT BUILT (2026-11-18, Opus builders, three rounds — base `bc867a0`; nothing under `src` or `tests` changed)
+
+**In one paragraph.** (iv′) was rebuilt from `069682a` with both cures and measured four ways. **THE FREE ROLL — the gate `069682a` failed — now passes on every walk** (21.4° → 4.8° – 5.3° on the cw loop; nothing over the base's + 6°). Close in is the base's (every walk within 2.1e-8), and the switch at 0 is the base bit for bit. But no version passes every gate of §15: the whole walk's worst frame (the base's + 1°) fails by 0.2° – 1.5° on 2 to 4 walks, always INSIDE a timed turn (an exit's, or a fast finger's entry), and an exit in the middle of the entry edge turns 4° – 5° (gate: 3°). By the brief's rule nothing is committed. The four patches: the session scratchpad's `es/es_build_v1.diff` … `v4.diff` (the recordings beside them).
+
+**The four versions** (each on top of the one before; v1 = the brief's letter): **v1** — `069682a` re-applied by hand + (a) the layout's share `1 − (1 − w)(1 − s)`, `s` the square camera's share shown (`squareShareShown`) + (b)
+  `headingStep`: the heading turned toward that value by at most `tiltRollDegS` × the frame's time, in the HEADING's own angle; the entry's first frame
+  the value there; the vectors of §15 written (23 mutants red; a level top, a triangle, a trapezoid, each edge). **v2** — (b) bounds the PICTURE, not the heading: a level heading's image turns 1 / sin e as fast across the view's level line (at 55° – 60°: a 6°
+  heading step turned the picture 8.2° — v1's free roll on the way back, 1.5° → 8.2°); and the entry's first frame at the edge's blend (depth 0: a
+  fast finger already deep was not silent — 9.7° in a frame at 4 px). **v3** — the entry continues the picture SHOWN the frame before, carried to the new view (`transportUp`: 0 roll by the probes' own measure) — the
+  bound camera at the entry frame had the calm's view swing in it (the 2-frame −4° / +5° at the ccw loop's second entry, as at `069682a`). **v4** — the target's offset read every frame on the bound camera (so an exit back over the entry edge pays nothing): the middle exit 0°, but each
+  re-entry at a side edge now pays the difference — the 4 px corner loop dithers into 60 turns of 8° – 24°. Worse; v3 is the best.
+
+| walk (far out unless said) | base: free / worst | `069682a`: free | v1 | v3 | v4 |
+|---|---|---|---|---|---|
+| cw loop +x (0.736 alike) | 2.0 / 6.9 | 21.4 | 5.5 / **8.2** | 5.3 / **8.2** | 4.8 / 7.8 |
+| cw loop −x | 1.3 / 7.5 | 17.1 | 5.5 / 6.9 | 5.2 / 6.9 | 4.7 / **8.8** |
+| ccw loop +x / −x | 2.5 / 7.5 · 2.3 / 7.5 | 7.2 – 7.3 | 7.0 / 7.2 | 6.7 / 7.0 · 6.6 / 7.0 | 6.8 / 7.1 · 6.6 / 7.1 |
+| in and back near the end +x / −x | 1.5 / 7.3 · 1.1 / 7.2 | 11.7 – 11.8 | **8.2** / **8.6** · **7.5** / 7.8 | 7.0 / 7.1 · 6.6 / 7.0 | 7.0 / 7.2 · 6.6 / 7.0 |
+| the corner loop at 4 px a frame | 3.3 / 7.9 | 19.4 | 7.7 / **9.9** | 7.2 / **9.1** | 7.2 / **9.1** (60 small turns) |
+| `mid_check`'s whole run | 5.2 / 9.3 | 21.6 (worst) | 5.7 / **10.8** | 5.6 / **10.8** | 5.5 / 9.7 |
+| straight dy at 2 / 4 / 6 px (x 190) | 4.3 / 10.9 · 9.5 · 10.0 | 8.0 / 12.1 / 19.7 | 6.0 / 6.5 / 6.1; worst 4 px **10.8** | 5.7 / 5.9 / 6.0 | 5.8 / 5.9 / 5.9 |
+
+(° in one frame: the free roll outside the timed turns / the whole frame's worst; **bold** = over its limit.) v3's other gates: every entry far out and at 0.736 0° (the ccw loop ONE turn a loop, −83°/15; the cw loop +31° and +33°, base +69° twice); in and back near the end no turn at all (base +32°, −32°); the far edge one realignment (its way back −210° the long way, as at `069682a`: G3's note, listed); **in near the end, out in the middle −5° / +4° (2 frames)**; the straight dy's curve −96 / +92 mm (base −8 / +26; §4.3's price).
+
+**Why the worst frames fail — and why it is not this rule's to cure.** Each is the FIRST frame of a timed turn whose angle grows while it starts (the target moves with the finger): the turn advances 6° of its first, smaller angle, the target adds the rest (`mid_check`: 0.207 × 46° = 9.5° + the look). A shorter exit turn (the picture already near the face's layout) makes that ratio worse. Curing it means changing the turns' pace — forbidden by §15 (no change to a turn's pace or drawing). The middle exit: the picture kept at the entry differs there from the bound camera's by the side bias and the calm's look at the new place (§4.3's second cause, *"a study of its own"*); v4 cures it and breaks the re-entries.
+
+**Also measured (v1, switch 1):** `Scene_1` and `Scene_0` replays identical; `Scene_0bis` another play from frame 315, health clean, worst 14.1° → 12.4°, roll 18.9° → 13.4°, the camera's up below level 32 → 89 frames; mode a identical frame for frame; the dy hold's walks (bottom far edge, zenith, far and 0.736): the blocked frames as at the base; 3 sub-walks of 24 set NO hold at the far edge (its turn under a quarter from the heading shown), the dy back honoured at once, the come-back crossing again as at the base. Switch 0 (v1): the three replays and the 33 walks identical.
+
+**For the owner — the choice** (nothing built): (1) accept the worst-frame gate as the base's + 2° inside timed turns and the middle exit's 5°: v3 as it stands (its patch); (2) let the timed turn advance on its CURRENT angle (a change of the turns' pace, every crossing — a package of its own, with LF2's lesson); (3) leave the entry as it is today. The readers: `scripts/probes/ORBIT_GATES.md` §7.3. No device look (rule 5).
+
+**Fix round 1 (2026-11-18, an Opus builder): still NOT BUILT — one walk fails by 0.3°.** Three more versions on v4 (patches and recordings: the session scratchpad's `es2/`). **v5** — the target's picture read every frame on the camera of the ENTRY's side of the spit axis: the middle exit **−5° / +4° → −0.2° / −0.2°** (gate 3 passes); v4's figures otherwise (the side never flipped there). **v6** — the heading HELD while a camera turn runs (the entry's own turn chased a target the step moved 7° a frame). **v7** — held also on the frame the turn lands (its last share and a step together made 9.8°). Gate 5 at v7, against the base's + 1°: cw +x 7.8 (limit 7.9), the 4 px loop **9.1 → 8.0** (8.9), `mid_check` **10.8 → 9.7** (10.3), the dy at 2 / 4 / 6 px all under; the free roll under its limit on every walk. ⛔ **What still fails: the cw loop −x, far and at 0.736 — 8.8° (limit 8.5)**, the first frame of a 14° exit turn whose angle grows to 21° in that frame (k = 6° / 14.4° = 0.415 applied to 20.8°): the root the auditor found, in the turns' pace, out of §15's reach.
+⚠ **And a cost no gate reads**: at the 4 px corner loop's dither on the bottom / triangle edge, v4 – v7 make 52 – 70 exit turns of about 6° each (base 118 turns, |roll| 330° in all, 21 frames of gizmo held; v7: 61 turns, 442°, 67 frames held — the loop 29 frames longer); v3 (the offset read once): 39 turns, 165°. The picture read every frame cures the middle exit and costs this wobble; read once, the reverse.
+**For the owner**, the three options above stand, with v7 now the closest (`es2/es_build_v7.diff`, applies on `bc867a0`; its vectors are v3's and NOT updated or mutation-tested for v5 – v7; gates 1, 2, 4, 6b not rerun on it).
+**Fix round 2 (2026-11-18, the last): still NOT BUILT — the cw loop's exit is the turns' pace, measured once more.** **v8** = v7 + the blend read at the DEEPEST depth reached since the entry (`entryReach`: once turned to the layout, the picture stays turned — the guess being that the way back toward the entry edge shortened the exit's turn). Measured (mode b, the dy at 2 / 4 / 6 px, `mid_check`; the session scratchpad's `es3/`, patch `es3/es_build_v8.diff`): **worse** — the cw loop −x 8.8° → **9.4°** (limit 8.5; far and 0.736), +x 7.8° → **8.5° / 8.6°** (limits 7.9 / 8.2); the others as v7 (ccw 7.1, back 7.0, far edge 11.1 / 7.8, the 4 px loop 8.1, `mid_check` 9.6, the dy all under; the free roll under its limit everywhere). ⭐ What the frames say (`decomp`, v8 f447 – 448): the guess was wrong — the heading was already at the layout within 3° on the way back; the exit turn is short (13.6°, base 59°) because the picture KEPT and the face beyond's camera are close, and in its first frame the face beyond's camera moves 7.5° (base 0.1°) with the finger's look, so k = 6° / 13.6° is applied to 21.1°: 8.2° of roll + 4.5° of look = 9.4°. The base's turn is long and its target moves across it, not along it. So **every silent picture makes this exit short**; nothing read on the free face reaches that first frame. v8 reverted in the working tree (never committed).
+**For the owner, after three rounds**: option (2) above — the timed turn advanced on its CURRENT angle (`seamTurnStep`: on a turn's first frame `k` = 6° over the angle read the frame before, applied to this frame's angle — measured by rounds 1 and 2 and their auditor; ⚠ the comment in `zoneStep` says *the whole angle as it is NOW*; the later frames' `k` does not follow that ratio exactly: read `seamTurnStep` and `turnWhole` before redesigning) — is the one cure measured for every failure of §16; it changes every crossing's pace (a package of its own, LF2's lesson). Then v7 (`es2/es_build_v7.diff`) re-gated whole: its wiring vectors are still v3's (their source patterns do not match v7's code — read, not run) and v5 – v7 were never mutation-tested; gates 1, 2, 4, 6b owed on it.
+
+## 17. ES as built: version 7 kept (2026-11-18, code `3c66eb9`; the gates re-run on it by an Opus agent)
+The owner: *"Keep version 7. Continue."* — v7 is in the game behind the switch `freeEntryUpright` (POLAR ZONES; 1 the default = the silent entry,
+0 = the entry as before). `git revert 3c66eb9` would undo the silent entry alone. `npm run verify`: 166 files, **2091 vectors**, green.
+
+| gate | base (`bc867a0`) | now (`3c66eb9`) | verdict |
+|---|---|---|---|
+| G1 switch at 0: 3 replays, mode a (6 walks), all 27 of mode b | — | frame for frame, largest difference 0 | ✅ |
+| G2 at 1: `Scene_1`, `Scene_0` replays; `Scene_0bis` health | gizmo's largest step 105 mm | frame for frame; 103 mm, 0 errors (the camera's up below 0: 32 → 234 frames, noted) | ✅ |
+| G3 far, 0.736: entry; loops; middle exit; far edge | 24° – 45°; ccw 2 turns, cw exit 62° – 69°; 1.4° – 2.1°; one realignment | 0.1° – 0.4° (limit 2°); ccw 2 turns, cw exit 7° then 27°; 0.2° (limit 3°); one | ✅ |
+| G4 close in, 0.515 (9 walks) | — | largest difference 2e-8, every turn as at the base | ✅ |
+| G5 free roll (limit base + 6°), 23 walks | 0.9° – 5.2° | 4.7° – 7.4°, all under | ✅ |
+| G5 worst frame (limit base + 1°) | cw loop −x 7.5° | 8.8° far and at 0.736 (limit 8.5°); the 21 other walks under | ⚠ accepted |
+| G6 dy hold (z_far, zT_far) | — | the hold as at the base (zT_far's second set-up stopped short, x 12 mm against 127; the hold unaffected) | ✅ |
+
+**What the owner will feel**: entering a level face over an edge, the picture no longer turns — it keeps the view and turns to the face's layout
+only as the gizmo reaches the face's middle, at the one speed. Close in nothing changes. **The accepted miss**: the cw loop's −x exit turns at the
+timed turns' pace on an angle read a frame late, so one frame reaches 8.8° (`FAST_ORBIT.md` §11.4; FO3 removes that timed turn). Recorded, not gated:
+the 4 px ccw loop's dither, LOOP 0 71 turns |roll| 129° 21 frames held → 62 turns 405° 67 held. Recordings: the session scratchpad's `es_v7/`.

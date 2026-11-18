@@ -361,7 +361,26 @@ export interface SceneState {
    *  gizmo is on: the face map it indexes and the facet's index in it (another map's entry is none — a seat), the face's position `ci` in the atlas's contour
    *  (the WORLD's coordinates), and the HEADING carried (a unit vector in the world, in the face's plane — the camera's up there): set IN AT THE EDGE, kept
    *  until the place is one band past the face (`freeFaceFrame`) */
-  asmFree: { readonly map: import("../input/face_map").FaceMap; readonly facet: number; readonly ci: number; readonly heading: import("../core/vec").Vec3 } | null;
+  asmFree: {
+    readonly map: import("../input/face_map").FaceMap;
+    readonly facet: number;
+    readonly ci: number;
+    /** the heading SHOWN (the camera's up on the face): the layout, or (ES, `freeEntryUpright` 1) the picture kept at the entry, turned toward the layout
+     * by the face's middle at most the tilts' one speed a frame — set by the camera's frame (`freeShownHeading`), read by the exit's turn */
+    readonly heading: import("../core/vec").Vec3;
+    /** ⭐ (LF1 (iv′)) the layout taken at the entry (`freeEntryHeading`) */
+    readonly layout: import("../core/vec").Vec3;
+    /** ⭐ (LF1 (iv′), ES) the entry edge (`entryEdgeOf`): a corner, the unit direction into the face square to the edge, the face's centre's depth (m) — null: no blend */
+    readonly entry: import("../input/free_face").EntryEdge | null;
+    /** ⭐ (LF1 (iv′)) the gizmo's signed depth from the entry edge (m), read at its place each frame (0 with no entry edge) */
+    readonly depth: number;
+    /** ⭐ (LF1 (iv′)) the picture's offset off the view's level part, read once at the entry frame by the camera (`pictureOffset`; null: not yet) */
+    readonly offset: number | null;
+    /** ⭐ (ES) the spit's side the bound camera stood on at the entry (read by the camera's first frame on the face; 0 before) */
+    readonly side: number;
+    /** ⭐ (ES) a camera turn was under way at the last camera frame on the face (the heading held one frame more: the frame the turn lands) */
+    readonly turning: boolean;
+  } | null;
   /** ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §16 — package C2W) THE PLACE BEFORE THE ONE SHOWN: the facet of the frame before
    *  `asmShown`'s, with the map it indexed — the tilt, made one frame after the gizmo reached a cap (`tiltOn` reads the place shown), takes its entry edge
    *  from it (`freeEntry`); `null`: none (the start, the switch off) */
@@ -399,6 +418,10 @@ export interface SceneState {
   asmSpitSide: number;
   /** ⭐⭐⭐ (2026-11-14) the camera's direction the spit's side was last read at (world) — the crossing read on the path from it (`crossingPitch`) */
   asmSpitU: import("../core/vec").Vec3 | null;
+  /** ⭐⭐⭐ (2026-11-18, `LEVEL_FACE_ENTRY.md` §16 — ES) the spit's camera frame built THIS frame, before the owner's offsets (its direction, its up) — and
+   *  the one of the frame before (`…Was`, moved at `assemblyFrame`'s start): a free face's entry continues that picture (`transportUp`); null: none */
+  asmSpitPic: { readonly u: import("../core/vec").Vec3; readonly up: import("../core/vec").Vec3 } | null;
+  asmSpitPicWas: { readonly u: import("../core/vec").Vec3; readonly up: import("../core/vec").Vec3 } | null;
   /** ⭐⭐⭐ (2026-11-13, the owner) the zones drawn in fuchsia (`zoneHighlightFrame`) and the zones' key they were built for */
   asmZoneMesh: { readonly key: string; readonly mesh: import("@babylonjs/core/Meshes/mesh").Mesh } | null;
   /** ⭐ (§3.5) the angle of F's up on the glass (`fingerInFrame`) — kept looking along the axis */

@@ -357,3 +357,159 @@ export function freeHeadingAngle(heading: Vec3, u: Vec3): number {
   const h2 = phi - w;
   return side(h1) >= side(h2) ? h1 : h2;
 }
+
+/* ⭐⭐⭐ (2026-11-18, `LEVEL_FACE_ENTRY.md` §15, §16 — package ES, the silent entry: (iv′) of `069682a` rebuilt with its two cures; the owner: *"Kept at the
+ * entry, then turned to the face's layout over its first half: I assume this is valid for any level face"*) THE PICTURE'S UPRIGHT CONTINUED ON A FREE FACE
+ * ------------------------------------------------------------------------------------------------------------------------------------------------------- */
+
+const smooth01 = (x: number): number => {
+  const y = Math.min(1, Math.max(0, x));
+  return y * y * (3 - 2 * y);
+};
+
+/**
+ * ⭐⭐⭐ (iv′) THE HEADING ON A FREE FACE entered over an edge (its TARGET: the heading shown turns toward it by `headingStep`) — the picture's upright
+ * continued near that edge, the entry edge's layout by the face's middle:
+ * * `viewLevel` the picture's LEVEL direction (whose image on the glass is the picture's vertical, toward its up — `viewLevelTurned`), any length:
+ *   laid level, its SIGN KEPT (⛔ turned to the layout's side, as prototyped: near a tip the calm leans the view toward 90° off the layout, the sign
+ *   flipped there and the heading jumped — 21.6° in one frame, `mid_check`'s climb);
+ * * `layout` the entry edge's layout (`entryHeading`);
+ * * `depth` the gizmo's SIGNED depth into the face from the entry edge (m; ≤ 0 on the edge or the band past it), `centreDepth` the face's centre's depth;
+ * * `squareShare` the square camera's share AS SHOWN (0 … 1 — the one the camera's direction is blended by): 1 close in (the camera square to the face).
+ * The share of the layout: 1 − (1 − w)·(1 − squareShare), w a smoothstep of `depth / centreDepth` (0 at the edge, whole at the centre's depth) — so
+ * close in (share 1) the layout EXACTLY, far out (share 0) the blend whole. ⛔ (`069682a`, cure (a)) faded by the view's elevation (70° – 80°): that
+ * band is where `Scene_0bis`'s bottom is seen far out — the heading 20° in one frame (`LEVEL_FACE_ENTRY.md` §10.3, cause 1). The blend turns about
+ * the vertical, the short way. `upright` 0 (the switch `freeEntryUpright` off): the layout at every depth. A view with no level part, or a share
+ * whole: the layout itself. ⭐ Paced by the gizmo's PLACE only — never fired at an edge; its pace per frame bounded by `headingStep`. Pure; the
+ * caller's terms in the MODEL's coordinates. No face, no scene named: any free face (a level top or bottom, any outline, any edge).
+ */
+export function entryBlendHeading(viewLevel: Vec3, layout: Vec3, depth: number, centreDepth: number, squareShare: number, upright = 1): Vec3 {
+  if (upright !== 1) return layout;
+  const lv: Vec3 = [viewLevel[0], 0, viewLevel[2]];
+  const l = Math.hypot(lv[0], lv[2]);
+  const w = centreDepth > 1e-9 ? smooth01(depth / centreDepth) : 1;
+  const s = squareShare > 0 ? Math.min(1, squareShare) : 0;
+  const share = 1 - (1 - w) * (1 - s);
+  if (!(l > 1e-9) || share >= 1) return layout;
+  const ha = Math.atan2(lv[2], lv[0]);
+  const hb = Math.atan2(layout[2], layout[0]);
+  const h = ha + Math.atan2(Math.sin(hb - ha), Math.cos(hb - ha)) * share;
+  return [Math.cos(h), 0, Math.sin(h)];
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-18, package ES, cure (b)) THE HEADING SHOWN, ONE FRAME: `from` turned about the vertical toward `to` (both level), the short way, so
+ * that THE PICTURE turns by at most `degS` (°/s — the tilts' one speed, `tiltRollDegS`) over `dtMs` — the picture seen along the view `u` (centre →
+ * camera): a level heading's image on the glass is its part square to `u` (`freeHeadingAngle` lays the up in the plane of `u` and the heading), so
+ * the picture's turn between two headings is the angle between their images. Never past `to`, and `to` ITSELF once within reach (it lands exactly).
+ * `degS` ≤ 0, or a view with no elevation (no heading turns the picture): `to` at once. ⭐ Measured (`LEVEL_FACE_ENTRY.md` §16): the heading bounded
+ * at the speed in ITS OWN angle (the brief's letter) turned the picture up to 8.2° in a frame at a 55° – 60° view (a heading's image turns 1 / sin e
+ * as fast across the view's own level line) — the bound is the picture's. ⛔ (`069682a`) unbounded: the blend's pace was the gizmo's travel × the
+ * smoothstep's slope — a fast finger, or the calm swinging the view on the way back to the entry edge, turned the picture 12° – 20° in a frame (§10.3,
+ * cause 2). Pure.
+ */
+export function headingStep(from: Vec3, to: Vec3, dtMs: number, degS: number, u: Vec3): Vec3 {
+  if (!(degS > 0)) return to;
+  const lu = len(u);
+  const se = lu > 1e-12 ? Math.abs(u[1]) / lu : 0;
+  if (!(se > 1e-6)) return to;
+  const az = Math.atan2(u[2], u[0]);
+  // the image's angle on the glass of the level heading at `th` (relative to the view's own level line): tan ψ = tan θ / sin e, monotone; its inverse
+  const psi = (h: Vec3): number => {
+    const th = Math.atan2(h[2], h[0]) - az;
+    return Math.atan2(Math.sin(th), se * Math.cos(th));
+  };
+  const pf = psi(from);
+  const d = Math.atan2(Math.sin(psi(to) - pf), Math.cos(psi(to) - pf));
+  const max = ((degS * Math.PI) / 180) * (Math.max(0, dtMs) / 1000);
+  if (Math.abs(d) <= max + 1e-12) return to;
+  const pn = pf + Math.sign(d) * max;
+  const h = az + Math.atan2(se * Math.sin(pn), Math.cos(pn));
+  return [Math.cos(h), 0, Math.sin(h)];
+}
+
+/** ⭐ (ES) the entry edge of a free face: a corner of it, the unit direction into the face square to the edge (in the face's plane), the face's centre's depth (m). */
+export interface EntryEdge {
+  readonly a: Vec3;
+  readonly inward: Vec3;
+  readonly centreDepth: number;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-18, ES — `069682a`'s `freeEntryEdge`, made pure) THE ENTRY EDGE of the face `ci` of `faces` (a contour) entered from the face `from`:
+ * the side shared with it that gives the layout (`entryHeading`'s — the first in the polygon's order). null: no entry over an edge (none before, the
+ * same face, not a neighbour, a level neighbour) — the layout alone, as before. Any outline (a rectangle, a triangle, a trapezoid …), any side, a level
+ * top as a bottom. The contour's coordinates (the MODEL's, turned into the world).
+ */
+export function entryEdgeOf(faces: readonly ChartFace[], ci: number, from: number, up: Vec3): EntryEdge | null {
+  const F = faces[ci];
+  if (F === undefined || from < 0 || from === ci) return null;
+  const e = freeEdges(faces, ci, up).find((x) => x.to === from);
+  if (e === undefined || e.heading === null) return null;
+  const dl = dist(e.a, e.b);
+  if (!(dl > 1e-9)) return null;
+  const d = mul(sub(e.b, e.a), 1 / dl);
+  const c = sub(F.c, e.a);
+  const w = sub(c, mul(d, dot(c, d)));
+  const depth = len(w);
+  if (!(depth > 1e-6)) return null;
+  return { a: e.a, inward: mul(w, 1 / depth), centreDepth: depth };
+}
+
+/** ⭐ (ES) the SIGNED depth (m) of the point `p` from the entry edge into the face (≤ 0 on the edge and past it). Pure. */
+export function entryDepth(entry: EntryEdge, p: Vec3): number {
+  return dot(sub(p, entry.a), entry.inward);
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-17, LF1 (iv′)) THE PICTURE'S LEVEL DIRECTION: the level direction lying in the plane of the view `u` and the camera's `up` — the one
+ * whose image on the glass is the picture's vertical, toward the up (its level side).
+ * Read on the camera the bound face beyond the edge would show (the spit's upright camera, before the owner's offsets), it is the heading that
+ * continues that picture on the free face exactly. A plane with no level line other than … (the up along the view): `u`'s own level part.
+ */
+export function pictureLevel(u: Vec3, up: Vec3): Vec3 {
+  const t = cross(cross(u, up), [0, 1, 0]);
+  const l = Math.hypot(t[0], t[2]);
+  if (!(l > 1e-9)) return [u[0], 0, u[2]];
+  const s = t[0] * up[0] + t[2] * up[2] < 0 ? -1 : 1;
+  return [(s * t[0]) / l, 0, (s * t[2]) / l];
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-17, LF1 (iv′)) THE PICTURE'S OFFSET AT THE ENTRY: the signed angle (rad, about the vertical, the heading's own sense, −π … π) from
+ * the view `u`'s level part to the picture's level direction (`pictureLevel(u, up)`, toward the up) — below a face about 0, above it about π (the up
+ * then points away from the camera's side). Read ONCE, at the entry frame, on the camera
+ * the bound face would show: the few degrees by which that picture stood off upright (the spit's side bias above 60° of view) are continued, never
+ * followed further (⛔ the bound camera's picture read every frame: close in, as the square camera climbed toward the face's normal, the side bias
+ * swung the heading across the axis, 24° in one frame). No level part: 0.
+ */
+export function pictureOffset(u: Vec3, up: Vec3): number {
+  const p = pictureLevel(u, up);
+  const l = Math.hypot(u[0], u[2]);
+  if (!(l > 1e-9)) return 0;
+  const d = Math.atan2(p[2], p[0]) - Math.atan2(u[2], u[0]);
+  return Math.atan2(Math.sin(d), Math.cos(d));
+}
+
+/** ⭐ (LF1 (iv′)) the view `u`'s level part, unit, turned about the vertical by `offset` (rad, the heading's sense) — `entryBlendHeading`'s `viewLevel`. */
+export function viewLevelTurned(u: Vec3, offset: number): Vec3 {
+  const h = Math.atan2(u[2], u[0]) + offset;
+  return Math.hypot(u[0], u[2]) > 1e-9 ? [Math.cos(h), 0, Math.sin(h)] : [u[0], 0, u[2]];
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-18, ES) THE PICTURE CARRIED FROM ONE VIEW TO THE NEXT: the up `up0` of a camera looking along `u0` (centre → camera) turned by the ONE
+ * rotation that takes `u0` onto `u1`, laid square to `u1` — the up a picture has when it is turned with the view and not rolled (the probes' "roll on
+ * the glass" is measured against it: 0 by construction). At the entry it is the picture the free face continues (`pictureOffset` of it, read once):
+ * ⛔ the bound face's own camera at the entry frame — the view's swing in that frame (the calm's frame changes at the entry: up to 5° of look) rolled
+ * the picture 3° – 5° in the entry's first frames (measured, `LEVEL_FACE_ENTRY.md` §16). `u0` and `u1` opposite: `up0` laid square to `u1`. Pure.
+ */
+export function transportUp(u0: Vec3, up0: Vec3, u1: Vec3): Vec3 {
+  const a = unit(u0);
+  const b = unit(u1);
+  const ax = cross(a, b);
+  const sn = len(ax);
+  const v = sn > 1e-12 ? rot(up0, mul(ax, 1 / sn), Math.atan2(sn, dot(a, b))) : up0;
+  const w = sub(v, mul(b, dot(v, b)));
+  return len(w) > 1e-12 ? unit(w) : v;
+}
