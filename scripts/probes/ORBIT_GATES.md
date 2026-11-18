@@ -484,3 +484,15 @@ node scripts/probes/shadow_read.mjs <folder>/<tag>_*.json <a fast walk's OUTJSON
   metre of gizmo travel today and as S1 would draw on the route, the gap (largest, frames over 45° / 90°), the free twists, the frames with a gap
   outside a spit (O8), A2, the gap at the end (A3), the turns by their twist, and on the hand A6 (the finger's way against the gizmo's on the glass).
 * The figures at `580913f` – `aa1aa8f`: `FAST_ORBIT.md` §13; the recordings: `_saved_patches/orbit_chain_2026-11-18/fo3/runs` (`base` at `6f47219`).
+
+## 12. FO3 S1 — the gates read base against S1 (`Claude/40_RENDER_SCENE/spec/FAST_ORBIT.md` §14)
+
+* **The base** for his hand and the fast walks is S0's recordings (`fo3/runs/new`: the game as drawn today, identical to `6f47219`'s); the dy hold's
+  and the level entry's base was recorded at `6f47219` (`git checkout 6f47219 -- src`, one batch, `git checkout HEAD -- src`). A0: the same batches
+  with `EXTRA="&freeTurnMaxDeg=0"`, compared frame for frame (`replay_cmp.mjs`; the kit's `same.mjs` for the other recorders).
+* **The readers** (the kit's `_saved_patches/orbit_chain_2026-11-18/fo3/`, outside the repository): `gates_s1.mjs <base> <s1> …` — one line a pair:
+  the roll a metre drawn (A5), its worst frame, the gap (A7, reported), A2, A3, the held frames and the turns ≥ 88° (A4), A6's largest; `a6_detail.mjs`
+  — A6 split by the gap and inside / outside a spit; `cancel.mjs` — the half turn's length from the pose shown (14.5); `wrap_sim.mjs` — the follower
+  re-run on S1's twists, the gap wrapped or not.
+* ⚠ On `Scene_0bis` the finger outside a spit never meets a gap (0 frames on his hand and the loops): S2 changed nothing there, and the runs made with
+  it stand for S1 alone (checked: `ilmj_23s` with and without S2 identical).

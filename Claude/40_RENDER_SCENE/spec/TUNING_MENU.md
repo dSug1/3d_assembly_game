@@ -45,7 +45,7 @@ frames (drags, lifts, four releases, their glides); the step without them reprod
 | | GOAL | never-grabbed mm / ° · orbited piece's goal margin mm / ° · capture offset · snap cone · snap time |
 | **INPUT** | | tap max duration · motion deadband · rest floor · rest = N × event gap · orbit drag deadband · its re-arm pause |
 | **ORBIT** | SPEED | yaw gain · elevation gain · box gain yaw / pitch · inertia · piece yaw per orbit yaw · close-in full distance · contact mm/mm |
-| | SMOOTHING | box smoothing · gizmo ease · orbit spring · camera catch-up after release |
+| | SMOOTHING | box smoothing · gizmo ease · orbit spring · ⭐ the camera's roll behind the orbit's (`rollFollowMs`, 200 ms, 60 – 600) · ⭐ a change of frame under this angle makes no timed turn (`freeTurnMaxDeg`, 90°, 0 – 90; 0 = today's turns, bit for bit) — both 2026-11-18, [`FAST_ORBIT.md`](FAST_ORBIT.md) §14 · camera catch-up after release |
 | | CALM ON A FACE | the seven face-span sliders |
 | | TILTED POLE | on / off · speed · automatic within · camera blend · the way out's blend (`tiltOutBlendMm`, 12 mm; 0: timed) · dy hold (`edgeHoldMm` 8 mm of finger back, a hysteresis, step 1 — was 30, step 5: 2026-11-18, [`DY_HOLD_REVERSAL.md`](DY_HOLD_REVERSAL.md) §6) |
 | | POLAR ZONES | on · upright up to · spit from · whole share · exit mm · a spit's level face: the calm (0) / square (1) · ⭐ a level face's entry (`freeEntryUpright`, 2026-11-18): the edge's layout at once (0) / the picture kept, the layout by the face's middle (1, the default) — [`LEVEL_FACE_ENTRY.md`](LEVEL_FACE_ENTRY.md) §17 |
@@ -73,6 +73,6 @@ TITLE: the new titles start folded once.
 
 `tests/menu_layout.test.ts` (3 — the tree, 118 sliders each once (88 on 2026-11-13) and live, the removed ones) and `tests/zero_sliders_removed.test.ts` (4) — red against
 `854ba10` but the kept-slider check; deleted: the leash / lag vectors of `proto_green_box.test.ts` (21), `proto_menu_worldspace.test.ts`, the CAMERA
-subsections' describe; the pins moved to the new sections. **1706**. ⭐ Since: **118 sliders** (2026-11-18, + `freeEntryUpright`; the count's one home is `tests/menu_layout.test.ts`).
+subsections' describe; the pins moved to the new sections. **1706**. ⭐ Since: **120 sliders** (2026-11-18, + `freeEntryUpright`, then + `rollFollowMs` and `freeTurnMaxDeg` — FO3 S1; the count's one home is `tests/menu_layout.test.ts`).
 
 ✅✅ **The owner (2026-11-13, on the device, `ddd2572`): *"changes are ok"*.**

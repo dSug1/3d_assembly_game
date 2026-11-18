@@ -653,3 +653,137 @@ which one(s) to recommend for later implementation if the deploy result is not s
 * **The mitigations**: a study aside (one Opus agent, offline, no game run, nothing built) — for each of his five lines: feasible or not, the
   regressions, the conflicts with the rules (his third and fourth lines change what the finger's step does to the orbit: the logic, R1), and which
   to build later **if his look at the deploy is not satisfactory**. Its result: the kit's `fo3/mitigations/MITIGATIONS.md`, then a section here.
+
+## 14. FO3 S1 — the picture drawn: the corner loops calm, his hand only partly; S2 built and REVERTED (the builder, 2026-11-18, night)
+
+**The result first.** S1 is built and drawn (`87cd6c2`). On the steered corner loops of `Scene_0bis` it does what §12.4 promised and more: the roll
+shown per metre of gizmo travel falls to **a fifth to a tenth of today's** (e.g. 76 → 18° a metre at his average pace), the gizmo is **never stopped**
+(19 – 135 held frames → 0), the gap stays **under 90° even at 2 000 px a second**. **On his own hand it helps less than the specification said**: the
+worst frame of roll falls sharply (e.g. 55 → 8°, 43 → 9°; at 143 frames a second 72 → 4°), but the roll per metre falls only **13 %** over his ten
+stretches (154 → 134° a metre), not by half — A5 fails there. **S2 (the finger turned by the gap outside a spit) was built (`48ae89c`) and REVERTED
+(`f198b3a`)**: at the top of `Scene_1` it feeds back — the finger turned by the gap spins the yaw at the pole, which is a roll of the logic's picture,
+which grows the gap. ⛔ Status: partly built. The owner's look decides whether S1 ships.
+
+### 14.1 What was built
+
+* **`src/render/roll_shadow.ts` `rollPictureFrame`** (the camera's stage, in place of the plain `zoneMixPose` call): the ghost (the pose the logic asks
+  for), its twist about the framed line, the gap stepped by the critically damped follower (`rollFollowMs`), the picture = the ghost turned about the line
+  by the gap. `st.asmCamLast` is the picture's. `freeTurnMaxDeg` 0: S0's shadow and today's `zoneMixPose`, nothing else (A0 below: bit for bit).
+* **A change made free** (O2, §13.7 (d)): a zone's turn (`asmZoneMix`) is dropped at its FIRST frame — before any orbit step can be refused — when its
+  WHOLE angle (last frame's ghost to this one's, `poseTurnAngle`) is under `freeTurnMaxDeg` − 2° (`turnIsFree`, `FREE_TURN_TOL_DEG`: a quarter turn read
+  88.3 – 89.8° stays). **Kept by kind, whatever the angle**: `byMm`, `out`, a tilt's entry and exit (tagged `tilt` at their two sites — a tag, nothing
+  else changes there), the square camera turning and a tilt's exit asked (`tiltHold`), and a new turn replacing a turn that stays (today's, from the
+  pose shown).
+* **The gap**: it takes the ghost's twist while the gizmo is free; a turn that stays: 0 while it runs (it starts from the pose shown — the picture), 0
+  the frame after it ends; the square camera turning or a tilt's exit asked with no zone turn: the twist not taken, the gap closing (§12.4 2.).
+* **O3**: a freed turn's ease of the piece's shown direction (`asmDirEase`) goes on on a clock of its own (`own`: its rest closed by the same law,
+  `gapStep` at `rollFollowMs`, stepped at the start of `assemblyFrame`, read in `dirAt` through `restShare`).
+* **The sliders** (ORBIT › SMOOTHING): `rollFollowMs` **200 ms** (60 – 600), `freeTurnMaxDeg` **90°** (0 – 90; 0 = today's game) —
+  [`TUNING_MENU.md`](TUNING_MENU.md).
+* **Vectors**: `tests/roll_follow_s1.test.ts` (11: the whole angle, the tolerance, the rest's share, the sliders, the wiring); 16 mutants, **14 red**,
+  2 equivalent (the `maxDeg > 0` and `isFinite` guards: a negative threshold and a NaN compare false anyway). Pins moved in `pose_about_piece`,
+  `orbit_charts_one_state`, `menu_layout` (120 sliders).
+
+### 14.2 The figures, base (today, `6f47219`) against S1 — like for like, per metre of gizmo travel
+
+**His hand** (`Scene_0bis`, his 1 536 × 742 glass, the virtual clock; 60 frames a second unless said):
+
+| stretch | gizmo m | roll a metre | worst frame | gap largest (frames > 45° / > 90°) | held frames | turns ≥ 88° | A6 largest |
+|---|---|---|---|---|---|---|---|
+| vyah_11s | 15.4 → 19.1 | 177 → 155 | 27.0 → 29.9 | 166° (6.5 % / 2.3 %) | 517 → 378 | 14 → 13 | 77 → 179 |
+| vyah_42s | 17.5 → 20.6 | 116 → 141 | 23.3 → 35.1 | 114° (4.7 / 1.0) | 372 → 376 | 8 → 13 | 80 → 154 |
+| ogse_3s | 13.3 → 15.3 | 186 → 198 | 20.5 → 12.2 | 94° (2.4 / 0.3) | 410 → 391 | 10 → 14 | 77 → 168 |
+| ilmj_4s | 16.4 → 22.6 | 149 → 112 | 29.7 → 7.3 | 113° (6.6 / 0.9) | 428 → 311 | 9 → 12 | 72 → 123 |
+| ilmj_23s | 18.2 → 20.8 | 138 → 150 | 42.2 → 30.2 | 164° (11.2 / 2.9) | 376 → 318 | 7 → 11 | 112 → 165 |
+| ilmj_39s | 17.8 → 25.8 | 182 → 131 | 26.1 → 9.2 | 139° (8.3 / 1.6) | 576 → 450 | 13 → 16 | 79 → 159 |
+| ilmj_60s | 18.3 → 22.2 | 171 → 105 | 55.5 → 8.1 | 100° (6.9 / 0.5) | 402 → 295 | 8 → 11 | 81 → 127 |
+| ilmj_83s | 16.1 → 21.8 | 129 → 121 | 35.1 → 13.8 | 140° (11.8 / 2.2) | 389 → 268 | 8 → 10 | 68 → 171 |
+| ilmj_99s | 15.6 → 21.7 | 153 → 120 | 43.0 → 9.3 | 90° (8.4 / 0.1) | 388 → 301 | 8 → 11 | 99 → 166 |
+| ilmj_114s | 9.4 → 11.6 | 138 → 123 | 15.8 → 7.6 | 108° (7.1 / 1.2) | 221 → 158 | 4 → 6 | 89 → 79 |
+| **the ten** | **158 → 202** | **154 → 134** | | | | **0.56 → 0.58 a metre** | |
+| ilmj_23s at 143 | 19.6 → 22.6 | 154 → 134 | 38.4 → 5.3 | 144° (12.0 / 2.4) | 1 049 → 885 | 8 → 14 | 175 → 179 |
+| ogse_3s at 143 | 15.3 → 15.5 | 183 → 189 | 71.8 → 3.8 | 170° (1.4 / 0.2) | 835 → 1 027 | 10 → 16 | 70 → 115 |
+| at 0.736: ilmj_23s / ilmj_99s / vyah_11s | 17.0 / 15.8 / 15.0 → 20.2 / 19.7 / 19.3 | 157 / 145 / 200 → 160 / 136 / 162 | 34.9 / 45.6 / 48.5 → 12.4 / 14.9 / 9.7 | 145 / 133 / 108° | | | |
+| close in: the same three | 8.1 / 8.2 / 6.9 → 8.4 / 8.4 / 6.9 | 157 / 115 / 54 → 142 / 108 / 54 | unchanged | 2.2 / 4.7 / 2.5° | | | |
+
+**The steered corner loops** (`Scene_0bis`, far out; ccw at +x / cw at −x):
+
+| px a second | roll a metre | worst frame | held frames | the gap's largest (> 45°) |
+|---|---|---|---|---|
+| 240 | 140 → 41 / 61 → 31 | 8.0 → 4.4 / 8.2 → 1.7 | 33 → 0 / 11 → 0 | 71° (2.6 %) / 23° |
+| 470 (his median) | 88 → 20 / 57 → 16 | 7.6 → 0.8 / 7.7 → 1.2 | 23 → 0 / 12 → 0 | 11° / 14° |
+| **571 (his average)** | **76 → 18 / 53 → 13** | **7.0 → 1.0 / 8.7 → 1.0** | 19 → 0 / 14 → 0 | 55° (1.2 %) / 15° |
+| 835 | 84 → 14 / 90 → 12 | 8.2 → 2.1 / 11.6 → 2.0 | 30 → 0 / 48 → 0 | 51° / 51° |
+| 1 050 | 98 → 14 / 53 → 8 | 13.0 → 1.8 / 8.5 → 1.5 | 53 → 0 / 22 → 0 | 28° / 18° |
+| 1 200 | 72 → 10 / 80 → 12 | 13.2 → 1.5 / 10.6 → 1.4 | 48 → 0 / 31 → 0 | 54° / 21° |
+| 1 800 (nothing breaks) | 90 → 10 / 88 → 10 | 17.7 → 5.4 / 10.3 → 2.1 | 79 → 0 / 92 → 0 | 90° (2.9 %) / 46° |
+| 2 000 (nothing breaks) | 109 → 11 / 55 → 10 | 30.7 → 5.4 / 12.8 → 4.3 | 135 → 0 / 130 → 8 | 82° (5.4 %) / 63° |
+
+Never a frame over 90° of gap on these loops. The others: `f_far_p_px20` 92 → 20° a metre; `f_edge_px2 / px8` unchanged (8 → 8°); `f_edge_px20`
+**10.5 → 24.2° a metre, its worst frame 0.8 → 2.9°** (its six changes under 90° now free: their roll eased over 200 ms instead of today's turns);
+`f_ridge_px20` identical to the base frame for frame (its one turn 180°: stays); `f_s0_up_px20` identical to frame 94, then within 1.3 mm (a free twist
+of at most 0.1° — the picture rolled by it steers the probe); `Scene_1` over its top: see 14.4. The seeded replays (roll in one frame, largest):
+`Scene_1` 13.8 → 9.4°, `Scene_0` 18.2 → 9.4°, `Scene_0bis` 19.0 → 7.6°; frames over 10°: 52 / 50 / 22 → 0 / 0 / 0 (S1 without S2).
+
+### 14.3 The gates
+
+| gate | result |
+|---|---|
+| A0 | ✅ `freeTurnMaxDeg=0`: the three replays identical to the base (`Scene_0bis` within its last-digit noise from frame 3, `1e-6` never); his hand (`ilmj_23s`), five fast walks (two corner loops, the three edge walks, `Scene_1` over the top), the six dy hold walks, ten level entry walks: identical frame for frame |
+| A1 | `npm run verify`: 14.6 |
+| A2 | ✅ the piece and the look point exact: at most 1.4e-15 of the half glass, every run |
+| A3 | ✅ the gap exactly 0 at the end of every hand run where the ghost has stopped (16 of 18); on `vyah_11s` (far, 0.736) the logic still twists at the last frame (3e-6 rad) — not at rest. The walks end 6 frames after their last move (not a rest) |
+| A4 | ✅ no zone turn under 88° drawn but by its kind or as a replacement (0 – 2 a stretch far out); the gizmo never held on the corner loops; the turns ≥ 88° per metre as the base's on his hand (0.56 → 0.58) |
+| A5 | ⛔ **on the corner loops ✅** (a fifth to a tenth; `cw` at 240 px a second 31 against 61 — at the half); **on his hand ⛔**: −13 % in all, between −39 % and +21 % a stretch; the worst frame not over the base's on 16 of 18 — **over it on two** (`vyah_11s` 27.0 → 29.9°, `vyah_42s` 23.3 → 35.1°: both inside a timed half turn that STAYS, its target flipped mid-turn by the gizmo crossing back — today's mechanics on S1's route, not the follower); `f_edge_px20` ⛔ (above) |
+| A6 | ⛔ on his hand, by the largest angle: 11 of 18 over the base's + 5°. The median is unchanged (8 – 19° in every gap band); the large angles are in frames with a gap over 45° inside a spit (base: 2 – 14 such frames a stretch; S1: 15 – 64). Reading the finger off the GHOST there instead (an experiment, `fo3x=2`) does not help (A6 96 – 178°) |
+| A7 | reported (amended, §13.7): above — his hand 90 – 170°, over 90° in 0.1 – 2.9 % of the frames; the loops ≤ 90° |
+| A8 | ✅ 1 800 – 2 000 px a second and 143 frames a second: no error, A2 and A3 as above |
+| A9 | ✅ `f_ridge_px20` identical; `f_s0_up_px20` differs from frame 94 by its own free twist (≤ 0.1°); the edge walks, the replays, the dy hold's and the level entry's walks by their freed turns and free twists (14.6); ⛔ the level entry's straight dy drifts twice as far (14.6) |
+| A10 | the documents, the tree, the processes: 14.6 |
+
+### 14.4 S2 refuted at a pole — built, measured, reverted
+
+`Scene_1` over the cube's top at 1 200 px a second (`f_s1_over_px20`), outside any spit: with S2 the gizmo sits at the pole (elevation 1.000) and its
+yaw spins −30° → 487° → 121° → 427° → 148°; the roll a metre **288°** (today 129°), the gap up to 179° (18.6 % of the frames over 90°), the walk **339
+frames** for today's 168. The same walk with S2 off (an experiment, never committed): **75° a metre**, worst frame 22.5 → 10.4°, 193 frames, the gap up
+to 174° (5.2 % over 90°). **Why**: at a pole a turn of the yaw IS a roll of the logic's picture; the finger turned by the gap pushes the yaw, the yaw
+grows the gap, the gap turns the finger further — a loop. ⛔ **R7 / O8's answer is refuted at a pole** ("a straight finger gives a straight gizmo on the
+glass while a gap closes" assumes the gap does not depend on the finger's own step). Outside a spit the finger is read as it is (today's): with a gap,
+the gizmo runs aside of the finger on the glass by up to the gap — **the owner's decision** (14.7).
+
+### 14.5 The roll before a crossing and its half turn — do they cancel? (offline, on S0's shadow)
+
+At the first frame of each turn that stays (143 turns of 88° or more, his hand, far, 0.736 and close in): the angle from the pose shown to the turn's
+target — today median **169°** (32 – 180°), from the pose S1 would show median **169°** (61 – 180°); S1's shorter by more than 1° in 43, longer in 45.
+⛔ **They do not cancel**: the half turn drawn is as long as today's. (`fo3/cancel.mjs`.)
+
+### 14.6 The dy hold's and the level entry's walks, `npm run verify`, the tree
+
+* **The dy hold's walks** (`hold_walk_batch.sh base`, six walks, against the base recorded at `6f47219`): `freeTurnMaxDeg=0` identical frame for
+  frame (A0 ✅). S1: the hold set in 30 of 30 sub-walks (the base 28: `b_far` missed two), the frames refused 808 → 805 — as today; the routes differ from
+  frame 11 – 3 407 (free twists far out).
+* **The level entry's walks** (`level_entry_batch.sh a b c`, 33 walks): `freeTurnMaxDeg=0` identical (A0 ✅, 10 walks). S1 (after S2's revert):
+  `Scene_0` close in (`a`) the same turns, the free roll's largest frame 1.2 → 0.3°; `Scene_0bis`'s corner loops: their turns under 90° (83°, 27°, 7°)
+  now free — none timed, the free roll's largest frame 4.7 – 7.0 → 1.5 – 5.3°; the turns of 90° or more unchanged. ⛔ **The straight dy across the
+  bottom drifts twice as far sideways** (`b_dy_*`: −96 → −218 mm, 92 → 216, −167 → −363, 154 → 339, −251 → −381, 235 → 374): the 2° change before the
+  half turn is now free, and the silent entry's heading (`freeShownHeading`, which reads "a turn under way" — O7) settles on its own speed instead of
+  the turn's. Not traced further in this packet.
+* ⛔ **With S2 these walks failed** (`a_x0`, `a_x190`: the gizmo never left `Scene_0`'s bottom face close in — 3 467 frames against 598): the same
+  feedback at the bottom pole. After the revert they pass, frame counts equal to the base's.
+* `npm run verify`: ✅ 168 files, **2 118 vectors** (2 107 + 11), at `f198b3a`. The tree clean, no process, no profile left (A10).
+
+### 14.7 What the owner will feel, and the decisions for his review
+
+* **Far out by a tip, at his pace**: no stop at an edge under 90° — the gizmo runs on. The picture no longer snaps: the worst frame of roll falls to a
+  third or less on 8 of his 10 stretches. ⛔ But the picture **trails**: up to a half turn behind the logic for up to half a second after a fast pass
+  by a tip (his hand: 1 – 3 % of the frames over 90°), then rolls back; the total roll is only 13 % less than today's. And the timed half turns at the
+  crossings are as long as today's (14.5).
+* **On the corner loops** (a face to the next, round a tip, any pace to 2 000 px a second): calm — a fifth to a tenth of today's roll, no stop.
+* **Close in**: as today (the gap at most 5°).
+* **Decisions for him**: (1) **ship S1 to his look** (the slider `freeTurnMaxDeg` 0 gives today's game back, bit for bit) — or not; (2) `rollFollowMs`
+  200 ms (a shorter time: less trailing, more roll a frame); (3) **outside a spit the finger as it is** (S2 refuted, 14.4) — accepted, or a study of
+  the finger at a pole first; (4) the edge walk's change (`f_edge_px20`: six small changes under 90° now rolled over 200 ms — 2.9° a frame at most,
+  against 0.8°); (5) ⛔ the level entry's straight dy drifting twice as far (14.6) — to be traced before a deploy, or accepted on his look; (6) A5 and A6 as written are not met on his hand: amend them (the roll a metre is not halved where the logic's own twist runs one
+  way — a follower delays a one-way twist, it removes only twists that come back) or keep them and judge on the device.
+* **Amendments of §12 measured here**: R7 / O8 (the finger turned by the gap) refuted at a pole (14.4); §12.4's sizing ("the roll shown per metre …
+  16 % of the ghost's at his average") holds on the corner loops, not on his hand (14.2) — the estimate was made on reversing twists.

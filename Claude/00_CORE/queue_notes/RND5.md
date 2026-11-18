@@ -696,3 +696,14 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
 * ⛔ **Refuted on his own hand** (`Scene_0bis`, far out and at 0.736): the gap over 90° in 9 of 10 stretches (up to 178°) — the ghost turns up to 42°
   a frame with the gizmo free near a tip's axis; `Scene_1` over its top: 161°, outside any spit. O6's fallback sized offline does not meet A7.
   **S1 not started**: the amendments for the owner's decision → [`FAST_ORBIT.md`](../../40_RENDER_SCENE/spec/FAST_ORBIT.md) §13.6.
+
+### 2026-11-18 (night) — FO3 S1, the picture drawn: built; S2 built and reverted; partly built
+
+* ✅ Built on `1.0.148-` (`87cd6c2`, local): the changes of frame under `freeTurnMaxDeg` (90°, less 2°) make no timed turn; the roll about the line
+  through the piece and its look point follows the logic (`rollFollowMs` 200 ms); `freeTurnMaxDeg` 0 = today's game, bit for bit (checked on the
+  replays, his hand, the fast, dy hold and level entry walks).
+* ✅ The corner loops of `Scene_0bis`: the roll a metre a fifth to a tenth of today's, the gizmo never stopped, the gap under 90° to 2 000 px a second.
+* ⛔ His hand: the worst frame of roll cut to a third or less, but the roll a metre only −13 %; the finger against the gizmo worse where the gap is over
+  45° (A5, A6 not met). The level entry's straight dy drifts twice as far.
+* ⛔ S2 (the finger turned by the gap outside a spit, `48ae89c`) REVERTED (`f198b3a`): a feedback at a pole (`Scene_1`'s top: 288° a metre against
+  129° today). The figures and the decisions → [`FAST_ORBIT.md`](../../40_RENDER_SCENE/spec/FAST_ORBIT.md) §14.
