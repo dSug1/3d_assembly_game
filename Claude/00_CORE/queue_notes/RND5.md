@@ -678,3 +678,6 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
 * ✅ **The owner (2026-11-18): *"Keep version 7. Continue."*** — the silent entry's v7 put in from its patch (the switch `freeEntryUpright`), the
   8.8° frame accepted; every gate of §15 re-run on the commit and independently checked. ⛔ The charts' audit launched at 08:20 did NOT run: its
   six readers stopped on the account's usage limit after ten minutes, nothing read — launched again.
+* ✅ **2026-11-18 (afternoon): the silent entry's v7 as committed (`3c66eb9`) gated** — verify 2091 vectors green; G1 – G6 of `LEVEL_FACE_ENTRY.md` §15
+  re-run on the commit, one headless run at a time, no profile or process left: all pass but the accepted 8.8° frame of the cw loop on −x
+  (§11.4 of `FAST_ORBIT.md`) → `LEVEL_FACE_ENTRY.md` §17.

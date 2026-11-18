@@ -775,3 +775,22 @@ the base, on every walk of §10.3's table and on the fast walks; the whole walk'
 **For the owner**, the three options above stand, with v7 now the closest (`es2/es_build_v7.diff`, applies on `bc867a0`; its vectors are v3's and NOT updated or mutation-tested for v5 – v7; gates 1, 2, 4, 6b not rerun on it).
 **Fix round 2 (2026-11-18, the last): still NOT BUILT — the cw loop's exit is the turns' pace, measured once more.** **v8** = v7 + the blend read at the DEEPEST depth reached since the entry (`entryReach`: once turned to the layout, the picture stays turned — the guess being that the way back toward the entry edge shortened the exit's turn). Measured (mode b, the dy at 2 / 4 / 6 px, `mid_check`; the session scratchpad's `es3/`, patch `es3/es_build_v8.diff`): **worse** — the cw loop −x 8.8° → **9.4°** (limit 8.5; far and 0.736), +x 7.8° → **8.5° / 8.6°** (limits 7.9 / 8.2); the others as v7 (ccw 7.1, back 7.0, far edge 11.1 / 7.8, the 4 px loop 8.1, `mid_check` 9.6, the dy all under; the free roll under its limit everywhere). ⭐ What the frames say (`decomp`, v8 f447 – 448): the guess was wrong — the heading was already at the layout within 3° on the way back; the exit turn is short (13.6°, base 59°) because the picture KEPT and the face beyond's camera are close, and in its first frame the face beyond's camera moves 7.5° (base 0.1°) with the finger's look, so k = 6° / 13.6° is applied to 21.1°: 8.2° of roll + 4.5° of look = 9.4°. The base's turn is long and its target moves across it, not along it. So **every silent picture makes this exit short**; nothing read on the free face reaches that first frame. v8 reverted in the working tree (never committed).
 **For the owner, after three rounds**: option (2) above — the timed turn advanced on its CURRENT angle (`seamTurnStep`: on a turn's first frame `k` = 6° over the angle read the frame before, applied to this frame's angle — measured by rounds 1 and 2 and their auditor; ⚠ the comment in `zoneStep` says *the whole angle as it is NOW*; the later frames' `k` does not follow that ratio exactly: read `seamTurnStep` and `turnWhole` before redesigning) — is the one cure measured for every failure of §16; it changes every crossing's pace (a package of its own, LF2's lesson). Then v7 (`es2/es_build_v7.diff`) re-gated whole: its wiring vectors are still v3's (their source patterns do not match v7's code — read, not run) and v5 – v7 were never mutation-tested; gates 1, 2, 4, 6b owed on it.
+
+## 17. ES as built: version 7 kept (2026-11-18, code `3c66eb9`; the gates re-run on it by an Opus agent)
+The owner: *"Keep version 7. Continue."* — v7 is in the game behind the switch `freeEntryUpright` (POLAR ZONES; 1 the default = the silent entry,
+0 = the entry as before). `git revert 3c66eb9` would undo the silent entry alone. `npm run verify`: 166 files, **2091 vectors**, green.
+
+| gate | base (`bc867a0`) | now (`3c66eb9`) | verdict |
+|---|---|---|---|
+| G1 switch at 0: 3 replays, mode a (6 walks), all 27 of mode b | — | frame for frame, largest difference 0 | ✅ |
+| G2 at 1: `Scene_1`, `Scene_0` replays; `Scene_0bis` health | gizmo's largest step 105 mm | frame for frame; 103 mm, 0 errors (the camera's up below 0: 32 → 234 frames, noted) | ✅ |
+| G3 far, 0.736: entry; loops; middle exit; far edge | 24° – 45°; ccw 2 turns, cw exit 62° – 69°; 1.4° – 2.1°; one realignment | 0.1° – 0.4° (limit 2°); ccw 2 turns, cw exit 7° then 27°; 0.2° (limit 3°); one | ✅ |
+| G4 close in, 0.515 (9 walks) | — | largest difference 2e-8, every turn as at the base | ✅ |
+| G5 free roll (limit base + 6°), 23 walks | 0.9° – 5.2° | 4.7° – 7.4°, all under | ✅ |
+| G5 worst frame (limit base + 1°) | cw loop −x 7.5° | 8.8° far and at 0.736 (limit 8.5°); the 21 other walks under | ⚠ accepted |
+| G6 dy hold (z_far, zT_far) | — | the hold as at the base (zT_far's second set-up stopped short, x 12 mm against 127; the hold unaffected) | ✅ |
+
+**What the owner will feel**: entering a level face over an edge, the picture no longer turns — it keeps the view and turns to the face's layout
+only as the gizmo reaches the face's middle, at the one speed. Close in nothing changes. **The accepted miss**: the cw loop's −x exit turns at the
+timed turns' pace on an angle read a frame late, so one frame reaches 8.8° (`FAST_ORBIT.md` §11.4; FO3 removes that timed turn). Recorded, not gated:
+the 4 px ccw loop's dither, LOOP 0 71 turns |roll| 129° 21 frames held → 62 turns 405° 67 held. Recordings: the session scratchpad's `es_v7/`.
