@@ -176,6 +176,8 @@ player sees may. ⚠ On `Scene_0bis` `EDGE=top` is not meaningful (the spit: the
 
 ⭐ (2026-11-17, LF2) LF2's timing rule was built (`e7ff2ed`) and REVERTED (`cb89bdd`): these rows stand for the current code; §8 records what the rule moved.
 
+⭐ (2026-11-18, DH `1562bd1`) holds set: mid_check 1 → 0, ridge_check MODE=across 3 → 2 (a hold set with no dy pushing is no longer set — `DY_HOLD_REVERSAL.md`, [the spec](../../Claude/40_RENDER_SCENE/spec/DY_HOLD_REVERSAL.md) §6); every other row of 6.3 – 6.4 identical.
+
 The code of `276a6c2` (the runs made on `a794693`, one docs commit after it — no code changed). Both switches at their defaults (1) — ⛔ the rows
 of the switches off moved at step 2.5 to [the history note](../../Claude/40_RENDER_SCENE/history/2026-11-16_orbit_gates_off_baselines.md). ⭐ Step 2.5
 (2026-11-16) recorded every default gate below again at its base and after it: equal to these rows (RND5). "Largest" is the view's largest turn in ONE frame (look and roll, the whole camera frame); "in all" its sum over the run;

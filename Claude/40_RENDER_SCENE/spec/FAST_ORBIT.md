@@ -400,7 +400,7 @@ design from that. Then do 2 and 3."* — and, the lead having found one session 
 | R9 | **Time, not frames**: every pace in ms and px a second; the same picture at 60 and at 143 frames a second. | §12.1 |
 | R10 | **One switch gives today's game back, bit for bit; the sliders ship with the rule.** | the project's (a guessed number has been wrong every time) |
 
-### 12.3 Part 2 — the obstacles and the fallbacks (read in the code at `bc867a0`)
+### 12.3 Part 2 — the obstacles and the fallbacks (read in the code at `bc867a0`; re-read at the audited tip before S0)
 
 | # | the obstacle | where | the answer | the fallback |
 |---|---|---|---|---|
@@ -494,7 +494,7 @@ most; a third failure: the code commits reverted, the documents and probes kept,
   A7 read on the shadow; where a gap exists outside a spit (O8). The figures in this file before S1.
 * **S1 — the picture drawn** from the gap (R2 – R5), the changes under 90° free (R6), the direction's rest on its own clock (O3), the two sliders.
 * **S2 — the finger** on the picture wherever S0 found it is not (R7).
-* **Not in this build**: the silent entry (its blocker is the timed turn FO3 removes under 90° — to be taken up again on FO3, on his word); any change
+* **Not in this build**: (2026-11-18) the silent entry v7 IS in the base (`3c66eb9`, `freeEntryUpright` 1; 0 = the entry before): S0 lists `freeShownHeading` among the readers of a turn under way (O7) and says what it sees once a change under 90° makes no timed turn; A0 and A9 run with `freeEntryUpright` 1 and 0; any change
   to a turn of 90° or more; the surface.
 * **Where**: branch `1.0.149-` from the audited tip of `1.0.147-`, the worktree `orbit_charts`; ⛔ nothing merged, nothing deployed without his word.
 

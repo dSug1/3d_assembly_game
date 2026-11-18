@@ -1,6 +1,6 @@
 # Entering a level face — why the picture shakes there, and what would stop it (2026-11-17)
 
-> **STATUS** · ✅ **APPROVED BY THE OWNER 2026-11-17** (*"Agreed to every recommendation. Proceed."*) — the build as briefed: §9; as built: after it; ⛔ **THE CHAIN STOPPED on his word 2026-11-17** (§13: (A) built and LIVE, (iv′) and the timing rule built then reverted, (v) stopped at its root cause §12); a fast orbit's turns merged: PROPOSED §14 — ✅ the owner's go the same night, the build → [`FAST_ORBIT.md`](FAST_ORBIT.md). ⛔ The silent entry (§15) NOT BUILT, 2026-11-18: §16 — ⭐ the chain stopped on the owner's word before its undo (*"0.3degree failure does jot warrant reverting"*), the 0.3° read frame by frame and the options → [`FAST_ORBIT.md`](FAST_ORBIT.md) §11.4; ✅ **the owner (2026-11-18): *"Keep version 7. Continue."*** — v7 PUT IN (the switch `freeEntryUpright`), its gates re-run on the commit. A study with measurements (an Opus agent, 2026-11-17), on the code of
+> **STATUS** · ✅ **APPROVED BY THE OWNER 2026-11-17** (*"Agreed to every recommendation. Proceed."*) — the build as briefed: §9; as built: after it; ⛔ **THE CHAIN STOPPED on his word 2026-11-17** (§13: (A) built and LIVE, (iv′) and the timing rule built then reverted, (v) stopped at its root cause §12); a fast orbit's turns merged: §14 — the fast orbit is ABORTED (built three times, each reverted, not in the game); FO3 agreed, not built → [`FAST_ORBIT.md`](FAST_ORBIT.md). ⭐ The silent entry (§15 – §17) is in the code behind `freeEntryUpright` (default 1; built `3c66eb9`, live, no device look); the path to it, 2026-11-18: §16 — ⭐ the chain stopped on the owner's word before its undo (*"0.3degree failure does jot warrant reverting"*), the 0.3° read frame by frame and the options → [`FAST_ORBIT.md`](FAST_ORBIT.md) §11.4; ✅ **the owner (2026-11-18): *"Keep version 7. Continue."*** — v7 PUT IN (the switch `freeEntryUpright`), its gates re-run on the commit. A study with measurements (an Opus agent, 2026-11-17), on the code of
 > `e252d0f` (= live `main` `6c0a165`). Every candidate was prototyped in a throwaway worktree and undone; nothing is committed under `src` or `tests`.
 > **OWNS** · the entry and the exit of a level face (the bottom of `Scene_0` / `Scene_0bis`, any level top) and the timing of every camera turn ·
 > **READ WITH** · [`TILTED_POLE_CLOSE_IN.md`](TILTED_POLE_CLOSE_IN.md) §1 – §3 (the rules T1 – T12, the carried heading),
@@ -591,12 +591,12 @@ close to its degenerate case to be trusted, or where its own path would exceed t
 | # | open point | where it stands |
 |---|---|---|
 | 1 | Close in on `Scene_0bis`, at a corner's side exits the picture rolls the long way round (262° – 274° for ~105°, up to 128° in one frame) — in the live build; not reported by the owner | the root cause §12, the prototype above; reopened if it shows on a game scene |
-| 2 | `Scene_0bis` far out: the entry turn onto the bottom near an end (25° – 45° in 6 – 9 frames), the two opposite turns of a corner loop | as built; (iv′) reverted — his options §10.3 |
+| 2 | `Scene_0bis` far out: the entry turn onto the bottom near an end (25° – 45° in 6 – 9 frames), the two opposite turns of a corner loop | as built; (iv′) reverted — his options §10.3; the silent entry v7 in the code behind `freeEntryUpright` (default 1), live, no device look |
 | 3 | One rule for every tilt (333 ms / 250 ms), with it the top ridge's half turn *"50% faster"* | reverted — his options §11.2; the ridge as built |
 | 4 | The 27° back over the entry edge near an end (the calm's look) | never studied (§8) |
-| 5 | A fast orbit over many edges: the turns merged | PROPOSED §14 |
+| 5 | A fast orbit over many edges: the turns merged | aborted after three measured builds; FO3 agreed, to be built on `1.0.149-` (`FAST_ORBIT.md` §12) |
 
-## 14. A fast orbit over many edges — one follower instead of a train of turns (PROPOSED 2026-11-17 — ✅ the owner's go that night: the build as briefed and as built → `FAST_ORBIT.md`)
+## 14. A fast orbit over many edges — one follower instead of a train of turns (PROPOSED 2026-11-17; built three times on `1.0.148-`, each reverted — ABORTED 2026-11-18, NOT in the game → `FAST_ORBIT.md` §6 – §10; FO3 agreed, not built, §12)
 
 **The owner** (verbatim): *"when I orbit fast, the gizmo travels fast on the orbit's surface. This is not a problem for large surfaces such as the
 cube of scene 1 but this is an issue on the spit heptagon in scene 0bis because there are a lot of edges and corners and each crossing triggers a

@@ -1,7 +1,7 @@
 # THE ORBIT ON CHARTS — one layout rule for any simple shape (2026-11-15, branch `1.0.145-`)
 
 > ✅ **APPROVED by the owner, 2026-11-15** — *"This is good. Charts approved. Commit. Proceed with execution."* — after the sections were shown on
-> 14 of the shapes (the artifact *Orbit Chart Sections*, https://claude.ai/artifact/BkQd1Ffrx6QLsdcsRUKYxn). ⛔ NOTHING BUILT IN `src` YET. Step 0's
+> 14 of the shapes (the artifact *Orbit Chart Sections*, https://claude.ai/artifact/BkQd1Ffrx6QLsdcsRUKYxn). ⭐ BUILT (2026-11-18): steps 1.1 – 2.5 (7.2, 7.3), always on since step 2.5 (`ef5e899`), live; step C built → `TILTED_POLE_CLOSE_IN.md`; step 3 (the audit) running; step B not started. Step 0's
 > deliverable: the rules, the model, an offline prototype that reads zero on 35 shapes, the build's steps and gates.
 >
 > The owner (2026-11-15): *"I want to implement your systematic approach"* → *"Don't forget the management of the calm in the specifications as this is
@@ -330,7 +330,7 @@ owner's go. A step that changes the screen is closed by the owner's look on a de
 | **2.4** 🔧 | built 2026-11-15 as P, 2.4a, 2.4b, 2.4c, 2.4e (§12, §12.1), each audited, deployed (main `902ae88`), the owner's look 2026-11-16: *"looks on pc and mobile look good"* (§12.3); 2.4d (the band) built and deployed 2026-11-16 (main `f1e03d3`, §12.1), its look owed; ⛔ the rings not wired — the atlas computed with the face map and the charts taking over the changes of frame (§4) | replays ✅ (§12.1); walks, the owner's look |
 | **2.5** 🔧 | built `ef5e899` 2026-11-16 (an Opus agent; [`../../00_CORE/queue_notes/RND5.md`](../../00_CORE/queue_notes/RND5.md)), the auditor's rerun owed — the two switches (`chartLayout`, `chartCalm`) and every path of the game before the charts deleted: the zone detectors, the old tilt's swing, roll back, exits and hold, the old box of a frame's map, the old calm; their 5 tunables and sliders, their state, 32 vectors; one new source pin | the default replays of the three scenes IDENTICAL to the base, every default gate equal (RND5) ✅ |
 | **3** | Fable's audit of the whole diff; the docs; then step B's offline round (§5.3) | the owner's look |
-| **C** (later) | the tilted pole close in on every kind of face (§10.1) — ⭐ its study, PROPOSED 2026-11-16: [`TILTED_POLE_CLOSE_IN.md`](TILTED_POLE_CLOSE_IN.md) (the rules, the obstacles, one design, the audit; the owner's decisions D-T1 – D-T7); then an offline round and the build | the owner's look |
+| **C** (built) | the tilted pole close in on every kind of face (§10.1) — ⭐ its study, PROPOSED 2026-11-16: [`TILTED_POLE_CLOSE_IN.md`](TILTED_POLE_CLOSE_IN.md) (the rules, the obstacles, one design, the audit; the owner's decisions D-T1 – D-T7); built 2026-11-16 (C0, C2 – C5, C2W), live | the owner's look: done (RND5.md) |
 
 ### 7.3 As built
 
@@ -548,7 +548,7 @@ build (`2cae564`, a headless run, the switch off and on): within `tiltAutoM` the
 
 **Step C** → its study, [`TILTED_POLE_CLOSE_IN.md`](TILTED_POLE_CLOSE_IN.md) (2026-11-16): the carried heading; the owner's decisions D-T1 – D-T7
 (the tilted pole for close in only — *"for fine placement of the piece, not for scene view"*; D-C2, D-C4, D-C6 kept; a spit's level faces on
-the same rule); its offline round run; built so far: the free faces' geometry (C2); a spit's level faces (C4) in build.
+the same rule); its offline round run; built: C2, C3, C4, C5, C2W (2026-11-16), live.
 
 ### 10.2 A band against input noise at every trigger of a camera movement
 
@@ -760,7 +760,7 @@ today); far out a pole stays the polar orbit's limit (D-C6: with the press gone 
 
 The owner: *"I will go to sleep. Finish everything tonight without asking me anything. Just record your decisions so I can review tomorrow morning.
 Tomorrow, we will work on the tilted-pole orbit at close in and the hysteresis."* → the list, each with its reason and what undoes it:
-[`RND5.md`](../../00_CORE/queue_notes/RND5.md), "DECISIONS TO REVIEW". ⭐ **The next session**: the tilted pole close in (step C,
+(2026-11-16, done since: see RND5.md) [`RND5.md`](../../00_CORE/queue_notes/RND5.md), "DECISIONS TO REVIEW". ⭐ **The next session**: the tilted pole close in (step C,
 §10.1 — it now runs on the one transition; the entry's 8.5° frame of §12.1's table is the first thing to look at) and the hysteresis (2.4d: ONE
 banded reading of the face under the gizmo, `faceSwitches` / `gizmoEdgeMarginMm`, for the tilt's entry and exit, the pole's crossing and the
 square camera's target — §10.2's table lists what has a band today). ✅ Deployed 2026-11-16 (the owner: *"deploy"*): main `902ae88`.
