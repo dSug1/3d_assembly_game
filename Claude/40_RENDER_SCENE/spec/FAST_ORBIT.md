@@ -1,6 +1,6 @@
 # A fast orbit over many edges — one follower instead of a train of turns (2026-11-17)
 
-> **STATUS** · ✅ **THE OWNER'S GO, the night of 2026-11-17** — the build as briefed: §1 – §5 (branch `1.0.148-`, from `1dac167`); as built: after §5 — ⛔ FO1's first build measured and reverted (§6); ⭐ the fix rounds on the contract amended (§7); ⛔ fix round 1 (test 2) built on §7, measured, NOT BUILT — reverted (§8); ⛔ fix round 2 (test 3, the last) — three realisations measured, NOT BUILT — reverted (§9); ⛔ **THE ABORT DONE: the work is back on `1.0.147-`, the fast orbit is NOT in the game** (§10: what was learned, the lead's proposal)
+> **STATUS** · ⭐⭐⭐ **2026-11-18: WHY THE THREE BUILDS FAILED — the specification, not a limit (§11); the silent entry's 0.3° on the same root (§11.4); FO3, the picture a follower of the logic, sized on the owner's measured pace — ✅ AGREED, to be built (§12)** · ✅ **THE OWNER'S GO, the night of 2026-11-17** — the build as briefed: §1 – §5 (branch `1.0.148-`, from `1dac167`); as built: after §5 — ⛔ FO1's first build measured and reverted (§6); ⭐ the fix rounds on the contract amended (§7); ⛔ fix round 1 (test 2) built on §7, measured, NOT BUILT — reverted (§8); ⛔ fix round 2 (test 3, the last) — three realisations measured, NOT BUILT — reverted (§9); ⛔ **THE ABORT DONE: the work is back on `1.0.147-`, the fast orbit is NOT in the game** (§10: what was learned, the lead's proposal)
 > **OWNS** · how a camera turn behaves when the gizmo crosses edges fast: which turns hold the gizmo, a running turn redirected, the pace of a turn that
 > does not hold · **READ WITH** · [`LEVEL_FACE_ENTRY.md`](LEVEL_FACE_ENTRY.md) §14 (the proposal: the turns counted, the literature, why nothing
 > drifts), [`TILTED_POLE_CLOSE_IN.md`](TILTED_POLE_CLOSE_IN.md) §1 (the rules T1 – T12), `scripts/probes/ORBIT_GATES.md` (the gates). The dossier:
@@ -256,3 +256,245 @@ from `1.0.147-`: the dy hold, the silent entry, the audit.
 when a free turn's lag reaches the limit (90°) — §9's option (a). It keeps his rule that a turn of 90° or more holds, and it bends only the lead's own
 §2 1. (the hold decided once). To be measured before any build: which pace his own fast orbit has — a play recorded on his phone would say whether 20
 or 30 px a frame is the case to judge.
+
+## 11. Why the three builds failed — the specification, not a limit (the lead, 2026-11-18, on the owner's question)
+
+**The owner** (2026-11-18, verbatim): *"analyze why the fast orbit failed: it looks like for me that the specification and the logic behind the fast orbit
+was not properly drafted. I see no link between gizmo movement and the smoothing of the camera-piece movement therefore I do not understand the reasons
+you provided for the failure of the attemps: they should be overcomeable by a better logic design (for example a camera-piece ghost target and
+camera-piece follower with intermediate transformed removed, or other state-of-the-art literature patent-free design)."*
+
+**The result first.** He is right. The builds did not fail because the smoothing cannot be done. They failed because §2 – §7 specified a patch on the
+turn events, not a model of the picture, and because §4 measured it with the wrong yardstick. §10's reason (*"the camera's TARGET itself turns 21 – 52°
+in one frame"*) was a symptom of that design, not a limit: split into its parts, that fast turning is ROLL — the part a follower absorbs.
+
+**How it was read** — offline, on the night's recordings (`fo1/base`, `fo1b`, `fo1c/v2` in the session's scratchpad; no game run): each frame's turning of
+the picture split into the ORBIT ITSELF (the camera's place going round the assembly: the direction centre → camera) and the ROLL (the picture turning
+about its own view axis: a frame's change at a crossing, a frame swinging near a pole or a tip). Scripts: the scratchpad's `fo_why/split.mjs`, `sim.mjs`,
+`per_metre.mjs`.
+
+### 11.1 What the recordings say (measured; the corner loops, 20 and 30 px a frame at 60 frames a second)
+
+| | today's game (`fo1/base`) | build 2 (`fo1b`) | build 3, v2 (`fo1c/v2`) |
+|---|---|---|---|
+| frames with the gizmo stopped by a turn | 28 – 67 % of a loop's frames | 0 at 20 px | 0 at 20 px |
+| the picture's turning in a loop: the orbit itself / the roll | 216 – 722° / 139 – 893° | 179 – 661° / 52 – 611° | 87 – 1165° / 57 – 1153° |
+| worst frame, 20 px: all (orbit / roll) | 12.6 – 14.8° (9.8 – 12.8 / 9.0 – 10.7) | 11.3 – 19.6° (9.1 – 18.8 / 7.8 – 14.6) | 6.0 – 9.8° (6.0 – 9.1 / 5.4 – 6.0) |
+| worst frame, 30 px: all (orbit / roll) | 16.8 – 30.5° (15.0 – 21.2 / 10.3 – 26.0) | 15.4 – 43.0° (13.0 – 24.7 / 9.4 – 35.7) | 55 – 130° (55 – 130 / 5.5 – 23.2) |
+| ⭐ LIKE FOR LIKE, every 20 px walk: the roll shown per METRE of gizmo travel | **93° a metre**, the gizmo stopped in 39 % of the frames | **24° a metre**, stopped in 2 % | 27° a metre, stopped in 2 % |
+
+* **Today the picture rolls about as much as it orbits, and the gizmo is stopped in a third to two thirds of the frames.** That stop-and-go is what a
+  fast orbit over the heptagon looks like.
+* **The logic's own jumps are roll.** On build 2's recorded TARGETS (the gizmo free): the worst frame of roll 59 – 153°, the worst frame of the orbit
+  itself 11 – 21°.
+* **Build 2's bad frames are roll** that no turn event carried (43.0° = 24.3 orbit, 35.7 roll): the frame swinging near a pole or a tip is not an "event".
+* **Build 3's jumps are the camera's PLACE** (113.8° = 113.0 orbit): its follower capped the whole picture at the turns' speed, so the camera's place
+  fell 80 – 137° behind the piece; a half turn then began, drawn the old way, and put the place back in one frame.
+* ⭐ **Per metre of gizmo travel, build 2 already showed four times less roll than today's game** (the table's last row) — and §4's gates failed it:
+  they compared a frame's worst and a loop's totals at one finger pace, with today's gizmo stopped four frames in ten.
+
+### 11.2 The four errors of the specification (the lead's)
+
+1. **The unit was the turn event, not the picture.** FO1 said which turn holds and how a running turn is redirected. A turn's drawing assumes a still
+   target (build 1's circle), and every roll that is not an event passed unfiltered (build 2).
+2. **No split between the orbit and the roll.** F11 made the turns' one speed (6° a frame) the budget of the WHOLE picture — the orbit itself asks 11 – 21°
+   a frame at those paces. The lag was built in (build 3).
+3. **Two drawings side by side** — the follower for a free turn, the old fade for a held one — with different assumptions: the jump at the hand-over.
+4. **The yardstick.** (a) The paces were chosen, not measured: measured since (§12.1), 20 and 30 px a frame at 60 are the top tenth and the top
+   fiftieth of his own pace — real, but the gates sat only there; none at his average (9.5 px a frame at 60), where both builds were better than today
+   on the one walk made (8 px: 30 → 23 frames, 85° → 65° / 51° of turning). (b) G5 – G6 compared a frame's worst and a loop's totals with a game whose
+   gizmo is stopped: with the gizmo free the same finger makes the orbit go further, so the comparison is not like for like. (c) A pace was written in
+   px a FRAME: his desk draws 143 frames a second, the probes and the phone 60.
+
+### 11.3 The link between the gizmo and the smoothing (his question)
+
+* **Today a camera turn is a timed event that STOPS the gizmo until it ends** (T5). To end the stop-and-go, FO1 let the gizmo move during a turn under
+  90°. From then on the turn's target moves while it is drawn. That is the only reason the gizmo entered the smoothing — and it was handled by patching
+  the event's drawing three times instead of drawing the picture as a follower of the logic.
+* **One link is real and stays in any design: the finger steers by the picture on the glass** (in a spit the finger is read off the picture DRAWN,
+  `zoneFinger`). So the camera's place must not lag the piece, and a half turn (the glass upside down) must still hold. The roll may lag: the finger keeps
+  its way on the glass.
+* ⭐ **The silent entry failed the same night on the same root** ([`LEVEL_FACE_ENTRY.md`](LEVEL_FACE_ENTRY.md) §16, its auditor): *a timed turn advances
+  its share by the angle it had before the frame and applies it to the angle it has now — the target keeps moving.* One cause, two packages.
+
+### 11.4 The silent entry's 0.3° — the same root, read frame by frame (the lead, 2026-11-18)
+
+**The owner** (2026-11-18, verbatim; fix round 1 had missed one gate by 0.3°): *"Silent entry: if fix round 2 fails, let’s do a deep analysis of the
+root cause before undoing the code. 0.3degree failure does jot warrant reverting to previous build."* Fix round 2 failed (v8, worse than v7:
+[`LEVEL_FACE_ENTRY.md`](LEVEL_FACE_ENTRY.md) §16). ✅ **The chain was stopped on his word before its undo step.** Nothing was ever committed under
+`src`: each version is a patch in the session's scratchpad — the best, v7: `es2/es_build_v7.diff`.
+
+**Read** (the scratchpad's `fo_why/es_worst.mjs`): the clockwise loop on the −x side, far out — the same figures at 0.736. The frame that fails is the
+second frame of the timed turn at the level face's exit.
+
+| | today's game (`bc867a0`) | the silent entry, v7 |
+|---|---|---|
+| the turn's angle at its first frame | 57.7° | 14.4° |
+| the turn's angle one frame later | 58.0° | 20.8° |
+| the turn shown in that frame (the one speed asks 6.0°) | 6.03° | 8.64° |
+| the whole frame: the turn and the camera following the finger (3.95° in v7) | 7.54° | **8.80°** (the gate: the base's + 1° = 8.54°) |
+
+* **The root is in the timed turn, not in the silent entry.** `zoneStep` advances the turn's share on the angle the camera's stage read a frame BEFORE
+  (`zm.rad`); `zoneMixPose` then applies that share to the angle of THIS frame. Its own note of 2026-11-14 states the rule — *"over the turn's whole
+  angle as it is NOW"* — and the read is one frame late: 6.0° over 14.4° is a share of 0.415, applied to 20.8°.
+* **Today's game has it too**: 6.03°, 6.19°, 6.38°, 6.21° shown in a frame where 6.0° is asked — its long turn grows slowly (57.7° → 64.5°).
+* **Why the angle grows while the gizmo is "held"**: the gizmo still moves in the turn's first two frames (12.7 mm, 12.4 mm; the hold bites from the
+  third), then the look point settles behind the finger — v7's turn goes 14.4° → 20.8° → 25.6° → 28.9° → 31.4° → 33.1°. A held turn's target is not still.
+* **The silent entry only exposes it**: it keeps the picture near the face's layout, so the exit turn is short and the same growth is 44 % of it in one
+  frame (0.5 % in today's game). The gate it missed is the lead's own (§15's gate 5).
+* **An estimate, not built**: the share taken on the frame's own angle — the turn shows 6.0°, the frame about 6.7°.
+
+**The options** (for his word): **(1)** v7 kept as it is, the 8.8° frame accepted — FO3 (§12) makes this exit turn, under 90°, a free change: no timed
+turn, no share; **(2)** the share read on the frame's own angle in every timed turn — every crossing's pace changes (by up to 6 % on a long turn),
+the replays no longer the base's bit for bit: a package of its own; **(3)** today's entry kept. ⭐ The lead's recommendation, relayed to him: (1) —
+with the gates never run on v7 (the switch at 0 frame for frame, the replays, close in, the mutants) run and independently checked before it is
+committed.
+
+## 12. FO3 — the picture a follower of the logic: the study in four parts (the lead, 2026-11-18; ✅ AGREED by the owner — §12.6)
+
+**The owner** (2026-11-18, verbatim, on §11's proposal — *1. a recording of his own fast orbit, 2. the study in his four parts with the test rewritten,
+3. the build after the charts' audit and the merge*): *"You don't need new recordings. Use the existing recordings to see the px per frame average and
+design from that. Then do 2 and 3."* — and, the lead having found one session only: *"They are in the E: drive"*.
+
+### 12.1 His pace, measured (his own play; the reader: the scratchpad's `fo_why/pace.mjs`)
+
+**The source**: `E:\Web\_Github websites\3d_assembly_game\Recordings\branch 1-0-142\` — the play recorder's sessions of 2026-11-14 (`_vyah`, `_ogse`,
+`_ilmj`; three more hold no press): his MOUSE on the desk, `Scene_0bis`, far out (the approach at 1 throughout), 143 frames a second, 27 presses,
+**170 s with the button down, 102 s moving**, the gizmo's travel 238 m (1 077 face lengths). The game was that day's (`7c38150`, before the charts).
+
+| the pointer's speed (a 100 ms window) | px a second | = px a frame at 60 (the probes, the phone) | = px a frame on his desk (143) |
+|---|---|---|---|
+| **the average** | **571** | **9.5** | 6.9 (measured per frame) |
+| the median | 468 | 7.8 | 4.9 |
+| three quarters of the time under | 835 | 13.9 | 8.8 |
+| nine tenths under | 1 213 | 20.2 | 14.4 |
+| 95 % / 99 % under | 1 469 / 1 996 | 24.5 / 33.3 | 19.3 / 32.8 |
+
+* **Half of his moving time is fast**: 183 stretches at 600 px a second or more (150 ms or longer), 43.7 s of the 102, at 850 – 1 120 px a second on
+  average — 14 – 19 px a frame at 60. A fast stretch lasts 0.2 – 0.45 s: a flick of the wrist, then a reversal or a pause.
+* **The gizmo**: 2.6 m a second on average, 5.9 at the top tenth, 12.3 at most — a rectangle face (221 mm) every 0.1 s at the median, every 0.04 s at
+  the top tenth: one face in two or three frames at 60.
+* **What he saw that day**: the pointer MOVING and the gizmo STOPPED by a turn during **31 – 39 % of the moving time** (40 – 44 % of the fast
+  stretches' frames); the picture's roll as large as the orbit itself (42 465° against 48 559° over the three sessions). The stop-and-go and the
+  rolling are his complaint, measured on his own hand.
+* **What it says of §4's gates**: 20 px a frame (1 200 px a second) is his top tenth, 30 px (1 800) his top fiftieth. ⛔ No gate stood at his average.
+* ⭐ **A pace is written in px a SECOND from here on** (the frame rate is not one: 143 on his desk, 60 in the probes and on the phone).
+
+### 12.2 Part 1 — the rules (what the picture must do)
+
+| # | the rule | whose |
+|---|---|---|
+| R1 | **The logic is not touched.** The pose the logic asks for each frame — every change of frame applied at once — is the GHOST. Every rule of the orbit stays (T1 – T12, the charts), but for R6. | his: *"a camera-piece ghost target"* |
+| R2 | **The picture is drawn ONE way on every frame**: the ghost, turned back by what is left of the gap. Never a fade from a pose fixed in the world. | §11.2, errors 1 and 3 |
+| R3 | **The place is exact.** The piece and the camera's look point keep, at every frame, the places on the glass the ghost gives them. Only the roll about the line through the two may lag. | his, 2026-11-14: the piece never leaps, nothing flies off the glass; §11.2, error 2 |
+| R4 | **The gap closes by one law, smooth at its start and its end; the newest target wins** — an intermediate frame that the next one cancels is never shown. | his: *"ignoring the intermediate quaternion"* |
+| R5 | **At rest the picture IS the ghost, bit for bit.** Nothing drifts. | his question on the drift ([`LEVEL_FACE_ENTRY.md`](LEVEL_FACE_ENTRY.md) §14) |
+| R6 | **No change under 90° stops the gizmo** (T5 bent, as he accepted for FO1). **A change of 90° or more is today's turn, bit for bit**: timed, the gizmo held. | his go of 2026-11-17 |
+| R7 | **The finger steers by the picture drawn**: a straight finger gives a straight gizmo on the glass while a gap closes. | §11.3 |
+| R8 | **The piece is drawn where the logic puts it** (the model's truth: contact, collisions). Only the camera follows. | the lead's (the solver must never read a picture) |
+| R9 | **Time, not frames**: every pace in ms and px a second; the same picture at 60 and at 143 frames a second. | §12.1 |
+| R10 | **One switch gives today's game back, bit for bit; the sliders ship with the rule.** | the project's (a guessed number has been wrong every time) |
+
+### 12.3 Part 2 — the obstacles and the fallbacks (read in the code at `bc867a0`)
+
+| # | the obstacle | where | the answer | the fallback |
+|---|---|---|---|---|
+| O1 | Today's turn is a fade from a pose FIXED IN THE WORLD (`asmZoneMix.from`) at a share `k`; its target moves when the gizmo is free | `zoneMixPose`, `zoneStep` (`assembly_wiring.ts`) | under 90° no such turn is made; the gap is a scalar on the ghost (§12.4) | — |
+| O2 | The change's angle is known only at the camera's stage, a frame after the site that makes the turn (`seamTurnStart`, the zone's switch, the spit's crossing) | the three sites; `tiltClampStep` | the builder decides WHERE under 90° is known; the rule: **no orbit step is refused for a change under 90°, not for one event** | decided at the camera's stage, the hold's test blind to a turn whose angle is not read yet |
+| O3 | A change of frame is not only a roll: the piece's shown direction steps by a few degrees (`asmDirEase`), eased today on the turn's clock (`e.mix === zm`) | `seam_turn.ts` `dirGap`, `easedDir`; `shownDir` | with no turn, the direction's rest decays on a clock of its own, by the same law | by time at the tilts' one speed over its own angle (`seamTurnStep`'s TIME) |
+| O4 | The roll's axis: about the view axis through the glass's centre the piece goes round the centre (⛔ tried 2026-11-13) | `assemblyCameraFrame`'s note | about the LINE THROUGH THE PIECE AND THE LOOK POINT: a camera turned about it keeps both where they are on the glass | the two closer than a few mm (close in): the view's own direction through the piece |
+| O5 | The turns that stay as they are: 90° or more; the automatic tilt's entry (`byMm`); the way out of close in (`out`); the square camera's (`asmSquare`); a tilt's exit | `turnHoldsGizmo`, `seamTurnFrame`, `seamOutFrame` | untouched. One starting takes its start from the pose SHOWN (it holds the gap): the gap is then 0, the follower idle until it ends | — |
+| O6 | Changes under 90° piling up the same way faster than the gap closes | offline: never on the routes walked at 20 px a frame, at any pace to 1 200 px a second (largest gap 59 – 67° = one change); on the routes walked at 30 px a frame (the probe lost its way there) 110 – 138° in 0.4 – 2 % of the frames, at 1 200 – 2 000 px a second | reported, not bounded: a hard stop at 90° shows up to 43° in one frame (offline) — worse than the lag | if the gap passes 90° at his paces in the game: the law's time shortened over 60° of gap — to be measured before it is built |
+| O7 | Who reads "a turn is under way": the pole's crossing (`turning`), the hold, the recorder, `easeCarry` | `pole_crossing.ts`, `assembly_wiring.ts` l. 1115, `play_recorder.ts` | each reader listed by the builder with what it now sees, before any change (step S0) | — |
+| O8 | Outside a spit the finger is read as it is: with a gap, the gizmo would run aside of the finger on the glass | `zoneFinger`, `orbitDragStep` | R7: the finger's step turned by the gap wherever it is not already read off the picture drawn (`asmCamLast` = the picture) | measured first in S0: where a gap can exist outside a spit at all |
+| O9 | A probe steered by the glass takes another route when the picture differs; no two builds walk the same metres | the night's G6 | like for like only: per metre of gizmo travel, and HIS HAND replayed (the same pointer events on both) | — |
+| O10 | The dy hold (`DY_HOLD_REVERSAL.md`), the look point's trail, the sway, the calm | — | part of the ghost or of a turn of 90° or more: untouched | — |
+| O11 | A reset (boot, a piece picked or put down, `resetOrbitState`) | — | the gap 0, no last ghost: the first frame is the ghost | — |
+
+### 12.4 Part 3 — the design (from the prior art, sized on his pace)
+
+**The model.** Each frame the camera's stage builds, as today, the pose the logic asks for: the eye, the look point, the up — **the ghost**. The piece is
+at `pp`, the look point at `L`. The **framed line** `a` goes through the two.
+
+1. **The ghost's twist.** The rotation from last frame's ghost to this frame's is split in two (swing and twist): the SWING takes last frame's line onto
+   this frame's — the orbit itself — and is shown in full, at once. The TWIST `τ` is what is left: a turn about the line — a change of frame, a frame
+   swinging near a pole or a tip, whatever made it. The follower need not know.
+2. **The gap.** One number, `θ`: `θ ← θ − τ`, taken the short way round. It is how far the picture is rolled back from the ghost. ⭐ The gap takes the
+   ghost's twist **only while the gizmo is free**: while a turn that stays holds it (5., O5), the picture turns as today's and a gap already open goes on
+   closing.
+3. **The follower.** `θ` closes to 0 by the critically damped ease (a smooth start, a smooth end, no overshoot; its state the gap and its speed), its
+   time `rollFollowMs`. A new twist adds to the gap while it closes: the newest target wins, and two changes that cancel are never drawn.
+4. **The picture** = the ghost turned about the framed line (through the piece) by `θ`. The piece and the look point are on the line: both keep their
+   places on the glass, exactly, whatever `θ`. The eye rides a small circle about the line. `θ = 0`: the ghost itself, bit for bit (under 0.01° and
+   slower than 0.01° a second it is set to 0).
+5. **The limit.** A change whose twist is 90° or more (`freeTurnMaxDeg`) is today's timed turn, the gizmo held (R6, O5). `freeTurnMaxDeg = 0`: every
+   change is today's turn — today's game, bit for bit (R10).
+6. **The finger** is read on the picture drawn (R7, O8); the piece is the logic's (R8).
+
+**Sized on his pace** — an ESTIMATE, offline (the scratchpad's `fo_why/pace_sim.mjs`: build 2's recorded targets, the gizmo free, re-timed to a pointer
+speed; NOT a run of the game — there the route changes with the picture). The ghost rolls 132° per metre of gizmo travel on the corner loops; today's
+game shows 93° a metre at 1 200 px a second with the gizmo stopped in 39 % of the frames (measured, §11.1).
+
+| the pointer | the roll shown per metre, `rollFollowMs` 200 | the worst frame of roll at 60 a second | the largest gap | the same with today's speed redirected (360° a second) |
+|---|---|---|---|---|
+| 240 px a second (slow) | 52° (40 % of the ghost's) | 4.3° | 66° | 105° a metre, 6.0° a frame |
+| 470 (his median) | 26° (20 %) | 3.7° | 63° | 74°, 6.0° |
+| **571 (his average)** | **21° (16 %)** | **3.7°** | **61°** | 64°, 6.0° |
+| 835 (three quarters under) | 14° (10 %) | 3.5° | 62° | 49°, 6.0° |
+| 1 050 (his fast stretches) | 11° (8 %) | 3.1° | 59° | 43°, 6.0° |
+| 1 200 (nine tenths under) | 10° (7 %) | 3.0° | 59° | 40°, 6.0° |
+| 1 800 – 2 000 (the top fiftieth; the routes walked at 30 px a frame, the half turns left to today's turn) | 19 – 20° (23 – 24 %) | 7.6° | 112 – 116° (over 90° in 1 % of the frames) | 33 – 35°, 6.0° |
+
+* **The defaults**: `rollFollowMs` **200** (slider 60 – 600; at 300: 13° a metre at his average, 2.3° a frame; at 250: 17°), `freeTurnMaxDeg` **90**
+  (slider 0 – 90; 0 = today's game). On his desk (143 frames a second) the same shares, 1.3 – 1.6° a frame.
+* **What he will feel**: no stop at an edge under 90°; a change of 51° (a face of the heptagon to the next) rolls in softly — within 5° after 0.39 s,
+  within 1° after 0.58 s, at 188° a second at most (today: 0.14 s at 360° a second, the gizmo stopped). He asked for it of the level face's entry: *"why
+  can't we make the turn slower instead of a tenth of a second ?"*. ⛔ The price: after a fast stretch the picture goes on rolling for about half a
+  second — the slider is his.
+* **Prior art, all over twenty years old**: the twist about an axis split from the swing (Shoemake, *Fiber bundle twist reduction*, Graphics Gems IV,
+  1994); a follower whose speed grows with what is left (Mackinlay, Card, Robertson, 1990), in its critically damped form (Game Programming Gems 4,
+  2004); filters on orientation signals (Lee and Shin, 2002); the up carried along a path (Bishop, 1975); the camera as a field over the surface the
+  pointer travels (Hanson and Wernert, 1997) — the second candidate, not taken: it smooths by PLACE, and his fast orbit needs a smoothing in TIME; the
+  trade named in the literature — frame coherence against constraint satisfaction (Halper, Helbing, Strothotte, 2001). That a camera keeping two points
+  at fixed places on the glass is free only to turn about the line through them is plain geometry.
+
+### 12.5 Part 4 — the audit: what "the test passes" means now
+
+**The inputs.** (H) **his hand**: stretches of his three sessions replayed (`walk_probe.mjs`'s `replay`: the same pointer events at their times, his
+1536 × 742 glass) on today's game and on the build — far out as recorded, and once more at 0.736 and close in; (S) the steered walks at **his** paces:
+240, 470, 571, 835, 1 050, 1 200 px a second, and 1 800 – 2 000 as a "nothing breaks" check only; (R) the older gates, the three seeded replays, the
+dy hold's walks, the level entry's walks. Each at 60 frames a second; (H) once at 143.
+
+| gate | what passes |
+|---|---|
+| A0 | `freeTurnMaxDeg = 0`: today's game, bit for bit — the three replays, a sample of every family of walks |
+| A1 | `npm run verify`; the new vectors land with the code, each shown to fail on a mutant |
+| A2 | **the place exact**: on every frame outside a timed turn, the piece's and the look point's places on the glass are the ghost's (within 1e-6 of the half glass) |
+| A3 | **at rest the ghost**: the gap is exactly 0 within 1.5 s after the ghost stops turning, and the pose is then the ghost's bit for bit; on the slow walks (the same route) the last pose is the base's |
+| A4 | **no stop under 90°**: no frame and no refused orbit step with the gizmo held by a change under 90°; the turns of 90° or more as many and as long as the base's |
+| A5 | **the roll, like for like**, on (H) and on (S) at 470 – 1 200 px a second: the roll shown per metre of gizmo travel under HALF the base's on every run where the base shows 30° a metre or more, never over the base's + 2° a metre elsewhere; the worst frame of roll not over the base's |
+| A6 | **the finger straight**: while a gap closes, the angle on the glass between the finger's way and the gizmo's not over the base's own largest on the same walk outside its turns, + 5° |
+| A7 | **the gap**: never over 90° on (H) and on (S) to 1 200 px a second; its largest value and its share over 45° reported at every pace |
+| A8 | **nothing breaks** at 1 800 – 2 000 px a second and at 143 frames a second: no error, no step of the gizmo out of its pace, A2 and A3 still true |
+| A9 | **no regression where nothing is free**: every walk on which the ghost never twists with the gizmo free (S0 lists them: close in, the tilted pole, the square camera, the way out, the dy hold's) identical to the base frame for frame; a difference elsewhere traced to a named free change |
+| A10 | the documents, the tree clean, no process left |
+
+**The chain**: an Opus builder, then an independent Opus auditor who re-measures with readers of its own and mutates the vectors; two fix rounds at
+most; a third failure: the code commits reverted, the documents and probes kept, a report. ⛔ No deploy without the owner's word.
+
+### 12.6 The build's order
+
+* **S0 — the shadow, before any change of what is drawn** (probes and documents only, then one code commit that draws nothing new): the readers of a
+  turn under way listed (O7); the ghost, its twist, the gap and the picture COMPUTED each frame and recorded, not drawn; his hand replayed; A2, A3 and
+  A7 read on the shadow; where a gap exists outside a spit (O8). The figures in this file before S1.
+* **S1 — the picture drawn** from the gap (R2 – R5), the changes under 90° free (R6), the direction's rest on its own clock (O3), the two sliders.
+* **S2 — the finger** on the picture wherever S0 found it is not (R7).
+* **Not in this build**: the silent entry (its blocker is the timed turn FO3 removes under 90° — to be taken up again on FO3, on his word); any change
+  to a turn of 90° or more; the surface.
+* **Where**: branch `1.0.149-` from the audited tip of `1.0.147-`, the worktree `orbit_charts`; ⛔ nothing merged, nothing deployed without his word.
+
+**For his review** (the lead's choices, each a slider or a line to change): the follower's time 200 ms; no hard stop of the gap at 90° (O6); the price
+named above; FO3 built after the charts' audit — on its own branch, so the merge of `1.0.147-` waits for nothing.
+
+✅ **The owner** (2026-11-18, on the design, the estimate, the price and these choices as relayed): *"Agreed"*. The build is S0 – S2 as written here;
+⛔ still nothing deployed without his word.

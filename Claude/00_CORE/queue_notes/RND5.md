@@ -658,3 +658,20 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   silent picture makes this exit short; nothing on the free face reaches that frame.
 * **For him**: the timed turn advanced on its current angle (a package of its own), then v7 re-gated whole; or keep today's entry
   ([`LEVEL_FACE_ENTRY.md`](../../40_RENDER_SCENE/spec/LEVEL_FACE_ENTRY.md) §16, its last paragraphs).
+
+### 2026-11-18 (morning) — the lead: the owner awake; why the fast orbit failed; his pace; FO3 agreed; the silent entry's chain stopped on his word
+
+* **His question** (*"analyze why the fast orbit failed … the specification and the logic behind the fast orbit was not properly drafted"*): he is
+  right — four errors of the lead's specification, read off the night's recordings split into the orbit itself and the roll
+  ([`FAST_ORBIT.md`](../../40_RENDER_SCENE/spec/FAST_ORBIT.md) §11). Like for like, today's game shows 93° of roll per metre of gizmo travel with the
+  gizmo stopped in 39 % of the frames; the second build of the night already showed 24° a metre.
+* **His pace** (*"Use the existing recordings to see the px per frame average and design from that. Then do 2 and 3."* — *"They are in the E:
+  drive"*): his play recorder's sessions of 2026-11-14 read — 571 px a second on average, 1 213 at the top tenth; the gizmo stopped by a turn during
+  31 – 39 % of his moving time (§12.1).
+* **FO3 — the picture a follower of the logic**, the study in his four parts (§12): the ghost's twist about the line through the piece and the look
+  point, one gap, a critically damped follower (200 ms), no stop under 90°; the test rewritten (his hand replayed, per metre of gizmo travel).
+  ✅ **The owner: *"Agreed"*.** To be built on `1.0.149-`, the shadow first, after the charts' audit. ⛔ Nothing built yet.
+* **The silent entry**: fix rounds 1 and 2 not built (v7 the best: one gate missed by 0.3°; v8 worse). ✅ **The chain stopped on his word before its
+  undo** (*"0.3degree failure does jot warrant reverting to previous build"*). The 0.3° read frame by frame: the timed turn's share is advanced on
+  the angle of the frame before and applied to this frame's — today's game has it too; the options (§11.4). v7 is a patch in the scratchpad;
+  `src` and `tests` are `bc867a0`'s.
