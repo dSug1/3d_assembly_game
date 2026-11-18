@@ -107,7 +107,7 @@ describe("UD4b — no stop under freeTurnMaxDeg near the vertical (`uprightBandF
   const rs = readFileSync("src/render/roll_shadow.ts", "utf8");
   it("FO3's rule at any w first; the freed frame's twist of G about the framed line handed to law U as a whole carry", () => {
     expect(rs).toContain("if (st.cfg.uprightBandFree === 1 && was.upright !== undefined && turnIsFree(whole, maxDeg)) return true;");
-    expect(rs).toContain("const freedTwist = freed > 0 && st.cfg.uprightBandFree === 1 && was !== null && was.upright !== undefined ? tw : null;");
+    expect(rs).toContain("const freedTwist = (freed > 0 || fresh) && st.cfg.uprightBandFree === 1 && was !== null && was.upright !== undefined ? tw : null;");
     expect(rs).toContain("const r = uprightStep(was?.upright?.state ?? UPRIGHT_REST, G, line, dtMs, knobs, scale, freedTwist);");
     expect(rs).toContain("const tw = was === null ? 0 : twistAbout(was.ghost, G, line.dir);");
   });

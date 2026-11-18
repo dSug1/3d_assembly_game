@@ -167,7 +167,9 @@ function uprightPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3,
   const tw = was === null ? 0 : twistAbout(was.ghost, G, line.dir);
   // ⭐⭐⭐ (§6 UD4b, `uprightBandFree` 1) on the frame a change is FREED the carry is whole: the frame's twist of G about the framed line undone — the
   // picture keeps its roll across it (well defined at the vertical, where α is not); the rest then closes at `uprightMaxDegS`
-  const freedTwist = freed > 0 && st.cfg.uprightBandFree === 1 && was !== null && was.upright !== undefined ? tw : null;
+  // ⭐⭐⭐ (fix round 1, F3 — measured: 3 – 5 one-frame flips left on his hand) and on a TIMED turn's first frame too (`fresh`): there the logic's view
+  // jumps 33 – 54° across the band and its `Δα` (not a roll) was carried at `c` = 0.69 – 1 — 100 – 140° of the picture in one frame
+  const freedTwist = (freed > 0 || fresh) && st.cfg.uprightBandFree === 1 && was !== null && was.upright !== undefined ? tw : null;
   const r = uprightStep(was?.upright?.state ?? UPRIGHT_REST, G, line, dtMs, knobs, scale, freedTwist);
   const P = poseRolled(G, line, r.phi);
   const d: Vec3 = [P.eye[0] - P.look[0], P.eye[1] - P.look[1], P.eye[2] - P.look[2]];
