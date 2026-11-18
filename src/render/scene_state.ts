@@ -414,6 +414,25 @@ export interface SceneState {
   asmDirEase: { readonly axis: import("../core/vec").Vec3; readonly angle: number; readonly mix: object } | null;
   /** ⭐ (D-Z7) the last camera frame built around the assembly (the switch's start, the finger's screen) */
   asmCamLast: import("../input/orbit_tilt").CamFrame | null;
+  /** ⭐⭐⭐ (2026-11-18, `FAST_ORBIT.md` §12.6 S0) THE SHADOW of the picture a follower of the logic — computed and recorded, NEVER drawn (`roll_shadow.ts`):
+   *  the ghost and its framed line, the frame's twist, the two gaps (`held`: taken only with the gizmo free today; `free`: as S1 would), the turn under
+   *  way and its twist at its first frame, the picture it would draw, A2's error on the glass; `null`: none yet (a reset) */
+  asmRollShadow: {
+    readonly ghost: import("../input/orbit_tilt").CamPose;
+    readonly dir: import("../core/vec").Vec3;
+    readonly piece: import("../core/vec").Vec3;
+    readonly held: import("../input/roll_follow").RollGap;
+    readonly free: import("../input/roll_follow").RollGap;
+    readonly turn: object | null;
+    readonly turnTw: number;
+    readonly stays: boolean;
+    readonly tw: number;
+    readonly gizmoFree: boolean;
+    readonly spit: boolean;
+    readonly freshTurn: boolean;
+    readonly picture: import("../input/orbit_tilt").CamPose;
+    readonly a2: number;
+  } | null;
   /** ⭐⭐⭐ (2026-11-13, the owner: *"replicate the behavior of scene 0 when crossing the zenith edge"*) the spit's side of the axis (`spitSide`; 0: none) */
   asmSpitSide: number;
   /** ⭐⭐⭐ (2026-11-14) the camera's direction the spit's side was last read at (world) — the crossing read on the path from it (`crossingPitch`) */

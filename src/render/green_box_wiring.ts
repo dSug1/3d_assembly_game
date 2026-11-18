@@ -41,6 +41,7 @@ import { cameraOffsetAt, easeShare, gizmoBlendTravel, horizontalShare, rigSwingN
 import { governedRingStep } from "../input/turn_governor";
 import { GRAVITY_FRAMES, quadFrames } from "../core/orientation_set";
 import { cameraFrameHeld, upSquareToView } from "../input/camera_frame";
+import { rollShadowFrame } from "./roll_shadow";
 import { elevationGainScale } from "../input/orbit";
 import { UNTURNED } from "../input/orbit_rig";
 import { contactFrame } from "./contact_wiring";
@@ -1063,6 +1064,8 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   let upIn: Vec3 = camFrame.up;
   // ⭐⭐⭐ (2026-11-14) a polar zone's turn (its switch, the spit's crossing): the camera turned ABOUT THE PIECE from the pose on the glass (`zoneMixPose`)
   if (assemblyOn(st)) {
+    // ⭐⭐⭐ (2026-11-18, `FAST_ORBIT.md` §12.6 S0) the shadow of the picture a follower of the logic: computed and recorded, never drawn (`roll_shadow.ts`)
+    rollShadowFrame(st, pp, { eye: camAt, look: lookAt, up: camFrame.up }, dtSec * 1000);
     const zp = zoneMixPose(st, pp, camAt, lookAt, camFrame.up);
     camAt = [zp.eye[0], zp.eye[1], zp.eye[2]];
     lookAt = [zp.look[0], zp.look[1], zp.look[2]];
