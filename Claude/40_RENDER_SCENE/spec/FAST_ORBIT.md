@@ -633,3 +633,23 @@ frames where the ghost turns over 0.5° about the line with the gizmo free today
      90° would then stop the gizmo — **his word needed**.
   3. O6 as written — measured above: it does not meet A7.
 * ⛔ Not decided here, not built: S1 waits for the lead and the owner.
+
+### 13.7 The owner's decision (2026-11-18) — a gap over 90° accepted; the mitigations studied aside
+
+**The owner** (verbatim, on 13.6's options as relayed): *"Let's do 1. There might also be ways to mitigate it further, for example: - select the speed
+of the follower with a slider - increase the speed of the follower with the distance - clamp by how much the delta input moves the orbit - damp by
+how much the delta input moves the orbit in function with the distance - recommend other (check state-of-the-art literature)"* — and: *"Do 1, and in
+parallel launch Opus agent(s) to evaluate the feasibility of those mitigations, if they can introduce regressions or conflicts with other rules and
+which one(s) to recommend for later implementation if the deploy result is not satisfactory to me."*
+
+* **S1 is built on amendment 1**: no bound on the gap, no hard stop, O6's fallback not built. ⭐ **A7 amended**: the gap's largest value and its
+  shares over 45° and over 90° are REPORTED at every pace and on his hand — never a failure. R1 – R10 unchanged. S2 is built where a gap exists
+  outside a spit (`Scene_0`, `Scene_1` over a top — 13.5).
+* **O2 as S0 read it**: the turns that stay are kept by their KIND (the square camera's, `byMm`, `out`, a tilt's); a zone's turn is judged on its
+  whole angle with a stated tolerance — never on the first frame's twist alone.
+* **To read offline before anything is drawn** (the lead's question, ⛔ not measured): the roll before a tip's crossing and the crossing's half turn
+  — at the frame the timed turn starts from the pose shown, how far is that pose from the turn's target? If the two largely cancel, the half turn
+  drawn is short. The figure goes in section 14.
+* **The mitigations**: a study aside (one Opus agent, offline, no game run, nothing built) — for each of his five lines: feasible or not, the
+  regressions, the conflicts with the rules (his third and fourth lines change what the finger's step does to the orbit: the logic, R1), and which
+  to build later **if his look at the deploy is not satisfactory**. Its result: the kit's `fo3/mitigations/MITIGATIONS.md`, then a section here.
