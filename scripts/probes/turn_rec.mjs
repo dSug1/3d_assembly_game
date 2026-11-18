@@ -12,7 +12,7 @@
 import { writeFileSync } from "node:fs";
 
 /** ⭐ (FO3 S0) one frame's shadow, an expression read in the page with `st` in scope (null: no shadow — a build before FO3, or none yet) */
-export const SHADOW_REC = `((s) => s ? { tw: s.tw, gh: s.held.gap, gf: s.free.gap, vf: s.free.speed, fr: s.gizmoFree ? 1 : 0, stays: s.stays ? 1 : 0, ttw: s.turnTw, sp: s.spit ? 1 : 0, nt: s.freshTurn ? 1 : 0, a2: s.a2, uw: s.upright ? s.upright.w : null, uf: s.upright ? s.upright.phi : null,
+export const SHADOW_REC = `((s) => s ? { tw: s.tw, gh: s.held.gap, gf: s.free.gap, vf: s.free.speed, fr: s.gizmoFree ? 1 : 0, stays: s.stays ? 1 : 0, ttw: s.turnTw, sp: s.spit ? 1 : 0, nt: s.freshTurn ? 1 : 0, a2: s.a2, uw: s.upright ? s.upright.w : null, uf: s.upright ? s.upright.phi : null, fe: s.freed ?? null,
   pp: s.piece, gh3: [s.ghost.eye, s.ghost.look, s.ghost.up], pi3: [s.picture.eye, s.picture.look, s.picture.up], fov: st.camera.fov, asp: st.camera.getEngine().getAspectRatio(st.camera) } : null)(st.asmRollShadow)`;
 
 export const TURN_REC = () => `(() => { const st = window.__st; window.__turnRec = []; const f0 = window.__frame; const ids = new WeakMap(); let nid = 0;

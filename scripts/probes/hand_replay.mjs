@@ -52,7 +52,7 @@ const RECORD = `(() => { const st = window.__st; window.__rows = []; window.__le
       up: [st.camera.upVector.x, st.camera.upVector.y, st.camera.upVector.z], g: g ? [g[0], g[1], g[2]] : null,
       mix: m ? { id: mid, k: m.k, rad: m.rad, byMm: !!m.byMm, out: !!m.out } : null, sq: st.asmSquare ? st.asmSquare.q : -1,
       tilt: st.asmTilt ? st.asmTilt.id : 0, zone: st.asmZone ? st.asmZone.zone.orientation : null, ap: st.approach, auto: !!st.asmTiltAuto,
-      free: st.asmFree ? 1 : 0, sh: ${SHADOW_REC} });
+      free: st.asmFree ? 1 : 0, h: st.asmEdgeHold ? [st.asmEdgeHold.sign, st.asmEdgeHold.back ?? null] : null, ds: st.asmDySign ?? null, sh: ${SHADOW_REC} });
     window.__fd = [0, 0];
   } catch (e) { window.__recErr = String(e); } }; return true; })()`;
 
