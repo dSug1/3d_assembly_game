@@ -637,3 +637,14 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   and `Scene_0` replays identical at 1; v3's entries far out 0° (the ccw loop one turn a loop); the dy hold's blocked frames as at the base.
 * **For him**: accept the worst-frame margin (v3's patch), change the timed turns' pace (a package of its own), or keep today's entry.
 * **Probes** (`d535287`): `level_entry_cmp.mjs`, `level_entry_worst.mjs`, `level_entry_batch.sh` mode c ([`ORBIT_GATES.md`](../../../scripts/probes/ORBIT_GATES.md) §7.3).
+
+### 2026-11-18 — package ES, fix round 1: still NOT BUILT (one walk 0.3° over its limit)
+
+* **Result**: `src` and `tests` as at `bc867a0`; no code commit. Three more versions measured (v5 – v7, the session scratchpad's `es2/`): the
+  picture's target read every frame on the entry side's camera (the middle exit −5° / +4° → −0.2°), the heading held while a camera turn runs and on
+  the frame it lands (the 4 px loop's worst frame 9.1° → 8.0°, `mid_check` 10.8° → 9.7°).
+* **What fails**: the cw loop −x (far and at 0.736) — 8.8° in one frame against 8.5°, the first frame of a short exit turn whose angle grows while it
+  starts — the turns' pace, out of the brief's reach. And a wobble no gate reads: 61 exit turns of about 6° at the 4 px loop's dither (base 118
+  turns of about 3°; the gizmo held 67 frames, base 21).
+* **For him**: as before (accept, change the turns' pace, or keep today's entry); v7 the closest
+  ([`LEVEL_FACE_ENTRY.md`](../../40_RENDER_SCENE/spec/LEVEL_FACE_ENTRY.md) §16, its last paragraphs).

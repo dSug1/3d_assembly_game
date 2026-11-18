@@ -333,6 +333,9 @@ frame falls in a timed turn. `mid_check`'s whole run: `DUMP=<f>/mid bash scripts
 `<f>/mid_1.json`. The base at `bc867a0` (the session scratchpad's `es/base`): far out the free roll 1.1° – 2.5° on the loops and the walks back,
 3.3° at 4 px, 4.3° – 4.4° on the straight dy, 5.2° over `mid_check`'s run; the worst frame 6.9° – 7.9° on the loops, 9.3° `mid_check`, 9.0° – 10.9°
 the straight dy. ES's four versions against it: `LEVEL_FACE_ENTRY.md` §16 (recordings `es/def` = v1, `es/v2` … `es/v4`, `es/off` the switch at 0).
+Fix round 1 (v5 – v7, recordings `es2/v5` … `es2/v7`): read also the 4 px corner loop's `LOOP 0` line in the analysis (`awk '/^=== /{w=$2}
+w=="b_ccw_p_far_px4" && /LOOP/'`) — the number of turns, their |roll| in all and the frames the gizmo is held. Each frame can pass while the dither
+makes dozens of 6° turns (v7: 61 turns, 442°, 67 frames held; the base 118, 330°, 21).
 
 ## 8. Gate (g) — every timed turn, base against new (`turn_rec.mjs`, `turn_table.mjs`, package LF2 — `LEVEL_FACE_ENTRY.md` §11)
 
