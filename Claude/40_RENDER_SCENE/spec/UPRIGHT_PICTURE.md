@@ -1,0 +1,236 @@
+# The upright picture — gravity on the glass's vertical during the orbit (branch `1.0.148b-Fast_orbit_upright_gravity`)
+
+> **What this is**: the specification of the fast orbit's second build. FO3 (S1, [`FAST_ORBIT.md`](FAST_ORBIT.md) §12 – §14) drew the picture as a
+> follower of the logic and was deployed for the owner's look (main `4eabab8`). He found it very good but for one thing: the scene ROLLS on the
+> screen. This file: his words (§0), the lead's decisions taken in his absence (§1 — ⭐ for his review), the build as briefed (§2), the gates
+> (§3), then the design study this build rests on, unchanged (§4 onwards). What was built and measured goes in a section added at the END.
+
+## 0. The owner's words (2026-11-18, verbatim)
+
+On the deployed build (main `4eabab8` = `1.0.148-` at `48ae89c`): *"the build is very good at 160 ms and 90degrees: set them as default. However, I
+want to modify something: is it possible to maintain the gravity align with the screen's vertical axis, or at least : for the vertical axis and
+gravity alignment to be as the initial game (for example in previous branch 1.0.147-) ? That would avoid the scene to roll on the screen view
+(which is annoying). note that a pitch in the screen view or a yaw in the screen view is ok, in my opinion as I judge it from the screen. I want to
+avoid the roll of the scene in the screen view. Propose a logic, test the logic on simple geometries, then build it in a new branch
+1.0.148b-Fast_orbit_upright_gravity."*
+
+Then, before sleeping: *"I will go to sleep. finish the builder's report, update the md files in branch 1.0.148- then proceed with the build of
+branch 1.0.148b, test, finetune until the result is acceptable, update the md files, deploy. then I will test tomorrow morning and we shall advise
+the next step (full audit of orbit charts or rework of the fast orbit). In the meantime, do not ask me question nor decisions as I won't be able to
+answer until tomorrow morning."*
+
+**Two levels, his**: the IDEAL — world gravity always along the screen's vertical; AT LEAST — gravity on the screen as in `1.0.147-`. A yaw or a
+pitch of the view is fine; a roll of the scene about the view is what he refuses. What he keeps of FO3: no stop of the gizmo under 90°.
+
+## 1. The lead's decisions, taken in his absence — ⭐ FOR HIS REVIEW (each a switch or a slider)
+
+| # | the decision | why | how to reverse it |
+|---|---|---|---|
+| UD1 | **Law U is built** (§2, §4's recommendation): the picture is the logic's pose turned about the line through the piece and the look point by the angle that puts gravity on the glass's vertical — in full from 25° off the vertical, not at all within 5° of it. No lag. | measured offline on his replayed hand: gravity tilted over 20° in 0.2 – 8 % of the frames (`1.0.147-`: 28 – 42 %; the deployed build: 44 – 53 %). The lead's own first proposal (a lagged roll toward upright) was refuted: worse than `1.0.147-` on the cube | `uprightPicture` 0 = the build he looked at, less S2 |
+| UD2 | **A change of frame of ANY angle makes no timed turn, and never holds the gizmo, where the picture is fully upright** (25° or more off the vertical). ⚠ This bends his rule R6 (*a change of 90° or more is today's turn, the gizmo held*). | the hold exists because the glass turns upside down under the finger. Under U the glass does not turn: the gizmo would stop for up to half a second with nothing turning on the screen | `uprightFreeTurns` 0 = the turns of 90° or more held as before |
+| UD3 | **Close in, under the square camera, U does nothing**: his rule T1 (the face's layout square on the glass) wins. | offline, U close in brought a frame of 32° of roll where `1.0.147-` shows 3°; close in the tilt is all near the vertical, where gravity has no direction on the glass | `uprightCloseIn` 1 = U under the square camera too |
+| UD4 | **Within 25° of the vertical the game is `1.0.147-`'s**: every change of frame is a timed turn there, the gizmo held — FO3's follower is not used. | the follower's gap is the roll he refuses; a variant that kept it near the vertical measured worse than `1.0.147-` on the cube. ⚠ The price: over a top the stops at an edge are back | `uprightPicture` 0; the band on two sliders (`uprightFromDeg` 5, `uprightFullDeg` 25) |
+| UD5 | **At rest the picture is the logic's pose made upright**, not that pose bit for bit (FO3's R5 bent). Nothing drifts. | the IDEAL asks for it | `uprightPicture` 0 |
+| UD6 | **The half turn that going over a top needs** (gravity upright on both sides) is drawn where the view is nearest the vertical: a spin of the floor seen from above, at the pace the view leaves the vertical. Its speed can be capped. | unavoidable; in `1.0.147-` it is the timed half turn at the far edge | `uprightMaxDegS` (0 = no cap); the default is set by the gates (§3, U-G3) |
+| UD7 | **`rollFollowMs` 160, `freeTurnMaxDeg` 90 are the defaults** (his word). Under U the follower's time acts only with `uprightPicture` 0. `freeTurnMaxDeg` 0 still gives `1.0.147-`'s game bit for bit, U included. | his word; R10 | the sliders |
+| UD8 | **The finger is read off the picture drawn, everywhere** — but at the vertical the picture IS the logic's pose, so the finger is read there exactly as in `1.0.147-`. | S2 (the finger turned by the gap) made the yaw spin at a pole; with U the picture no longer depends on the logic's own roll, which breaks that loop | `uprightPicture` 0 |
+| UD9 | **A gesture that reads the screen keeps reading the picture** (the resting face's roll axis, `camera.getDirection`). | it is what he sees | — |
+| UD10 | **"Acceptable"** = §3's gates: on his replayed hand gravity's tilt and the scene's roll no worse than `1.0.147-`'s on any stretch and at most half of it in all; no runaway of the finger; close in unchanged. Two fix rounds at most. **If the gates still fail: `1.0.148b-` is deployed with `uprightPicture` 0 by default** (the build he called very good, less S2, at 160 ms) — he can then try the switch himself. Nothing undone. | he cannot be asked | — |
+
+## 2. The build as briefed
+
+**The law** (formulas: §4's part 3, "U"). Per frame, at the camera's stage: `G` = the logic's pose — the ghost, or the timed turn's pose where a
+turn stays (FO3's gap is NOT applied); `L` = the framed line (piece → look point, `framedLine`); `ν` = the angle between `G`'s view and the world's
+vertical; `α` = the turn about `L` that puts world-down on the glass's down (the root nearest 0; kept continuous across ±180° while `0 < w < 1`);
+`w = smoothstep((ν − uprightFromDeg)/(uprightFullDeg − uprightFromDeg))`, times the square camera's complement (UD3: 0 while the square camera
+holds the picture, back to 1 along the share its own turn already uses — no new clock); `φ = w·α`, its change capped by `uprightMaxDegS` where
+`w < 1` only (exact at `w = 1`: a lag toward upright adds tilt); the picture `P = poseRolled(G, L, φ)`.
+
+**In order, one commit each** (C = `src` + `tests`, P = `scripts/probes`, D = `.md`):
+1. (C) the defaults: `rollFollowMs` 160.
+2. (C) **U0** — `src/input/upright.ts`, pure: `α` (closed form or Newton, its no-root case stated), `ν`, `w`, the unwrap, the cap, `φ`; vectors,
+   each red on a mutant: gravity exactly on the glass's vertical at `w = 1` whatever `G`'s own roll; the piece and the look point unmoved on the
+   glass; `P = G` bit for bit at the vertical; continuity of `φ` through the band and across `α = ±180°`; the cap exact at `w = 1`; the same at
+   60 and 143 frames a second.
+3. (C) **U1 + U2** — the picture drawn behind `uprightPicture`; ⭐ `st.asmCamLast` stays the LOGIC's pose (`poseShown`, the free entry's heading
+   read it), a new field carries the picture for the finger and the recorder; the finger's step read off the picture (outside a spit S2's
+   `fingerOnGhost(picture, G)` — in the history at `48ae89c`; inside a spit `zoneFinger` off the picture's field); a reset clears the unwrap and
+   the cap's state; the sliders in `gestureConfig.ts`, the menu (ORBIT › SMOOTHING), the menu's layout test.
+4. (C) **U3** — behind `uprightFreeTurns`: a change of frame whose first frame has `w = 1` makes no timed turn whatever its angle (the kinds that
+   stay — the square camera's, `byMm`, `out`, a tilt's — stay, FO3's rule by kind); where `w < 1` every change is `1.0.147-`'s timed turn (UD4).
+5. (C) **S1's open regression traced** (FAST_ORBIT.md §14.6: the level entry's straight dy drifts twice as far sideways): its root; fixed here
+   with a vector if it lies in FO3's code (suspected: `freeShownHeading` reading "a turn under way", blind to a freed turn); else reported.
+6. (P) the gravity reader in `scripts/probes` (from the study's `m.mjs`: gravity's tilt on the glass, its roll per metre), the gates' batch.
+7. The gates (§3) measured; (D) the section "as built" at this file's end, `TUNING_MENU.md`, `ORBIT_GATES.md`, a dated entry in `RND5.md`.
+
+**Forbidden**: any change to WHAT the logic asks (R1) beyond UD2's freeing; to the piece's pose (R8); a rule naming a scene, a face or a geometry;
+a lag or a follower toward upright outside the band (refuted, §4); a threshold in pixels or frames; a 3D orientation widget; `Scene_2`.
+
+## 3. The gates — what "acceptable" means (in the game; like for like: per metre of gizmo travel, his hand replayed)
+
+**The runs**: (H) his ten stretches far out at 60 frames a second, three at 0.736 and close in, two at 143; (R) the three seeded replays; (S) the
+corner loops at 571 and 1 200 px a second, `Scene_1` over its top, `Scene_0` up, the edge and ridge walks, the level entry's walks, the dy hold's
+walks. **The bases**, already recorded in the kit: `1.0.147-`'s game (`6f47219`), the deployed build (`48ae89c`); the switch-off base = the commit
+before step 2 with `rollFollowMs` 160.
+
+| gate | what passes |
+|---|---|
+| U-G1 | `uprightPicture` 0 = the commit before step 2, frame for frame (the three replays, a sample of every family); `freeTurnMaxDeg` 0 = `6f47219` bit for bit |
+| U-G2 | **gravity on the glass** (its tilt, not counted within 10° of the vertical): on every stretch of his hand the share of frames over 20° not over `1.0.147-`'s; over the ten together at most HALF of it; the seeded replays not over `1.0.147-`'s + 0.5 point; no run over 90° in more than 1 % of its frames unless `1.0.147-` does. Reported: how far from 0 |
+| U-G3 | **the scene's roll**: gravity's roll per metre of gizmo travel not over `1.0.147-`'s on every run; the largest frame reported — over 45° on his hand at 60 frames a second: the cap is tried (720 then 1 440 ° a second) and the default is the setting with the smallest largest-frame that still passes U-G2 |
+| U-G4 | **the places**: the piece and the look point on the glass, picture against `G`: within 1e-9 of the half glass, every frame |
+| U-G5 | **the finger**: no runaway — `Scene_1` over its top in `1.0.147-`'s frames + 10 % at most, its yaw never spinning; the level entry's walks on `Scene_0`'s bottom leave the face as in `1.0.147-` (S2 stuck there); the angle between the finger's way and the gizmo's ON THE PICTURE: its 95th percentile not over `1.0.147-`'s + 5° per stretch |
+| U-G6 | **no stall** (reported against both bases): the frames with the gizmo held by a turn, per metre — not over the deployed build's on his hand; no frame held by a change whose first frame had `w = 1` (but the kinds that stay) |
+| U-G7 | **where U is idle nothing moves**: the close-in runs identical to `uprightPicture` 0 frame for frame; the dy hold set as before; the level entry's walks no worse than `1.0.147-`'s (step 5) |
+| U-G8 | `npm run verify`; every new vector red on a mutant; the documents and their two tests; the tree clean; no process left |
+
+**To deploy with `uprightPicture` 1**: U-G1, U-G4, U-G5, U-G7, U-G8 pass, and U-G2 and U-G3 pass at least at the AT LEAST level. Otherwise UD10.
+
+## 4. The design study, unchanged (one Opus agent, 2026-11-18; offline only, nothing built, no game run)
+
+Nothing built, no game run. Scripts in this folder: `m.mjs` (part 0), `where.mjs`, `zones.mjs`, `sim.mjs` (part 4). Every figure below is MEASURED
+on recorded frames unless it says estimate. The route of every recording is the recorded one: no law here re-reads the finger.
+
+### The result first
+
+1. **Today's game before FO3 (base, 6f47219) is upright almost everywhere but in one place: the spit's timed half turns.** On his hand
+   (Scene_0bis, far) the frames with gravity tilted over 20° are 28 – 42 %, over 90° 10 – 24 %; in those runs 42 – 52 % of the frames are in a timed
+   turn, and there the mean tilt is 56 – 76° against 1.4 – 9.5° when no turn runs. On the cube and the heptagon the base is upright (over 20°: 1.1 %, 0.4 %).
+2. **The deployed build (48ae89c) adds tilt everywhere**: cube over 20° 1.1 → 15.2 %, heptagon 0.4 → 18.7 %, his hand 28 – 42 → 44 – 53 %; gravity's
+   roll per metre ×1.3 – 3.4. Cause: S1's gap takes the WHOLE twist about the framed line, and a turntable yaw seen from above the horizon IS a twist
+   about the view (yaw × sine of the elevation). The gap cancels it, then rolls it back in 160 – 200 ms: gravity tilts on every yaw.
+3. **The logic's own target (the ghost before the timed turn's fade, `sh.gh3`) is nearly upright**: over 20° in 0.9 – 5.6 % of his hand's frames.
+   The tilt the owner sees is made by the DRAWING (the turn's fade from a pose carried over the top; S1's gap), not by the logic.
+4. **The lead's P2 as written is refuted**: carrying the roll in the cone and following the upright target with a lag makes the cube and the heptagon
+   WORSE than base (over 20°: 17.7 %, 18.0 %), for the reason in 2. The neutral in the cone must be the ghost, not the carried picture.
+5. **Recommended law U ("upright by the view's angle")**: the picture = the pose today would draw, turned about the framed line by `φ = w·α` —
+   `α` the turn that puts world-down on the glass's down, `w` 0 near the vertical, 1 from 25° off it. No lag, no follower, no state but an unwrap.
+   Offline on his hand: over 20° 0.2 – 8 % (base 28 – 42 %, deployed 44 – 53 %); never more tilted than base (0 – 1 frame a run far out).
+
+### Part 0 — what he sees (the camera drawn: `c, t, up`)
+
+Measures. **m1** = signed angle between world-down projected on the glass and the glass's down; undefined (cut, not counted) when the view is
+within 10° of the vertical. **gRoll** = |Δm1| per frame × sine of the view's angle from the vertical (gravity's arrow turning, weighted by how
+visible it is), per metre of gizmo travel. **vTwist** = the camera's twist about its own view per metre (includes a turntable yaw; for reference).
+
+| run (60 fps) | base: >20° / >45° / >90° / max | deployed: same | gRoll °/m base → deployed | largest frame of gRoll |
+|---|---|---|---|---|
+| Scene_1 cube, seeded replay | 1.1 / 0.6 / 0.0 % / 74° | 15.2 / 4.7 / 0.2 % / 97° | 13 → 34 | 5.5 → 6.7° |
+| Scene_0 heptagon, seeded | 0.4 / 0.0 / 0.0 % / 28° | 18.7 / 6.5 / 0.6 % / 122° | 11 → 37 | 6.3 → 7.0° |
+| Scene_0bis, seeded | 16.3 / 13.4 / 8.3 % / 179° | 15.2 / 6.3 / 1.7 % / 180° | 43 → 83 | 8.6 → 18.0° |
+| his hand ilmj_23s far | 28.5 / 19.6 / 10.7 % | 53.0 / 37.6 / 19.5 % | 83 → 138 | 25 → 36° |
+| his hand ilmj_99s far | 32.7 / 23.0 / 9.9 % | 44.3 / 30.3 / 14.5 % | 102 → 125 | 22 → 29° |
+| his hand vyah_11s far | 42.4 / 34.9 / 24.0 % | 43.8 / 34.5 / 20.4 % | 128 → 160 | 35 → 66° |
+| his hand ogse_3s far | 41.3 / 24.2 / 14.0 % | 47.2 / 35.3 / 22.3 % | 98 → 132 | 10 → 20° |
+| his hand ilmj_23s close in | 9.3 / 7.5 / 5.0 % | 9.4 / 7.5 / 5.1 % | 40 → 41 | 3.0 → 3.2° |
+| corner loop ccw, 9.52 px/frame | 4.2 / 0 / 0 % / 31° | 0 / 0 / 0 % / 18° | 27 → 34 | 5.7 → 3.9° |
+| Scene_1 over the top, 20 px/frame | 0.7 / 0 / 0 % / 23° | 8.5 / 4.9 / 1.4 % / 121° | 9 → 23 (vTwist 129 → 288) | 7.3 → 6.1° |
+| Scene_0 up, 20 px/frame | 0 % / 2° | 0 % / 2° | 7 → 7 | 0.6° |
+
+Where (frames over 20° or 45°): base, his hand — in the SPIT (100 %), during a timed turn (94 – 99 %); turns of 180° (`mix.rad`); the views 20 – 90°
+off the vertical, mostly looking UP from under the axis. Base seeded Scene_0bis: one stretch of 138 frames upside down looking up, 20 – 40° off the
+vertical, no turn. Close in: all near the vertical (under 25°) under the square camera. Deployed: the same turns plus S1's gap outside them (his
+hand's free frames: mean tilt 9.5 → 13.3° on vyah_11s; cube and heptagon replays: the whole rise is free frames). ⚠ The seeded replays carry no
+zone/turn tags, so "where" is read there only by the view's angle.
+
+### Part 1 — the rules the new picture keeps
+
+* **His words**: no roll of the scene about the view; a yaw or a pitch of the view is fine. IDEAL gravity on the glass's vertical; AT LEAST never more
+  tilted than base on the same frame. Keep the fluidity (no gizmo stop under 90°, a smooth picture).
+* **R1** (logic untouched), **R3** (piece and look point exact), **R8** (the piece is the logic's; nothing in the logic reads the picture), **R9**, **R10**
+  kept. **R2** kept in form (one way every frame: the drawn pose turned about the framed line). **R4** (the gap's one law) and the follower: idle under
+  U. **R5 BENT**: at rest the picture is the ghost made upright, not the ghost bit for bit (deterministic: no drift; |α| under 0.01° → 0).
+  **R6** kept and possibly widened (decision D1). **R7** kept by P3.
+* **T1 – T12**: T6 is what U strengthens (upright everywhere gravity means something). T1/T2 (close in: sections level and upright on the glass on the
+  face under the gizmo) can be bent in the band 5 – 25° under the square camera (decision D2). T4/T5 (a turn at an edge, one rule, completes): U draws
+  a freed turn's roll as nothing where w = 1; the turns that stay are unchanged in the logic. T9 (the dy hold) untouched (logic).
+* **Standing**: the orbit logic not reopened; same direction gizmo/finger on the glass, no jump; no rule naming a scene or a face; thresholds in °, ms,
+  °/s; no orientation widget; patent-free (the parts are gluLookAt's world-up camera and Shoemake 1994's twist, both old and free); one switch; sliders.
+
+### Part 2 — obstacles, read in the code (48ae89c / HEAD)
+
+* **Why the base is not upright** (`assemblyCameraFrameRaw`, `spitCameraHeading`, `spitStep`, polar_zone.ts l. 180 – 260): the spit camera IS a world-
+  upright turntable (`offsetFrame(u, heading)`); its heading is biased to the SIDE of the axis from 60 – 75° of pitch so a camera passing over the
+  axis keeps its picture; past the axis the side flips and ONE timed turn (`asmZoneMix`, `frameMix`, from `poseShown`) rolls 180° to the new side's
+  upright. The fade starts from the pose shown (carried, upside down) — that fade is the 10 – 24 % over 90°. The tilted pole (`asmTilt`) and the
+  square camera are upright in their frame F; their tilt lies near the vertical (part 0, close in).
+* **Who reads the drawn pose**: `st.asmCamLast` is written with the PICTURE in S1 (`rollPictureFrame` l. 143) and read by the LOGIC — `poseShown` (a
+  turn's start, l. 320, 2142, 2251), `freeEntry`'s heading (l. 2195), `zoneFinger` (l. 2334). ⛔ Under U it must be split: the logic keeps the pose
+  today would draw; a new field carries the picture for the finger only. `green_box_wiring.ts` l. 325, 416, 1374 read `st.camera.getDirection(right)`
+  (the resting face's roll axis when no pink axis): a gesture's reading of the screen — decision D6. The recorder must record ghost and picture.
+  The gizmo's sections are world geometry: under U they are drawn as the logic placed them; a φ of 180° keeps horizontal lines horizontal.
+* **The S2 feedback on Scene_1's top is real** (CHECKPOINT_S1: yaw −30 → 487°, roll 129 → 288°/m): at the pole a dx makes the ghost SPIN about the view
+  instead of moving the gizmo; S2 turns the next finger step by the gap that spin opened, which feeds more dx. P3 alone would keep it wherever the
+  picture differs from the ghost at the pole. **What breaks it under U: φ = 0 at the pole** (w = 0 under 5°), so the finger is read exactly as base
+  there. In the band 5 – 25° the loop gain is at most w × the logic's spin per dx — not measurable offline (gate G5).
+* **Timed half turns under U**: the fade's roll is cancelled where w = 1 (the picture stays upright), so the gizmo hold would show as a stall with
+  nothing turning (D1). In the cone (under 5°) the turn is drawn as today: a spin of the floor seen from above. **The lead's "known and unavoidable"
+  is right**: over a top with gravity upright on both sides a half turn about the view is needed; U places it where the view is nearest the vertical
+  — at the speed the view crosses the band (U) or at a capped speed (U-cap). A reset (O11): φ = w·α at once, no state to clear but the unwrap.
+* **Close in**: the tilt there lies under 25° from the vertical; U leaves the cone to today's drawing.
+
+### Part 3 — the designs (formulas; angles in rad in code, ° in sliders)
+
+Common: per frame, `G` = the pose today's stage would draw (the ghost when no turn stays, `zoneMixPose`'s pose otherwise); `L` = the framed line
+(piece → look point, `framedLine`); `ν` = the view's angle from the vertical; `α` = the root of `m1(rolled(G, L, α)) = 0` nearest 0 (Newton on the
+rolled pose, 3 – 6 steps; `rolled` = `poseRolled`); picture `P = rolled(G, L, φ)`.
+* **P2 (lead)**: `φc = φ − τ` (τ = the ghost's twist); target `φc + wrap(α − φc)` if ν > 10°, else `φc`; φ follows by the critically damped ease
+  (160 ms). Refuted offline (below): the carry removes the turntable yaw's twist and the lag restores it as tilt.
+* **U (recommended)**: `w = smoothstep((ν − ν0)/(ν1 − ν0))`, ν0 = `uprightFromDeg` 5°, ν1 = `uprightFullDeg` 25°; `φ = w·ᾱ`, ᾱ = α unwrapped
+  only while 0 < w < 1 (at w = 1 a turn of 2π is the same pose). No follower. Finger (P3): the step turned by the picture's roll against G (S2's
+  `fingerOnGhost(picture, G)`), in a spit read off the picture's frame. Turns: a change is freed by S1's rule only if w = 1 at its first frame (D1).
+  Switch `uprightPicture` 0 = 48ae89c (S1 at 160 / 90 as he asked); `freeTurnMaxDeg` 0 = base bit for bit.
+* **U-cap (fallback)**: `φc = φ + w·Δα` (exact at w = 1), then φ moves toward `w·ᾱ` by at most `uprightMaxDegS` × dt (720 °/s; 0 = U).
+* **U2 (rejected)**: U plus S1's gap in the cone (`φ = w·ᾱ + (1−w)·g`) — the gap again carries twist (cube over 20°: 2.1 % against U's 0.0 %).
+* **U1s (rejected)**: w smoothed in time (200 – 400 ms) — in the cone it applies α where α is wild near the vertical (his hand up to 35 – 47 % over 20°).
+* Prior art (all old, free): the world-up look-at camera with a pole fallback (gluLookAt, early 1990s; turntable orbits in modelling tools); Shoemake's
+  swing–twist (Graphics Gems IV, 1994); parallel transport of the up (Bishop, 1975 — what P2's carry is, and why it fails here: a carried up is not a
+  gravity up); critically damped followers (Game Programming Gems 4, 2004). ⛔ Not used: any orientation widget (ViewCube, patented); HoverCam (2005).
+  No web search was made.
+
+### Part 4 — the test offline (`sim.mjs`; 60 fps; cut 10°; band 5 – 25°)
+
+(a) **Over today's drawing** (`runs/new`, SRC=drawn: base with its timed turns), (b) **over the logic's ghost on the deployed route** (`runs/s1`,
+`sh.gh3`: every change at once — an approximation of "turns freed"). Over 20° / over 90° / max; gRoll °/m; largest frame of gRoll.
+
+| run | base drawn | P2 (a) | U (a) | U-cap 720 (a) | U (b) |
+|---|---|---|---|---|---|
+| cube seeded | 1.1 / 0 % / 74°; 13; 5.5° | 17.7 / 2.5 %; 57 | 0.1 / 0 % / 61°; 5; 15° | 0.4 / 0 % / 61°; 5; 8.4° | (a, gh3) 0.0 % / 13°; 3; 2.3° |
+| heptagon seeded | 0.4 / 0 % / 28°; 11; 6.3° | 18.0 / 3.1 %; 60 | 0.1 / 0 % / 21°; 4; 2.8° | — | (gh3) 0.1 % / 17°; 4; 2.8° |
+| Scene_0bis seeded | 16.3 / 8.3 % / 179°; 43; 8.6° | 13.6 / 0.6 %; 80 | 1.4 / 0 % / 139°; 8; 39° | 2.0 / 0.3 % / 163°; 11; 8.4° | (gh3) 1.3 / 0 % / 139°; 5 |
+| hand ilmj_23s | 28.5 / 10.7 %; 83; 25° | 32.0 / 8.0 % | 0.8 / 0 % / 79°; 11; 37° | 8.7 / 3.1 %; 45; 15° | 4.1 / 0 % / 74°; 7; 25° |
+| hand ilmj_99s | 32.7 / 9.9 %; 102; 22° | 29.1 / 7.8 % | 2.0 / 0.1 % / 91°; 18; 46° | 9.1 / 2.4 %; 54; 16° | 0.2 / 0 % / 25°; 3; 11° |
+| hand vyah_11s | 42.4 / 24.0 %; 128; 35° | 31.5 / 11.5 % | 6.1 / 1.2 % / 139°; 39; 60° | 21.2 / 8.7 %; 106; 26° | 0.3 / 0 % / 39°; 4; 18° |
+| hand ogse_3s | 41.3 / 14.0 %; 98; 10° | 29.5 / 7.5 % | 8.0 / 0.8 % / 149°; 31; 44° | 14.1 / 3.6 %; 58; 11° | 1.1 / 0.1 % / 131°; 8; 44° |
+| hand close in | 9.3 / 5.0 %; 40; 3.0° | 12.9 / 2.2 % | 5.4 / 0.2 %; 42; 32° | 6.3 / 1.3 %; 32; 7° | — |
+| Scene_1 over top | 0.7 % / 23°; 9 | 18.1 / 10.4 % | 0 % / 11°; 3; 5.1° | 0 % / 11° | 0 % / 10°; 1; 1.5° |
+| corner ccw / edge | 4.2 % / 1.5 % | 5.8 % | 0 % / — | 0 % | 0 % / 0 % |
+
+* **Places on the glass**: piece and look point exact under every law (largest error 8e-16 half-glass; a turn about the line through both).
+* **Never more tilted than base** (frames over 5° and 1° more than base's, law (a)): U 0 – 1 a run far out, 10 of 1 059 close in; U-cap 0 – 27.
+* **The finger turn P3 must apply** (|φ|): route (b) 95th percentile 3 – 12°, largest 30 – 173°; route (a) 95th 53 – 154° (the fade's carried pose).
+* **The one cost of U**: when the view crosses the band fast while G is upside down (the spit's fade), the rest of the half turn is drawn in 1 – 2
+  frames: the largest gravity frame 37 – 60° (base 10 – 35°); the view jumps 15° a frame there at his pace. U-cap trades it for a longer tilt.
+* **What offline cannot tell**: the route once the finger is read off the picture (P3) and once turns are freed by w; the loop in the band; 143 fps;
+  how the freed half turns change T9's holds; what the sections and the pink axes look like. Hence the gates below, in the game, like for like.
+
+### Recommendation
+
+**Build U**, U-cap behind its slider (0 = off) as the fallback if the band's fast half turn reads as a snap on his device.
+**Gates** (in the game; per metre of gizmo travel; his hand replayed far and close, 60 and 143 fps; seeded replays of Scene_0, Scene_1, Scene_0bis;
+the corner loops; Scene_1 over the top; Scene_0 up; the edge and the ridge walks): G1 `uprightPicture` 0 = 48ae89c bit for bit and `freeTurnMaxDeg`
+0 = base bit for bit (2 794 / 2 794 frames); G2 over 20°: hand ≤ 8 %, seeded ≤ base, Scene_0bis ≤ 2 %, no run over 90° in more than 1 %; G3 gravity
+roll per metre ≤ base on every run, the largest frame reported (fails over 45° → switch U-cap on); G4 places ≤ 1e-9; G5 the finger: A6's angle on
+the PICTURE ≤ base's 95th, Scene_1 over the top in ≤ base's frames (193) with the yaw monotone (no runaway); G6 gizmo-held frames ≤ deployed;
+vectors that fail on 48ae89c, mutants red; the device look closes it.
+**Packets**: U0 `src/input/upright.ts` (α, w, φ, unwrap; pure; vectors red on the old code) → U1 the picture in `rollPictureFrame` behind the switch,
+`asmCamLast` split from the finger's field, recorder fields → U2 P3 (outside a spit `fingerOnGhost`; inside, `zoneFinger` off the picture field) →
+U3 the freeing rule by w (and D1) → U4 the gates' runs → U5 deploy and his look.
+**Decisions for the owner**: D1 free the half turns where the view is 25° or more off the vertical (no stall, nothing visible turns) or keep 90°
+timed (a stall with no visible turn); D2 U under the close-in square camera, or T1 wins there; D3 the half turn over a top drawn as a spin of the
+floor seen from above, at the view's speed (U) or capped (U-cap); D4 `rollFollowMs` 160 then serves only the switch off; D5 R5 bent (the rest pose is
+the upright one); D6 the resting face's roll axis read off the picture (what he sees) or the logic.
+**Advise against**: P2 as written (refuted: worse than base on cube and heptagon); any follower lag toward upright outside the band; smoothing w in
+time; S2's finger at the pole; keeping S1's gap under U.
+**Not checked**: no game, no vitest, no device; the s1 files read are those that parsed whole; HEAD has S2 reverted (f198b3a) while runs/s1 is 48ae89c;
+the band 5 – 25° and the cap 720 °/s are guesses (sliders); A6 on the picture not computed; T9 holds under freed half turns.
