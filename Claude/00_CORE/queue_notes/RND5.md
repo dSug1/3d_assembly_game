@@ -625,3 +625,15 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   turn is over; 6 mm also passed the walks (about 0.7 face, margin 1 mm). The slider: ☰ → TILTED POLE.
 * **Seen and not changed**: under the hold a finger wobbling ±2.5 mm while pushing walks the gizmo AWAY from the edge (the held half dropped, the
   other half passed: 400 – 450 mm in 144 frames) — the hold's own rule, at the base too; the probe's `Scene_1` walk does not reach the cube's top.
+
+## 2026-11-18 — the silent entry (package ES): NOT BUILT — the free roll cured, the worst frame inside timed turns not
+
+* **Result**: nothing under `src` or `tests` changed (base `bc867a0`); four versions measured and undone, their patches in the session scratchpad
+  (`es/es_build_v1.diff` … `v4.diff`). THE FREE ROLL — `069682a`'s failure — passes everywhere (cw loop 21.4° → 4.8° – 5.3°; base 2.0°). What fails:
+  the whole walk's worst frame (base + 1°) by 0.2° – 1.5° on 2 – 4 walks, always in a timed turn's first frame (a turn advancing on its first, smaller
+  angle while the target moves — its pace is out of the brief's reach), and the exit in the middle of the entry edge 4° – 5° (gate 3°)
+  ([`LEVEL_FACE_ENTRY.md`](../../40_RENDER_SCENE/spec/LEVEL_FACE_ENTRY.md) §16, with the table).
+* **What held**: the switch at 0 bit for bit (the three replays, the 33 level-entry walks); close in every walk within 2.1e-8 of the base; `Scene_1`
+  and `Scene_0` replays identical at 1; v3's entries far out 0° (the ccw loop one turn a loop); the dy hold's blocked frames as at the base.
+* **For him**: accept the worst-frame margin (v3's patch), change the timed turns' pace (a package of its own), or keep today's entry.
+* **Probes** (`d535287`): `level_entry_cmp.mjs`, `level_entry_worst.mjs`, `level_entry_batch.sh` mode c ([`ORBIT_GATES.md`](../../../scripts/probes/ORBIT_GATES.md) §7.3).

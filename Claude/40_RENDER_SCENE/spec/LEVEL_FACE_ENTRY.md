@@ -1,6 +1,6 @@
 # Entering a level face — why the picture shakes there, and what would stop it (2026-11-17)
 
-> **STATUS** · ✅ **APPROVED BY THE OWNER 2026-11-17** (*"Agreed to every recommendation. Proceed."*) — the build as briefed: §9; as built: after it; ⛔ **THE CHAIN STOPPED on his word 2026-11-17** (§13: (A) built and LIVE, (iv′) and the timing rule built then reverted, (v) stopped at its root cause §12); a fast orbit's turns merged: PROPOSED §14 — ✅ the owner's go the same night, the build → [`FAST_ORBIT.md`](FAST_ORBIT.md). A study with measurements (an Opus agent, 2026-11-17), on the code of
+> **STATUS** · ✅ **APPROVED BY THE OWNER 2026-11-17** (*"Agreed to every recommendation. Proceed."*) — the build as briefed: §9; as built: after it; ⛔ **THE CHAIN STOPPED on his word 2026-11-17** (§13: (A) built and LIVE, (iv′) and the timing rule built then reverted, (v) stopped at its root cause §12); a fast orbit's turns merged: PROPOSED §14 — ✅ the owner's go the same night, the build → [`FAST_ORBIT.md`](FAST_ORBIT.md). ⛔ The silent entry (§15) NOT BUILT, 2026-11-18: §16. A study with measurements (an Opus agent, 2026-11-17), on the code of
 > `e252d0f` (= live `main` `6c0a165`). Every candidate was prototyped in a throwaway worktree and undone; nothing is committed under `src` or `tests`.
 > **OWNS** · the entry and the exit of a level face (the bottom of `Scene_0` / `Scene_0bis`, any level top) and the timing of every camera turn ·
 > **READ WITH** · [`TILTED_POLE_CLOSE_IN.md`](TILTED_POLE_CLOSE_IN.md) §1 – §3 (the rules T1 – T12, the carried heading),
@@ -739,3 +739,48 @@ the base, on every walk of §10.3's table and on the fast walks; the whole walk'
 — the price of a silent entry) and the way back over the entry edge near an end (27°, the calm's look, §8). The dy hold's long walks
 (`DY_HOLD_REVERSAL.md` §3 — built before this, its D1) not worse. Known, not a failure: a far edge's half turn coming out the other way round
 (`FAST_ORBIT.md` §4, G3's note).
+
+## 16. ES — the silent entry: NOT BUILT (2026-11-18, an Opus builder — base `bc867a0`; nothing under `src` or `tests` changed)
+
+**In one paragraph.** (iv′) was rebuilt from `069682a` with both cures and measured four ways. **THE FREE ROLL — the gate `069682a` failed — now
+passes on every walk** (21.4° → 4.8° – 5.3° on the cw loop; nothing over the base's + 6°). Close in is the base's (every walk within 2.1e-8), and the
+switch at 0 is the base bit for bit. But no version passes every gate of §15: the whole walk's worst frame (the base's + 1°) fails by 0.2° – 1.5° on 2 to
+4 walks, always INSIDE a timed turn (an exit's, or a fast finger's entry), and an exit in the middle of the entry edge turns 4° – 5° (gate: 3°). By the
+brief's rule nothing is committed. The four patches: the session scratchpad's `es/es_build_v1.diff` … `v4.diff` (the recordings beside them).
+
+**The four versions** (each on top of the one before; v1 = the brief's letter): **v1** — `069682a` re-applied by hand + (a) the layout's share `1 − (1 − w)(1 − s)`, `s` the square camera's share shown (`squareShareShown`) + (b)
+  `headingStep`: the heading turned toward that value by at most `tiltRollDegS` × the frame's time, in the HEADING's own angle; the entry's first frame
+  the value there; the vectors of §15 written (23 mutants red; a level top, a triangle, a trapezoid, each edge). **v2** — (b) bounds the PICTURE, not the heading: a level heading's image turns 1 / sin e as fast across the view's level line (at 55° – 60°: a 6°
+  heading step turned the picture 8.2° — v1's free roll on the way back, 1.5° → 8.2°); and the entry's first frame at the edge's blend (depth 0: a
+  fast finger already deep was not silent — 9.7° in a frame at 4 px). **v3** — the entry continues the picture SHOWN the frame before, carried to the new view (`transportUp`: 0 roll by the probes' own measure) — the
+  bound camera at the entry frame had the calm's view swing in it (the 2-frame −4° / +5° at the ccw loop's second entry, as at `069682a`). **v4** — the target's offset read every frame on the bound camera (so an exit back over the entry edge pays nothing): the middle exit 0°, but each
+  re-entry at a side edge now pays the difference — the 4 px corner loop dithers into 60 turns of 8° – 24°. Worse; v3 is the best.
+
+| walk (far out unless said) | base: free / worst | `069682a`: free | v1 | v3 | v4 |
+|---|---|---|---|---|---|
+| cw loop +x (0.736 alike) | 2.0 / 6.9 | 21.4 | 5.5 / **8.2** | 5.3 / **8.2** | 4.8 / 7.8 |
+| cw loop −x | 1.3 / 7.5 | 17.1 | 5.5 / 6.9 | 5.2 / 6.9 | 4.7 / **8.8** |
+| ccw loop +x / −x | 2.5 / 7.5 · 2.3 / 7.5 | 7.2 – 7.3 | 7.0 / 7.2 | 6.7 / 7.0 · 6.6 / 7.0 | 6.8 / 7.1 · 6.6 / 7.1 |
+| in and back near the end +x / −x | 1.5 / 7.3 · 1.1 / 7.2 | 11.7 – 11.8 | **8.2** / **8.6** · **7.5** / 7.8 | 7.0 / 7.1 · 6.6 / 7.0 | 7.0 / 7.2 · 6.6 / 7.0 |
+| the corner loop at 4 px a frame | 3.3 / 7.9 | 19.4 | 7.7 / **9.9** | 7.2 / **9.1** | 7.2 / **9.1** (60 small turns) |
+| `mid_check`'s whole run | 5.2 / 9.3 | 21.6 (worst) | 5.7 / **10.8** | 5.6 / **10.8** | 5.5 / 9.7 |
+| straight dy at 2 / 4 / 6 px (x 190) | 4.3 / 10.9 · 9.5 · 10.0 | 8.0 / 12.1 / 19.7 | 6.0 / 6.5 / 6.1; worst 4 px **10.8** | 5.7 / 5.9 / 6.0 | 5.8 / 5.9 / 5.9 |
+
+(° in one frame: the free roll outside the timed turns / the whole frame's worst; **bold** = over its limit.) v3's other gates: every entry far out and at 0.736 0° (the ccw loop ONE turn a loop, −83°/15; the cw loop +31° and +33°, base +69° twice); in and back near
+the end no turn at all (base +32°, −32°); the far edge one realignment (its way back −210° the long way, as at `069682a`: G3's note, listed);
+**in near the end, out in the middle −5° / +4° (2 frames)**; the straight dy's curve −96 / +92 mm (base −8 / +26; §4.3's price).
+
+**Why the worst frames fail — and why it is not this rule's to cure.** Each is the FIRST frame of a timed turn whose angle grows while it starts (the
+target moves with the finger): the turn advances 6° of its first, smaller angle, the target adds the rest (`mid_check`: 0.207 × 46° = 9.5° + the
+look). A shorter exit turn (the picture already near the face's layout) makes that ratio worse. Curing it means changing the turns' pace — forbidden by
+§15 (no change to a turn's pace or drawing). The middle exit: the picture kept at the entry differs there from the bound camera's by the side bias
+and the calm's look at the new place (§4.3's second cause, *"a study of its own"*); v4 cures it and breaks the re-entries.
+
+**Also measured (v1, switch 1):** `Scene_1` and `Scene_0` replays identical; `Scene_0bis` another play from frame 315, health clean, worst 14.1° →
+12.4°, roll 18.9° → 13.4°, the camera's up below level 32 → 89 frames; mode a identical frame for frame; the dy hold's walks (bottom far edge, zenith,
+far and 0.736): the blocked frames as at the base; 3 sub-walks of 24 set NO hold at the far edge (its turn under a quarter from the heading shown),
+the dy back honoured at once, the come-back crossing again as at the base. Switch 0 (v1): the three replays and the 33 walks identical.
+
+**For the owner — the choice** (nothing built): (1) accept the worst-frame gate as the base's + 2° inside timed turns and the middle exit's 5°: v3 as
+it stands (its patch); (2) let the timed turn advance on its CURRENT angle (a change of the turns' pace, every crossing — a package of its own, with
+LF2's lesson); (3) leave the entry as it is today. The readers: `scripts/probes/ORBIT_GATES.md` §7.3. No device look (rule 5).

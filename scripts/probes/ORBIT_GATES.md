@@ -320,6 +320,20 @@ frame 1143 (drag 17; the largest view turn 15.4°, roll 18.2°). `tilt_check` 8.
 `across_check` NOT rerun at `3ef7ba7` (`Scene_0bis` is untouched by (A): its replay and its 27 walks identical).
 ⛔ (iv′) (`069682a`, reverted `fa72bab`): its runs are recorded in `LEVEL_FACE_ENTRY.md` §10.3 — read the FREE ROLL column first (21.4° there).
 
+### 7.3 The free-roll gate of the silent entry (2026-11-18, package ES — `LEVEL_FACE_ENTRY.md` §15 gate 5, §16; not built, the base `bc867a0`)
+
+```bash
+OUT=<f> bash scripts/probes/level_entry_batch.sh <tag> b c                               # c: the straight dy at 4 and 6 px a frame, both ends
+node scripts/probes/level_entry_worst.mjs <base>/<t>_b_cw_p_far.json <new>/<t2>_b_cw_p_far.json  # any recording with t, c, up, mix (a mid DUMP too)
+node scripts/probes/level_entry_cmp.mjs   <base>/<t>_b_cw_p_far.json <new>/<t2>_b_cw_p_far.json  # frame for frame (the switch at 0)
+```
+
+`level_entry_worst.mjs` prints the FREE ROLL against the base's + 6° and the whole walk's WORST FRAME against the base's + 1°, and whether the worst
+frame falls in a timed turn. `mid_check`'s whole run: `DUMP=<f>/mid bash scripts/probes/mid_batch.sh "idleOrbitOn=0|2|0"`, then the reader on
+`<f>/mid_1.json`. The base at `bc867a0` (the session scratchpad's `es/base`): far out the free roll 1.1° – 2.5° on the loops and the walks back,
+3.3° at 4 px, 4.3° – 4.4° on the straight dy, 5.2° over `mid_check`'s run; the worst frame 6.9° – 7.9° on the loops, 9.3° `mid_check`, 9.0° – 10.9°
+the straight dy. ES's four versions against it: `LEVEL_FACE_ENTRY.md` §16 (recordings `es/def` = v1, `es/v2` … `es/v4`, `es/off` the switch at 0).
+
 ## 8. Gate (g) — every timed turn, base against new (`turn_rec.mjs`, `turn_table.mjs`, package LF2 — `LEVEL_FACE_ENTRY.md` §11)
 
 Package A's lesson on every gate: a turn is judged by its path, not only by its speed. `DUMP=<prefix>` on any batch (`tilt_batch.sh`, `mid_batch.sh`,
