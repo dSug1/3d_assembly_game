@@ -164,12 +164,15 @@ function uprightPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3,
   const share = sq.n === null || !(sq.q > 0) ? 0 : sq.q;
   const scale = st.cfg.uprightCloseIn === 1 ? 1 : 1 - share;
   const knobs = { fromDeg: st.cfg.uprightFromDeg, fullDeg: st.cfg.uprightFullDeg, maxDegS: st.cfg.uprightMaxDegS };
-  const r = uprightStep(was?.upright?.state ?? UPRIGHT_REST, G, line, dtMs, knobs, scale);
+  const tw = was === null ? 0 : twistAbout(was.ghost, G, line.dir);
+  // ⭐⭐⭐ (§6 UD4b, `uprightBandFree` 1) on the frame a change is FREED the carry is whole: the frame's twist of G about the framed line undone — the
+  // picture keeps its roll across it (well defined at the vertical, where α is not); the rest then closes at `uprightMaxDegS`
+  const freedTwist = freed > 0 && st.cfg.uprightBandFree === 1 && was !== null && was.upright !== undefined ? tw : null;
+  const r = uprightStep(was?.upright?.state ?? UPRIGHT_REST, G, line, dtMs, knobs, scale, freedTwist);
   const P = poseRolled(G, line, r.phi);
   const d: Vec3 = [P.eye[0] - P.look[0], P.eye[1] - P.look[1], P.eye[2] - P.look[2]];
   const l = Math.hypot(d[0], d[1], d[2]);
   st.asmPicLast = l > 1e-12 ? { dir: [d[0] / l, d[1] / l, d[2] / l], up: P.up } : st.asmCamLast;
-  const tw = was === null ? 0 : twistAbout(was.ghost, G, line.dir);
   const turnTw = fresh ? tw : (was?.turnTw ?? 0);
   const g = { gap: r.phi, speed: 0 };
   st.asmRollShadow = { ghost: G, dir: line.dir, piece, held: g, free: g, turn: zm, turnTw, stays: zm !== null, tw, gizmoFree, spit: spitZone(st) !== null, freshTurn: fresh, picture: P, a2: placeError(st, G, P, piece, line), drawn: true, freed, upright: { state: r.state, w: r.w, phi: r.phi } };
@@ -184,6 +187,9 @@ function uprightPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3,
  * square camera's, `byMm`, `out`, a tilt's) are refused before this is asked.
  */
 function uprightFrees(st: SceneState, was: NonNullable<SceneState["asmRollShadow"]>, ghost: CamPose, whole: number, maxDeg: number): boolean {
+  // ⭐⭐⭐ (2026-11-18, §6 UD4b — fix round 1, `uprightBandFree` 1) no stop under `freeTurnMaxDeg` near the vertical either: FO3's rule at ANY w (the
+  // picture keeps its roll across the freed frame, the rest closes in time — `uprightPictureFrame`); 0: UD4 — in the band every change timed
+  if (st.cfg.uprightBandFree === 1 && was.upright !== undefined && turnIsFree(whole, maxDeg)) return true;
   if (was.upright === undefined || !(was.upright.w >= 1)) return false;
   const sq = st.asmSquare;
   const share = sq.n === null || !(sq.q > 0) ? 0 : sq.q;

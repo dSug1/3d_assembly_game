@@ -75,7 +75,6 @@ describe("law U's wiring (`roll_shadow.ts` uprightPictureFrame, `assembly_wiring
   it("only with freeTurnMaxDeg over 0 and uprightPicture 1; the logic's pose from zoneMixPose, the picture turned by phi about the framed line", () => {
     expect(rs.indexOf("if (!(maxDeg > 0)) {")).toBeLessThan(rs.indexOf("if (st.cfg.uprightPicture === 1) return uprightPictureFrame("));
     expect(rs).toContain("const G = zoneMixPose(st, piece, eye, look, up);");
-    expect(rs).toContain("const r = uprightStep(was?.upright?.state ?? UPRIGHT_REST, G, line, dtMs, knobs, scale);");
     expect(rs).toContain("const P = poseRolled(G, line, r.phi);");
     expect(rs).toContain("const scale = st.cfg.uprightCloseIn === 1 ? 1 : 1 - share;");
   });
@@ -101,6 +100,20 @@ describe("U3 — a change of frame freed only where the picture is fully upright
   it("uprightFreeTurns 1 by default, 0 or 1", () => {
     expect(DEFAULT_CONFIG.uprightFreeTurns).toBe(1);
     for (const v of [0.5, 2, Number.NaN]) expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, uprightFreeTurns: v })).toThrow();
+  });
+});
+
+describe("UD4b — no stop under freeTurnMaxDeg near the vertical (`uprightBandFree`, fix round 1) — read in the source", () => {
+  const rs = readFileSync("src/render/roll_shadow.ts", "utf8");
+  it("FO3's rule at any w first; the freed frame's twist of G about the framed line handed to law U as a whole carry", () => {
+    expect(rs).toContain("if (st.cfg.uprightBandFree === 1 && was.upright !== undefined && turnIsFree(whole, maxDeg)) return true;");
+    expect(rs).toContain("const freedTwist = freed > 0 && st.cfg.uprightBandFree === 1 && was !== null && was.upright !== undefined ? tw : null;");
+    expect(rs).toContain("const r = uprightStep(was?.upright?.state ?? UPRIGHT_REST, G, line, dtMs, knobs, scale, freedTwist);");
+    expect(rs).toContain("const tw = was === null ? 0 : twistAbout(was.ghost, G, line.dir);");
+  });
+  it("uprightBandFree 1 by default, 0 or 1", () => {
+    expect(DEFAULT_CONFIG.uprightBandFree).toBe(1);
+    for (const v of [0.5, 2, Number.NaN]) expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, uprightBandFree: v })).toThrow();
   });
 });
 
