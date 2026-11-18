@@ -648,3 +648,13 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   turns of about 3°; the gizmo held 67 frames, base 21).
 * **For him**: as before (accept, change the turns' pace, or keep today's entry); v7 the closest
   ([`LEVEL_FACE_ENTRY.md`](../../40_RENDER_SCENE/spec/LEVEL_FACE_ENTRY.md) §16, its last paragraphs).
+
+### 2026-11-18 — package ES, fix round 2 (the last): still NOT BUILT — the silent entry left for the owner
+
+* **Result**: `src` and `tests` as at `bc867a0`; no code commit. One more version measured (v8 = v7 + the blend read at the deepest depth reached
+  since the entry, the session scratchpad's `es3/`): worse — the cw loop −x 8.8° → 9.4° (limit 8.5), +x 7.8° → 8.5° (limit 7.9).
+* **Why, read off the frames**: the exit turn there is short (13.6°, base 59°) because the picture kept is close to the face beyond's camera, and
+  in the turn's first frame that camera moves 7.5° with the finger's look (base 0.1°): 6° over 13.6° applied to 21.1° — the turns' pace. Every
+  silent picture makes this exit short; nothing on the free face reaches that frame.
+* **For him**: the timed turn advanced on its current angle (a package of its own), then v7 re-gated whole; or keep today's entry
+  ([`LEVEL_FACE_ENTRY.md`](../../40_RENDER_SCENE/spec/LEVEL_FACE_ENTRY.md) §16, its last paragraphs).
