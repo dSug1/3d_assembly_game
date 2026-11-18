@@ -787,3 +787,13 @@ target — today median **169°** (32 – 180°), from the pose S1 would show me
   way — a follower delays a one-way twist, it removes only twists that come back) or keep them and judge on the device.
 * **Amendments of §12 measured here**: R7 / O8 (the finger turned by the gap) refuted at a pole (14.4); §12.4's sizing ("the roll shown per metre …
   16 % of the ghost's at his average") holds on the corner loops, not on his hand (14.2) — the estimate was made on reversing twists.
+
+## 15. What followed (the lead, 2026-11-18, night)
+
+* **Deployed on his word** (*"can you deploy so I can test in parallel ? and tell me where are the sliders located"*): LIVE main `4eabab8` = `1.0.148-`
+  at `48ae89c`, 21:23, not independently tested. ⚠ LIVE holds S2, reverted on the branch (`f198b3a`, 14.4). Sliders: ☰, ORBIT › SMOOTHING.
+* **His look**: *"the build is very good at 160 ms and 90degrees: set them as default. However, I want to modify something: …  I want to avoid the roll
+  of the scene in the screen view. Propose a logic, test the logic on simple geometries, then build it in a new branch 1.0.148b-Fast_orbit_upright_gravity."*
+* The independent test of S1 as built was NOT run (the picture's rule changes in `1.0.148b-`; tested there once). 14.7 stays open.
+* The mitigations studied (nothing built, largely superseded): [`FAST_ORBIT_MITIGATIONS.md`](FAST_ORBIT_MITIGATIONS.md). The upright picture (law U):
+  `UPRIGHT_PICTURE.md` on branch `1.0.148b-Fast_orbit_upright_gravity` (not on this branch).
