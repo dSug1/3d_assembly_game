@@ -110,7 +110,7 @@ describe("the wiring (`roll_shadow.ts` rollPictureFrame) — read in the source"
     expect(rs).toContain("if (zm !== null && fresh && was !== null && was.drawn && was.turn === null && zm.byMm !== true && zm.out === undefined && zm.tilt !== true && !sq && !tiltHold) {");
     expect(rs).toContain("const whole = poseTurnAngle(was.ghost, ghost);");
     expect(rs).toContain("if (turnIsFree(whole, maxDeg)) {");
-    expect(rs).toContain('const mode: FollowMode = was === null || !was.drawn || zm !== null || afterStay ? "ZERO" : gizmoFree ? "TAKE" : "SKIP";');
+    expect(rs).toContain('const mode: FollowMode = was === null || !was.drawn || was.upright !== undefined || zm !== null || afterStay ? "ZERO" : gizmoFree ? "TAKE" : "SKIP";');
     expect(rs).toContain("const g = followStep(was?.free ?? GAP_ZERO, tw, dtMs, st.cfg.rollFollowMs, mode);");
   });
   it("the tilt's turns tagged to stay (its entry, its exit); the direction's rest on its own clock, stepped before it is read", () => {

@@ -24,6 +24,7 @@
  */
 import { distanceTurningPoints } from "./orbit";
 import { FREE_TURN_MAX_DEG, ROLL_FOLLOW_MS } from "./roll_follow";
+import { UPRIGHT_FROM_DEG, UPRIGHT_FULL_DEG, UPRIGHT_MAX_DEG_S } from "./upright";
 
 export const CAMERA_NEAR_PLANE_M = 0.01;
 
@@ -409,6 +410,17 @@ export interface GestureConfig {
   /** ⭐⭐⭐ (FO3 S1) a change of frame whose whole angle is under this (deg, less `FREE_TURN_TOL_DEG`) makes no timed turn: the gizmo free, the picture
    * follows; 90 or more: today's timed turn. 0: every change today's turn and no follower — today's game, bit for bit (0 – 90) */
   freeTurnMaxDeg: number;
+  /** ⭐⭐⭐ (2026-11-18, `UPRIGHT_PICTURE.md` §2 — law U, UD1) THE UPRIGHT PICTURE: the logic's pose turned about the line through the piece and its look
+   * point so that gravity is on the glass's vertical (1); 0: FO3 S1's follower (the build the owner looked at, less S2). Acts only with `freeTurnMaxDeg` > 0 */
+  uprightPicture: number;
+  /** ⭐ (UD3) law U under the close-in square camera too (1); 0: not while the square camera holds the picture (its share) — his rule T1 wins */
+  uprightCloseIn: number;
+  /** ⭐ (UD1) within this of the vertical (deg) the picture is the logic's pose — gravity has no direction on the glass there (0 – 45) */
+  uprightFromDeg: number;
+  /** ⭐ (UD1) from this off the vertical (deg) the picture fully upright; a smoothstep between (0 – 60; at or under `uprightFromDeg`: a step there) */
+  uprightFullDeg: number;
+  /** ⭐ (UD6) the cap of the picture's roll toward upright inside the band (deg a second; 0 = none; exact outside the band) (0 – 2 880) */
+  uprightMaxDegS: number;
   /** ⭐⭐⭐ (2026-11-10, POLAR_ORBIT_CLEANUP.md §9.4 — the owner's TILTED POLE) a press on a cap tilts the orbit so the cap is a side (1); off (0): the polar cap as before. ⛔ (2026-11-15, the owner: *"cancel my rule and remove the press action on the orbit"*) no press tilts: 1 the automatic tilt close in (`tiltAutoM`), 0 none. */
   tiltedPole: number;
   /** ⭐⭐⭐ (2026-11-10, the owner: *"limit the speed of the scene tilt at crossing"* → *"one speed for every tilt"*) EVERY tilt — the roll back to upright, the swing of a tilt just made — at this speed (°/s; 0: at once) — ⛔ `tiltRollMinMs` (a whole roll in 250 ms whatever its size) replaced. */
@@ -869,6 +881,11 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitShellOffsetMm: 60, // ⭐⭐⭐ (2026-11-04, Step 2) the shell's offset
   rollFollowMs: ROLL_FOLLOW_MS, // ⭐⭐⭐ (2026-11-18, FO3 S1) 160 ms — the owner's word on the deployed build (`UPRIGHT_PICTURE.md` §0, UD7); 200 before
   freeTurnMaxDeg: FREE_TURN_MAX_DEG, // ⭐⭐⭐ (FO3 S1) 90: the changes under 90° free (R6); 0 = today's game
+  uprightPicture: 1, // ⭐⭐⭐ (2026-11-18, `UPRIGHT_PICTURE.md` UD1) law U on; 0 = FO3 S1's follower
+  uprightCloseIn: 0, // ⭐ (UD3) the square camera's T1 wins close in
+  uprightFromDeg: UPRIGHT_FROM_DEG, // ⭐ (UD1) 5°
+  uprightFullDeg: UPRIGHT_FULL_DEG, // ⭐ (UD1) 25°
+  uprightMaxDegS: UPRIGHT_MAX_DEG_S, // ⭐ (UD6) no cap
   gizmoEaseMs: 45, // ⭐⭐ (2026-11-04, the owner: *"update the lag the gizmo's position the piece follows to 45ms"*; 62, 55 before, the former GIZMO_TAU_MS 90)
   orbitSpringMs: 30, // ⭐⭐ (2026-11-04) the former boxSmoothMs / 2 for the orbit's spring
   tiltedPole: 1, // ⭐⭐⭐ (2026-11-10, §9.4) the tilted pole on
@@ -1048,6 +1065,11 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (cfg.freeFaceSquare !== 0 && cfg.freeFaceSquare !== 1) throw new Error(`freeFaceSquare (${cfg.freeFaceSquare}) must be 0 or 1.`);
   if (!(cfg.rollFollowMs >= 60 && cfg.rollFollowMs <= 600)) throw new Error(`rollFollowMs (${cfg.rollFollowMs}) must be in [60, 600] ms.`);
   if (!(cfg.freeTurnMaxDeg >= 0 && cfg.freeTurnMaxDeg <= 90)) throw new Error(`freeTurnMaxDeg (${cfg.freeTurnMaxDeg}) must be in [0, 90] deg.`);
+  if (cfg.uprightPicture !== 0 && cfg.uprightPicture !== 1) throw new Error(`uprightPicture (${cfg.uprightPicture}) must be 0 or 1.`);
+  if (cfg.uprightCloseIn !== 0 && cfg.uprightCloseIn !== 1) throw new Error(`uprightCloseIn (${cfg.uprightCloseIn}) must be 0 or 1.`);
+  if (!(cfg.uprightFromDeg >= 0 && cfg.uprightFromDeg <= 45)) throw new Error(`uprightFromDeg (${cfg.uprightFromDeg}) must be in [0, 45] deg.`);
+  if (!(cfg.uprightFullDeg >= 0 && cfg.uprightFullDeg <= 60)) throw new Error(`uprightFullDeg (${cfg.uprightFullDeg}) must be in [0, 60] deg (at or under \`uprightFromDeg\`: a step there).`);
+  if (!(cfg.uprightMaxDegS >= 0 && cfg.uprightMaxDegS <= 2880)) throw new Error(`uprightMaxDegS (${cfg.uprightMaxDegS}) must be in [0, 2880] deg a second.`);
   if (cfg.freeEntryUpright !== 0 && cfg.freeEntryUpright !== 1) throw new Error(`freeEntryUpright (${cfg.freeEntryUpright}) must be 0 or 1.`);
   if (!(cfg.edgeHoldMm >= 0 && cfg.edgeHoldMm <= 200)) throw new Error(`edgeHoldMm (${cfg.edgeHoldMm}) must be in [0, 200] mm.`);
   if (!(cfg.approachPinchGain > 0 && cfg.approachPinchGain <= 10)) throw new Error(`approachPinchGain (${cfg.approachPinchGain}) must be in (0, 10].`);

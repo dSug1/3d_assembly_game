@@ -19,6 +19,7 @@ import { upSquareToView } from "../input/camera_frame";
 import { squareTurning, type CamPose } from "../input/orbit_tilt";
 import { followStep, FREE_TURN_MAX_DEG, framedLine, GAP_ZERO, onGlass, poseRolled, poseTurnAngle, ROLL_FOLLOW_MS, turnIsFree, twistAbout, type FollowMode } from "../input/roll_follow";
 import { easeRest } from "../input/seam_turn";
+import { UPRIGHT_REST, uprightStep } from "../input/upright";
 import { spitZone, zoneMixPose } from "./assembly_wiring";
 import type { SceneState } from "./scene_state";
 
@@ -127,10 +128,11 @@ export function rollPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: V
       freed = whole > 0 ? whole : Number.MIN_VALUE;
     }
   }
+  if (st.cfg.uprightPicture === 1) return uprightPictureFrame(st, piece, eye, look, up, dtMs, zm, fresh, freed, zm === null && !sq && !tiltHold);
   const tw = was === null ? 0 : twistAbout(was.ghost, ghost, line.dir);
   const gizmoFree = zm === null && !sq && !tiltHold;
   const afterStay = was !== null && was.turn !== null && zm === null;
-  const mode: FollowMode = was === null || !was.drawn || zm !== null || afterStay ? "ZERO" : gizmoFree ? "TAKE" : "SKIP";
+  const mode: FollowMode = was === null || !was.drawn || was.upright !== undefined || zm !== null || afterStay ? "ZERO" : gizmoFree ? "TAKE" : "SKIP";
   const g = followStep(was?.free ?? GAP_ZERO, tw, dtMs, st.cfg.rollFollowMs, mode);
   const zp = zoneMixPose(st, piece, eye, look, up);
   let pose = zp;
@@ -145,4 +147,31 @@ export function rollPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: V
   const turnTw = fresh ? tw : (was?.turnTw ?? 0);
   st.asmRollShadow = { ghost, dir: line.dir, piece, held: g, free: g, turn: zm, turnTw, stays: zm !== null, tw, gizmoFree, spit: spitZone(st) !== null, freshTurn: fresh, picture, a2: placeError(st, ghost, picture, piece, line), drawn: true, freed };
   return pose;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-18, `UPRIGHT_PICTURE.md` §2 steps 3 – 4 — law U, `uprightPicture` 1) ONE FRAME OF THE UPRIGHT PICTURE, at the camera's stage: `G` the logic's
+ * pose (`zoneMixPose`: the ghost, or a timed turn's pose where a turn stays — FO3's gap NOT applied, UD4); `φ` from law U (`uprightStep`: the turn about
+ * the framed line that puts gravity on the glass's vertical, weighted by the view's angle from the vertical and the square camera's complement — UD3,
+ * `uprightCloseIn` 0); the picture `P = poseRolled(G, L, φ)` — the piece and the look point exact on the glass; `φ` 0: `G` itself. `st.asmCamLast` stays
+ * the logic's (`zoneMixPose` wrote it); the picture's frame in `st.asmPicLast` (the finger in a spit); the record in `st.asmRollShadow` (`ghost` = `G`).
+ */
+function uprightPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Vec3, dtMs: number, zm: object | null, fresh: boolean, freed: number, gizmoFree: boolean): CamPose {
+  const was = st.asmRollShadow;
+  const G = zoneMixPose(st, piece, eye, look, up);
+  const line = framedLine(G, piece);
+  const sq = st.asmSquare;
+  const share = sq.n === null || !(sq.q > 0) ? 0 : sq.q;
+  const scale = st.cfg.uprightCloseIn === 1 ? 1 : 1 - share;
+  const knobs = { fromDeg: st.cfg.uprightFromDeg, fullDeg: st.cfg.uprightFullDeg, maxDegS: st.cfg.uprightMaxDegS };
+  const r = uprightStep(was?.upright?.state ?? UPRIGHT_REST, G, line, dtMs, knobs, scale);
+  const P = poseRolled(G, line, r.phi);
+  const d: Vec3 = [P.eye[0] - P.look[0], P.eye[1] - P.look[1], P.eye[2] - P.look[2]];
+  const l = Math.hypot(d[0], d[1], d[2]);
+  st.asmPicLast = l > 1e-12 ? { dir: [d[0] / l, d[1] / l, d[2] / l], up: P.up } : st.asmCamLast;
+  const tw = was === null ? 0 : twistAbout(was.ghost, G, line.dir);
+  const turnTw = fresh ? tw : (was?.turnTw ?? 0);
+  const g = { gap: r.phi, speed: 0 };
+  st.asmRollShadow = { ghost: G, dir: line.dir, piece, held: g, free: g, turn: zm, turnTw, stays: zm !== null, tw, gizmoFree, spit: spitZone(st) !== null, freshTurn: fresh, picture: P, a2: placeError(st, G, P, piece, line), drawn: true, freed, upright: { state: r.state, w: r.w, phi: r.phi } };
+  return P;
 }

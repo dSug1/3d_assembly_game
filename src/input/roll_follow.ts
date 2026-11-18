@@ -192,6 +192,25 @@ export function turnIsFree(angleRad: number, maxDeg: number): boolean {
 }
 
 /**
+ * ⭐⭐⭐ (FO3 S2 at `48ae89c`, reverted; back 2026-11-18 for law U — `UPRIGHT_PICTURE.md` §2 step 3, UD8) THE FINGER READ OFF THE PICTURE DRAWN: a move
+ * on the glass (`dx` right, `dy` up, any unit) seen on `picture` and read on `ghost`'s glass (the logic's) — the same world move, its length kept. The
+ * picture the ghost itself (the same object, or the same axes): the move as it is, bit for bit.
+ */
+export function fingerOnGhost(dx: number, dy: number, picture: CamPose, ghost: CamPose): { readonly dx: number; readonly dy: number } {
+  if (picture === ghost || (dx === 0 && dy === 0)) return { dx, dy };
+  const [, uP, sP] = poseAxes(picture);
+  const [, uG, sG] = poseAxes(ghost);
+  if (uP[0] === uG[0] && uP[1] === uG[1] && uP[2] === uG[2] && sP[0] === sG[0] && sP[1] === sG[1] && sP[2] === sG[2]) return { dx, dy };
+  const w: Vec3 = [dx * sP[0] + dy * uP[0], dx * sP[1] + dy * uP[1], dx * sP[2] + dy * uP[2]];
+  const ox = dot(w, sG);
+  const oy = dot(w, uG);
+  const l = Math.hypot(ox, oy);
+  if (!(l > 1e-12)) return { dx, dy };
+  const k = Math.hypot(dx, dy) / l;
+  return { dx: ox * k, dy: oy * k };
+}
+
+/**
  * ⭐⭐⭐ (FO3 S1, O3) THE PIECE'S SHOWN DIRECTION'S REST ON A CLOCK OF ITS OWN (no timed turn carries it): the rest angle (rad) closed by the same
  * critically damped law (`gapStep`, `followMs`) — its share of the whole `angle` shown (0 … 1); at rest (`GAP_ZERO`): 1, the ease over.
  */

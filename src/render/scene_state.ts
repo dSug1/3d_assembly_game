@@ -436,7 +436,14 @@ export interface SceneState {
     readonly drawn: boolean;
     /** ⭐ (FO3 S1) this frame's change of frame made free (no timed turn) — its whole angle (rad); 0: none */
     readonly freed: number;
+    /** ⭐⭐⭐ (2026-11-18, `UPRIGHT_PICTURE.md` §2 — law U, `uprightPicture` 1) the picture drawn by law U: `ghost` is then the LOGIC's pose `G` (the pose
+     *  `zoneMixPose` gives — a turn that stays included), `picture` = `G` turned by `phi` about the framed line; the law's state (`upright.ts`), its weight
+     *  `w` (the square camera's complement included) and `phi` (rad); absent: FO3 S1's follower or the shadow */
+    readonly upright?: { readonly state: import("../input/upright").UprightState; readonly w: number; readonly phi: number };
   } | null;
+  /** ⭐⭐⭐ (2026-11-18, `UPRIGHT_PICTURE.md` §2 step 3 — law U) the PICTURE's camera frame last drawn (the finger in a spit read off it); `asmCamLast` stays
+   *  the logic's. `null`: none — law U off, or a reset */
+  asmPicLast: import("../input/orbit_tilt").CamFrame | null;
   /** ⭐⭐⭐ (2026-11-13, the owner: *"replicate the behavior of scene 0 when crossing the zenith edge"*) the spit's side of the axis (`spitSide`; 0: none) */
   asmSpitSide: number;
   /** ⭐⭐⭐ (2026-11-14) the camera's direction the spit's side was last read at (world) — the crossing read on the path from it (`crossingPitch`) */
