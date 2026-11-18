@@ -90,6 +90,20 @@ describe("law U's wiring (`roll_shadow.ts` uprightPictureFrame, `assembly_wiring
   });
 });
 
+describe("U3 — a change of frame freed only where the picture is fully upright at both ends (`uprightFrees`) — read in the source", () => {
+  const rs = readFileSync("src/render/roll_shadow.ts", "utf8");
+  it("asked only of the changes S1 would judge (first frame, none of the kinds that stay); w 1 before and after; any angle with uprightFreeTurns 1", () => {
+    expect(rs).toContain("if (st.cfg.uprightPicture === 1 ? uprightFrees(st, was, ghost, whole, maxDeg) : turnIsFree(whole, maxDeg)) {");
+    expect(rs).toContain("if (was.upright === undefined || !(was.upright.w >= 1)) return false;");
+    expect(rs).toContain("if (!(uprightWeight(viewFromVertical(ghost), st.cfg.uprightFromDeg, st.cfg.uprightFullDeg) * scale >= 1)) return false;");
+    expect(rs).toContain("return st.cfg.uprightFreeTurns === 1 ? Number.isFinite(whole) : turnIsFree(whole, maxDeg);");
+  });
+  it("uprightFreeTurns 1 by default, 0 or 1", () => {
+    expect(DEFAULT_CONFIG.uprightFreeTurns).toBe(1);
+    for (const v of [0.5, 2, Number.NaN]) expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, uprightFreeTurns: v })).toThrow();
+  });
+});
+
 describe("law U's sliders (ORBIT › UPRIGHT PICTURE)", () => {
   it("uprightPicture 1, uprightCloseIn 0, the band 5 – 25°, no cap; their ranges", () => {
     expect([DEFAULT_CONFIG.uprightPicture, DEFAULT_CONFIG.uprightCloseIn, DEFAULT_CONFIG.uprightFromDeg, DEFAULT_CONFIG.uprightFullDeg, DEFAULT_CONFIG.uprightMaxDegS]).toEqual([1, 0, 5, 25, 0]);

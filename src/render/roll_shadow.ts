@@ -19,7 +19,7 @@ import { upSquareToView } from "../input/camera_frame";
 import { squareTurning, type CamPose } from "../input/orbit_tilt";
 import { followStep, FREE_TURN_MAX_DEG, framedLine, GAP_ZERO, onGlass, poseRolled, poseTurnAngle, ROLL_FOLLOW_MS, turnIsFree, twistAbout, type FollowMode } from "../input/roll_follow";
 import { easeRest } from "../input/seam_turn";
-import { UPRIGHT_REST, uprightStep } from "../input/upright";
+import { UPRIGHT_REST, uprightStep, uprightWeight, viewFromVertical } from "../input/upright";
 import { spitZone, zoneMixPose } from "./assembly_wiring";
 import type { SceneState } from "./scene_state";
 
@@ -116,7 +116,7 @@ export function rollPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: V
   let freed = 0;
   if (zm !== null && fresh && was !== null && was.drawn && was.turn === null && zm.byMm !== true && zm.out === undefined && zm.tilt !== true && !sq && !tiltHold) {
     const whole = poseTurnAngle(was.ghost, ghost);
-    if (turnIsFree(whole, maxDeg)) {
+    if (st.cfg.uprightPicture === 1 ? uprightFrees(st, was, ghost, whole, maxDeg) : turnIsFree(whole, maxDeg)) {
       // O3: the piece's shown direction's ease on this turn — its rest — on a clock of its own
       const e = st.asmDirEase;
       if (e !== null && e.mix === zm) {
@@ -174,4 +174,20 @@ function uprightPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3,
   const g = { gap: r.phi, speed: 0 };
   st.asmRollShadow = { ghost: G, dir: line.dir, piece, held: g, free: g, turn: zm, turnTw, stays: zm !== null, tw, gizmoFree, spit: spitZone(st) !== null, freshTurn: fresh, picture: P, a2: placeError(st, G, P, piece, line), drawn: true, freed, upright: { state: r.state, w: r.w, phi: r.phi } };
   return P;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-18, `UPRIGHT_PICTURE.md` §2 step 4 — U3, UD2, UD4) UNDER LAW U, A CHANGE OF FRAME MADE FREE (no timed turn, the gizmo never held by it) only
+ * where the picture is FULLY UPRIGHT at both its ends — `w` 1 on the pose before the change (last frame's) and on the ghost after it (this frame's, the
+ * square camera's complement included): the glass does not turn there, a timed turn would only stall the gizmo. `uprightFreeTurns` 1: whatever its angle;
+ * 0: under `freeTurnMaxDeg` as FO3 S1 (`turnIsFree`). `w` under 1 at either end: every change `1.0.147-`'s timed turn (UD4). The kinds that stay (the
+ * square camera's, `byMm`, `out`, a tilt's) are refused before this is asked.
+ */
+function uprightFrees(st: SceneState, was: NonNullable<SceneState["asmRollShadow"]>, ghost: CamPose, whole: number, maxDeg: number): boolean {
+  if (was.upright === undefined || !(was.upright.w >= 1)) return false;
+  const sq = st.asmSquare;
+  const share = sq.n === null || !(sq.q > 0) ? 0 : sq.q;
+  const scale = st.cfg.uprightCloseIn === 1 ? 1 : 1 - share;
+  if (!(uprightWeight(viewFromVertical(ghost), st.cfg.uprightFromDeg, st.cfg.uprightFullDeg) * scale >= 1)) return false;
+  return st.cfg.uprightFreeTurns === 1 ? Number.isFinite(whole) : turnIsFree(whole, maxDeg);
 }
