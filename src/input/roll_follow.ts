@@ -201,13 +201,28 @@ export function fingerOnGhost(dx: number, dy: number, picture: CamPose, ghost: C
   const [, uP, sP] = poseAxes(picture);
   const [, uG, sG] = poseAxes(ghost);
   if (uP[0] === uG[0] && uP[1] === uG[1] && uP[2] === uG[2] && sP[0] === sG[0] && sP[1] === sG[1] && sP[2] === sG[2]) return { dx, dy };
-  const w: Vec3 = [dx * sP[0] + dy * uP[0], dx * sP[1] + dy * uP[1], dx * sP[2] + dy * uP[2]];
-  const ox = dot(w, sG);
+  // ⭐⭐⭐ (2026-11-19, fix round 2) the glass's RIGHT is `up × forward` (Babylon's left-handed axes, as `fingerInFrame`) = −`poseAxes`' third axis
+  // (`forward × up`). ⛔ (FO3 S2, law U until fix round 2) `+s`: the finger's dx mirrored — the move turned by −φ instead of φ (right only at 0° and 180°)
+  const w: Vec3 = [-dx * sP[0] + dy * uP[0], -dx * sP[1] + dy * uP[1], -dx * sP[2] + dy * uP[2]];
+  const ox = -dot(w, sG);
   const oy = dot(w, uG);
   const l = Math.hypot(ox, oy);
   if (!(l > 1e-12)) return { dx, dy };
   const k = Math.hypot(dx, dy) / l;
   return { dx: ox * k, dy: oy * k };
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §8 UD8b — fix round 2) THE FINGER AT THE ENTRY, ONCE: the orbit finger's step (`dx` right, `fdy` up — `orbitDy`'s
+ * sign: finger up positive) turned from the picture drawn onto the LOGIC's glass (`fingerOnGhost`) BEFORE anything reads it — the dy the hold pushes
+ * with (`dySignPushing`), the hold itself (`edgeHoldDy`, `edgeHoldFinger`), the spit's frame (`zoneFinger`, then on the logic's own frame). After it the
+ * logic reads a finger drawn on its own glass, as in `1.0.147-`. No picture (`null`, law U off) or the picture the logic's pose: the move as it is, bit for
+ * bit. ⛔ (fix round 1) the hold read the RAW glass dy while the move was read off the picture later: with the two 143° apart the opposite sign.
+ */
+export function fingerOnLogic(dx: number, fdy: number, picture: CamPose | null, ghost: CamPose | null): { readonly dx: number; readonly fdy: number } {
+  if (picture === null || ghost === null || picture === ghost) return { dx, fdy };
+  const f = fingerOnGhost(dx, fdy, picture, ghost);
+  return { dx: f.dx, fdy: f.dy };
 }
 
 /**

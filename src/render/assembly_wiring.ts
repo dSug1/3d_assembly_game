@@ -40,7 +40,7 @@ import { crossingHold, crossingPitch, distanceToFacets, fingerInFrame, fingerSwa
 import { assignCharts, capTiltHeading, chartContour, chartZones, DEFAULT_CHART_OPTS, type ChartAssignment, type ChartFace } from "../input/orbit_charts";
 import { holdAtCrossing, poseAboutPiece, poseFramingTwo, type CamPose } from "../input/orbit_tilt";
 import { poleCrossingDue, poleSeam } from "../input/pole_crossing";
-import { fingerOnGhost, gapStep, restShare } from "../input/roll_follow";
+import { fingerOnLogic, gapStep, restShare } from "../input/roll_follow";
 import { dirGap, easedDir, easeRest, poleYawKept, seamOutPaced, seamOutShare, seamOutStep, seamOutTarget, seamTurnPace, seamTurnStep, seamWholeRad, tiltLeavesNow, turnHoldsGizmo } from "../input/seam_turn";
 import { bandedFacet } from "../input/face_band";
 import { contourFaceAt, crossingEvent, entryBlendHeading, entryDepth, entryEdgeOf, exitHoldSign, headingStep, pictureOffset, transportUp, viewLevelTurned, exitTurnRad, faceOwnUp, freeEdges, freeEntryHeading, freeHeadingAngle, isFreeFace } from "../input/free_face";
@@ -109,7 +109,7 @@ export function ensureAssembly(st: SceneState): void {
 type OrbitStateStart = Pick<
   SceneState,
   | "asmGizmo" | "asmSupport" | "asmSupportLevel" | "pieceHold" | "pieceHoldPrev" | "asmLook" | "asmFacePoint" | "asmG" | "asmPrevQ" | "asmShown" | "asmFaceBand" | "asmFree" | "asmPlaceWas" | "asmMapQ"
-  | "asmEdgeHold" | "asmZone" | "asmZoneMix" | "asmPieceDrawn" | "asmDirEase" | "asmCamLast" | "asmRollShadow" | "asmPicLast" | "asmSpitSide" | "asmSpitU" | "asmSpitPic" | "asmSpitPicWas" | "asmZoneAlpha" | "asmDySign" | "asmHeadO"
+  | "asmEdgeHold" | "asmZone" | "asmZoneMix" | "asmPieceDrawn" | "asmDirEase" | "asmCamLast" | "asmRollShadow" | "asmSpitSide" | "asmSpitU" | "asmSpitPic" | "asmSpitPicWas" | "asmZoneAlpha" | "asmDySign" | "asmHeadO"
   | "asmHeadW" | "asmHeadYaw" | "asmTilt" | "asmGOff" | "asmTiltAuto" | "asmTiltPending" | "asmOrbitMm" | "asmBlend" | "asmCalmWhole" | "asmCalmWholeV"
   | "asmSquare" | "asmCalm" | "asmMouth" | "asmRawPrev" | "asmGizmoAt" | "asmGizmoLag"
 >;
@@ -144,7 +144,6 @@ export function orbitStateStart(): OrbitStateStart {
     asmDirEase: null,
     asmCamLast: null,
     asmRollShadow: null,
-    asmPicLast: null,
     asmSpitSide: 0,
     asmSpitU: null,
     asmSpitPic: null,
@@ -2322,23 +2321,25 @@ function freeFaceExit(st: SceneState, fr: NonNullable<SceneState["asmFree"]>, co
 }
 
 /**
+ * ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §8 UD8b) THE FINGER AT THE ENTRY: the orbit finger's step (`dx`, `fdy` up, px) turned ONCE from the picture
+ * drawn (law U's, last frame's) onto the logic's glass (`fingerOnLogic`) — before the dy hold and the spit read it. Law U off: as it is.
+ */
+export function fingerAtEntry(st: SceneState, dx: number, fdy: number): { readonly dx: number; readonly fdy: number } {
+  const sh = st.asmRollShadow;
+  return sh !== null && sh.upright !== undefined ? fingerOnLogic(dx, fdy, sh.picture, sh.ghost) : { dx, fdy };
+}
+
+/**
  * ⭐⭐⭐ (§3.5) THE FINGER IN A SPIT (the pointer's `dx`, `fdy` in px — `fdy` up positive; the §8 hold after a crossing already applied): the move read in
  * F's upright screen (`fingerInFrame`: a dx pole to pole, a dy round the axis — the way it goes on the glass). Elsewhere as it is.
  */
 export function zoneFinger(st: SceneState, dx: number, fdy: number): { readonly dx: number; readonly fdy: number } {
   const z = spitZone(st);
-  const sh = st.asmRollShadow;
-  const up = sh !== null && sh.upright !== undefined;
-  if (z === null) {
-    // ⭐⭐⭐ (2026-11-18, `UPRIGHT_PICTURE.md` §2 step 3 — law U, UD8) outside a spit the finger read OFF THE PICTURE (the logic's pose turned by φ about the
-    // framed line): the same move on the logic's glass (`fingerOnGhost`). φ 0 (at the vertical, close in): as it is, bit for bit
-    if (!up || sh.picture === sh.ghost) return { dx, fdy };
-    const f = fingerOnGhost(dx, fdy, sh.picture, sh.ghost);
-    return { dx: f.dx, fdy: f.dy };
-  }
+  // ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §8 UD8b) the finger is already on the logic's glass (`fingerAtEntry`): outside a spit as it is; in a spit read
+  // on the logic's own frame (`asmCamLast`), as in `1.0.147-` — ⛔ (fix round 1) turned off the picture HERE, after the hold had read the raw glass's dy
+  if (z === null) return { dx, fdy };
   const dy = fdy;
-  // ⭐⭐⭐ (law U) in a spit the finger read off the PICTURE's frame (`asmPicLast`); else the logic's (`asmCamLast`) as before
-  const cf = up && st.asmPicLast !== null ? st.asmPicLast : st.asmCamLast;
+  const cf = st.asmCamLast;
   if (cf === null) return { dx, fdy: dy };
   // ⭐ F's up on the glass from the orbit's own angles (`cos θ·a − sin θ·d`: the way toward the pole — at the pole itself the way OFF it at the yaw, so a
   // drag that way leaves it; ⛔ the axis projected: undefined there, the last angle kept — the finger turned the yaw unseen, the gizmo stalled at the apex)

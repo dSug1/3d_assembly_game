@@ -154,7 +154,7 @@ export function rollPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: V
  * pose (`zoneMixPose`: the ghost, or a timed turn's pose where a turn stays — FO3's gap NOT applied, UD4); `φ` from law U (`uprightStep`: the turn about
  * the framed line that puts gravity on the glass's vertical, weighted by the view's angle from the vertical and the square camera's complement — UD3,
  * `uprightCloseIn` 0); the picture `P = poseRolled(G, L, φ)` — the piece and the look point exact on the glass; `φ` 0: `G` itself. `st.asmCamLast` stays
- * the logic's (`zoneMixPose` wrote it); the picture's frame in `st.asmPicLast` (the finger in a spit); the record in `st.asmRollShadow` (`ghost` = `G`).
+ * the logic's (`zoneMixPose` wrote it); the record in `st.asmRollShadow` (`ghost` = `G`).
  */
 function uprightPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Vec3, dtMs: number, zm: object | null, fresh: boolean, freed: number, gizmoFree: boolean): CamPose {
   const was = st.asmRollShadow;
@@ -172,9 +172,6 @@ function uprightPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3,
   const freedTwist = (freed > 0 || fresh) && st.cfg.uprightBandFree === 1 && was !== null && was.upright !== undefined ? tw : null;
   const r = uprightStep(was?.upright?.state ?? UPRIGHT_REST, G, line, dtMs, knobs, scale, freedTwist);
   const P = poseRolled(G, line, r.phi);
-  const d: Vec3 = [P.eye[0] - P.look[0], P.eye[1] - P.look[1], P.eye[2] - P.look[2]];
-  const l = Math.hypot(d[0], d[1], d[2]);
-  st.asmPicLast = l > 1e-12 ? { dir: [d[0] / l, d[1] / l, d[2] / l], up: P.up } : st.asmCamLast;
   const turnTw = fresh ? tw : (was?.turnTw ?? 0);
   const g = { gap: r.phi, speed: 0 };
   st.asmRollShadow = { ghost: G, dir: line.dir, piece, held: g, free: g, turn: zm, turnTw, stays: zm !== null, tw, gizmoFree, spit: spitZone(st) !== null, freshTurn: fresh, picture: P, a2: placeError(st, G, P, piece, line), drawn: true, freed, upright: { state: r.state, w: r.w, phi: r.phi } };
