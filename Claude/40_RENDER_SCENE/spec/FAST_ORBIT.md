@@ -1,6 +1,6 @@
 # A fast orbit over many edges — one follower instead of a train of turns (2026-11-17)
 
-> **STATUS** · ⭐⭐⭐ **2026-11-18: WHY THE THREE BUILDS FAILED — the specification, not a limit (§11); the silent entry's 0.3° on the same root (§11.4); FO3, the picture a follower of the logic, sized on the owner's measured pace — ✅ AGREED, to be built (§12)** · ✅ **THE OWNER'S GO, the night of 2026-11-17** — the build as briefed: §1 – §5 (branch `1.0.148-`, from `1dac167`); as built: after §5 — ⛔ FO1's first build measured and reverted (§6); ⭐ the fix rounds on the contract amended (§7); ⛔ fix round 1 (test 2) built on §7, measured, NOT BUILT — reverted (§8); ⛔ fix round 2 (test 3, the last) — three realisations measured, NOT BUILT — reverted (§9); ⛔ **THE ABORT DONE: the work is back on `1.0.147-`, the fast orbit is NOT in the game** (§10: what was learned, the lead's proposal)
+> **STATUS** · ⭐⭐⭐ **2026-11-18: WHY THE THREE BUILDS FAILED — the specification, not a limit (§11); the silent entry's 0.3° on the same root — ✅ the owner: *"Keep version 7"* (§11.4); FO3, the picture a follower of the logic, sized on the owner's measured pace — ✅ AGREED, to be built (§12)** · ✅ **THE OWNER'S GO, the night of 2026-11-17** — the build as briefed: §1 – §5 (branch `1.0.148-`, from `1dac167`); as built: after §5 — ⛔ FO1's first build measured and reverted (§6); ⭐ the fix rounds on the contract amended (§7); ⛔ fix round 1 (test 2) built on §7, measured, NOT BUILT — reverted (§8); ⛔ fix round 2 (test 3, the last) — three realisations measured, NOT BUILT — reverted (§9); ⛔ **THE ABORT DONE: the work is back on `1.0.147-`, the fast orbit is NOT in the game** (§10: what was learned, the lead's proposal)
 > **OWNS** · how a camera turn behaves when the gizmo crosses edges fast: which turns hold the gizmo, a running turn redirected, the pace of a turn that
 > does not hold · **READ WITH** · [`LEVEL_FACE_ENTRY.md`](LEVEL_FACE_ENTRY.md) §14 (the proposal: the turns counted, the literature, why nothing
 > drifts), [`TILTED_POLE_CLOSE_IN.md`](TILTED_POLE_CLOSE_IN.md) §1 (the rules T1 – T12), `scripts/probes/ORBIT_GATES.md` (the gates). The dossier:
@@ -349,6 +349,11 @@ turn, no share; **(2)** the share read on the frame's own angle in every timed t
 the replays no longer the base's bit for bit: a package of its own; **(3)** today's entry kept. ⭐ The lead's recommendation, relayed to him: (1) —
 with the gates never run on v7 (the switch at 0 frame for frame, the replays, close in, the mutants) run and independently checked before it is
 committed.
+
+✅ **THE OWNER'S DECISION** (2026-11-18, verbatim): *"Keep version 7. Continue."* — option (1). v7 goes in as the builders left it (the switch
+`freeEntryUpright`, default 1; 0 = today's entry), the 8.8° frame accepted until FO3 removes that timed turn. ⭐ Put in by the lead from the
+saved patch, then EVERY gate of [`LEVEL_FACE_ENTRY.md`](LEVEL_FACE_ENTRY.md) §15 run on the commit by an Opus agent and checked by an independent
+one (the figures: that file's section as built). A gate failing there, other than the 0.3°, is reported to him — ⛔ never undone without his word.
 
 ## 12. FO3 — the picture a follower of the logic: the study in four parts (the lead, 2026-11-18; ✅ AGREED by the owner — §12.6)
 

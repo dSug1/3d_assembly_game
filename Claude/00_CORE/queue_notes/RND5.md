@@ -675,3 +675,6 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   undo** (*"0.3degree failure does jot warrant reverting to previous build"*). The 0.3° read frame by frame: the timed turn's share is advanced on
   the angle of the frame before and applied to this frame's — today's game has it too; the options (§11.4). v7 is a patch in the scratchpad;
   `src` and `tests` are `bc867a0`'s.
+* ✅ **The owner (2026-11-18): *"Keep version 7. Continue."*** — the silent entry's v7 put in from its patch (the switch `freeEntryUpright`), the
+  8.8° frame accepted; every gate of §15 re-run on the commit and independently checked. ⛔ The charts' audit launched at 08:20 did NOT run: its
+  six readers stopped on the account's usage limit after ten minutes, nothing read — launched again.
