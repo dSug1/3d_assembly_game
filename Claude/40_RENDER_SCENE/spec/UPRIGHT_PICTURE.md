@@ -234,3 +234,69 @@ the upright one); D6 the resting face's roll axis read off the picture (what he 
 time; S2's finger at the pole; keeping S1's gap under U.
 **Not checked**: no game, no vitest, no device; the s1 files read are those that parsed whole; HEAD has S2 reverted (f198b3a) while runs/s1 is 48ae89c;
 the band 5 – 25° and the cap 720 °/s are guesses (sliders); A6 on the picture not computed; T9 holds under freed half turns.
+
+## 5. As built and measured (the builder, 2026-11-18, night; local commits, nothing pushed)
+
+**The result first.** Law U is built and on by default. On his ten stretches replayed far out, **gravity is tilted over 20° in 3.2 % of the
+frames** (`1.0.147-`: 35.4 %; the deployed build: 47.0 %), every stretch under `1.0.147-`'s, and **gravity's roll falls to a fifth** (19.9° a metre
+against 101.5 and 127.2). On the corner loops gravity never tilts at all; over `Scene_1`'s top the yaw runs as in `1.0.147-` (no runaway).
+⛔ **But the half turn over a top now often happens in ONE frame**: 84 frames on the ten stretches where the whole camera turns more than 90° from one
+frame to the next (`1.0.147-`: 0; the deployed build: 0). The owner may see this as a snap. The specification assumed the view leaves the 5 – 25° band
+over several frames; at his pace the logic's view itself turns 10 – 30° a frame at a turn's start (`1.0.147-` too), so it crosses the band in one
+frame and `φ` jumps from 0 to the whole half turn. The cap inside the band cannot help (the band is crossed in one frame); an experiment (not
+committed) with the cap applied at `w` = 1 too cuts these frames to 10 (below).
+
+### 5.1 What was built (commits on `1.0.148b-`)
+
+| commit | kind | what |
+|---|---|---|
+| `7bcae02` | C | `rollFollowMs` 160 ms by default (his word; UD7) |
+| `e82ae2e` | C | **U0** `src/input/upright.ts`, pure: `ν`, `w` (smoothstep), `α` in CLOSED FORM (the turn about the framed line whose glass right is level and whose up is to the sky, the root nearest 0; none when no turn about that line can level the glass — then the last `ᾱ` is held), `φ = w·ᾱ` unwrapped in the band, the cap; 13 vectors, 12 mutants all red |
+| `bb4b5fa` | C | **U1 + U2** `roll_shadow.ts` `uprightPictureFrame` behind `uprightPicture`: `G` = `zoneMixPose`'s pose (FO3's gap not applied), the picture `poseRolled(G, L, φ)`; `asmCamLast` stays the logic's, `asmPicLast` the picture's; the finger off the picture (outside a spit `fingerOnGhost`, back from `48ae89c`; in a spit the picture's frame); the square camera's complement (`uprightCloseIn` 0); ⚠ a turn now starts from the LOGIC's last pose (`poseShown`: it read the camera drawn, not `asmCamLast` as §4 said — from the picture, law U would turn it once more in the band); 11 vectors, 9 mutants red |
+| `8348ce1` | C | **U3** `uprightFrees`: a change of frame freed only where `w` = 1 at both its ends (the pose before, the ghost after); any angle with `uprightFreeTurns` 1, under `freeTurnMaxDeg` with 0; the kinds that stay unchanged; 4 vectors, 5 mutants red |
+| `e615a61` | P | `gravity_read.mjs`, `upright_batch.sh`, `uw` / `uf` in the recorded shadow (`ORBIT_GATES.md` §13) |
+
+**The sliders** — ☰ › ORBIT › **UPRIGHT PICTURE** (a section of its own: SMOOTHING may hold 9 at most): `uprightPicture` 1, `uprightFreeTurns` 1,
+`uprightCloseIn` 0, `uprightFromDeg` 5°, `uprightFullDeg` 25°, `uprightMaxDegS` 0 (no cap). `rollFollowMs` (160) and `freeTurnMaxDeg` (90) stay in
+SMOOTHING. **126 sliders.** `freeTurnMaxDeg` 0 is still `1.0.147-`'s game bit for bit, law U included.
+
+### 5.2 The gates (his hand: the ten stretches far out at 60 frames a second; `1.0.147-` = `6f47219`, deployed = `48ae89c`)
+
+| gate | measured | verdict |
+|---|---|---|
+| U-G1 | `uprightPicture` 0 against step 1's code: the three replays 2 794 / 2 794 identical, `ilmj_23s` far 886 / 886, the three close-in stretches 1 059 / 1 161 / 1 166 identical. `freeTurnMaxDeg` 0 against `6f47219`: the replays, `ilmj_23s` far and `Scene_1` over its top identical | ✅ |
+| U-G2 | over 20°: the ten 3.2 % (`1.0.147-` 35.4, deployed 47.0); a stretch 0.9 – 10.1 % against 23.4 – 46.2 — each under; over 90° at most 0.7 %. Replays `Scene_1` 1.0 % (1.1), `Scene_0` 0.0 % (0.4), `Scene_0bis` 0.5 % (16.3; over 90°: 0 against 8.3) | ✅ the IDEAL nearly |
+| U-G3 | gravity's roll a metre: the ten 19.9 (101.5; deployed 127.2), a stretch 12.9 – 31.6 against 71.8 – 127.7; replays 7.5 / 3.9 / 10.0 (13.4 / 11.3 / 43.0); corner loops 0 (18 – 37); `Scene_1` over its top 3.4 (9.3). ⛔ The largest frame: 44 – 88° on his hand (`1.0.147-` 10 – 45), `Scene_0bis` replay 37.9° (8.6). The cap tried: 720° a second in the band — worse (75 – 131°, 33.1° a metre); the band 5 – 45° with 720 — worse (9.2 %, 66.6° a metre). Default left: no cap | ✅ per metre, ⛔ the largest frame |
+| U-G4 | the piece and the look point on the glass, picture against `G`: at most 1.8e-15 of the half glass (13 521 frames) | ✅ |
+| U-G5 | `Scene_1` over its top: 165 frames (`1.0.147-` 168, deployed 339), the yaw −91° → 319° (−90° → 321°): no runaway. The level entry's walks on `Scene_0`'s bottom close in: 588 / 624 / 597 / 524 frames, drift 0 — as `1.0.147-`. ⛔ A6 on the picture, 95th percentile (`1.0.147-` → U): 37.6 → 39.9, 44.3 → 80.9, 44.1 → 41.2, 50.1 → 89.0, 79.1 → 89.8, 71.1 → 77.9, 57.5 → 72.4, 52.2 → 82.6, 48.2 → 76.9, 65.3 → 39.1 — over `1.0.147-` + 5° on 7 of 10 (the deployed build: 102.3, 52.3, 31.4, 74.6, 89.9, 89.6, 72.6, 90.1, 69.0, 40.7) | ⛔ A6 |
+| U-G6 | frames held by a turn a metre (U / deployed / `1.0.147-`): 27.2 / 19.8 / 33.5, 21.9 / 18.2 / 21.3, 25.8 / 25.6 / 30.8, 16.2 / 13.7 / 26.1, 15.8 / 15.3 / 20.6, 23.3 / 17.4 / 32.3, 12.6 / 13.3 / 22.0, 15.9 / 12.3 / 24.1, 17.3 / 13.9 / 24.9, 25.0 / 13.6 / 23.5 — over the deployed build's on 9 of 10 (UD4's price: every change in the band is timed), under `1.0.147-`'s on 8. Turns of 88° or more that stay: 0 on every stretch (`1.0.147-` 4 – 14) | ⛔ against the deployed |
+| U-G7 | ⛔ The close-in stretches cannot be identical to `uprightPicture` 0: their first ~180 frames are still far enough that `w` = 1 (the rest made upright, UD5: φ 1.4°), and `uprightPicture` 0 draws S1's own gap there. Gravity close in: `ilmj_23s` as `1.0.147-`; `ilmj_99s` better (over 90° 1.1 → 0.2 %); `vyah_11s` worse (over 90° 0 → 1.0 %, roll 29 → 48° a metre). The level entry's straight dy (step 5): drift 1.2 – 1.9 × `1.0.147-`'s | ⛔ |
+| U-G8 | `npm run verify`, the documents' two tests, the tree, the processes: the report (`fo3/upright/REPORT_U_BUILD.md`) | see there |
+
+### 5.3 Step 5 — the level entry's straight dy (FAST_ORBIT.md §14.6): traced, not fixed
+
+**The suspect is refuted**: the free face's heading (`freeShownHeading`) is the same frame for frame in `1.0.147-`, S1 and U (`b_dy_x190`: −49.8 /
+−51.1 / −51.1°, then −63.6 / −64.1°). **The root**: the picture differs from the logic's pose while the free face's heading step rolls the logic's
+camera, and the finger in a spit is read off the PICTURE. Under S1 the follower lags that roll (nine frames after the entry the camera's up is
+(0.49, 0.21, −0.85) against `1.0.147-`'s (−0.03, 0.18, −0.98)); under U the picture is held upright (0.65, 0.49, −0.58 against 0.33, 0.45, −0.83).
+It is R7 / UD8's choice (the finger read off what he sees), not a defect of FO3's code alone. Drift from the entry (mm), `1.0.147-` / S1 / U:
+−96 / −218 / −181, 92 / 216 / 135, −167 / −363 / −244, 154 / 339 / 192, −251 / −381 / −337, 235 / 374 / 280. On the glass the gizmo's way off
+straight down, median: 7.8° / 12.2° / 9.7°.
+
+### 5.4 Amendments the frames ask for (none built)
+
+1. **The band is crossed in one frame at his pace** — refutes UD6's "at the pace the view leaves the vertical" and U-G3's cap rule (a cap inside the
+   band only cannot act). The smallest amendment that keeps his words: **the cap on the deviation from the carry at `w` = 1 too** (the carry
+   `w·Δα` keeps a rigid roll exact, so the cap acts only where `φ` jumps). Measured as an experiment (one line, not committed), 720° a second: frames
+   turning over 90° in one 84 → 10; gravity's largest frame 44 – 88° → 12 – 25°; but over 20° 3.2 → 12.0 % (still each stretch under
+   `1.0.147-`, the ten under half of it), roll 19.9 → 51.0° a metre (each under `1.0.147-`); A6 unchanged. It bends "Forbidden: a lag toward
+   upright outside the band" — the lead's and the owner's decision.
+2. **U-G7 as written** (close in identical to `uprightPicture` 0) is unreachable with UD5 and with S1's gap close in: judge close in by its figures.
+3. **U-G5's A6** fails on 7 of 10 (as it did for S1): the finger read off a picture that differs from the logic's — the same root as 5.3.
+
+### 5.5 What he will feel
+
+Far out: the scene stays upright — no slow roll on every yaw any more, no half-second roll after a crossing. Corner loops: perfectly calm. ⛔ Over a
+top or a tip's axis at his pace: the half turn arrives in one frame — a flip of the scene, where `1.0.147-` rolled it over half a second.
+Close in: as before (the square camera). The gizmo stops at an edge again inside the band (5 – 25° from the vertical); outside it, never.
+**Not run**: `Scene_0` up, the edge and ridge walks, the dy hold's walks, the stretches at 0.736 and at 143 frames a second.

@@ -496,3 +496,25 @@ node scripts/probes/shadow_read.mjs <folder>/<tag>_*.json <a fast walk's OUTJSON
   re-run on S1's twists, the gap wrapped or not.
 * ⚠ On `Scene_0bis` the finger outside a spit never meets a gap (0 frames on his hand and the loops): S2 changed nothing there, and the runs made with
   it stand for S1 alone (checked: `ilmj_23s` with and without S2 identical).
+
+## 13. Law U — the upright picture (`Claude/40_RENDER_SCENE/spec/UPRIGHT_PICTURE.md` §3, §5)
+
+```bash
+STRETCHES=<stretches.json> OUT=<folder> bash scripts/probes/upright_batch.sh <tag> hand close half fps143 reps over loops more le hold
+node scripts/probes/gravity_read.mjs <rec.json> ...          # JSON=1: one object a recording
+```
+
+* **`gravity_read.mjs`** reads the camera DRAWN of any recording (`c`, `t`, `up`; the gizmo `g`): gravity's tilt on the glass (world-down projected
+  on the glass against the glass's down; not counted within 10° of the vertical, `CUT`) — the share of frames over 20°, 45°, 90° and its largest;
+  gravity's roll per metre of gizmo travel (|Δtilt| a frame × the sine of the view's angle from the vertical) and its largest frame; the frames held
+  by a turn per metre; with law U's record (`sh.uw`, `sh.uf`, added to `SHADOW_REC`) the largest φ and the frames held by a turn whose frame before
+  had `w` = 1.
+* **The bases**: `1.0.147-`'s game = the kit's `fo3/runs/new` (`6f47219`); the deployed build = `fo3/runs/s1` (`48ae89c`); the dy hold's and the
+  level entry's base `fo3/runs/base` (`6f47219`). U-G1: `EXTRA="&uprightPicture=0"` against step 1's code (`git checkout 7bcae02 -- src`, one batch,
+  `git checkout HEAD -- src`), `EXTRA="&freeTurnMaxDeg=0"` against `fo3/runs/new` — the kit's `same.mjs`.
+* **The kit's readers** (`_saved_patches/orbit_chain_2026-11-18/fo3/upright/`, outside the repository): `vsum.mjs` (a line a stretch and the ten's
+  totals, with the frames whose camera turns over 90° / 45° in ONE frame), `jumps.mjs` (those frames: the view from the vertical, `w`, φ, the turn),
+  `viewjump.mjs` (the view's own turn a frame, at a turn's start and elsewhere), `a6p.sh` (A6 on the picture: largest / 95th / n), `dy_cmp.sh` and
+  `dy_glass.mjs` (the straight dy walks: the world drift and the gizmo's way on the drawn glass), `id_cmp.sh` (U-G1, U-G7).
+* ⚠ A whole-camera turn over 90° in one frame is the measure gravity's tilt misses: law U as built makes 84 of them on his ten stretches (the base 0) —
+  `UPRIGHT_PICTURE.md` §5.

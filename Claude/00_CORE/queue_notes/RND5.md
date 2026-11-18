@@ -718,3 +718,15 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
 * **Not run**: the independent test of S1 as built (the picture's rule changes in `1.0.148b-`; tested there once). `FAST_ORBIT.md` 14.7 stays open.
 * **Branch**: `1.0.148b-Fast_orbit_upright_gravity` made from this branch's tip after the docs commit. `1.0.148-` is pushed to origin at `48ae89c` only.
 * **The lead's choices in his absence** (each reversible by a switch or a slider): defaults `rollFollowMs` 160, `freeTurnMaxDeg` 90 (first commit of `1.0.148b-`); law U behind a switch (off = the build he looked at, without S2); "acceptable" = on his replayed hand gravity's tilt and the scene's roll no worse than `1.0.147-`'s, the gizmo never stopped under 90°, nothing worse than tonight's build elsewhere; two fix rounds at most; if the gates still fail: `1.0.148b-` deployed with the upright switch OFF and the 160 ms default, nothing undone.
+
+### 2026-11-18 (night, later) — law U built on `1.0.148b-`: gravity upright, but the half turn over a top in one frame; partly passing
+
+* **Built** (local, not pushed): `7bcae02` `rollFollowMs` 160; `e82ae2e` `src/input/upright.ts` (law U, closed form); `bb4b5fa` the picture drawn
+  behind `uprightPicture` (default 1), the finger off the picture; `8348ce1` a change freed only where the picture is upright at both ends;
+  `e615a61` `gravity_read.mjs`, `upright_batch.sh`. Six sliders in ☰ › ORBIT › UPRIGHT PICTURE. → `UPRIGHT_PICTURE.md` §5.
+* **Measured on his ten stretches**: gravity over 20° 35.4 % (`1.0.147-`) → 3.2 %; its roll 101.5 → 19.9° a metre; corner loops 0; U-G1 (both
+  switches off: bit for bit) and U-G4 pass. ⛔ 84 frames turn the camera over 90° in ONE frame (`1.0.147-` 0): the view crosses the 5 – 25° band in
+  one frame at his pace; the cap inside the band cannot act. ⛔ A6 on the picture over `1.0.147-` + 5° on 7 of 10; held frames a metre over the
+  deployed build's on 9 of 10; close in not identical to the switch off (UD5); the level entry's straight dy drifts 1.2 – 1.9 × (root traced: the
+  finger read off a picture that differs from the logic's — `freeShownHeading` cleared).
+* **Experiment, not committed**: the cap at `w` = 1 too, 720° a second — one-frame flips 84 → 10, over 20° 12.0 %, roll 51° a metre. For the lead.
