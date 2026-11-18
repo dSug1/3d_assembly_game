@@ -300,3 +300,33 @@ Far out: the scene stays upright — no slow roll on every yaw any more, no half
 top or a tip's axis at his pace: the half turn arrives in one frame — a flip of the scene, where `1.0.147-` rolled it over half a second.
 Close in: as before (the square camera). The gizmo stops at an edge again inside the band (5 – 25° from the vertical); outside it, never.
 **Not run**: `Scene_0` up, the edge and ridge walks, the dy hold's walks, the stretches at 0.736 and at 143 frames a second.
+
+## 6. Fix round 1 as briefed — the one-frame flip refutes UD6: the way to upright is paced in TIME, everywhere (the lead, 2026-11-18, 23:45; ⭐ for his review)
+
+**What the builder's frames say** (§5). Law U keeps gravity upright: on his ten stretches the frames with gravity tilted over 20° fall to 3.2 %
+(`1.0.147-`: 35.4 %; the deployed build: 47.0 %). ⛔ But the half turn that a pass over the vertical needs arrives in ONE frame: 84 frames turn
+the whole camera by more than 90° from one frame to the next (`1.0.147-`: 0; the deployed build: 0). **UD6 is refuted**: it assumed the view
+leaves the vertical over several frames. At his pace the logic's own view turns 10 – 30° in a frame when a turn starts (it does in `1.0.147-`
+too), so the band 5 – 25° is crossed in one frame and a cap acting only inside the band never acts. The builder's uncommitted experiment — the
+cap acting where the picture is fully upright too, 720° a second: 84 → 10 flips; the largest frame of gravity's roll 12 – 25° (`1.0.147-`:
+10 – 45°); over 20° 12.0 % (under `1.0.147-`'s on every stretch, a third of it in all); gravity's roll 51° a metre (`1.0.147-`: 101.5°).
+
+**The lead's amendments** — UD6, UD4 and §2's "Forbidden: a lag toward upright outside the band" are amended; the owner's words are kept: the half
+turn cannot be avoided, it must never be a jump (his standing rule: no jump).
+
+* **UD6b — the law in time.** The picture's turn `φ` moves in two parts each frame. (1) THE CARRY, at once: `φ ← φ + c·wrap(α − α_prev)`, with
+  `c = w` — the picture follows the logic's own roll where gravity has no direction on the glass (at the vertical: `1.0.147-`'s picture) and
+  stays upright where it has one. (2) THE REST: what is left to the target `w·α` — taken the short way, `α` always the root nearest 0, no unwrap
+  state — closes at `uprightMaxDegS` at most, EVERYWHERE: default **720° a second**, set by the gates below (0 = at once: law U as first built).
+  So the half turn after a pass over the vertical is a roll of a quarter of a second with the gizmo free — never a flip; and on any path that
+  stays off the vertical, and at rest, the picture is exactly upright: the carry is exact. What §4 refuted is a lag of the CARRY; this is not one.
+* **UD4b — no stop under 90° near the vertical either.** On the frame a change of frame is FREED, the carry is whole: the picture keeps its roll
+  across that frame (the frame's twist of the logic's pose about the framed line undone — `twistAbout`, well defined at the vertical, where `α`
+  is not), and the rest closes by (2). Freed = FO3's rule at any `w` (under `freeTurnMaxDeg`, the kinds that stay excepted), and UD2's any angle
+  at `w = 1`. Behind `uprightBandFree` (default 1; 0 = UD4: within the band every change is `1.0.147-`'s timed turn). ⚠ At the vertical only a
+  CHANGE OF FRAME may open a rest — never the logic's continuous spin there (that was S2's loop: its gap took the spin).
+* **The gates amended.** U-G3: the frames turning the WHOLE camera by more than 45° and by more than 90° from one frame to the next — not more
+  than `1.0.147-`'s on the same stretch (0 over 90°); the cap's default = the fastest of 720 and 1 440° a second that keeps this, U-G2 still
+  passing. U-G5: the finger's angle read apart on the frames where the picture is steady (the rest under 5°) and where it is closing — steady: its
+  95th percentile not over `1.0.147-`'s + 5°. U-G6: against the deployed build again. U-G7: close in judged by its figures per metre against
+  `1.0.147-`'s — it cannot be frame for frame (§5: the rest pose is made upright before the square camera holds). The others as §3.
