@@ -124,7 +124,7 @@ describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
   it("⭐⭐ wired: the piece's place (the solver's too) and the camera's frame from the assembly's orbit; the gizmo each frame before the solve; a tap no longer moves it; no top pause, no governor; the approach checked against the parts; Shift and two fingers approach; locked, never behind the face", () => {
     const r = code("render/camera_rig.ts");
     expect(r).toContain("if (assemblyOn(st)) return placeOffset(st, yaw, v);");
-    expect(r).toContain("if (assemblyOn(st)) return assemblyCameraFrame(st, cam, off);");
+    expect(r).toContain("if (assemblyOn(st)) return assemblyCameraFrame(st, cam, off, dtMs);"); // ⭐ (2026-11-18, ES) the frame's time passed down (the heading shown stepped by it, `free_entry_upright.test.ts`)
     expect(r).toContain("a tap on a part no longer moves it if (assemblyOn(st)) return;");
     const g = code("render/green_box_wiring.ts");
     expect(g).toContain("assemblyFrame(st, dtSec * 1000); // ⭐⭐⭐ (2026-10-28)");
