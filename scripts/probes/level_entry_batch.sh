@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # ⭐⭐⭐ (2026-11-17, package LF1) THE LEVEL FACE'S ENTRY GATE (level_entry_check.mjs + level_entry_analyse.mjs) on a dev server:
-#   bash scripts/probes/level_entry_batch.sh <tag> a|b|<walk name> ...     EXTRA="&<tunable>=<value>" is appended to every URL
+#   bash scripts/probes/level_entry_batch.sh <tag> a|b|c|<walk name> ...     EXTRA="&<tunable>=<value>" is appended to every URL
+#   c — (2026-11-18, ES) Scene_0bis: the straight dy at 4 and 6 px a frame, both ends
 #   a — Scene_0 close in: a slow dy (1 px a frame) down the lower front face near +x, −x and the middle, then across the bottom; the same coming down
 #       from a top face near both ends; the +x walk with a fast finger (3 px a frame)
 #   b — Scene_0bis: the corner loops (ccw, cw; both tips; far out, 0.736, 0.515, close in; 2 px a frame, once 4 px far out); in and back near the end,
@@ -23,11 +24,13 @@ for SIDE in 1 -1; do
 done
 WALKS_B="$WALKS_B b_ccw_p_far_px4|4|loop|0|4||LOOP=ccw;START=F;SIDE=1| b_back_p_d736|4|loop|half|2||LOOP=back;REPS=1;SIDE=1;HALFN=7| b_back_p_close|4|loop|1|2||LOOP=back;REPS=1;SIDE=1|"
 WALKS_B="$WALKS_B b_dy_x190|4|bottomout|0|2|190|| b_dy_xm190|4|bottomout|0|2|-190||"
+# ⭐ (2026-11-18, package ES) c — the straight dy at 4 and 6 px a frame, both ends (the free-roll gate, LEVEL_FACE_ENTRY.md §15 gate 5)
+WALKS_C="b_dy_px4_x190|4|bottomout|0|4|190|| b_dy_px4_xm190|4|bottomout|0|4|-190|| b_dy_px6_x190|4|bottomout|0|6|190|| b_dy_px6_xm190|4|bottomout|0|6|-190||"
 SEL=""
 for a in "$@"; do
-  case "$a" in a) SEL="$SEL $WALKS_A" ;; b) SEL="$SEL $WALKS_B" ;; *) for w in $WALKS_A $WALKS_B; do [ "${w%%|*}" = "$a" ] && SEL="$SEL $w"; done ;; esac
+  case "$a" in a) SEL="$SEL $WALKS_A" ;; b) SEL="$SEL $WALKS_B" ;; c) SEL="$SEL $WALKS_C" ;; *) for w in $WALKS_A $WALKS_B $WALKS_C; do [ "${w%%|*}" = "$a" ] && SEL="$SEL $w"; done ;; esac
 done
-[ -z "$SEL" ] && { echo "nothing to run (give a, b or walk names)"; exit 2; }
+[ -z "$SEL" ] && { echo "nothing to run (give a, b, c or walk names)"; exit 2; }
 server_start "le_$TAG"
 ANA="$OUT/${TAG}_analysis.txt"
 : > "$ANA"
