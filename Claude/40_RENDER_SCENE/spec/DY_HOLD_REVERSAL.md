@@ -1,7 +1,7 @@
 # The dy held after a half turn — "I cannot revert the dy" (2026-11-17)
 
 > **STATUS** · ⛔ **REPORTED BY THE OWNER the night of 2026-11-17** — to troubleshoot and to fix BEFORE the audit: the build as briefed §1 – §4; the
-> root cause and what was built: after §4. **OWNS** · this report, its root cause, its fix · **READ WITH** ·
+> root cause §5 (measured); ⭐ BUILT §6 (2026-11-18, `1562bd1`, the walks passed) — ⛔ no device look, not deployed. **OWNS** · this report, its root cause, its fix · **READ WITH** ·
 > [`ORBIT_ANY_SHAPE.md`](ORBIT_ANY_SHAPE.md) §8 (the hold: its rule; §8.1 the release is the finger's; §8.2 the hold is the gesture's),
 > [`TILTED_POLE_CLOSE_IN.md`](TILTED_POLE_CLOSE_IN.md) §1 (T9), §10 (D-T4) and §13 (C5: the one event and its hold). The dossier:
 > [`RND5.md`](../../00_CORE/queue_notes/RND5.md).
@@ -136,3 +136,60 @@ hold the same — far out 30 mm of finger = 333 – 371 mm of surface, the same 
 All three causes date from 2026-11-14 (the finger's band, `edgeHoldFinger`) and before (the spit's last-dy-sign hold, `asmDySign` never reset).
 `Scene_0` (close in, its ridge and its bottom's far edge): the same (30 mm → 296 – 315 mm of surface, N ≤ 12 blocked). `Scene_1`: the probe's steering did
 not reach the cube's top (no crossing measured) — its gate is `tilt_check` `MODE=ridge`.
+
+## 6. AS BUILT (2026-11-18, `1562bd1` — `git revert 1562bd1` undoes it whole) — ⛔ no device look yet; not deployed (D5)
+
+**What changed, one rule per cause** (pure, `src/input/orbit_tilt.ts`, no face, scene or geometry named):
+
+1. **The release is a true hysteresis on the finger** (`edgeHoldFinger`): `back` is how far the finger is back the other way from the farthest point
+   it reached the held way; the held way pays it off (never under 0). The band `edgeHoldMm`: **30 → 8 mm** of finger. Why 8: a finger wobbling
+   ±2.5 mm swings 5 mm; measured with the forward push, `back` reaches 3.5 mm at most (was 21 mm, summed). 8 mm = the worst 5 mm swing + 3 mm.
+   6 mm also stayed clean in the walks (1 mm margin) — the owner's slider (☰ → TILTED POLE, step now 1 mm, label unchanged).
+2. **The sign held is the dy pushing NOW** (`dySignPushing`): a finger step with a dy its sign; a sideways step (a dx, no dy) none; a still step
+   unchanged; the gesture's end none (`gestureOver`). So a crossing after the lift (the camera's lag, the coast) or made by a dx round a tip holds nothing.
+3. **Each half-turn event's hold replaces the last** (`holdAtCrossing`, in `crossTurn`): an event that holds nothing ends the older hold.
+
+Unchanged: when a turn fires, its pace and drawing, which dy is held at a dy-made crossing, the frames, the calm, the square camera; the hold
+still ends with the gesture.
+
+**The report's case — the long walks, base (`892b6a3`'s code) → now** (`Scene_0bis`, 2 px a frame; BLOCKED = frames of the come-back with the hold on
+and the gizmo still; the surface since the crossing until the first dy back honoured):
+
+| distance, crossing | N = 3 / 6 mm back (under the band) | N = 12 | N = 20 | N = 30 |
+|---|---|---|---|---|
+| far, zenith | blocked 99 / 104 → **100 / 104** (no second crossing) | blocked 112 (never) → **0**, 45 mm | 112 → **0**, 203 mm | 0, 436 mm → the same |
+| far, bottom far edge | 98 / 103 → 98 / 103 | 112 → **0**, 35 mm | 112 → **0**, 208 mm | 0, 429 mm → the same |
+| 0.736, zenith / bottom | 99 / 104, 98 / 103 → the same | 112 → **0**, 34 / 35 mm | 112 → **0**, 214 / 207 mm | 0 → 0 |
+| close (0.651), zenith / bottom | 98 / 103, 98 / 102 → the same | 113 → **0**, 11 / 22 mm | 112 → **0**, 173 / 189 mm | 0 → 0 |
+| 0.515, zenith / bottom | 97 / 102 → the same | 112 → **0**, 6 / 9 mm | 112 → **0**, 50 / 54 mm | 0 → 0 |
+
+(The surface for N ≥ 12 is the walk's own N back, not the band: the walk reverses N in full before asking.) **The band itself, far out**: the turn
+over (a finger that waits for it), a finger mm back is ~20 mm of surface — 8 mm back ≈ 160 mm + the crossing's overshoot (4 – 44 mm): a dy back
+honoured about **200 mm from the edge (0.9 of a 221 mm face)**, was 430 – 450 mm (two faces, to the opposite level face). Measured with N = 10 at band
+8: 238 / 242 mm since the crossing. Most often the reversal starts during the turn (the gizmo held ~30 frames): then it is honoured within the face.
+
+**The triangle** (`zT_far`, `bT_far`, both ways): the hold on the triangle 56 blocked frames → **0 – 1**; the dx round the tip ends the hold.
+`zT_close` s1 (27 blocked) and `bT_close` s1 (26 / 19): unchanged and NOT the triangle — the probe's dx slid back onto the top faces (x 215 – 226 mm)
+and its dy crossed the ridge again: a new crossing, its hold by the rule. **The coast** (`zC_far`): the hold set by the coast 2 – 4 frames after
+the release → **none**; the next press blocked 19 of 41 frames, moved 0 mm → **0**, moved 220 / 262 mm. **The lift** (`zL_*`, `bL_*`): unchanged
+(honoured after 6 frames). **No `STALE` hold** after any steering (base: in every run starting from the boot). **The wobble** (`zW_far`,
+`zW_close`, `bW_far`): the hold kept, no turn, no second crossing; `back` at most 3.5 mm (was 21 mm). **8 px a frame**: N 3 / 6 blocked as before,
+N ≥ 12 not blocked (was 12 – 21 frames).
+
+**No ping-pong**: every walk with N under the band — no second crossing (the walk of 2026-11-14 is N = 3: blocked, no crossing). `tilt_check`
+`MODE=ridge` (`0 1 4`), `tilt_check` default (`1 0 4`), `across_check`, `ridge_check` `MODE=tip` (far, close): **identical** to the base, line for
+line. `mid_check`: the walk identical; its setup's one hold (a probe step, set with no dy pushing) not set (holds 1 → 0). `ridge_check`
+`MODE=across`: the walk identical; the bottom far edge's hold set after the walk-back's release (at the base) → none (holds 3 → 2).
+
+**Elsewhere**: the three replays — `Scene_1` and `Scene_0bis` identical in every frame; `Scene_0` 2696 of 2794 frames identical, the rest within 6e-10
+(the last digits: noise; `1e-6: never`, no non-numeric difference) — health and worst frame as the base's. `Scene_0` close in (`s0_ridge_close`,
+`s0_bottom_close`): N = 12 blocked 112 → 0; the rest as at the base. `Scene_1`: its replay identical, `MODE=ridge` identical (the probe's own
+`s1_top_close` is not meaningful: its steering never reaches the top). `npm run verify`: **165 files, 2066 vectors** passed.
+
+**What the owner will feel**: after a half turn, pushing on the way he crossed stays held (no bounce back over the edge); a deliberate move back of
+**8 mm of finger** frees it — far out the gizmo is then within about one face of the edge, never round to the opposite level face; a fresh press
+after a lift or a coast is never blocked; a dx onto a tip's triangle carries no hold there.
+
+**Vectors** (`tests/orbit_any_shape.test.ts`, describe "DH"): the hysteresis (a 50-swing wobble, the pay-off, the release, a nadir's), the default
+and its slider, `dySignPushing`, `holdAtCrossing` and its wiring; the gesture's end pin. Red on 7 mutants (the old counter; the last dy kept on a
+sideways step; `holdAtCrossing`'s back; a 0 hold leaving the last on; no reset at the gesture's end; the old sign wiring; the old default 30).

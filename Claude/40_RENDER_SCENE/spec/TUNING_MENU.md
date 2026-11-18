@@ -47,7 +47,7 @@ frames (drags, lifts, four releases, their glides); the step without them reprod
 | **ORBIT** | SPEED | yaw gain · elevation gain · box gain yaw / pitch · inertia · piece yaw per orbit yaw · close-in full distance · contact mm/mm |
 | | SMOOTHING | box smoothing · gizmo ease · orbit spring · camera catch-up after release |
 | | CALM ON A FACE | the seven face-span sliders |
-| | TILTED POLE | on / off · speed · automatic within · camera blend · dy hold |
+| | TILTED POLE | on / off · speed · automatic within · camera blend · dy hold (`edgeHoldMm` 8 mm of finger back, a hysteresis, step 1 — was 30, step 5: 2026-11-18, [`DY_HOLD_REVERSAL.md`](DY_HOLD_REVERSAL.md) §6) |
 | **APPROACH & CONTACT** | | approach by pinch · shell offset · look at the gizmo within · piece gap · collision allowance · solver checks · contact band |
 | | THE APPROACH'S DISTANCE (THE RINGS) | the four rings' radius / height, the 3rd ring's switch |
 | **GIZMO & SECTIONS** | | sections drawn · faces merged within · facet's share · gizmo edge margin · yellow gizmo shown · yellow quad slice · quads' growth |

@@ -416,3 +416,35 @@ node scripts/probes/fast_walk_table.mjs <base>/fw_f_edge_px20.json <new>/<tag>_f
 | f_s1_over_px20 (`Scene_1`) | 168 | 0 / 0 | 611 | 1 | 22.5 | 0 |
 
 Deterministic as every probe here (the virtual clock). The figures per loop: `fw_analysis.txt` beside the recordings.
+
+## 10. Gate (i) — the dy hold's long walks (`hold_walk_*`, package DH — `Claude/40_RENDER_SCENE/spec/DY_HOLD_REVERSAL.md` §3, §5, §6)
+
+The hold after a half turn lives on the FINGER's path (`pointer_wiring.ts`): these walks use real mouse events, never the orbit's angles.
+`hold_walk_check.mjs` (one run = one distance and one crossing, every frame recorded), `hold_walk_analyse.mjs` (the reading), run by `hold_walk_batch.sh`.
+
+```bash
+OUT=<folder> EXTRA="" bash scripts/probes/hold_walk_batch.sh <tag> all        # 30 walks, about 70 minutes (run it in the background)
+OUT=<folder> bash scripts/probes/hold_walk_batch.sh <tag> base                 # z_far b_far z_close b_close zT_far zC_far, about 15 minutes
+OUT=<folder> bash scripts/probes/hold_walk_batch.sh <tag> z_far zT_far         # any walks by name
+node scripts/probes/hold_walk_analyse.mjs <rec.json> [SHOW=s3 FROM=0 TO=400]   # the reading again; SHOW: the frames of one sub-walk
+```
+
+* **A run** (`Scene_0bis` unless named): the approach (`far` 1.0, `d736` 0.736, `d515` 0.515, `close` the latch on, 0.651), then one SUB-WALK per N
+  (`NS`, default 3, 6, 12, 20, 30, 45 mm): steered to 8° before the edge (`START`) at x 80 mm (`X`), released; ONE press, a pure finger dy at 2 px a
+  frame (`PX`) toward the edge until the hold is set; 8 frames more (`PUSH`); N mm of finger the other way; the crossing's way again 60 mm (`COME`,
+  "come back"). The sub-walks alternate their side, so the crossings go both ways. `z_*` the zenith ridge, `b_*` the bottom face's far edges.
+* **Variants**: `zL_* / bL_*` the finger lifted before coming back; `zT_* / bT_*` after the crossing a pure dx onto a tip's triangle, then the dy both
+  ways (`tri-held`, `tri-other`, `tri-held2`, 30 mm each); `zC_far` the crossing made by the coast (released 6° before the edge at 8 px a frame), then a
+  new press; `zW_* / bW_far` a finger still pushing the crossing way at 0.5 px a frame with a ±2.5 mm wobble (`WAMP`, period 24 frames, 144 frames);
+  `*_px8` 8 px a frame; `s0_ridge_close`, `s0_bottom_close` (`Scene_0`); `s1_top_close` (`Scene_1`: ⚠ its steering does not reach the cube's top —
+  not meaningful, use `tilt_check` `MODE=ridge` there).
+* **Reading, per sub-walk**: the frame the hold was set, the site's verdict, its sign against the finger's dy that crossed (`⚠ NOT the crossing's` if
+  not); the surface per finger mm (frames with no turn running); `back` (finger mm → surface mm, the hold after it); `come`: **BLOCKED** frames (the
+  finger asks the held sign, the hold on, no turn, the gizmo still), the first dy back HONOURED (the gizmo going toward the edge two frames running) with
+  the finger's travel and the surface since the crossing, or NEVER; a second crossing in it. `STALE hold … after the steering` on a run's line: a hold
+  left on after the steering's release (a hold set with no finger down) — ended by a still press before the sub-walk.
+* **Good** (DH, `DY_HOLD_REVERSAL.md` §6): N under the band — the come-back blocked, no second crossing (no ping-pong); N over it — honoured with
+  0 blocked frames after the band; the wobble — the hold on, no turn; the triangle — no BLOCKED frame; the coast and the lift — no hold left for the
+  next press; no `STALE`.
+* The base (`892b6a3`'s code) and the fix's recordings: the session scratchpad's `dh/base`, `dh/new`; the band's sweep `dh/sweep`; the earlier commits
+  `dh/old_<commit>`. Deterministic (the virtual clock).

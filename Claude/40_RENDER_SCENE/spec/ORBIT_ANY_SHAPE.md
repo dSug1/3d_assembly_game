@@ -181,6 +181,7 @@ orbit by NOTHING for 4 – 8 s — each the first of a NEW press going the way t
 **Probed after** (the same walks, ~100 – 140 fps): blocked segments **13 → 0**; crossings 63 → 75 (the dy moving now), none within 0.6 s of the
 last (no ping-pong over the edge); no one-frame turn over 90°.
 **Vectors**: `orbit_any_shape.test.ts` (the wiring: ended at the gesture's end).
+⭐ (2026-11-18) The band 30 → 8 mm, a true hysteresis; the sign held the dy pushing now; each crossing's hold replaces the last → [`DY_HOLD_REVERSAL.md`](DY_HOLD_REVERSAL.md) §5 – §6.
 
 ## 9. ✅ THE CAMERA'S ROLL AT THE ZENITH (2026-11-13, `1.0.125-Debug_scene_0`, live `a0ec9bc`) — ✅✅ the owner: *"this is good"*
 

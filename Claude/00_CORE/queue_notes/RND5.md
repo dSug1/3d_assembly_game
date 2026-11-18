@@ -607,3 +607,21 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   Nothing deployed. The lead's reading and proposal: §10 there.
 * **Next, in his order**: the dy hold's fix ([`DY_HOLD_REVERSAL.md`](../../40_RENDER_SCENE/spec/DY_HOLD_REVERSAL.md)), the silent entry
   ([`LEVEL_FACE_ENTRY.md`](../../40_RENDER_SCENE/spec/LEVEL_FACE_ENTRY.md) §15), the audit — all on `1.0.147-`, without the fast orbit.
+
+### 2026-11-18 — package DH: the dy held after a half turn (the owner: *"I cannot revert the dy input"*) — built, not deployed
+
+* **Root cause** (measured first, `DY_HOLD_REVERSAL.md` §5, `0eb58f3`): three. (1) The release was 30 mm of FINGER summed: far out a finger mm is
+  13 – 21 mm of surface, so 30 mm = 430 – 450 mm (two faces of 221 mm, to the opposite level face); and a summed counter, not a hysteresis (a ±2.5 mm
+  wobble reached 21 mm). (2) A hold set with no finger down (the spit's crossing read a frame after the lift, the coast) blocked the next press from
+  its first frame — `asmDySign` never reset. (3) Round a tip a dx-made crossing set the hold again with the zenith's old dy: blocked on the triangle.
+  The same at `c7ac510`, `ef14420^` (identical frame for frame) and `a1a52f0`: *"not here before"* not reproduced.
+* **Built** (`1562bd1`, one commit, `git revert 1562bd1` undoes it): a true hysteresis, band 8 mm; the dy pushing now (none at the gesture's end, none on a
+  sideways step); each crossing's hold replaces the last. 7 mutants red. The probe: `scripts/probes/hold_walk_*` (`3013992`, `a96f382`; runbook
+  `ORBIT_GATES.md` §10).
+* **Gates** (§6 there): every come-back after 12 mm or more back — blocked 112 frames → 0, every distance and crossing; under the band still held, no
+  second crossing; the triangle 56 → 0 – 1 blocked; the coast and the lift leave no hold; the ridge / tilt / across / tip gates identical; the
+  replays identical (`Scene_0`: last digits); `npm run verify` 165 files, 2066 vectors. ⛔ No device look; ⛔ not deployed (D5: his word).
+* **For him to choose**: the band 8 mm (margin 3 mm over a ±2.5 mm wobble) — far out about 0.9 of a face before a dy back is honoured once the
+  turn is over; 6 mm also passed the walks (about 0.7 face, margin 1 mm). The slider: ☰ → TILTED POLE.
+* **Seen and not changed**: under the hold a finger wobbling ±2.5 mm while pushing walks the gizmo AWAY from the edge (the held half dropped, the
+  other half passed: 400 – 450 mm in 144 frames) — the hold's own rule, at the base too; the probe's `Scene_1` walk does not reach the cube's top.
