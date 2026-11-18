@@ -46,7 +46,7 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-11-18)
 
-⭐⭐⭐ **NOW — branch `1.0.147-` at `31fec5b`; LIVE main `bc8dc9e`.** The orbit runs ON CHARTS, always on (the old switches and detectors deleted); the
+⭐⭐⭐ **NOW — branch `1.0.148-` (made 2026-11-18 from `1.0.147-`: FO3 is built here); LIVE main `bc8dc9e` = `1.0.147-` at `31fec5b`.** The orbit runs ON CHARTS, always on (the old switches and detectors deleted); the
 tilted pole close in on the carried heading (the way out blended); the level face's entry; ⭐ live since 2026-11-18: the dy hold released by a true
 hysteresis (8 mm of finger) and the SILENT ENTRY (a level face entered over an edge keeps the picture — the switch `freeEntryUpright`). **2091
 vectors.** ⛔ No device look on the last two yet.

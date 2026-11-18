@@ -234,7 +234,7 @@ at 20 px only, with 30 px read as "beyond the one speed" (changes G6); (c) the h
 
 **The abort.** Three real tests, three failures (§6, §8, §9): his rule applied — *"If the test fails a third time, abort and revert to the branch
 1.0.147-."* The worktree is back on `1.0.147-`. The night's documents and probes were carried over (twelve commits picked, the tree identical to
-`1.0.148-`'s tip); no commit past `892b6a3` touches `src` or `tests` there. `1.0.148-` is kept, local and not pushed, as the record of the three
+`1.0.148-`'s tip); no commit past `892b6a3` touches `src` or `tests` there. That branch — renamed `1.0.148-Fast-orbit-three-builds-reverted` on 2026-11-18, when the owner asked for a new `1.0.148-` (FO3's) — is kept, local and not pushed, as the record of the three
 builds: `45b0d2f`, `83a7713`, `1b6b1a7`, each reverted by the commit after it. Nothing deployed: the live game is `892b6a3`'s code. The night goes on
 from `1.0.147-`: the dy hold, the silent entry, the audit.
 
@@ -496,7 +496,7 @@ most; a third failure: the code commits reverted, the documents and probes kept,
 * **S2 — the finger** on the picture wherever S0 found it is not (R7).
 * **Not in this build**: (2026-11-18) the silent entry v7 IS in the base (`3c66eb9`, `freeEntryUpright` 1; 0 = the entry before): S0 lists `freeShownHeading` among the readers of a turn under way (O7) and says what it sees once a change under 90° makes no timed turn; A0 and A9 run with `freeEntryUpright` 1 and 0; any change
   to a turn of 90° or more; the surface.
-* **Where**: branch `1.0.149-` from the audited tip of `1.0.147-`, the worktree `orbit_charts`; ⛔ nothing merged, nothing deployed without his word.
+* **Where**: branch `1.0.148-` from the audited tip of `1.0.147-`, the worktree `orbit_charts`; ⛔ nothing merged, nothing deployed without his word.
 
 **For his review** (the lead's choices, each a slider or a line to change): the follower's time 200 ms; no hard stop of the gap at 90° (O6); the price
 named above; FO3 built after the charts' audit — on its own branch, so the merge of `1.0.147-` waits for nothing.

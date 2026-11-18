@@ -594,7 +594,7 @@ close to its degenerate case to be trusted, or where its own path would exceed t
 | 2 | `Scene_0bis` far out: the entry turn onto the bottom near an end (25° – 45° in 6 – 9 frames), the two opposite turns of a corner loop | as built; (iv′) reverted — his options §10.3; the silent entry v7 in the code behind `freeEntryUpright` (default 1), live, no device look |
 | 3 | One rule for every tilt (333 ms / 250 ms), with it the top ridge's half turn *"50% faster"* | reverted — his options §11.2; the ridge as built |
 | 4 | The 27° back over the entry edge near an end (the calm's look) | never studied (§8) |
-| 5 | A fast orbit over many edges: the turns merged | aborted after three measured builds; FO3 agreed, to be built on `1.0.149-` (`FAST_ORBIT.md` §12) |
+| 5 | A fast orbit over many edges: the turns merged | aborted after three measured builds; FO3 agreed, to be built on `1.0.148-` (`FAST_ORBIT.md` §12) |
 
 ## 14. A fast orbit over many edges — one follower instead of a train of turns (PROPOSED 2026-11-17; built three times on `1.0.148-`, each reverted — ABORTED 2026-11-18, NOT in the game → `FAST_ORBIT.md` §6 – §10; FO3 agreed, not built, §12)
 

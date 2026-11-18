@@ -670,7 +670,7 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   31 – 39 % of his moving time (§12.1).
 * **FO3 — the picture a follower of the logic**, the study in his four parts (§12): the ghost's twist about the line through the piece and the look
   point, one gap, a critically damped follower (200 ms), no stop under 90°; the test rewritten (his hand replayed, per metre of gizmo travel).
-  ✅ **The owner: *"Agreed"*.** To be built on `1.0.149-`, the shadow first, after the charts' audit. ⛔ Nothing built yet.
+  ✅ **The owner: *"Agreed"*.** To be built on `1.0.148-`, the shadow first, after the charts' audit. ⛔ Nothing built yet.
 * **The silent entry**: fix rounds 1 and 2 not built (v7 the best: one gate missed by 0.3°; v8 worse). ✅ **The chain stopped on his word before its
   undo** (*"0.3degree failure does jot warrant reverting to previous build"*). The 0.3° read frame by frame: the timed turn's share is advanced on
   the angle of the frame before and applied to this frame's — today's game has it too; the options (§11.4). v7 is a patch in the scratchpad;
@@ -681,3 +681,8 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
 * ✅ **2026-11-18 (afternoon): the silent entry's v7 as committed (`3c66eb9`) gated** — verify 2091 vectors green; G1 – G6 of `LEVEL_FACE_ENTRY.md` §15
   re-run on the commit, one headless run at a time, no profile or process left: all pass but the accepted 8.8° frame of the cw loop on −x
   (§11.4 of `FAST_ORBIT.md`) → `LEVEL_FACE_ENTRY.md` §17.
+* ✅ **2026-11-18, evening — the silent entry and the dy hold's fix LIVE** (main `bc8dc9e` = `1.0.147-` at `31fec5b`; version 7's six gates
+  passed, the accepted miss aside). **The owner: *"Make a new branch 1.0.148- and move to this new branch."*** — `1.0.148-` made from `1.0.147-`
+  at `d6f9771`: FO3 is built there, by packets, from a fresh lead session (the handover:
+  [`HANDOVER_2026-11-18.md`](HANDOVER_2026-11-18.md)). The night's branch of that name (the three reverted builds, `fa0e2a2`) is renamed
+  `1.0.148-Fast-orbit-three-builds-reverted`, kept local.
