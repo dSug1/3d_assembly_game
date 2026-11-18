@@ -40,7 +40,7 @@ import { crossingHold, crossingPitch, distanceToFacets, fingerInFrame, fingerSwa
 import { assignCharts, capTiltHeading, chartContour, chartZones, DEFAULT_CHART_OPTS, type ChartAssignment, type ChartFace } from "../input/orbit_charts";
 import { holdAtCrossing, poseAboutPiece, poseFramingTwo, type CamPose } from "../input/orbit_tilt";
 import { poleCrossingDue, poleSeam } from "../input/pole_crossing";
-import { fingerOnGhost, gapStep, restShare } from "../input/roll_follow";
+import { gapStep, restShare } from "../input/roll_follow";
 import { dirGap, easedDir, easeRest, poleYawKept, seamOutPaced, seamOutShare, seamOutStep, seamOutTarget, seamTurnPace, seamTurnStep, seamWholeRad, tiltLeavesNow, turnHoldsGizmo } from "../input/seam_turn";
 import { bandedFacet } from "../input/face_band";
 import { contourFaceAt, crossingEvent, entryBlendHeading, entryDepth, entryEdgeOf, exitHoldSign, headingStep, pictureOffset, transportUp, viewLevelTurned, exitTurnRad, faceOwnUp, freeEdges, freeEntryHeading, freeHeadingAngle, isFreeFace } from "../input/free_face";
@@ -2322,14 +2322,7 @@ function freeFaceExit(st: SceneState, fr: NonNullable<SceneState["asmFree"]>, co
  */
 export function zoneFinger(st: SceneState, dx: number, fdy: number): { readonly dx: number; readonly fdy: number } {
   const z = spitZone(st);
-  if (z === null) {
-    // ⭐⭐⭐ (2026-11-18, `FAST_ORBIT.md` §14 — FO3 S2, R7, O8) outside a spit the finger read OFF THE PICTURE DRAWN (rolled from the logic's by the gap):
-    // the same move on the logic's glass (`fingerOnGhost`). No gap, or the shadow only (`freeTurnMaxDeg` 0): as it is
-    const sh = st.asmRollShadow;
-    if (sh === null || !sh.drawn || sh.picture === sh.ghost) return { dx, fdy };
-    const f = fingerOnGhost(dx, fdy, sh.picture, sh.ghost);
-    return { dx: f.dx, fdy: f.dy };
-  }
+  if (z === null) return { dx, fdy };
   const dy = fdy;
   const cf = st.asmCamLast;
   if (cf === null) return { dx, fdy: dy };

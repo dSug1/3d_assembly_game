@@ -15,7 +15,7 @@
  *
  * ⛔ ENGINE-FREE. Rodrigues' formula, a quaternion's swing and twist, a critically damped spring — textbook, decades old; no licence, no patent.
  * ⚠ S0 (the shadow): computed and recorded, never drawn. ⭐ S1 (`FAST_ORBIT.md` §14): DRAWN — the sliders `rollFollowMs` and `freeTurnMaxDeg`
- * (`gestureConfig.ts`; the two defaults below), a change judged free on its whole angle (`turnIsFree`), the finger read off the picture (`fingerOnGhost`, S2).
+ * (`gestureConfig.ts`; the two defaults below), a change judged free on its whole angle (`turnIsFree`),.
  */
 import { cross, dot, type Vec3 } from "../core/vec";
 import { rotateAbout, type CamPose } from "./orbit_tilt";
@@ -189,25 +189,6 @@ export function poseTurnAngle(prev: CamPose, next: CamPose): number {
 export function turnIsFree(angleRad: number, maxDeg: number): boolean {
   if (!(maxDeg > 0)) return false;
   return Number.isFinite(angleRad) && angleRad < (maxDeg - FREE_TURN_TOL_DEG) * DEG;
-}
-
-/**
- * ⭐⭐⭐ (FO3 S2, `FAST_ORBIT.md` §12.2 R7, O8) THE FINGER READ OFF THE PICTURE DRAWN: a move on the glass (`dx` right, `dy` up, any unit) seen on
- * `picture` and read on `ghost`'s glass (the logic's) — the same world move, its length kept. The picture the ghost itself (the same object, or the
- * same axes): the move as it is, bit for bit.
- */
-export function fingerOnGhost(dx: number, dy: number, picture: CamPose, ghost: CamPose): { readonly dx: number; readonly dy: number } {
-  if (picture === ghost || (dx === 0 && dy === 0)) return { dx, dy };
-  const [, uP, sP] = poseAxes(picture);
-  const [, uG, sG] = poseAxes(ghost);
-  if (uP[0] === uG[0] && uP[1] === uG[1] && uP[2] === uG[2] && sP[0] === sG[0] && sP[1] === sG[1] && sP[2] === sG[2]) return { dx, dy };
-  const w: Vec3 = [dx * sP[0] + dy * uP[0], dx * sP[1] + dy * uP[1], dx * sP[2] + dy * uP[2]];
-  const ox = dot(w, sG);
-  const oy = dot(w, uG);
-  const l = Math.hypot(ox, oy);
-  if (!(l > 1e-12)) return { dx, dy };
-  const k = Math.hypot(dx, dy) / l;
-  return { dx: ox * k, dy: oy * k };
 }
 
 /**
