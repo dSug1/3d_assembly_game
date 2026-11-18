@@ -730,3 +730,4 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   deployed build's on 9 of 10; close in not identical to the switch off (UD5); the level entry's straight dy drifts 1.2 – 1.9 × (root traced: the
   finger read off a picture that differs from the logic's — `freeShownHeading` cleared).
 * **Experiment, not committed**: the cap at `w` = 1 too, 720° a second — one-frame flips 84 → 10, over 20° 12.0 %, roll 51° a metre. For the lead.
+* **2026-11-19 (fix round 1)**: law U in time (`5d1f17c`, `d7ec0d2`, `9cf3fda`, `06d9faa`): no frame turns the camera over 90° on his hand (84 → 0), gravity over 20° 7.1 %, roll 57° a metre, the rest at 1 440° a second; ⛔ open: 45 – 90° frames (45 vs 5), A6, held frames vs deployed on 5 of 10 → `UPRIGHT_PICTURE.md` §7.

@@ -518,3 +518,6 @@ node scripts/probes/gravity_read.mjs <rec.json> ...          # JSON=1: one objec
   `dy_glass.mjs` (the straight dy walks: the world drift and the gizmo's way on the drawn glass), `id_cmp.sh` (U-G1, U-G7).
 * ⚠ A whole-camera turn over 90° in one frame is the measure gravity's tilt misses: law U as built makes 84 of them on his ten stretches (the base 0) —
   `UPRIGHT_PICTURE.md` §5.
+* **Fix round 1** (`UPRIGHT_PICTURE.md` §7): the kit's `sum_fr1.sh <tag>` (vsum + A6 split), `a6split.mjs` (A6 apart on the frames where law U's rest
+  is under 5° and where it is closing — α recomputed from the recorded `gh3`, `pp`), `j90.sh <tag> [deg]` (the frames turning the whole camera over
+  `deg` a stretch, with `1.0.147-`'s count over 45°), `jrep.sh <tag>` (the same on the replays and `Scene_1` over its top), `id_fr1.sh` (U-G1).
