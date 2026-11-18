@@ -53,7 +53,7 @@ const LAYOUT: Node[] = [
   n("INPUT", ["tapMaxDuration", "motionDeadbandMm", "restConfirmMs", "restGapFactor", "orbitDeadbandMm", "orbitBandRestMs"]),
   n("ORBIT", [], [
     n("SPEED", ["gainOrbitYaw", "gainOrbitElevation", "boxGainYaw", "boxGainPitch", "orbitInertiaGain", "orbitPieceYawFactor", "orbitGainFullM", "orbitContactMmPerMm"]),
-    n("SMOOTHING", ["boxSmoothMs", "gizmoEaseMs", "orbitSpringMs", "cameraCatchUpMs"]),
+    n("SMOOTHING", ["boxSmoothMs", "gizmoEaseMs", "orbitSpringMs", "rollFollowMs", "freeTurnMaxDeg", "cameraCatchUpMs"]),
     n("CALM ON A FACE", ["faceSpanShareH", "faceSpanZoneHPct", "faceSpanZoneMinHCm", "faceSpanShareVOn", "faceSpanShareV", "faceSpanZoneVPct", "faceSpanZoneMinVCm"]),
     n("TILTED POLE", ["tiltedPole", "tiltRollDegS", "tiltAutoM", "tiltBlendMm", "tiltOutBlendMm", "edgeHoldMm"]),
     // ⭐⭐⭐ (2026-11-14, merged from 1.0.129b-: POLAR_ZONES.md D-Z1 – D-Z7) where the tilted pole stops
@@ -80,9 +80,9 @@ describe("⭐⭐⭐ the menu by subject (2026-11-13)", () => {
     expect(menuTree()).toEqual(LAYOUT);
   });
 
-  it("118 sliders (110 + the polar zones' 8 + the charts' switch, ORBIT_CHARTS.md step 2.2 + the calm's, step 2.3 + `tiltOutBlendMm`, step C3 − the two switches and the zone detectors' three, step 2.5 + `freeEntryUpright`, LF1), each once, each a live config value; no folder over 9", () => {
+  it("118 sliders (110 + the polar zones' 8 + the charts' switch, ORBIT_CHARTS.md step 2.2 + the calm's, step 2.3 + `tiltOutBlendMm`, step C3 − the two switches and the zone detectors' three, step 2.5 + `freeEntryUpright`, LF1 + `rollFollowMs`, `freeTurnMaxDeg`, FO3 S1), each once, each a live config value; no folder over 9", () => {
     const all = flatten(menuTree());
-    expect(all.length).toBe(118); // ⭐ (2026-11-17, LF1) + `freeEntryUpright` // ⭐ (2026-11-16, step C3) + `tiltOutBlendMm`; ⛔ (step 2.5) − `chartLayout`, `chartCalm`, `zoneValenceMin`, `zoneFacetMinRatio`, `zoneSnapDeg`
+    expect(all.length).toBe(120); // ⭐ (2026-11-18, FO3 S1) + `rollFollowMs`, `freeTurnMaxDeg` // ⭐ (2026-11-17, LF1) + `freeEntryUpright` // ⭐ (2026-11-16, step C3) + `tiltOutBlendMm`; ⛔ (step 2.5) − `chartLayout`, `chartCalm`, `zoneValenceMin`, `zoneFacetMinRatio`, `zoneSnapDeg`
     expect(new Set(all).size).toBe(all.length);
     for (const k of all) expect(k in DEFAULT_CONFIG, k).toBe(true);
     const sizes = (ns: Node[]): number[] => ns.flatMap((x) => [x.sliders.length, ...sizes(x.subsections)]);

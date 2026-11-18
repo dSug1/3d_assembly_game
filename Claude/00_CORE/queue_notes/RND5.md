@@ -1,7 +1,7 @@
 # RND5 — The orbit on charts
 
-> **STATUS** · ✅ spec APPROVED 2026-11-15; ✅ steps 1.1 – 2.1; 🔧 2.2, 2.3 and **step 2.4 (P, 2.4a – 2.4c, 2.4e) built, DEPLOYED** (main `902ae88`), the owner's look 2026-11-16: *"looks on pc and mobile look good. OK with two comments"*; 🔧 **2.4d (the band against noise) built and DEPLOYED 2026-11-16** (`42a408a`, **1960 vectors**; the owner: *"Deploy"* — main `f1e03d3`), its look owed; ⭐ **the tilted-pole orbit's STUDY written, PROPOSED** (`TILTED_POLE_CLOSE_IN.md`: the owner's decisions D-T1 – D-T7 before any build); ⛔ 2.5 (the old detectors deleted) after it → the spec's §12.3
-> **LAST VERIFIED** · 2026-11-16
+> **STATUS** · ✅ steps 1.1 – 2.5 and C0 – C5 built and LIVE (main `bc8dc9e` = `1.0.147-` at `31fec5b`, with (A) of the level face's entry; the owner: *"I am happy with the build as it is now"*); built, no device look: the dy hold's hysteresis (DH, `1562bd1`), the silent entry v7 (`3c66eb9`, `freeEntryUpright`); reverted: package A, R1, the timing rule; the fast orbit's three builds reverted (not in the game), FO3 agreed, not built; step 3 (the audit) running; step B and the surface study owed. The earlier statuses (steps 2.2 – 2.4d, the tilted pole's study) are in the sections below.
+> **LAST VERIFIED** · 2026-11-18
 
 ## 2026-11-15 — queued (the owner: *"I want to implement your systematic approach"*)
 
@@ -102,20 +102,20 @@
 | # | the decision | why | what undoes it |
 |---|---|---|---|
 | 1 | **2.4d (the trigger's band, the hysteresis) NOT built** | the owner: *"Tomorrow, we will work on the tilted-pole orbit at close in and the hysteresis"*; put to the owner before sleep: *"I agree. Proceed"* | ✅ built 2026-11-16, `42a408a` (the spec's §12.1) |
-| 2 | **All of step 2.4 sits under `chartLayout` 1** (2.4e under `chartCalm` too) — no third switch; "the layout with the old detectors" (what `157974f` shows with the switch on) is no longer reachable | fewer states to compare on a device: off = the game as it was (minus the press), on = the charts | a second switch around the 2.4a – 2.4c branches |
-| 3 | **Far out a pole stays the orbit's limit** (the spec's D-C6, unchanged): with the press gone, a top face, `Scene_0`'s ridge and a cap's centre are crossed CLOSE IN only (within `tiltAutoM`, 0.6 m); far out the dy stops there and the way round is a dx | D-C6 was approved with the charts; the owner removed the press knowing the tilt becomes close in only | `poleCrossingDue`'s `closeIn` condition (2.4b) for a ridge; a cap far out needs the tilt far out — the press's rule or another trigger |
-| 4 | **A new gesture pushing the same way over a ridge crosses it again** | the owner's rule of 2026-11-14 (the dy hold ends with the gesture that crossed), kept as it is | a hold that outlives the gesture — the hysteresis session's |
+| 2 | **All of step 2.4 sits under `chartLayout` 1** (2.4e under `chartCalm` too) — no third switch; "the layout with the old detectors" (what `157974f` shows with the switch on) is no longer reachable | fewer states to compare on a device: off = the game as it was (minus the press), on = the charts | a second switch around the 2.4a – 2.4c branches ⭐ (2026-11-18) the switch was deleted at step 2.5: undone by a revert only. |
+| 3 | **Far out a pole stays the orbit's limit** (the spec's D-C6, unchanged): with the press gone, a top face, `Scene_0`'s ridge and a cap's centre are crossed CLOSE IN only (within `tiltAutoM`, 0.6 m); far out the dy stops there and the way round is a dx | D-C6 was approved with the charts; the owner removed the press knowing the tilt becomes close in only | `poleCrossingDue`'s `closeIn` condition (2.4b) for a ridge; a cap far out needs the tilt far out — the press's rule or another trigger ⭐ (2026-11-18) decided, D-T3: keep D-C6. |
+| 4 | **A new gesture pushing the same way over a ridge crosses it again** | the owner's rule of 2026-11-14 (the dy hold ends with the gesture that crossed), kept as it is | a hold that outlives the gesture — the hysteresis session's ⭐ (2026-11-18) decided, D-T6: keep; the hold's release rebuilt by DH (`DY_HOLD_REVERSAL.md`). |
 | 5 | **The zones come from the atlas with their OWN faces as facets** (`used[].own`), not every face the whole rule adds | the wiring reads a zone's facets for the calm and the tint: with all 21 the calm would vanish on `Scene_0bis`'s body; and so the atlas's zone equals `polarZones`' there (the replay identical bit for bit) | `chartZones` |
-| 6 | **The RINGS chart is not wired** | no scene leaves a face to it; a face whose home is RINGS stays on gravity's columns map, as today | its own step, with a test scene |
-| 7 | **2.4c: no roll back inside the tilted frame** — leaving a tilt is ONE camera turn from the pose shown (the zones' mechanism), the frame changed at once | "two camera turns, two codes" was half of the root cause (§11); measured: `Scene_0`'s 180° one-frame roll gone | `chartLayout` 0 |
-| 8 | **2.4c: at a change of frame the piece's spring and the camera's follow state are SET to the new chart's angles, their lag eased** (not kept and left to catch up) | "every angle state set" is the rule that makes the orbit's and the map's angles equal (23° – 26° apart before, 0.00° after); ⚠ its cost: under a fast dy the tilt's entry turns the view 8.5° in one frame (5.7° before) | keep each follower's lag through `seamRebase` — to judge on the device in the tilted-pole session |
+| 6 | **The RINGS chart is not wired** | no scene leaves a face to it; a face whose home is RINGS stays on gravity's columns map, as today | its own step, with a test scene ⭐ (2026-11-18) decided 2026-11-16: record and do nothing. |
+| 7 | **2.4c: no roll back inside the tilted frame** — leaving a tilt is ONE camera turn from the pose shown (the zones' mechanism), the frame changed at once | "two camera turns, two codes" was half of the root cause (§11); measured: `Scene_0`'s 180° one-frame roll gone | `chartLayout` 0 ⭐ (2026-11-18) the switch and this knob were deleted at step 2.5: undone by a revert only. |
+| 8 | **2.4c: at a change of frame the piece's spring and the camera's follow state are SET to the new chart's angles, their lag eased** (not kept and left to catch up) | "every angle state set" is the rule that makes the orbit's and the map's angles equal (23° – 26° apart before, 0.00° after); ⚠ its cost: under a fast dy the tilt's entry turns the view 8.5° in one frame (5.7° before) | keep each follower's lag through `seamRebase` — to judge on the device in the tilted-pole session ⭐ (2026-11-18) W11: option A built and reverted (`6e56dfc`); stands as measured. |
 | 9 | **2.4c, my fix: a transition's clock runs over the SUM of the camera's turn and the piece's direction's gap** | the two angles are unrelated; on the camera's alone the gap's rest landed in one frame (9.1°), on the longer of the two they added (8.9°) | `seamWholeRad` |
 | 10 | **2.4c, by design: leaving a tilt by distance with the gizmo on the FAR half of a cap turns the camera round to that side** | the camera is derived from the place; before, it stayed and the gizmo's angles disagreed — the owner's report 4 (the gizmo on the face opposite the camera) | none without the two states again |
-| 11 | **2.4e: a side face's vertical calm reads its OWN run, and is whole by position at both its own edges** — the bounce's rule (2026-11-04: the box's height for a vertical face) replaced under `chartCalm` 1 | one reference for every face (§11 3.); the owner's report 1 measured 8.1° → 4.9° a frame; ⚠ cost 1: walls of unequal extents side by side (an L-shaped tower) ease the view's pitch on a dx — no scene has them; ⚠ cost 2: `Scene_1`'s and `Scene_0`'s view changes by up to ~4° with `chartCalm` 1 (the old reference was the parts' box, 83 mm taller than the cube's side faces) | `chartCalm` 0; or `CalmKnobs.ownRun` / `wholeEnds` alone |
+| 11 | **2.4e: a side face's vertical calm reads its OWN run, and is whole by position at both its own edges** — the bounce's rule (2026-11-04: the box's height for a vertical face) replaced under `chartCalm` 1 | one reference for every face (§11 3.); the owner's report 1 measured 8.1° → 4.9° a frame; ⚠ cost 1: walls of unequal extents side by side (an L-shaped tower) ease the view's pitch on a dx — no scene has them; ⚠ cost 2: `Scene_1`'s and `Scene_0`'s view changes by up to ~4° with `chartCalm` 1 (the old reference was the parts' box, 83 mm taller than the cube's side faces) | `chartCalm` 0; or `CalmKnobs.ownRun` / `wholeEnds` alone ⭐ (2026-11-18) the switch and this knob were deleted at step 2.5: undone by a revert only. |
 | 12 | **Nothing pushed, nothing deployed** — live is still `157974f` (step 2.3); the branch's 15 commits since `6d5f2b7` are local → ✅ DEPLOYED 2026-11-16 on the owner's word (main `902ae88`; the first try `7e49ae7` failed the gate: a doc link's label in a docs commit not re-verified — fixed `67ccac3`) | a push and a deploy are the owner's word each time | *"deploy"* — live about 4 minutes later; the default (both switches off) then differs from live by ONE thing: a press no longer tilts |
-| 13 | **Step 2.5 (the old detectors and the switch deleted) not started** | it follows the owner's look on the switch-on behaviour | — |
+| 13 | **Step 2.5 (the old detectors and the switch deleted) not started** | it follows the owner's look on the switch-on behaviour | — ⭐ (2026-11-18) built 2026-11-16, `ef5e899`; live. |
 | 14 | **The shelved fix in `git stash` left in place** | superseded by 2.4e (it was the per-face form of the same idea), but dropping a stash is not mine to do unasked | `git stash drop` in the worktree, on the owner's word |
-| 15 | **`CLAUDE.md`'s status lines and `QUEUE.md`'s row not touched** | only when asked; `QUEUE.md` is 5 bytes under its budget | — |
+| 15 | **`CLAUDE.md`'s status lines and `QUEUE.md`'s row not touched** | only when asked; `QUEUE.md` is 5 bytes under its budget | — ⭐ (2026-11-18) see the final docs pass (QUEUE.md is updated). |
 
 **Found on the way, not acted on** — (a) the atlas on a tipped heptagon whose axis is 10 – 20° off the vertical takes a frame square to the axis
 serving 6 faces where the old detector finds one whole upright zone (no scene; the test scenes and step 3); (b) under the charts a box whose top
@@ -670,7 +670,7 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   31 – 39 % of his moving time (§12.1).
 * **FO3 — the picture a follower of the logic**, the study in his four parts (§12): the ghost's twist about the line through the piece and the look
   point, one gap, a critically damped follower (200 ms), no stop under 90°; the test rewritten (his hand replayed, per metre of gizmo travel).
-  ✅ **The owner: *"Agreed"*.** To be built on `1.0.149-`, the shadow first, after the charts' audit. ⛔ Nothing built yet.
+  ✅ **The owner: *"Agreed"*.** To be built on `1.0.148-`, the shadow first, after the charts' audit. ⛔ Nothing built yet.
 * **The silent entry**: fix rounds 1 and 2 not built (v7 the best: one gate missed by 0.3°; v8 worse). ✅ **The chain stopped on his word before its
   undo** (*"0.3degree failure does jot warrant reverting to previous build"*). The 0.3° read frame by frame: the timed turn's share is advanced on
   the angle of the frame before and applied to this frame's — today's game has it too; the options (§11.4). v7 is a patch in the scratchpad;
@@ -681,3 +681,18 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
 * ✅ **2026-11-18 (afternoon): the silent entry's v7 as committed (`3c66eb9`) gated** — verify 2091 vectors green; G1 – G6 of `LEVEL_FACE_ENTRY.md` §15
   re-run on the commit, one headless run at a time, no profile or process left: all pass but the accepted 8.8° frame of the cw loop on −x
   (§11.4 of `FAST_ORBIT.md`) → `LEVEL_FACE_ENTRY.md` §17.
+* ✅ **2026-11-18, evening — the silent entry and the dy hold's fix LIVE** (main `bc8dc9e` = `1.0.147-` at `31fec5b`; version 7's six gates
+  passed, the accepted miss aside). **The owner: *"Make a new branch 1.0.148- and move to this new branch."*** — `1.0.148-` made from `1.0.147-`
+  at `d6f9771`: FO3 is built there, by packets, from a fresh lead session (the handover:
+  [`HANDOVER_2026-11-18.md`](HANDOVER_2026-11-18.md)). The night's branch of that name (the three reverted builds, `fa0e2a2`) is renamed
+  `1.0.148-Fast-orbit-three-builds-reverted`, kept local.
+
+### 2026-11-18 (evening) — FO3 S0, the shadow: built and measured, nothing drawn changes — section 12 refuted on his hand (A7)
+
+* ✅ Built on `1.0.148-` (local commits): the follower's pure parts (`src/input/roll_follow.ts`, 16 vectors, 15 mutants red) and the shadow computed
+  at the camera's stage, recorded, never drawn (`src/render/roll_shadow.ts`); the probes `hand_replay.mjs`, `hand_batch.sh`, `shadow_read.mjs`.
+  The seeded replays identical to the base (`Scene_0` within its last-digit noise).
+* ✅ Confirmed on the steered corner loops: to 1 200 px a second the gap under 60°, the roll a metre halved or better.
+* ⛔ **Refuted on his own hand** (`Scene_0bis`, far out and at 0.736): the gap over 90° in 9 of 10 stretches (up to 178°) — the ghost turns up to 42°
+  a frame with the gizmo free near a tip's axis; `Scene_1` over its top: 161°, outside any spit. O6's fallback sized offline does not meet A7.
+  **S1 not started**: the amendments for the owner's decision → [`FAST_ORBIT.md`](../../40_RENDER_SCENE/spec/FAST_ORBIT.md) §13.6.

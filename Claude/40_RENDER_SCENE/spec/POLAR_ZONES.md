@@ -1,5 +1,7 @@
 # POLAR ZONES — where the tilted-pole orbit stops, and the polar orbit about the zone's own axis (2026-11-13, branch `1.0.129-from_commit_601cc85`, worktree `debug_on_scene0bis`)
 
+⭐ (2026-11-16, step 2.5 of the charts, `ef5e899`) the DETECTORS of 3.2 – 3.4 and 4.1 (`polarZones`, `zoneValenceMin`, `zoneFacetMinRatio`, `zoneSnapDeg`) are DELETED: a zone is now what the atlas assigns (`chartZones`, [`ORBIT_CHARTS.md`](ORBIT_CHARTS.md) 2.3, 3); 2, 3.5 and 4.2 – 4.8 (the zone's frame, the spit, the realignment) stand as built. The status below is the document's first one (2026-11-13).
+
 > ⛔⛔ **PROPOSED, NOT APPROVED, NOTHING BUILT.** The owner's decisions are open (§6). Written to become ONE module (`src/input/polar_zone.ts`) and to
 > merge with the `3d_assembly_game-scene2` worktree's proxy faces (`30_OBJECTS_3D/spec/PART_AUTHORING.md` §3 item 3).
 >

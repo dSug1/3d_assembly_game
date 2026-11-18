@@ -1,11 +1,11 @@
 # THE TILTED-POLE ORBIT — its rules, its obstacles, one design for any geometry, the audit (2026-11-16)
 
-> **STATUS** · ⛔⛔ **A STUDY — PROPOSED, NOT APPROVED, NOTHING BUILT.** The owner (2026-11-16): *"do the same as what we have done so far, i.e.:
+> **STATUS** · ⭐ **DECIDED and BUILT (2026-11-18).** Decided by the owner 2026-11-16 (D-T1 – D-T7, §5; the evening's decisions, §17) and built: C0, C2 – C5, C2W, live (main `bc8dc9e`); reverted: package A (§18), R1 (§19, dropped); open: W8 / D-T5, RINGS, the ridge from a tip (recorded, nothing to build); later: `LEVEL_FACE_ENTRY.md`, `DY_HOLD_REVERSAL.md`. The owner (2026-11-16): *"do the same as what we have done so far, i.e.:
 > formulate properly the rules of what this tilted pole orbit is trying to achieve … identify what geometry and topology obstacles need to be overcome,
 > where they can be overcome and where they cannot and require a fallback (the "polar zone" equivalent, made more systematic than our empirical design) …
 > design a systematic way to achieve the rules on any geometry, based on what Blender or others have solved … audit the scripts and code we have built
 > and identify weaknesses"*. **OWNS** · step C of the charts' rebuild ([`ORBIT_CHARTS.md`](ORBIT_CHARTS.md) §10.1) · **READ IF** · you touch the tilt, the
-> square camera, a zone's camera or any trigger of a camera turn · **THE OWNER'S DECISIONS** · §5 — nothing is built before them; those of 2026-11-16 (evening) · §17.
+> square camera, a zone's camera or any trigger of a camera turn · **THE OWNER'S DECISIONS** · §5 — decided; those of 2026-11-16 (evening) · §17.
 
 ## 0. In one page
 
@@ -22,7 +22,7 @@
 * **The audit** (§4): today the one obstacle has THREE families of code — the tilt on gravity's caps close in, the spit's side under / over a body, the
   polar limit far out — each with its own trigger, turn and hold. ⭐ **The owner's comment on `Scene_0bis`'s bottom face is the second family failing**:
   measured, it is not noise (§4.1).
-* **Asked of the owner** (§5): seven decisions. The two that shape the build: the layout kept until an EDGE (never dropped by distance), and the spit's
+* **Decided** (§5): seven decisions. The two that shape the build: the layout kept until an EDGE (never dropped by distance), and the spit's
   level faces on the same rule (no turn in the middle of the bottom face).
 
 ## 1. THE RULES — what the tilted-pole orbit is trying to achieve
@@ -40,7 +40,7 @@ Collected from the owner's words as the documents record them (`POLAR_ORBIT_CLEA
 | **T6** | **Upright where upright means something.** On every face that is not level the world's vertical is up on the glass; never upside down | *"the camera roll shall keep the scene upside up if the face is not purely horizontal"* (11-04) · R4 KEPT (11-13) |
 | **T7** | **No surprise at an entry.** Entering a face needs no turn when a layout continuing the view exists; the turn is paid at the exit that needs one | *"If the gizmo crosses the edge … towards a face which would result in the scene upside down or slanted, the camera tilts when the gizmo crosses the edge so that the verticality on the next face is restored"* (11-09) |
 | **T8** | **Once per face, close in.** A layout taken on a face is kept until the gizmo leaves that face — or the piece backs out past the close-in distance (D-T1) | *"my new rule allows to convert a polar red-green face to a perpendicular red-green face once, until the gizmo crossing edges requires the polar orbit to realign its poles"* (11-09) · *"the tilted pole orbit is reserved for close in … The close in square is for fine placement of the piece, not for scene view"* (11-16) |
-| **T9** | **The half turn's price.** After a half turn the dy that crossed is held until the finger reverses; the hold ends with the gesture | *"the dy upwards is blocked until a certain band is reached in the face beyond but dx and dy downwards are allowed"* (11-12) · *"there are times I cannot reverse"* (11-14) |
+| **T9** | **The half turn's price.** After a half turn the dy that crossed is held until the finger reverses; the hold ends with the gesture | *"the dy upwards is blocked until a certain band is reached in the face beyond but dx and dy downwards are allowed"* (11-12) · *"there are times I cannot reverse"* (11-14) ⭐ (2026-11-18, DH `1562bd1`) the sign held is the dy pushing now, the release 8 mm of finger back → `DY_HOLD_REVERSAL.md` §5 – §6. |
 | **T10** | **The approach is not disturbed — on the way in nor on the way out.** Made during the approach, the layout changes the sections at once and the camera waits, then blends by the finger's first millimetres; backing out, the camera's way back to the orbit is blended too (§8) | *"the red-green sections automatically switches to orthogonal … but the camera view waits through the approach"* (11-11) · *"Find a way to blend properly the camera movement on the way out"* (11-16) |
 | **T11** | **No noise into the camera.** Every trigger of a camera turn has a band | *"hysteresis where needed … so that input noise does not transfer to camera movement"* (11-15) · the middle of `Scene_0bis`'s bottom face (11-16) |
 | **T12** | **Any geometry, one way.** The same rules on every shape; where a rule cannot hold, a stated fallback — never a case-by-case patch | *"analyze the deep root cause, don't patch with fix which may conflict with other rules"* (11-15) |
@@ -586,7 +586,7 @@ The table of the four sites read on `1190db2` → [2026-11-17_c5_four_sites_and_
 
 ### 13.3 As built (2026-11-16, an Opus agent) — MOVED (2026-11-17, word for word, to make room)
 `crossingHoldSign`, `crossingEvent`, `crossTurn` and the four sites, the vectors, the gates → [2026-11-17_c5_four_sites_and_as_built.md](../history/2026-11-17_c5_four_sites_and_as_built.md).
-⛔ Its spit's hold (the finger's last dy sign, the side off the camera) STANDS: R1 was built and REVERTED (§19).
+⛔ Its spit's hold (the finger's last dy sign, the side off the camera) STANDS: R1 was built and REVERTED (§19). (2026-11-18, DH `1562bd1`) the sign held is the dy pushing now, each crossing's hold replaces the last, the release 8 mm of finger back → `DY_HOLD_REVERSAL.md` §5 – §6.
 
 ### 13.4 The top ridge arrived at from a tip (`Scene_0bis`) — measured, nothing built
 

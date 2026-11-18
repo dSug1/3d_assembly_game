@@ -328,7 +328,8 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): ONE STATE (⛔ the
   it("⭐ `dirAt` applies the eased direction (the turn's own share; another turn or none: whole) — ONE place; the pole's crossing and the spit's restart carry it", () => {
     const d = fnSource(W, "function dirAt(");
     expect(d).toContain("const s = tiltDir(R, calmDir(st, u));");
-    expect(d).toContain("const e = st.asmDirEase; if (e === null) return s; return easedDir(s, e, e.mix === st.asmZoneMix && st.asmZoneMix !== null ? st.asmZoneMix.k : 1);");
+    // ⭐⭐⭐ (2026-11-18, FO3 S1, O3) a change made free: the rest on its own clock (`own`); else the turn's share as before
+    expect(d).toMatch(/const e = st\.asmDirEase; if \(e === null\) return s; (?:\/\/[^]*?\(`own`\) )?return easedDir\(s, e, e\.own !== undefined \? restShare\(e\.own, e\.angle\) : e\.mix === st\.asmZoneMix && st\.asmZoneMix !== null \? st\.asmZoneMix\.k : 1\);/);
     expect(raw(W).match(/easedDir\(/g)?.length).toBe(1);
     const e = fnSource(W, "function seamEase(");
     expect(e).toContain("const gap = dirGap(uWas, drawnDir(st));");

@@ -405,15 +405,38 @@ export interface SceneState {
   asmZone: { readonly id: number; readonly zone: import("../input/polar_zone").PolarZone } | null;
   /** ⭐⭐⭐ (D-Z7; 2026-11-14 about the piece) the camera's turn into a zone's frame (or out): the POSE on the glass at the switch, the share, the turn's
    *  angle, its axis kept frame to frame (`null`: not yet) */
-  asmZoneMix: { readonly from: import("../input/orbit_tilt").CamPose; k: number; rad: number; axis: import("../core/vec").Vec3 | null; /** (2026-11-14) the turn's rule, chosen at its first frame and kept: 0 not yet, 1 the two framed (`poseFramingTwo`), 2 about the piece alone */ rule: 0 | 1 | 2; /** (2026-11-14) the two's angles carried frame to frame (`FramingKeep`; null: not yet) */ keep: import("../input/orbit_tilt").FramingKeep | null; /** (2026-11-14) the angle turned so far (rad) — the turn's progress at one speed */ done: number; /** ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4c) the automatic tilt's entry made with the camera PENDING: paced as its swing was (`seamTurnPace`: held while pending, then by the finger's travel, then by time); absent: by time */ byMm?: boolean; /** ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §8, step C3 — `tiltOutBlendMm` > 0 only) THE WAY OUT OF CLOSE IN paced by the finger (`seamOutPaced`): its progress `p` (never back; `k` its smooth share, `seamOutShare`), the approach finger's travel OUTWARD and the orbit finger's travel (mm on the glass) since it started — counted only while it is alive (`seamOutFeed`); absent: by time or `byMm` */ out?: { p: number; outMm: number; orbitMm: number } } | null;
+  asmZoneMix: { readonly from: import("../input/orbit_tilt").CamPose; k: number; rad: number; axis: import("../core/vec").Vec3 | null; /** (2026-11-14) the turn's rule, chosen at its first frame and kept: 0 not yet, 1 the two framed (`poseFramingTwo`), 2 about the piece alone */ rule: 0 | 1 | 2; /** (2026-11-14) the two's angles carried frame to frame (`FramingKeep`; null: not yet) */ keep: import("../input/orbit_tilt").FramingKeep | null; /** (2026-11-14) the angle turned so far (rad) — the turn's progress at one speed */ done: number; /** ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4c) the automatic tilt's entry made with the camera PENDING: paced as its swing was (`seamTurnPace`: held while pending, then by the finger's travel, then by time); absent: by time */ byMm?: boolean; /** ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §8, step C3 — `tiltOutBlendMm` > 0 only) THE WAY OUT OF CLOSE IN paced by the finger (`seamOutPaced`): its progress `p` (never back; `k` its smooth share, `seamOutShare`), the approach finger's travel OUTWARD and the orbit finger's travel (mm on the glass) since it started — counted only while it is alive (`seamOutFeed`); absent: by time or `byMm` */ out?: { p: number; outMm: number; orbitMm: number }; /** ⭐⭐⭐ (2026-11-18, FO3 S1, §13.7 (d)) a tilt's turn (its entry, its exit): it stays today's timed turn whatever its angle — kept by its KIND */ tilt?: true } | null;
   /** ⭐ (2026-11-14) where the piece was drawn last frame around the assembly (a zone's turn starts from the piece's place on the glass then) */
   asmPieceDrawn: import("../core/vec").Vec3 | null;
   /** ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4c) THE PIECE'S SHOWN DIRECTION EASED on the camera turn's clock: the one rotation from
    *  the new chart's direction back to the one drawn before the change of frame (`dirGap`), its rest `1 − k` of the turn `mix` (`asmZoneMix`, the same
    *  object — another turn, or none: whole), applied in `dirAt` (`easedDir`); `null`: none */
-  asmDirEase: { readonly axis: import("../core/vec").Vec3; readonly angle: number; readonly mix: object } | null;
+  asmDirEase: { readonly axis: import("../core/vec").Vec3; readonly angle: number; readonly mix: object; /** ⭐⭐⭐ (2026-11-18, `FAST_ORBIT.md` §14 — FO3 S1, O3) no timed turn carries it (a change made free): its REST on a clock of its own (rad and rad a second, `gapStep` at `rollFollowMs`; its share `restShare`); absent: the turn's `mix` */ readonly own?: import("../input/roll_follow").RollGap } | null;
   /** ⭐ (D-Z7) the last camera frame built around the assembly (the switch's start, the finger's screen) */
   asmCamLast: import("../input/orbit_tilt").CamFrame | null;
+  /** ⭐⭐⭐ (2026-11-18, `FAST_ORBIT.md` §12.6 S0) THE SHADOW of the picture a follower of the logic — computed and recorded, NEVER drawn (`roll_shadow.ts`):
+   *  the ghost and its framed line, the frame's twist, the two gaps (`held`: taken only with the gizmo free today; `free`: as S1 would), the turn under
+   *  way and its twist at its first frame, the picture it would draw, A2's error on the glass; `null`: none yet (a reset) */
+  asmRollShadow: {
+    readonly ghost: import("../input/orbit_tilt").CamPose;
+    readonly dir: import("../core/vec").Vec3;
+    readonly piece: import("../core/vec").Vec3;
+    readonly held: import("../input/roll_follow").RollGap;
+    readonly free: import("../input/roll_follow").RollGap;
+    readonly turn: object | null;
+    readonly turnTw: number;
+    readonly stays: boolean;
+    readonly tw: number;
+    readonly gizmoFree: boolean;
+    readonly spit: boolean;
+    readonly freshTurn: boolean;
+    readonly picture: import("../input/orbit_tilt").CamPose;
+    readonly a2: number;
+    /** ⭐⭐⭐ (FO3 S1) the picture DRAWN (`freeTurnMaxDeg` over 0); false: the shadow only (S0's, `freeTurnMaxDeg` 0 — the finger read as it is) */
+    readonly drawn: boolean;
+    /** ⭐ (FO3 S1) this frame's change of frame made free (no timed turn) — its whole angle (rad); 0: none */
+    readonly freed: number;
+  } | null;
   /** ⭐⭐⭐ (2026-11-13, the owner: *"replicate the behavior of scene 0 when crossing the zenith edge"*) the spit's side of the axis (`spitSide`; 0: none) */
   asmSpitSide: number;
   /** ⭐⭐⭐ (2026-11-14) the camera's direction the spit's side was last read at (world) — the crossing read on the path from it (`crossingPitch`) */

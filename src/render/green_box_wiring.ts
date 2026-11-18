@@ -35,12 +35,13 @@ import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, dot, length, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
 import { cameraFrameNow, retargetGizmo, rigNow, ringPlaceNow, syncCentre } from "./camera_rig";
-import { assemblyFrame, assemblyOn, resetOrbitState, restDrawn, shownOffset, spitStep, tiltClampStep, zoneMixPose } from "./assembly_wiring";
+import { assemblyFrame, assemblyOn, resetOrbitState, restDrawn, shownOffset, spitStep, tiltClampStep } from "./assembly_wiring";
 import { gizmoShownAt } from "../input/assembly_orbit";
 import { cameraOffsetAt, easeShare, gizmoBlendTravel, horizontalShare, rigSwingNeed } from "../input/orbit_rig";
 import { governedRingStep } from "../input/turn_governor";
 import { GRAVITY_FRAMES, quadFrames } from "../core/orientation_set";
 import { cameraFrameHeld, upSquareToView } from "../input/camera_frame";
+import { rollPictureFrame } from "./roll_shadow";
 import { elevationGainScale } from "../input/orbit";
 import { UNTURNED } from "../input/orbit_rig";
 import { contactFrame } from "./contact_wiring";
@@ -1063,7 +1064,10 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   let upIn: Vec3 = camFrame.up;
   // ⭐⭐⭐ (2026-11-14) a polar zone's turn (its switch, the spit's crossing): the camera turned ABOUT THE PIECE from the pose on the glass (`zoneMixPose`)
   if (assemblyOn(st)) {
-    const zp = zoneMixPose(st, pp, camAt, lookAt, camFrame.up);
+    // ⭐⭐⭐ (2026-11-18, `FAST_ORBIT.md` §12.6 S0, §14 S1) THE PICTURE A FOLLOWER OF THE LOGIC (`roll_shadow.ts`): the changes of frame under
+    // `freeTurnMaxDeg` free, the roll about the line through the piece and its look point eased (`rollFollowMs`) — `freeTurnMaxDeg` 0: the shadow only and
+    // today's `zoneMixPose`
+    const zp = rollPictureFrame(st, pp, camAt, lookAt, camFrame.up, dtSec * 1000);
     camAt = [zp.eye[0], zp.eye[1], zp.eye[2]];
     lookAt = [zp.look[0], zp.look[1], zp.look[2]];
     upIn = zp.up;

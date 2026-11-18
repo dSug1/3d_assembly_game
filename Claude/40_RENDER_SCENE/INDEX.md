@@ -57,7 +57,7 @@ boot** — a hand is owed. ⭐ Three essays moved to
 ## Where it stands
 
 ✅ **Scenes are DATA** (`src/content/`, `content/scenes.ts`; the level menu or `?sceneIndex=`). ⭐⭐ `Scene_0` is the HEPTAGON since
-2026-11-12 — the orbit on ANY shape, §9 the zenith roll → [`spec/ORBIT_ANY_SHAPE.md`](spec/ORBIT_ANY_SHAPE.md); zones `spec/POLAR_ZONES.md`; ⭐ the charts → `spec/ORBIT_CHARTS.md`, tilt `spec/TILTED_POLE_CLOSE_IN.md`; the slide removed → `spec/CLOSE_IN_CONTACT.md` §10.
+2026-11-12 — the orbit on ANY shape, §9 the zenith roll → [`spec/ORBIT_ANY_SHAPE.md`](spec/ORBIT_ANY_SHAPE.md); zones `spec/POLAR_ZONES.md`; ⭐ the charts → [`spec/ORBIT_CHARTS.md`](spec/ORBIT_CHARTS.md); close in on the tilted pole [`spec/TILTED_POLE_CLOSE_IN.md`](spec/TILTED_POLE_CLOSE_IN.md); a level face's entry [`spec/LEVEL_FACE_ENTRY.md`](spec/LEVEL_FACE_ENTRY.md); the dy hold [`spec/DY_HOLD_REVERSAL.md`](spec/DY_HOLD_REVERSAL.md); the fast orbit (aborted, not in the game; FO3 agreed, not built) [`spec/FAST_ORBIT.md`](spec/FAST_ORBIT.md); package A's circle (reverted) [`spec/BOTTOM_FACE_CIRCLE_REGRESSION.md`](spec/BOTTOM_FACE_CIRCLE_REGRESSION.md); the headless gates [`../../scripts/probes/ORBIT_GATES.md`](../../scripts/probes/ORBIT_GATES.md); the slide removed → `spec/CLOSE_IN_CONTACT.md` §10.
 
 ✅ **Camera rules are REAL, not diagnostic.** `src/input/` owns the geometry; this
 folder only applies it.
@@ -67,14 +67,6 @@ folder only applies it.
 ✅✅ **THE OBJECT RULES ARE REAL NOW, and the MODEL is authoritative** (`3D1`, closed
 2026-09-15). A gesture writes `src/core/object_model.ts`; the render loop reads the model
 every frame and draws `displayPose = SWAY ∘ FOLLOW ∘ model`.
-
-⭐⭐ **EVERY HIGHLIGHT FLOATS ONE PIXEL OFF WHAT IT MARKS** (`D126`, the owner 2026-09-27). It was a
-world distance — 1.5 mm for a face marker, 2 % of the body's half-size for the aligned outline — so 10–20
-px up close and under one far away. ⭐ Now `highlightLiftMm` (one CSS pixel, a slider in FACE ALIGNMENT)
-is turned into metres at each body's camera distance every frame (`input/highlight_lift.ts`): face
-markers are built ON the face and translated along its normal; an outline's offset is baked, so it is
-rebuilt only when stale by 5 % (a zoom). ⭐ **Default 0.1 mm since 2026-09-28** (the owner; ~67/d × a 24-bit depth step at d m, vectored). One pixel is ~60× the 24-bit depth step at 3 m, ~1200× at
-0.15 m. ⚠ A 16-bit depth buffer would need 2–3 px beyond ~1 m. The PioneerFaceCursor rides 3 lifts up.
 
 ⚠ **The HUD carries depth's verdict and its ceiling** (`depth=… [min–max] ⛔MAX`): a claim a device
 cannot check is an assertion, not a finding.

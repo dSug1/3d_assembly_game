@@ -14,23 +14,18 @@ record. **A status changes in BOTH places or neither.**
 
 ---
 
-## ⭐⭐⭐ YOU ARE HERE (2026-11-13, branch `1.0.131-`, from `1.0.130from1.0.128-Cleaned-sliders`)
+## ⭐⭐⭐ YOU ARE HERE (2026-11-18, branch `1.0.147-`, live main `bc8dc9e` = `31fec5b`)
 
-⭐⭐⭐ **THE OWNER (2026-11-12): `12dc4b6` (`1.0.121-two-types-of-orbits-finalized`) IS THE BEST IMPLEMENTATION OF THE ORBIT SO FAR** — the reference to come back to (before it `1.0.117-Tilted-polar-orbit`, `6c6da30`); open points closed (`POLAR_ORBIT_CLEANUP.md` §9.16). ⭐⭐⭐ **Work goes on from it** (`1.0.124from1.0.121-Added_scene_2`, then `1.0.125-Debug_scene_0`).
-⛔⛔ **The slide's removal NOT USED** (*"It has to be re-built properly"*) — the trial on `1.0.122-Trial-of-removing-the-slide-not-used`. ⭐⭐⭐ **REBUILT (2026-11-13, `1.0.126-Slide_removal`, from `785ea5a`)**: the trial replayed, its causes fixed — GJK's false contact face to face (the friction), the ring's unchecked drift and the 0.4 m relocation (the teleport: the ring's hold, 3 cm), the rest on the support; the walks: inside a part / tunnels ~0 against hundreds with the slide, on both scenes; ✅✅ merged, the owner's look 11-13 (`825e62c`: *"all looks good on screen"*) → [`CLOSE_IN_CONTACT.md`](../40_RENDER_SCENE/spec/CLOSE_IN_CONTACT.md) §10.
-⭐⭐ `Scene_0` the HEPTAGON (+ anchor), `Scene_2` empty, the menu; ⭐ `Scene_0bis` (`?sceneIndex=4`) its heptagon TIPPED (✅ device OK) → [`GAME_STRUCTURE.md`](../20_GAME_RULES/spec/GAME_STRUCTURE.md) §7, §7.1.
-⭐⭐ **2026-11-12, `1.0.125-Debug_scene_0`** (from `1.0.124from1.0.121-Added_scene_2`): the orbit on ANY shape — the heptagon's walks, five root causes, the owner's rules (a face not a rectangle: the section that rings the shape straight; a ridge holds the pole); fixes F2, F4, F1, F3, F5, §8 the dy hold, §9 the zenith roll; ✅✅ the owner's look 11-13 → [`ORBIT_ANY_SHAPE.md`](../40_RENDER_SCENE/spec/ORBIT_ANY_SHAPE.md). The `1.0.117-` / `1.0.114-` lines: `history/2026-11-12_queue_lines_moved.md`.
-⭐⭐⭐ **2026-11-13, `1.0.128-Removed-the-zoom`** (from `1.0.127from1.0.125-Slide_removal` = `1.0.125-` + the slide's rebuilt removal): **NO ZOOM** (the pinch, the wheel, the boot zoom — the camera the radius offset behind the piece); **the PINCH is the APPROACH** on the phone (spread: in) — live `c9738e4`; ✅✅ the owner's look (*"tested ok on device"*) → [`ZOOM_REMOVED_PINCH_APPROACH.md`](../10_INPUT_TOUCH/spec/ZOOM_REMOVED_PINCH_APPROACH.md).
-⭐⭐⭐ **2026-11-13, `1.0.130from1.0.128-Cleaned-sliders`**: the float sliders at 0 removed with their code (bit for bit), the never-acting ones too; the menu by subject, nine sections, 88 sliders; ✅✅ the owner's look (`ddd2572`) → [`TUNING_MENU.md`](../40_RENDER_SCENE/spec/TUNING_MENU.md).
-⭐⭐ **2026-11-13, `1.0.131-`**: the browser's gestures kept off the game — the iOS loupe, Safari's pinch, the double click; the screen kept awake; the player's launch messages specified (not built) → [`BROWSER_GUARDS.md`](../10_INPUT_TOUCH/spec/BROWSER_GUARDS.md).
+⭐⭐⭐ **LIVE**: the orbit on charts, always on (the switches `chartLayout` / `chartCalm` and the old detectors deleted at step 2.5); the tilted pole close in on the carried heading (C0 to C5, the way out blended); the level face's entry (A); the dy hold released by a true hysteresis, 8 mm of finger (`1562bd1`, `DY_HOLD_REVERSAL.md`); the silent entry, version 7 (`3c66eb9`, switch `freeEntryUpright` default 1, `LEVEL_FACE_ENTRY.md` §15 - §17; one gate missed by 0.3 degree, accepted: `FAST_ORBIT.md` §11.4). ⛔ No device look yet on the last two. ⛔ Built, measured, reverted, NOT in the game: package A, R1, the timing rule, the fast orbit's three builds of 2026-11-17. ⚠ `Scene_2` never ran with the charts; the iPhone's black screen (RND6) is diagnosed, not fixed.
+⭐ **NEXT (the owner's order, 2026-11-18)**: (2) the fast orbit FO3 built, tested, deployed (`FAST_ORBIT.md` §12, agreed, not built; branch `1.0.148-`); (3) a lean audit on his word; (4) the merge into the main folder prepared (the merge on his word); then the surface study before the charts' step B → [`RND5.md`](queue_notes/RND5.md); the handover → [`HANDOVER_2026-11-18.md`](queue_notes/HANDOVER_2026-11-18.md).
+⭐⭐⭐ **`12dc4b6` is the best orbit before the charts** (the owner, 2026-11-12). The status lines of 2026-11-12 to 2026-11-14 (the slide's rebuild, no zoom, the cleaned sliders, the pick-up flow, the browser guards) moved → [`history/2026-11-18_queue_status_moved.md`](history/2026-11-18_queue_status_moved.md).
+✅ `npm run verify`: **2091 vectors** (166 files), green — MEASURED 2026-11-18 on `1.0.147-` at `3c66eb9`.
 ⭐⭐ **A NEW SCENE, ANY SCENE** (2026-11-12, ⛔ proposed, in use): **its ASSEMBLY PLAN first**, then the geometry (W0 – W7) → [`SCENE_WORKFLOW.md`](../20_GAME_RULES/spec/SCENE_WORKFLOW.md); the parts and the checks → [`PART_AUTHORING.md`](../30_OBJECTS_3D/spec/PART_AUTHORING.md). ⭐ `Scene_2`: W1, W2 ✅; W3 built, `.glb` out (11-13) → [`SCENE_2_ASSEMBLY.md`](../30_OBJECTS_3D/spec/SCENE_2_ASSEMBLY.md). ⛔ **THE PLUNGE SNAP** owed (§5 item 8: from a hole's mouth onto the seat). ⭐ The 11-09 `1.0.114-` block → [`history/2026-11-09_queue_spent_blocks.md`](history/2026-11-09_queue_spent_blocks.md).
 ⭐⭐⭐ **THE PROTOTYPE IS THE MAIN LINE** (since 2026-10-10, `1.0.62-`): the orbit moves the ORBITED PIECE round a yellow gizmo, the camera follows;
 merged into `main`, served at the site root; no `D`-numbers; the record is `40_RENDER_SCENE/spec/` (`DOUBLE_ORBIT_PROTOTYPE.md` — a dated line per
 change) and `30_OBJECTS_3D/spec/COLLISION.md` §11–§12.
-⭐⭐⭐ **2026-11-14 — THE PICK-UP FLOW** (`1.0.143from1.0.142-Pick-up-of-parts`, 🔧 built headless, ⛔ no device look; §12): a TAP picks a part (its step available, outlined), a DOUBLE TAP puts it down; the scene orbit ↔ the piece orbit by the clock; `CL1` the clean-up first → [`PICK_AND_PLACE.md`](../20_GAME_RULES/spec/PICK_AND_PLACE.md). The tilted orbit's 11-04 – 11-09 lines → [`history/2026-11-14_queue_lines_moved.md`](history/2026-11-14_queue_lines_moved.md).
 ⭐ **The owner's rules**: the solver budget stays **24 gap queries** a frame (*"i am testing on iphone"*); patent-free methods only;
 md, commits, deploys only when asked; deploy = push the branch, merge `--no-ff` into `main`, push, wait for `version.json`.
-✅ `npm run verify`: **1712 golden vectors, all passing** — MEASURED 2026-11-13 on `1.0.131-` (the browser guards; 1706 `1.0.130from1.0.128-`; 1716 `1.0.128-`; 1737 `1.0.127from1.0.125-`; 1799 `1.0.125-`; 1716 `1.0.126-`; older: `CLAUDE.md`; moved lines: `history/2026-11-13_queue_lines_moved.md`).
 
 ⭐ The 2026-09-30 record block (`D180`, the paused playability program, the inputs' simplification) moved → [`history/2026-11-09_queue_spent_blocks.md`](history/2026-11-09_queue_spent_blocks.md).
 
@@ -41,6 +36,7 @@ md, commits, deploys only when asked; deploy = push the branch, merge `--no-ff` 
 3. ⚠ `D47`'s pull-apart break (`3D3`) and the approach (`3D2`) — specified, not built.
 4. ⚠ **Prototype `1.0.58b-`** → `DOUBLE_ORBIT_PROTOTYPE.md`; its demo path drives the box, `DEMO_SCENE.md` §7. ⭐ (2026-10-14) it IS the main line — see the block above.
 5. ⛔ **THE LAUNCH MESSAGES SHEET** — not built; its texts in `render/browser_guards.ts` → [`BROWSER_GUARDS.md`](../10_INPUT_TOUCH/spec/BROWSER_GUARDS.md) §3.
+6. ⛔ **The orbit's owed work** — FO3, the fast orbit (`FAST_ORBIT.md` §12); the lean audit; the merge into the main folder (on the owner's word); the surface study, then the charts' step B; a device look on the dy hold and the silent entry; `Scene_2` with the charts; RND6 (the iPhone's black screen) → [`RND5.md`](queue_notes/RND5.md).
 ⭐ The 2026-09-17 version of this list (white contours, shakes, two undos, `FOLLOW`) is spent → [`history/2026-09-27_queue_spent_blocks.md`](history/2026-09-27_queue_spent_blocks.md).
 
 ### ⛔⛔⛔ THE 2026-09-17 AUDIT — the first defects found by READING, and a device look is owed
@@ -301,7 +297,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | RND2 | Mate preview: ghost + drop line | RND | render | queued | 3D2 |
 | RND3 | Anchor ring during two-touchpoint gestures (§4) | RND | render | queued | IN2 |
 | RND4 | Off-screen target indication — Halo / Wedge | RND | render | queued. ⭐ Not general polish: **6ter needs BOTH objects selected**, and at close zoom the partner is routinely off-frame, so the gesture becomes unreachable with nothing to say why. Curvature (Halo) or a tapered wedge encodes direction AND distance without a camera snap. ⚠ Audience includes youth — cap the indicator count. Prior art: Baudisch & Rosenholtz CHI 2003; Gustafson et al. CHI 2008 | 3D1, IN4 |
-| RND5 | ⭐ Orbit on charts | RND | feature | 2.4d 🔧 → `queue_notes/RND5.md` | — |
+| RND5 | ⭐ Orbit on charts | RND | feature | steps 1.1 - 2.5, C0 - C5, (A) LIVE; DH, silent entry v7 built, no device look; owed: step 3, FO3, step B → `queue_notes/RND5.md` | — |
 
 ## Phase DEP — build and deployment
 

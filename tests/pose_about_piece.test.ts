@@ -126,7 +126,11 @@ describe("the camera turned about the piece (a polar zone's turn)", () => {
     expect(gb).toMatch(/const camPlace = cameraPlaceNow\(st\);[^\n]*\n(?:\s*\/\/[^\n]*\n)*\s*if \(assemblyOn\(st\)\) spitStep\(st, camPlace\);\n\s*const camFrame = cameraFrameNow\(st, camPlace, off, dtSec \* 1000\);/);
     expect(aw).toContain("const t = zm.rule === 2 ? null : poseFramingTwo(zm.from, to, piece, zm.k, zm.keep);");
     expect(aw).toContain("const r = poseAboutPiece(zm.from, to, piece, zm.k, zm.axis);");
-    expect(gb).toContain("const zp = zoneMixPose(st, pp, camAt, lookAt, camFrame.up);");
+    // ⭐⭐⭐ (2026-11-18, FO3 S1) through the picture a follower of the logic (`rollPictureFrame`), which hands the ghost to `zoneMixPose` on both paths
+    expect(gb).toContain("const zp = rollPictureFrame(st, pp, camAt, lookAt, camFrame.up, dtSec * 1000);");
+    const rs = readFileSync("src/render/roll_shadow.ts", "utf8");
+    expect(rs).toContain("return zoneMixPose(st, piece, eye, look, up);");
+    expect(rs).toContain("const zp = zoneMixPose(st, piece, eye, look, up);");
     // ⭐⭐⭐ (2026-11-14) the spit's side: the SHOWN rule at the ORBIT's own angles (⛔ the piece's spring: late; ⛔ the bare orbit: the square camera's turn over the ridge unseen)
     expect(aw).not.toContain("const u = dirAt(st, st.orbit.yaw, st.orbit.elevation);");
   });

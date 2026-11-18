@@ -23,6 +23,7 @@
  * from here and `scene.ts` reads it — it does not keep its own copy.
  */
 import { distanceTurningPoints } from "./orbit";
+import { FREE_TURN_MAX_DEG, ROLL_FOLLOW_MS } from "./roll_follow";
 
 export const CAMERA_NEAR_PLANE_M = 0.01;
 
@@ -402,6 +403,12 @@ export interface GestureConfig {
   /** ⭐⭐ …and the orbit's angles (yaw, pitch, zoom), on a critically damped spring of this time constant (ms; 0: at once) — the travel counts that share the
    * orbit's spring with it (the piece's entry, its aim, the centre's return) */
   orbitSpringMs: number;
+  /** ⭐⭐⭐ (2026-11-18, `FAST_ORBIT.md` §12.4, §14 — FO3 S1) THE PICTURE A FOLLOWER OF THE LOGIC: the time (ms) the camera's roll about the line through
+   * the piece and its look point takes to catch up the logic's (critically damped; 60 – 600) */
+  rollFollowMs: number;
+  /** ⭐⭐⭐ (FO3 S1) a change of frame whose whole angle is under this (deg, less `FREE_TURN_TOL_DEG`) makes no timed turn: the gizmo free, the picture
+   * follows; 90 or more: today's timed turn. 0: every change today's turn and no follower — today's game, bit for bit (0 – 90) */
+  freeTurnMaxDeg: number;
   /** ⭐⭐⭐ (2026-11-10, POLAR_ORBIT_CLEANUP.md §9.4 — the owner's TILTED POLE) a press on a cap tilts the orbit so the cap is a side (1); off (0): the polar cap as before. ⛔ (2026-11-15, the owner: *"cancel my rule and remove the press action on the orbit"*) no press tilts: 1 the automatic tilt close in (`tiltAutoM`), 0 none. */
   tiltedPole: number;
   /** ⭐⭐⭐ (2026-11-10, the owner: *"limit the speed of the scene tilt at crossing"* → *"one speed for every tilt"*) EVERY tilt — the roll back to upright, the swing of a tilt just made — at this speed (°/s; 0: at once) — ⛔ `tiltRollMinMs` (a whole roll in 250 ms whatever its size) replaced. */
@@ -860,6 +867,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitMode: 0, // ⭐⭐⭐ (2026-10-28) the orbit around the assembly
   assemblyLockDistM: 0.3, // ⭐ (2026-10-28) the look at the gizmo within 30 cm (the lock deleted 2026-11-04)
   orbitShellOffsetMm: 60, // ⭐⭐⭐ (2026-11-04, Step 2) the shell's offset
+  rollFollowMs: ROLL_FOLLOW_MS, // ⭐⭐⭐ (2026-11-18, FO3 S1) 200 ms, sized on the owner's pace (`FAST_ORBIT.md` §12.4)
+  freeTurnMaxDeg: FREE_TURN_MAX_DEG, // ⭐⭐⭐ (FO3 S1) 90: the changes under 90° free (R6); 0 = today's game
   gizmoEaseMs: 45, // ⭐⭐ (2026-11-04, the owner: *"update the lag the gizmo's position the piece follows to 45ms"*; 62, 55 before, the former GIZMO_TAU_MS 90)
   orbitSpringMs: 30, // ⭐⭐ (2026-11-04) the former boxSmoothMs / 2 for the orbit's spring
   tiltedPole: 1, // ⭐⭐⭐ (2026-11-10, §9.4) the tilted pole on
@@ -1037,6 +1046,8 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.zoneWholeShare >= 0 && cfg.zoneWholeShare <= 1.01)) throw new Error(`zoneWholeShare (${cfg.zoneWholeShare}) must be in [0, 1.01].`);
   if (!(cfg.zoneExitMm >= 0 && cfg.zoneExitMm <= 200)) throw new Error(`zoneExitMm (${cfg.zoneExitMm}) must be in [0, 200] mm.`);
   if (cfg.freeFaceSquare !== 0 && cfg.freeFaceSquare !== 1) throw new Error(`freeFaceSquare (${cfg.freeFaceSquare}) must be 0 or 1.`);
+  if (!(cfg.rollFollowMs >= 60 && cfg.rollFollowMs <= 600)) throw new Error(`rollFollowMs (${cfg.rollFollowMs}) must be in [60, 600] ms.`);
+  if (!(cfg.freeTurnMaxDeg >= 0 && cfg.freeTurnMaxDeg <= 90)) throw new Error(`freeTurnMaxDeg (${cfg.freeTurnMaxDeg}) must be in [0, 90] deg.`);
   if (cfg.freeEntryUpright !== 0 && cfg.freeEntryUpright !== 1) throw new Error(`freeEntryUpright (${cfg.freeEntryUpright}) must be 0 or 1.`);
   if (!(cfg.edgeHoldMm >= 0 && cfg.edgeHoldMm <= 200)) throw new Error(`edgeHoldMm (${cfg.edgeHoldMm}) must be in [0, 200] mm.`);
   if (!(cfg.approachPinchGain > 0 && cfg.approachPinchGain <= 10)) throw new Error(`approachPinchGain (${cfg.approachPinchGain}) must be in (0, 10].`);
