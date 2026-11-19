@@ -21,7 +21,7 @@
  */
 import { cross, dot, type Vec3 } from "../core/vec";
 import type { CamPose } from "./orbit_tilt";
-import { poseAxes, type FramedLine } from "./roll_follow";
+import { poseAxes, twistAbout, type FramedLine } from "./roll_follow";
 
 /** ⭐ within this of the vertical (deg) the picture is the logic's pose (`w` 0) — the slider `uprightFromDeg` */
 export const UPRIGHT_FROM_DEG = 5;
@@ -92,6 +92,8 @@ export interface UprightState {
   readonly phi: number;
   readonly ap: number | null;
   readonly wp?: number;
+  /** ⭐ (fix round 3, UD6c) the logic's pose last frame — the carry is its twist about the framed line over this frame (`twistAbout`) */
+  readonly gp?: CamPose;
 }
 export const UPRIGHT_REST: UprightState = Object.freeze({ au: null, phi: 0, ap: null });
 
@@ -118,11 +120,11 @@ export interface UprightFrame {
  * `w` 0: `φ` exactly 0 (no cap) and the state at rest. `w` 1: `φ = α` exactly. Between: `w·ᾱ`, its change capped at `maxDegS` × `dtMs` if `maxDegS` > 0
  * (the carry `w·Δα` first, so a rigid roll of the logic is followed exactly).
  */
-export function uprightStep(s: UprightState, pose: CamPose, line: FramedLine, dtMs: number, knobs: UprightKnobs, scale = 1, freedTwist: number | null = null): UprightFrame {
+export function uprightStep(s: UprightState, pose: CamPose, line: FramedLine, dtMs: number, knobs: UprightKnobs, scale = 1, whole = false): UprightFrame {
   const nu = viewFromVertical(pose);
   const sc = Math.min(1, Math.max(0, Number.isFinite(scale) ? scale : 0));
   const w = uprightWeight(nu, knobs.fromDeg, knobs.fullDeg) * sc;
-  if (knobs.maxDegS > 0) return uprightPaced(s, pose, line, dtMs, knobs.maxDegS, w, nu, freedTwist);
+  if (knobs.maxDegS > 0) return uprightPaced(s, pose, line, dtMs, knobs.maxDegS, w, nu, whole);
   const alpha = w > 0 ? uprightAngle(pose, line) : null;
   let au: number | null;
   if (!(w > 0)) au = null;
@@ -146,24 +148,23 @@ export function uprightHoldKept(freed: boolean, wBefore: number, wAfter: number,
 
 /**
  * ⭐⭐⭐ (2026-11-18, `UPRIGHT_PICTURE.md` §6 — UD6b, UD4b; fix round 1) LAW U IN TIME: `φ` moves in two parts each frame.
- * (1) THE CARRY, at once: `φ + c·wrap(α − α_prev)`, `c = min(w, w_prev)` — exact on any path that stays off the vertical (`w` 1 on both frames: the
- *     picture exactly upright), nothing at the vertical (`1.0.147-`'s picture). ⛔ `c = w` (as §6 wrote it): an `α` read on the frame BEFORE, near
- *     the vertical where it is wild, was carried at the weight AFTER a band crossed in one frame — the 10 flips left by the builder's experiment.
- *     On a FREED change of frame (`freedTwist`, UD4b) the carry is WHOLE instead: the frame's twist of the logic's pose about the framed line undone
- *     (`φ − τ`) — the picture keeps its roll across that frame, at any `w`.
+ * (1) THE CARRY, at once — ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §10 UD6c, fix round 3) the logic's TWIST UNDONE: `φ − c·τ`, `τ` the twist of the
+ *     logic's pose about the framed line over this frame (`twistAbout`, defined everywhere), `c = min(w, w_prev)`; `c` 1 (`whole`) on a freed frame
+ *     and on a timed turn's first frame (round 1's F2 and F3 as one rule). A rigid roll of the logic is undone exactly; the upright's OWN swing (the
+ *     view passing near the vertical) is left to the rest, so it goes through the cap. ⛔ (fix rounds 1 – 2) `φ + c·wrap(α − α_prev)`: `α` has no
+ *     meaning at the vertical, so a `Δα` read across a frame where the view crosses the band was not a roll — the 98° frame (`ilmj_39s` f629).
  * (2) THE REST: what is left to the target `w·α` (`α` the root nearest 0; none: held), the short way, closed at `maxDegS` × `dtMs` at most. No unwrap.
  * At the vertical with nothing open: `φ` exactly 0 (the picture is the logic's pose) — the logic's own continuous spin there opens no rest.
  */
-function uprightPaced(s: UprightState, pose: CamPose, line: FramedLine, dtMs: number, maxDegS: number, w: number, nu: number, freedTwist: number | null): UprightFrame {
+function uprightPaced(s: UprightState, pose: CamPose, line: FramedLine, dtMs: number, maxDegS: number, w: number, nu: number, whole: boolean): UprightFrame {
   const alpha = w > 0 ? uprightAngle(pose, line) : null;
-  const c = Math.min(w, s.wp ?? 0);
-  let pc = s.phi;
-  if (freedTwist !== null && Number.isFinite(freedTwist)) pc = wrapPi(s.phi - freedTwist);
-  else if (alpha !== null && s.ap !== null && c > 0) pc = s.phi + c * wrapPi(alpha - s.ap);
+  const c = whole ? 1 : Math.min(w, s.wp ?? 0);
+  const tau = s.gp !== undefined ? twistAbout(s.gp, pose, line.dir) : 0;
+  const pc = c > 0 && Number.isFinite(tau) && tau !== 0 ? wrapPi(s.phi - c * tau) : s.phi;
   const target = !(w > 0) ? 0 : alpha !== null ? w * alpha : pc;
   const e = wrapPi(target - pc);
   const cap = dtMs > 0 ? ((maxDegS * Math.PI) / 180) * (dtMs / 1000) : 0;
   const phi = Math.abs(e) <= cap ? target : wrapPi(pc + Math.sign(e) * cap);
-  const state: UprightState = phi === 0 && !(w > 0) ? UPRIGHT_REST : { au: null, phi, ap: alpha, wp: w };
+  const state: UprightState = { au: null, phi, ap: alpha, wp: w, gp: pose };
   return { state, phi, w, nu, alpha, closed: phi === target };
 }

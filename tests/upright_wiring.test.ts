@@ -191,8 +191,9 @@ describe("UD4b — no stop under freeTurnMaxDeg near the vertical (`uprightBandF
   it("FO3's rule at any w first; the freed frame's twist of G about the framed line handed to law U as a whole carry", () => {
     expect(rs).toContain("if (st.cfg.uprightBandFree === 1 && was.upright !== undefined && turnIsFree(whole, maxDeg)) return true;");
     // ⭐ (fix round 2) F3 (a timed turn's first frame, `fresh`) carried by the twist whatever `uprightBandFree`; the freed frame (UD4b) only with it at 1
-    expect(rs).toContain("const freedTwist = (fresh || (freed > 0 && st.cfg.uprightBandFree === 1)) && was !== null && was.upright !== undefined ? tw : null;");
-    expect(rs).toContain("const r = uprightStep(was?.upright?.state ?? UPRIGHT_REST, G, line, dtMs, knobs, scale, freedTwist);");
+    // ⭐ (fix round 3, UD6c) the twist read by the law; the wiring says only when the carry is WHOLE (a timed turn's first frame; a freed one with the band's switch on)
+    expect(rs).toContain("const whole = fresh || (freed > 0 && st.cfg.uprightBandFree === 1);");
+    expect(rs).toContain("const r = uprightStep(was?.upright?.state ?? UPRIGHT_REST, G, line, dtMs, knobs, scale, whole);");
     expect(rs).toContain("const tw = was === null ? 0 : twistAbout(was.ghost, G, line.dir);");
   });
   it("⭐ (fix round 2, UD11) the hold a change set dropped by law U where that change is freed fully upright with nothing left to close — after the picture is made", () => {
