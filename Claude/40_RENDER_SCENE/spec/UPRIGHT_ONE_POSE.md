@@ -347,3 +347,48 @@ At `Scene_1`'s top a fast sideways drag turns the view at most 720° a second, s
 * **OD11** — the spit's heading at the pole fixed at its source (11.3, 2).
 * **OD12** — the gizmo held for the whole half turn rather than its first 90° (the hold walks and R7 show the cost of releasing it early).
 * OD1 – OD8 (§10) as built; the pace stays 720° a second (360 measured worse).
+
+## 12. Fix round 1 (the lead's F1 – F5, 2026-11-19, night; `453b19e`; local, nothing pushed) — ⛔ the join still fails: for the lead's study
+
+**The result first.** F1 does what it says: at `Scene_1`'s top a dx at his pace yaws the picture with the logic, 1:1 (769° a second, 0° behind; P2:
+capped at 719°, 70 – 80° behind), a reversal followed on the logic's own frame; no half turn opens without a logic change (0; P2: 6); the gizmo waits
+the whole half turn (F2); gravity is upright more often than with the live defaults (19.2 % over 20° against 21.7 %). ⛔ Still failing: frames turning
+the camera over 45° rose to 49 (2 over 90°), the jitter at a pole (16 of 30), R7 (15.8°), close in bit for bit, and 2 half turns at a level face's entry.
+
+**Built** (`453b19e`, (C)): the picture = its target + a GAP — the target (`w · h · α`) followed exactly, the gap opened only by a logic change (the
+picture's last up carried to the new view, re-decided the shortest way, A1) and closed at 720° a second in one sense; a half turn = a gap of 90° or
+more, the gizmo held for the whole of it; the dead band and its slider deleted (127); the spit's heading at the pole the side's own within 4° of the
+vertical, blended into the formula by 12° (`spitCameraHeadingOne`, behind the switch). Vectors; mutants 7 of 7 and 2 of 2 red; 2 191 vectors.
+
+| his ten stretches, far out, 60 fps | fix round 1 | P2 (§11) | defaults `74a247e` | `6f47219` |
+|---|---|---|---|---|
+| G1 the circle: `vb` B2 · `au_read` B2 | 2 · 28 | 1 · 26 | 74 · 24 | 81 · 10 |
+| G2 bursts entry / exit / else · passes 2+ · per crossing 0 / 1 / 2+ | 5 / 170 / 1 · 13 · 45 / 103 / 6 | 6 / 176 / 0 · 18 · 49 / 106 / 6 | 7 / 161 / 2 · 11 | 2 / 115 / 3 · 14 |
+| G3 the jitter at a pole | 16 of 30 | 17 of 35 | 16 of 26 | 18 of 45 |
+| G5 gravity over 20° · its roll a metre | **19.2 % · 79.0°** | 22.4 % · 83.3° | 21.7 % · 88.8° | 35.4 % · 101.5° |
+| G6 frames over 90° / 45 – 90° | ⛔ 2 / 47 | 0 / 13 | 1 / 27 | 0 / 5 |
+| G7 R7 median / p90 | 15.8° / 81.5° | 18.8° / 90.4° | 14.3° / 65.9° | 12.1° / 61.1° |
+
+* **His two places**: at an edge 88 half turns (15.4° from the vertical, 233 ms, the gizmo waiting 217 ms), at a level face's exit 64 (13.7°, 233 ms,
+  233 ms); with no logic change 0; at a level face's ENTRY 2 (the view 85° from the vertical) — not fixed.
+* **The dy hold**: `z_far` s0 now exactly `6f47219`'s (held 113 frames, the gizmo 11 mm after the crossing); every come-back in 1 frame but `z_far` s5
+  (10 frames; `6f47219` 2); `b_far` held; 0 re-crossings under a steady push. **The rest**: seeded replays 0.4 / 3.1 / 1.1 %; the level entry's walks B2 4;
+  143 frames a second 0 frames over 45°; `Scene_1` over its top 2 reversals (defaults 1); G9 every switch at 0 identical.
+
+**What the frames say (F4, F5 and the gates still failing; measured unless said)**
+1. **G6** — of the 49 frames over 45°: 28 the logic's OWN view jumping 35 – 52° in one frame at his fastest (the band weight jumping with it), 8 the
+   logic's pose rolling 45°+ in a frame with no change event, 6 the fade, 6 changes. Followed exactly, the target's roll now adds to the view's own swing;
+   P2 capped it. The root is the band weight read off a view that crosses the band in one frame (RB4 found the same) — not fixed.
+2. **The jitter** — 10 of 16 arrivals are a logic change at the arrival (the side's flip at the pole): the half turn's roll, then the logic's own motion
+   after it, read as a there-and-back; 6 a heading's wobble (spit 3, a level face's edge 3). F3 removed the spit's wobble only at the pole itself.
+3. **F4, close in** — still apart from frame 179 (to 1.6 later). Read frame by frame: the LOGIC's pose differs first (1.1·10⁻⁷), on the first frame his
+   finger's step passes the motion dead band, still far out with the picture 1.4° off the logic. One pose maps that step on the picture's glass, the
+   live build turns it onto the logic's glass: the same world move only for a roll about the view, and the picture rolls about the framed line. Root:
+   OP1 (one glass) — by design, not fixed.
+4. **F5** — `au_read`'s B2 (28) counts any turn about the vertical within 45° of it outside a pass's main burst: under F1 that is the logic's own heading
+   moving near the pole, shown 1:1 — not a lag (the top walk is 1:1). `Scene_1`'s 2 reversals are unchanged by F1: not the lag; not read further.
+5. **R7** — 14.2° where the picture is within 5° of the logic (2 086 frames, the defaults' level); 39.0° on the 297 frames it is not (a gap closing).
+
+**For the lead** (the owner's rule: the same join failing twice → stop and study): the half turn is now where and as decided; what fails lies in the
+target's own inputs at his pace — the logic's view jumping 35 – 52° in a frame, the band weight read off it, the logic's pose rolling with no change
+event — and in one glass against the framed line's roll (close in, R7).

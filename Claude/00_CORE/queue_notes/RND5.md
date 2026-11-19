@@ -757,3 +757,10 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   21.7 % / 35.4 %. ⛔ R7 18.8° / 14.3° / 12.1° (the frames right after a half turn, the push held); ⛔ the jitter at a pole 17 of 35 / 16 of 26 / 18 of 45;
   ⛔ a fast yaw at a pole capped at 720° a second (the picture 70 – 80° behind); ⛔ close in 7·10⁻⁶ apart from the live build. Every switch at 0 gives
   its earlier game frame for frame. Next: his and the lead's word on OD9 – OD12 (`UPRIGHT_ONE_POSE.md` §11.5).
+
+### 2026-11-19 (night) — packet D, fix round 1 on `1.0.148d-` (`453b19e`): the half turn as decided, the target's inputs fail
+  The picture = its target + a gap (F1): the yaw at a pole 1:1 (769° a second, 0° behind; P2 capped at 719°), no half turn without a logic change, the
+  gizmo held the whole half turn (F2), the dead band deleted (127 sliders), the spit's heading at the pole the side's own (F3). Gravity over 20° 19.2 %
+  (the defaults 21.7 %). ⛔ Still failing: 49 frames turning the camera over 45° (P2 13; the logic's own view jumping 35 – 52° in a frame, the band weight
+  with it, now followed exactly), the jitter 16 of 30, R7 15.8°, close in apart from frame 179 (one glass against the framed line's roll), 2 half turns
+  at a level face's entry. `npm run verify` 2 191 vectors; every switch at 0 identical. The record: `UPRIGHT_ONE_POSE.md` §12. Next: the lead's study.
