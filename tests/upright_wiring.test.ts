@@ -194,6 +194,11 @@ describe("UD4b — no stop under freeTurnMaxDeg near the vertical (`uprightBandF
     expect(rs).toContain("const r = uprightStep(was?.upright?.state ?? UPRIGHT_REST, G, line, dtMs, knobs, scale, freedTwist);");
     expect(rs).toContain("const tw = was === null ? 0 : twistAbout(was.ghost, G, line.dir);");
   });
+  it("⭐ (fix round 2, UD11) the hold a change set dropped by law U where that change is freed fully upright with nothing left to close — after the picture is made", () => {
+    const g = "if (st.asmEdgeHold !== null && !uprightHoldKept(freed > 0, was?.upright?.w ?? 0, r.w, r.closed)) st.asmEdgeHold = null;";
+    expect(rs).toContain(g);
+    expect(rs.indexOf("const P = poseRolled(G, line, r.phi);")).toBeLessThan(rs.indexOf(g));
+  });
   it("uprightBandFree 1 by default, 0 or 1", () => {
     expect(DEFAULT_CONFIG.uprightBandFree).toBe(1);
     for (const v of [0.5, 2, Number.NaN]) expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, uprightBandFree: v })).toThrow();

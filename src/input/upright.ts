@@ -109,6 +109,8 @@ export interface UprightFrame {
   readonly w: number;
   readonly nu: number;
   readonly alpha: number | null;
+  /** ⭐ (fix round 2, UD11) nothing left to close: `phi` is this frame's target (the rest closed, or no pace) */
+  readonly closed: boolean;
 }
 
 /**
@@ -129,7 +131,17 @@ export function uprightStep(s: UprightState, pose: CamPose, line: FramedLine, dt
   else au = s.au + wrapPi(alpha - s.au);
   const phi = au === null ? 0 : w * au;
   const state: UprightState = phi === 0 && au === null ? UPRIGHT_REST : { au, phi, ap: w > 0 ? alpha : null };
-  return { state, phi, w, nu, alpha };
+  return { state, phi, w, nu, alpha, closed: true };
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §8 UD11 — fix round 2) A HOLD BELONGS TO A TURN THE PLAYER SEES: the dy hold set by a change of frame (`crossTurn`)
+ * is kept unless that change is FREED (no timed turn) where the picture is FULLY UPRIGHT at both its ends (`w` 1 on the frame before and on this one) with
+ * nothing left to close (`closed`) — there the picture does not turn (the carry keeps it upright), the same push goes on in the world and only a come-back
+ * would be held. Measured (fix round 2, his stretches): 51 of 104 holds set were such. Any other change keeps its hold (`1.0.147-`'s rule).
+ */
+export function uprightHoldKept(freed: boolean, wBefore: number, wAfter: number, closed: boolean): boolean {
+  return !(freed && wBefore >= 1 && wAfter >= 1 && closed);
 }
 
 /**
@@ -153,5 +165,5 @@ function uprightPaced(s: UprightState, pose: CamPose, line: FramedLine, dtMs: nu
   const cap = dtMs > 0 ? ((maxDegS * Math.PI) / 180) * (dtMs / 1000) : 0;
   const phi = Math.abs(e) <= cap ? target : wrapPi(pc + Math.sign(e) * cap);
   const state: UprightState = phi === 0 && !(w > 0) ? UPRIGHT_REST : { au: null, phi, ap: alpha, wp: w };
-  return { state, phi, w, nu, alpha };
+  return { state, phi, w, nu, alpha, closed: phi === target };
 }

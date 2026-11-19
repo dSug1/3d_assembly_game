@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import type { Vec3 } from "../src/core/vec";
 import { rotateAbout, type CamPose } from "../src/input/orbit_tilt";
 import { framedLine, onGlass, poseRolled, twistAbout } from "../src/input/roll_follow";
-import { gravityTilt, UPRIGHT_FROM_DEG, UPRIGHT_FULL_DEG, UPRIGHT_MAX_DEG_S, UPRIGHT_REST, uprightAngle, uprightStep, uprightWeight, viewFromVertical, type UprightState } from "../src/input/upright";
+import { gravityTilt, UPRIGHT_FROM_DEG, UPRIGHT_FULL_DEG, UPRIGHT_MAX_DEG_S, UPRIGHT_REST, uprightAngle, uprightHoldKept, uprightStep, uprightWeight, viewFromVertical, type UprightState } from "../src/input/upright";
 
 const DEG = Math.PI / 180;
 const wrap = (a: number): number => Math.atan2(Math.sin(a), Math.cos(a));
@@ -308,5 +308,35 @@ describe("no root: held", () => {
     const r = uprightStep(held, g, vertical, 16, K);
     expect(r.alpha).toBeNull();
     expect(r.phi).toBeCloseTo(0.3, 12);
+  });
+});
+
+describe("UD11 — a hold belongs to a turn the player sees (fix round 2, UPRIGHT_PICTURE.md §8): `uprightHoldKept`, and law U's `closed`", () => {
+  it("dropped only where the change is FREED, the picture fully upright at both ends (w 1 before and after), nothing left to close", () => {
+    expect(uprightHoldKept(true, 1, 1, true)).toBe(false);
+    expect(uprightHoldKept(false, 1, 1, true)).toBe(true); // a timed turn: 1.0.147-'s hold
+    expect(uprightHoldKept(true, 0.99, 1, true)).toBe(true); // in the band before: the picture follows the logic part of the way
+    expect(uprightHoldKept(true, 1, 0.5, true)).toBe(true);
+    expect(uprightHoldKept(true, 1, 1, false)).toBe(true); // a rest still to close: the picture still turns
+    expect(uprightHoldKept(true, 0, 0, true)).toBe(true); // at the vertical: the picture is the logic's pose, it turns with it
+  });
+  it("closed: a change of 180° at w 1 carried (the picture where it was) is closed; a band crossed with α near 180° leaves a rest (not closed) until it is", () => {
+    const K6 = { ...K, maxDegS: 720 };
+    const dt = 1000 / 60;
+    let s: UprightState = UPRIGHT_REST;
+    for (let n = 0; n < 40; n++) s = pic(s, poseAt(50, 20, 30), dt, K6).r.state;
+    expect(pic(s, poseAt(50, 20, 30), dt, K6).r.closed).toBe(true);
+    const g0 = poseAt(50, 20, 30);
+    expect(pic(s, poseRolled(g0, framedLine(g0, piece), Math.PI), dt, K6).r.closed).toBe(true);
+    // at the vertical, then off it in one frame with the logic rolled near half a turn: the rest is 12° a frame, so not closed on that frame
+    let v: UprightState = UPRIGHT_REST;
+    for (let n = 0; n < 5; n++) v = pic(v, poseAt(89, 20, 0), dt, K6).r.state;
+    const jump = pic(v, poseAt(40, 20, 170), dt, K6).r;
+    expect(jump.closed).toBe(false);
+    let st2 = jump.state, last = jump;
+    for (let n = 0; n < 30 && !last.closed; n++) { last = pic(st2, poseAt(40, 20, 170), dt, K6).r; st2 = last.state; }
+    expect(last.closed).toBe(true);
+    // no pace (maxDegS 0): always closed
+    expect(pic(v, poseAt(40, 20, 170)).r.closed).toBe(true);
   });
 });
