@@ -488,3 +488,31 @@ the gizmo back; after a crossing he does not see turn (a freed change, fully upr
 steers a little better than last night (the mirror) but still worse than `1.0.147-` for a third of a second after a fast pass over a ridge. One flick
 of 98° on one of his ten stretches. Close in as before. **Slider label changed**: ☰ › ORBIT › UPRIGHT PICTURE, *the rest to upright, its pace*.
 **Not run**: the corner loops, the stretches at 0.736, `Scene_0` up, the edge and ridge walks; `z_far` s2 not re-run under amendment 3.
+
+## 10. Fix round 3 as briefed — the carry is the logic's twist undone (the lead, 2026-11-19, 04:00; ⭐ for his review)
+
+**What round 2 gave** (§9, its builder's figures): the dy hold is `1.0.147-`'s again on the hold walks — the blocker is fixed; ⭐ found on the way:
+`fingerOnGhost` was MIRRORED since FO3's S2 (the glass's right taken as forward × up; the engine's is up × forward), so every move was turned the
+wrong way round — the deployed build's S2 had it; fixed, with a vector that sees it. The finger's angle (R7) 16.3° → 14.9° (`1.0.147-`: 12.1°).
+⛔ Left: ONE frame turning the camera by 98° (`ilmj_39s` frame 629: the law's angle 57° → 9° in one frame, the carry at 0.70, while the view
+crosses the band) and 55 frames of 45 – 90° (`1.0.147-`: 5); the come-back on one hold walk (`z_far` s2); the straight dy at 360 px a second.
+
+**One more round than UD10's two** — the lead's choice: what is left is ONE rule of the law (how the carry is read), not a new design, and the
+night leaves the time for it and for an independent re-test. If that re-test finds a blocker, UD10's fallback stands (`uprightPicture` 0).
+
+* **UD6c — the carry is the logic's twist, undone; never `Δα`.** Each frame `φ ← φ − c·τ`: `τ` the twist of the logic's pose about the framed
+  line over that frame (`twistAbout` — well defined everywhere), `c = min(w, w before)`, `c = 1` on a freed frame and on a timed turn's first
+  frame (round 1's F2 and F3 become this one rule); then the rest to `w·α` closes at `uprightMaxDegS`, as before. So beyond the share of the
+  logic's own twist that the picture keeps near the vertical, the picture never rolls faster than the cap — the upright's OWN swing (fast when
+  the view passes close to the vertical) now goes through the cap too. Why: `α` has no meaning at the vertical, so `Δα` read across a frame where
+  the view crosses the band is not a roll — that is the 98° frame and most of the 45 – 90° ones. At rest, and on a path where the upright's own
+  turn stays under the cap (1 440° a second: 24° a frame at 60), the picture is still exactly upright.
+* **UD11b — a freed change never holds.** A change that is freed turns the picture by less than 90° (it is under `freeTurnMaxDeg`) or not at
+  all (`w = 1`): the push that crossed never goes back. Its hold is dropped inside the band too (round 2 measured: what is left of R7 over
+  `1.0.147-`'s sits in the third of a second after such a change).
+* **Not built** (an event's patch, for his review): the hold's band read at a timed turn's END — `z_far` s2, where a come-back of 12.2 mm fell
+  inside the turn and counted as 5.1 mm.
+* **This round's gates**: no frame turning the camera by more than 90° on his ten stretches, nor at 143 frames a second; the 45 – 90° frames
+  reported (the aim: under half of 55); gravity over 20° and its roll a metre not over round 2's 7.3 % and 57.2° by more than 2 points and 5°;
+  the hold walks as round 2's; R7 not over 14.9°; the identities (`uprightPicture` 0, `freeTurnMaxDeg` 0, and `uprightMaxDegS` 0 with
+  `uprightBandFree` 0 = `e653099`); `npm run verify`.
