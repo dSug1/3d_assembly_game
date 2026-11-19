@@ -208,6 +208,8 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "upright: none within this of the vertical (deg)", "uprightFromDeg", 0, 45, 1),
             tunable(st, "upright: in full from this off the vertical (deg)", "uprightFullDeg", 0, 60, 1),
             tunable(st, "upright: the rest to upright, its pace (deg a second; 0 = at once)", "uprightMaxDegS", 0, 2880, 60),
+            // ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §15 V1) near the vertical the picture keeps the roll it arrives with
+            tunable(st, "upright: near the vertical the roll kept, the half turn once on the way out (1 on, 0 = the picture the logic's pose there)", "uprightKeepRoll", 0, 1, 1),
           ],
         },
         {

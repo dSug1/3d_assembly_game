@@ -444,7 +444,7 @@ export interface SceneState {
     /** ⭐⭐⭐ (2026-11-18, `UPRIGHT_PICTURE.md` §2 — law U, `uprightPicture` 1) the picture drawn by law U: `ghost` is then the LOGIC's pose `G` (the pose
      *  `zoneMixPose` gives — a turn that stays included), `picture` = `G` turned by `phi` about the framed line; the law's state (`upright.ts`), its weight
      *  `w` (the square camera's complement included) and `phi` (rad); absent: FO3 S1's follower or the shadow */
-    readonly upright?: { readonly state: import("../input/upright").UprightState; readonly w: number; readonly phi: number };
+    readonly upright?: { readonly state: import("../input/upright").UprightState; readonly w: number; readonly phi: number; readonly sc?: number };
   } | null;
   /** ⭐⭐⭐ (2026-11-13, the owner: *"replicate the behavior of scene 0 when crossing the zenith edge"*) the spit's side of the axis (`spitSide`; 0: none) */
   asmSpitSide: number;

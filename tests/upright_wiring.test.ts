@@ -347,3 +347,21 @@ describe("RB2 — THE HOLD IS A DIRECTION ON THE PICTURE'S GLASS (UPRIGHT_PICTUR
     expect(rs).toContain("const hold = ask.hold === undefined ? undefined : holdSeen(seen, ask.hold, drawn ? was.picture : null, drawn ? was.ghost : null);");
   });
 });
+
+describe("V1 — the roll kept near the vertical (UPRIGHT_PICTURE.md §15): one switch, one owner — read in the source", () => {
+  const rs = readFileSync("src/render/roll_shadow.ts", "utf8").replace(/\r\n/g, "\n");
+  it("uprightKeepRoll 1 by default, 0 or 1 only", () => {
+    expect(DEFAULT_CONFIG.uprightKeepRoll).toBe(1);
+    for (const v of [0, 1]) expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, uprightKeepRoll: v })).not.toThrow();
+    for (const v of [0.5, 2, -1, Number.NaN]) expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, uprightKeepRoll: v })).toThrow();
+  });
+  it("the law is told (knobs.keep from the slider); a change is seen through the carry's weight at BOTH ends (changeWeight) — never through w alone", () => {
+    expect(rs).toMatch(/const keep = st\.cfg\.uprightKeepRoll === 1;/);
+    expect(rs).toMatch(/maxDegS: st\.cfg\.uprightMaxDegS, keep \}/);
+    expect(rs).toMatch(/const wAfter = changeWeight\(keep, uprightWeight\(viewFromVertical\(ghost\), knobs\.fromDeg, knobs\.fullDeg\) \* scale, scale\);/);
+    expect(rs).toMatch(/wBefore: drawn \? changeWeight\(keep, was\.upright!\.w, was\.upright!\.sc\) : 0/);
+    expect(rs).toMatch(/upright: \{ state: r\.state, w: r\.w, phi: r\.phi, sc: r\.sc \}/);
+    // one owner of the picture's roll: the law's φ is the only roll drawn under law U (nothing after it turns the picture)
+    expect(rs.match(/poseRolled\(G, line, /g)?.length).toBe(1);
+  });
+});

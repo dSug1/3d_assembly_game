@@ -422,6 +422,10 @@ export interface GestureConfig {
   /** ⭐ (UD6b, fix round 1) the pace of the picture's REST toward upright, everywhere (deg a second; 0 = at once: law U as first built); the carry of the
    * logic's own roll is at once whatever this is (0 – 2 880) */
   uprightMaxDegS: number;
+  /** ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §15 — V1) near the vertical the picture KEEPS THE ROLL IT ARRIVES WITH (1): the law undoes the logic's twist whole at
+   * every view (no crossing's half turn, no level face's exit shown), the target the kept roll turned toward upright by the weight; the half turn paid once,
+   * on the way out. 0: the defaults commit `74a247e`, frame for frame (the picture the logic's pose within `uprightFromDeg`). Acts with `uprightMaxDegS` > 0 */
+  uprightKeepRoll: number;
   /** ⭐⭐⭐ (2026-11-10, POLAR_ORBIT_CLEANUP.md §9.4 — the owner's TILTED POLE) a press on a cap tilts the orbit so the cap is a side (1); off (0): the polar cap as before. ⛔ (2026-11-15, the owner: *"cancel my rule and remove the press action on the orbit"*) no press tilts: 1 the automatic tilt close in (`tiltAutoM`), 0 none. */
   tiltedPole: number;
   /** ⭐⭐⭐ (2026-11-10, the owner: *"limit the speed of the scene tilt at crossing"* → *"one speed for every tilt"*) EVERY tilt — the roll back to upright, the swing of a tilt just made — at this speed (°/s; 0: at once) — ⛔ `tiltRollMinMs` (a whole roll in 250 ms whatever its size) replaced. */
@@ -887,6 +891,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   uprightFromDeg: UPRIGHT_FROM_DEG, // ⭐ (UD1; the owner 2026-11-19) 15°
   uprightFullDeg: UPRIGHT_FULL_DEG, // ⭐ (UD1; the owner 2026-11-19) 50°
   uprightMaxDegS: UPRIGHT_MAX_DEG_S, // ⭐ (UD6b; the owner 2026-11-19) 720° a second, everywhere
+  uprightKeepRoll: 1, // ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §15 V1) the roll kept near the vertical; 0 = the defaults commit
   gizmoEaseMs: 45, // ⭐⭐ (2026-11-04, the owner: *"update the lag the gizmo's position the piece follows to 45ms"*; 62, 55 before, the former GIZMO_TAU_MS 90)
   orbitSpringMs: 30, // ⭐⭐ (2026-11-04) the former boxSmoothMs / 2 for the orbit's spring
   tiltedPole: 1, // ⭐⭐⭐ (2026-11-10, §9.4) the tilted pole on
@@ -1070,6 +1075,7 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (cfg.uprightCloseIn !== 0 && cfg.uprightCloseIn !== 1) throw new Error(`uprightCloseIn (${cfg.uprightCloseIn}) must be 0 or 1.`);
   if (!(cfg.uprightFromDeg >= 0 && cfg.uprightFromDeg <= 45)) throw new Error(`uprightFromDeg (${cfg.uprightFromDeg}) must be in [0, 45] deg.`);
   if (!(cfg.uprightFullDeg >= 0 && cfg.uprightFullDeg <= 60)) throw new Error(`uprightFullDeg (${cfg.uprightFullDeg}) must be in [0, 60] deg (at or under \`uprightFromDeg\`: a step there).`);
+  if (cfg.uprightKeepRoll !== 0 && cfg.uprightKeepRoll !== 1) throw new Error(`uprightKeepRoll (${cfg.uprightKeepRoll}) must be 0 or 1.`);
   if (!(cfg.uprightMaxDegS >= 0 && cfg.uprightMaxDegS <= 2880)) throw new Error(`uprightMaxDegS (${cfg.uprightMaxDegS}) must be in [0, 2880] deg a second.`);
   if (cfg.freeEntryUpright !== 0 && cfg.freeEntryUpright !== 1) throw new Error(`freeEntryUpright (${cfg.freeEntryUpright}) must be 0 or 1.`);
   if (!(cfg.edgeHoldMm >= 0 && cfg.edgeHoldMm <= 200)) throw new Error(`edgeHoldMm (${cfg.edgeHoldMm}) must be in [0, 200] mm.`);

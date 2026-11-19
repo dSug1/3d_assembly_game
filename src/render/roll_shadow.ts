@@ -19,7 +19,7 @@ import { upSquareToView } from "../input/camera_frame";
 import { squareTurning, type CamPose } from "../input/orbit_tilt";
 import { followStep, FREE_TURN_MAX_DEG, framedLine, GAP_ZERO, onGlass, poseRolled, poseTurnAngle, ROLL_FOLLOW_MS, turnIsFree, twistAbout, type FollowMode } from "../input/roll_follow";
 import { easeRest } from "../input/seam_turn";
-import { changeSeen, holdSeen, UPRIGHT_REST, uprightStep, uprightWeight, viewFromVertical } from "../input/upright";
+import { changeSeen, changeWeight, holdSeen, UPRIGHT_REST, uprightStep, uprightWeight, viewFromVertical } from "../input/upright";
 import { changeApply, spitZone, zoneMixPose } from "./assembly_wiring";
 import type { SceneState } from "./scene_state";
 
@@ -167,15 +167,18 @@ function uprightPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3,
   const sq = st.asmSquare;
   const share = sq.n === null || !(sq.q > 0) ? 0 : sq.q;
   const scale = st.cfg.uprightCloseIn === 1 ? 1 : 1 - share;
-  const knobs = { fromDeg: st.cfg.uprightFromDeg, fullDeg: st.cfg.uprightFullDeg, maxDegS: st.cfg.uprightMaxDegS };
+  // ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §15 V1) `keep`: near the vertical the picture keeps the roll it arrives with — the law's carry whole at every view
+  const keep = st.cfg.uprightKeepRoll === 1;
+  const knobs = { fromDeg: st.cfg.uprightFromDeg, fullDeg: st.cfg.uprightFullDeg, maxDegS: st.cfg.uprightMaxDegS, keep };
   let freed = 0;
   const ask = st.asmChange;
   if (ask !== null) {
     const drawn = was !== null && was.drawn && was.upright !== undefined;
     const turnRad = drawn ? poseTurnAngle(was.ghost, ghost) : Number.NaN;
     const stays = !drawn || was.turn !== null || ask.paced || ask.byMm || ask.tilt || sqTurning || tiltHold;
-    const wAfter = uprightWeight(viewFromVertical(ghost), knobs.fromDeg, knobs.fullDeg) * scale;
-    const seen = changeSeen({ stays, wBefore: drawn ? was.upright!.w : 0, wAfter, turnRad, freeMaxDeg: st.cfg.freeTurnMaxDeg });
+    // ⭐⭐⭐ (V1) the weight a change is seen through: the carry's (`changeWeight`) — with `keep` the square camera's complement, else `w`
+    const wAfter = changeWeight(keep, uprightWeight(viewFromVertical(ghost), knobs.fromDeg, knobs.fullDeg) * scale, scale);
+    const seen = changeSeen({ stays, wBefore: drawn ? changeWeight(keep, was.upright!.w, was.upright!.sc) : 0, wAfter, turnRad, freeMaxDeg: st.cfg.freeTurnMaxDeg });
     // ⭐⭐⭐ (§12 RB2) the hold the change asked: ONLY a turn he sees of 90° or more, the push held as he made it on the picture (`holdSeen`)
     const hold = ask.hold === undefined ? undefined : holdSeen(seen, ask.hold, drawn ? was.picture : null, drawn ? was.ghost : null);
     changeApply(st, ask, seen.timed, hold);
@@ -198,6 +201,6 @@ function uprightPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3,
   }
   const turnTw = fresh ? tw : (was?.turnTw ?? 0);
   const g = { gap: r.phi, speed: 0 };
-  st.asmRollShadow = { ghost: G, dir: line.dir, piece, held: g, free: g, turn: zm, turnTw, stays: zm !== null, tw, gizmoFree, spit: spitZone(st) !== null, freshTurn: fresh, picture: P, a2: placeError(st, G, P, piece, line), drawn: true, freed, upright: { state: r.state, w: r.w, phi: r.phi } };
+  st.asmRollShadow = { ghost: G, dir: line.dir, piece, held: g, free: g, turn: zm, turnTw, stays: zm !== null, tw, gizmoFree, spit: spitZone(st) !== null, freshTurn: fresh, picture: P, a2: placeError(st, G, P, piece, line), drawn: true, freed, upright: { state: r.state, w: r.w, phi: r.phi, sc: r.sc } };
   return P;
 }
