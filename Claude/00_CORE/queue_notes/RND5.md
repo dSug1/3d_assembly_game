@@ -757,3 +757,6 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   a ratchet, an amendment the frames asked for) behind ONE switch `uprightKeepRoll` (1; 0 = `74a247e` frame for frame): the circle gone (B2 74 → 3), the
   jitter at a pole 16 → 9 arrivals; but the half turn still once a pass, the dy hold over a ridge far out gone (`z_far` 0 frames held, 100 / 104 before),
   gravity tilted 29.4 % (21.7) and ~30 % on the replays (~1 %), R7 worse → `UPRIGHT_PICTURE.md` §16 (what §15 assumed and the frames refute).
+* **2026-11-19, evening — the V1 fix round measured (`ca4a4ae`, local), ⛔ gates failed; the branch closed as the record.** Gravity back at the
+  defaults' level (21.9 %), the circle still gone (B2 3), but the half turn once a pass, the jitter 14 of 23 arrivals, R7 16.0°, the dy hold late on
+  `z_far` (97 – 103 mm past the edge) and none on `b_far` → `UPRIGHT_PICTURE.md` §17. The owner: the rebuild starts again from `1.0.148b-` on `1.0.148d-`.

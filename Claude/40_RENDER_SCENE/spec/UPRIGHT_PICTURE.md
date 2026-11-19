@@ -403,55 +403,9 @@ night leaves the time for it and for an independent re-test. If that re-test fin
   the hold walks as round 2's; R7 not over 14.9°; the identities (`uprightPicture` 0, `freeTurnMaxDeg` 0, and `uprightMaxDegS` 0 with
   `uprightBandFree` 0 = `e653099`); `npm run verify`.
 
-## 11. Fix round 3 as built and measured (the builder, 2026-11-19, early morning; local commits, nothing pushed)
+## 11. Fix round 3 as built and measured — MOVED
 
-**The result first.** The carry is the logic's twist undone (UD6c) and a freed change never holds (UD11b). On his ten stretches no frame turns
-the camera by more than 90° (round 2: one of 98°), the finger's way improves to **13.4°** median (round 2: 14.9°; `1.0.147-`: 12.1°), the dy hold
-is round 2's on every hold walk. ⚠ At the old pace (1 440° a second) the new carry let gravity tilt more (over 20°: 9.6 %, its roll 69.5° a metre
-— over the round's limits): **the rest's pace is now 1 800° a second** (7.8 %, 58.8°).
-
-### 11.1 What was built
-
-| commit | kind | what |
-|---|---|---|
-| `fb80fd0` | C | **T1, UD6c** — `uprightPaced`: `φ − c·τ`, `τ` = `twistAbout` of the logic's pose about the framed line over the frame, read by the law from its own state (`gp`, last frame's pose); `c = min(w, w before)`, 1 on a freed frame and a timed turn's first frame (`whole`; F2 and F3 one rule); the rest as before. 5 vectors, 6 mutants red |
-| `f1f9b55` | C | **T2, UD11b** — `uprightHoldKept(freed)`: every freed change drops its hold, inside the band too; timed turns keep theirs. 1 mutant red |
-| `4d4f658` | C | `uprightMaxDegS` **1 800** by default (the figures below); its two pins moved |
-
-### 11.2 The gates (his ten stretches far out, 60 frames a second, at the default unless said)
-
-| gate | now (1 800) | 1 440 | 2 160 | round 2 | `1.0.147-` | verdict |
-|---|---|---|---|---|---|---|
-| frames over 90° | 0 | 0 | 0 | 1 | 0 | ✅ |
-| frames 45 – 90° (aim under 27) | 47 | 22 | 97 | 55 | 5 | ⚠ under round 2, not under half |
-| gravity over 20° (limit 9.3 %) | 7.8 % | 9.6 % | 6.3 % | 7.3 % | 35.4 % | ✅ |
-| gravity's roll a metre (limit 62.2°) | 58.8° | 69.5° | 58.3° | 57.2° | 101.5° | ✅ |
-| frames held a metre | 1.6 | 1.6 | 1.8 | 1.4 | 2.7 | ✅ |
-| R7 away from the vertical, median / p95 | 13.4 / 71.9 | 13.1 / 64.9 | 13.5 / 77.6 | 14.9 / 83.6 | 12.1 / 61.1 | ✅ |
-| hold walks | as round 2 on all 28 sub-walks; refused both ways nowhere | | | | | ✅ |
-| 143 frames a second (`ilmj_23s`) | 0 errors, largest camera turn 46° | | | 43° | | ✅ |
-| identities | `uprightPicture` 0 = `7bcae02` and `freeTurnMaxDeg` 0 = `6f47219`: the `Scene_1` replay 2 794 / 2 794 and `ilmj_23s` 886 / 886 identical. ⛔ `uprightMaxDegS` 0 + `uprightBandFree` 0 against `e653099`: differs from frame 3 – 6 (§11.3) | | | | | ✅ two; ⛔ the third |
-| `Scene_1` over its top | 169 frames, 632°, no reversal, 0 errors | | | 169 | 168 | ✅ |
-| level entry, `Scene_0`'s bottom close in | 0 errors, drift 0 | | | | | ✅ |
-
-### 11.3 What the frames say
-
-* **The default**: at 1 440° a second the upright's own swing (the view passing near the vertical, now through the rest) lags: gravity over 20°
-  9.6 %, its roll 69.5° a metre. 1 800 meets both limits with 47 frames of 45 – 90°; 2 160 halves the tilt but doubles those frames (97). The figures
-  support **1 800**. The assumption of §10 the frames refute: that the rest at 1 440° a second would leave the picture "still exactly upright" on his
-  paths — at his pace the upright's own turn often runs over 24° a frame.
-* **The identity with `e653099`** (`uprightMaxDegS` 0 + `uprightBandFree` 0) no longer holds, from frame 3 of the replays and 6 of `ilmj_23s`.
-  Not T1: with `uprightMaxDegS` 0 the law returns before the new carry. Round 2's deliberate changes act there — the finger's mirror fixed (wherever
-  the picture is turned from the logic's pose, from the start: the rest made upright, UD5) and the holds dropped (UD11, UD11b). Round 2 did not run
-  this identity. The two switches that give back earlier games whole (`uprightPicture` 0, `freeTurnMaxDeg` 0) still do.
-* **R7**: under UD11b the frames right after a freed change no longer hold the dy; 13.4° median (round 2: 14.9°).
-
-### 11.4 What he will feel
-
-Far out the scene stays upright; the rare flick of the whole view over a ridge is gone (none over 90°). The finger steers closer to his way than last
-night. Over a top the floor rights itself in about a tenth of a second (1 800° a second). After a crossing he does not see turn, no hold.
-**Slider**: ☰ › ORBIT › UPRIGHT PICTURE, *the rest to upright, its pace* — 1 800 now (1 440 is calmer frame to frame, tilts more; 2 160 the reverse).
-**Not run**: the corner loops, the stretches at 0.736, close in, the straight dy walks; `ogse_3s` at 143 frames a second.
+⭐ (2026-11-19, packet V1-fix, for the 800-line cap) moved whole, unchanged → [`../history/2026-11-19_upright_fix_round_3_moved.md`](../history/2026-11-19_upright_fix_round_3_moved.md).
 
 ## 12. Root or patch? The audit — and THE REBUILD as briefed (the lead, 2026-11-19, 05:50; ⭐ for his review)
 
@@ -786,3 +740,40 @@ changes.
 * V1-c — the next study, from the root of §16.4: whether the one half turn should be decided as a TURN (timed at its own pace, the gizmo held,
   the push held — T5, T9) at the moment the kept roll and upright part by 90° or more, instead of paced by the view; and whether the kept roll
   should hold only within `uprightFromDeg` of the vertical, upright in the rest of the band.
+
+## 17. The V1 fix round as built and measured (`ca4a4ae`, 2026-11-19, afternoon; local, nothing pushed) — ⛔ GATES FAILED; superseded by `1.0.148d-`
+
+**The result first.** The fix round answered §16's audit with one rule in the law: the kept roll held only within `uprightFromDeg` (15°) of the
+vertical, the picture upright in the rest of the band; the pass's one half turn opens whole where the view leaves 15°, a turn decided once (RB3:
+the gizmo held, the push held), its side kept; `25b82ae`'s ratchet removed. Gravity is back at the defaults' level and the circle stays gone, but
+the quick half turn is still once a pass, the jitter at a pole is back at the defaults' level, the finger's angle is worse, and the dy hold is late
+on `z_far` and missing on `b_far`. The batch ran 15:13 – 16:02; its builder wrote its checkpoint up to the hold walks only — the rest read by the
+lead (16:40, the kit's `fo3/vertical/fix/rd_rest.sh`, `same.mjs`).
+
+| gate (his ten stretches, `Scene_0bis`, far out, 60 frames a second, unless said) | fix (`ca4a4ae`) | V1 (`25b82ae`) | defaults (`74a247e`) | `6f47219` |
+|---|---|---|---|---|
+| B2, the circle (turns of 90°+ in the level plane, unasked) | 3 | 3 | 74 | 81 |
+| B1 bursts entry / exit / elsewhere · passes with more than one | 6 / 169 / 3 · 9 | 6 / 164 / 3 · 14 | 7 / 161 / 2 · 11 | 2 / 115 / 3 · 14 |
+| A, jitter at a pole (arrivals) | 14 of 23 | 9 of 24 | 16 of 26 | 18 of 45 |
+| frames turning the camera over 90° / 45 – 90° | 0 / 6 | 0 / 7 | 1 / 27 | 0 / 5 |
+| gravity over 20° · its roll a metre | 21.9 % · 89.4° | 29.4 % · 107.6° | 21.7 % · 88.8° | 35.4 % · 101.5° |
+| R7 away from the vertical, median / p90 | 16.0° / 72.7° | 15.7° / 71.3° | 14.3° / 65.9° | 12.1° / 61.1° |
+| hold walks `z_far` | set s0 – s5, 97 – 103 mm past the edge (6f: 35 – 45); come legs still 132 of 133 frames | none | held | held |
+| hold walks `b_far` s0, s1 | no hold (the bottom face's exit applied at once, undone by the carry: nothing seen); the come crosses again after 48 / 55 frames | none | held 98 / 103 | held 98 / 103 |
+| seeded replays: gravity over 20° (heptagon / `Scene_0bis` / cube) · A | 4.7 / 4.0 / 8.7 % · 4 of 30 | 30.7 / 14.2 / 28.9 % · 3 of 24 | 0.2 / 4.5 / 1.1 % · 6 of 34 | 0.4 / 16.3 / 1.1 % · 6 of 35 |
+| `Scene_1` over its top: reversals, worst frame · level entry's walks: B2 90°+ · A | 2, 17.7° · 8 · 5 of 10 | 1, 20.9° · 4 · — | 1, 22.4° · 16 · 1 of 5 | — |
+
+Met: close in identical to the live build (6.9e-18); 143 frames a second 0 frames over 45°; `uprightPicture` 0 = `7bcae02` and `freeTurnMaxDeg` 0 =
+`6f47219` identical (three replays + `ilmj_23s`). ⚠ `uprightKeepRoll` 0 = `74a247e`: `Scene_0`, `Scene_1` identical; `Scene_0bis` 8.7e-7 from frame 3
+(not rerun); `ilmj_23s` not compared — its run crashed in `hand_replay.mjs` (no frames recorded).
+
+**What the frames say.** The hold follows the VIEW (the turn opens where the view leaves 15°, after the gizmo crossed), not the logic's crossing:
+late on `z_far`; and where the carry undoes the logic's turn nothing is seen, so RB2 sets no hold (`b_far`). On a fast approach the upright
+picture's own swing near the pole is the jitter's extra (`ogse_3s` f9 – f13: the view 39° → 1.5° from the vertical in 3 frames). ⭐ The lead's
+reading of the root: three rounds moved the conflict between TWO owners of the roll — the logic's pose with its timed turns, and the picture's
+law with its weight — from one place to another, and the holds read what the picture shows, so each change of the law moved or removed a hold.
+
+**Next — the owner, 2026-11-19, evening (verbatim):** *"start again the rebuild. use the branch 1.0.148b- as clean start and take the lessons
+learned from branch 1.0.148c- to do a new rebuild in branch 1.0.148d- by addressing the logic failure root causes. Do prototyping of your rebuild
+to check if all you have listed (circle, quick 180 degree roll, jitter, dy hold, etc.) is fixed."* — *"also use the information from branch
+1.0.149-"*. This branch stays as the record; nothing of it is deployed; `74a247e` (his defaults) is carried to `1.0.148d-`.
