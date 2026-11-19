@@ -340,7 +340,7 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`)", () => {
   it("⭐ the gizmo held while the turn runs: `tiltClampStep` refuses an orbit step while `asmZoneMix` is short of whole (no second hold added)", () => {
     const h = fnSource(W, "export function tiltClampStep(");
     // ⭐ (2026-11-15, step 2.4c) a turn not paced (`byMm` — the automatic tilt's entry made pending, `chartLayout` 1 only) is held while short of whole, as before
-    expect(h).toContain("const zoneTurning = (zm !== null && turnHoldsGizmo(zm.out !== undefined, zm.byMm === true, st.asmTiltPending, st.asmBlend !== null, zm.k)) || lawHalfTurn(st.asmRollShadow?.upright?.state);"); // ⭐ (2026-11-16, step C3) the rule in `turnHoldsGizmo`: as before for every turn but the way out paced by the finger
+    expect(h).toContain("const zoneTurning = (zm !== null && turnHoldsGizmo(zm.out !== undefined, zm.byMm === true, st.asmTiltPending, st.asmBlend !== null, zm.k)) || lawHalfTurn(st.asmRollShadow?.upright?.state ?? st.asmRollShadow?.one?.state);"); // ⭐ (2026-11-16, step C3) the rule in `turnHoldsGizmo`: as before for every turn but the way out paced by the finger
     expect(h).toContain("if (zoneTurning && (st.orbit.yaw !== yaw0 || st.orbit.elevation !== v0)) { st.orbit.reset(yaw0, v0); return true; }");
   });
 });

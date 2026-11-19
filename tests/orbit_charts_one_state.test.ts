@@ -312,7 +312,7 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): ONE STATE (⛔ the
     before(a, "if (st.asmTiltAuto && st.asmTilt === null) tiltOn(st,", "seamTurnFrame(st, dtMs);");
     before(a, "seamTurnFrame(st, dtMs);", "const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };");
     const h = fnSource(W, "export function tiltClampStep(");
-    expect(h).toContain("const zoneTurning = (zm !== null && turnHoldsGizmo(zm.out !== undefined, zm.byMm === true, st.asmTiltPending, st.asmBlend !== null, zm.k)) || lawHalfTurn(st.asmRollShadow?.upright?.state);"); // ⭐ (2026-11-16, step C3) the rule in `turnHoldsGizmo`: as before for every turn but the way out paced by the finger
+    expect(h).toContain("const zoneTurning = (zm !== null && turnHoldsGizmo(zm.out !== undefined, zm.byMm === true, st.asmTiltPending, st.asmBlend !== null, zm.k)) || lawHalfTurn(st.asmRollShadow?.upright?.state ?? st.asmRollShadow?.one?.state);"); // ⭐ (2026-11-16, step C3) the rule in `turnHoldsGizmo`: as before for every turn but the way out paced by the finger
     expect(h).toContain("if (!turning && (tl === null || !(tl.exit || tl.off))) return false;");
     expect(h).not.toContain("tiltUnderWay(");
   });
