@@ -747,3 +747,9 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   gravity's roll a metre of gizmo travel 56.4° / 101.5° / 127.3°; frames turning the whole camera by more than 90° at once 0 / 0 / 0, by 45 – 90° 51 / 5 / 8; the finger's angle against the gizmo's way, median 14.7° / 12.1° / 14.3°;
   the picture rolling a third of a turn and back near the vertical 7 / 0 / 0 (the one conflict left); the dy hold as `1.0.147-`'s. `npm run verify`: 170 files, 2173 vectors. The record: `UPRIGHT_PICTURE.md` §12 – §14.
   **Next** (option 3): the logic's own camera upright at the source far out, no pose carried upside down, the half turn once; his T4, T7, T9 and the charts' rule move together. On a NEW branch `1.0.149-Upright_at_the_source`; first an offline study in his four parts, nothing built before his word on its decisions.
+* **2026-11-19 (noon), branch `1.0.148c-Upright_near_the_vertical` (from `8d18262`), packet V1** — the owner's defaults (`74a247e`: `uprightMaxDegS`
+  720, `uprightFromDeg` 15, `uprightFullDeg` 50; both switches frame for frame; 2 174 vectors) and his two symptoms MEASURED on his ten stretches:
+  the circle is the crossing's timed half turn near the vertical, shown whole because law U's carry weight `min(w, w before)` is 0 there (115
+  crossings, the picture turning 154° on average); the rapid 180° roll is law U's own rest back to the logic's pose (118 at 1 800°/s, 67 at 720);
+  the jitter at a pole is that same turn starting, held and released. The rule to build (V1, nothing built): near the vertical the picture keeps the
+  roll it arrives with, the logic's twist undone whole at every view, the one half turn paid on the way out → `UPRIGHT_PICTURE.md` §15.

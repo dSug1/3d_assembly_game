@@ -533,3 +533,7 @@ node scripts/probes/gravity_read.mjs <rec.json> ...          # JSON=1: one objec
   `audit/t_read.mjs` (`ALL=1`), `rebuild/big_frames.mjs` (the 45° frames by cause), `rebuild/pic_turns.mjs` (holds against the turn SEEN); RB4's
   offline proof `rebuild/rb4.mjs` (`w` off the camera's view against off the piece's direction); the straight dy `upright/dy_glass.mjs`; the identities
   `scripts/probes/replay_cmp.mjs` (replays) and the kit's `same.mjs` (a stretch). The driver `rebuild/drv_rb.sh`, `drv_rb2.sh`.
+* **Near the vertical** (`UPRIGHT_PICTURE.md` §15, packet V1): the kit's `fo3/vertical/vb.mjs` (B1, B2, A by events: the view crossing 45°, the
+  level face carried or dropped, an arrival within 4° of the vertical; `V=1` a line an event, `SUM=1` the totals), `turns.mjs` (every timed turn:
+  entry / exit / crossing, near or far from the vertical, the logic's turn about the view against the picture's, law U's fast rolls), `vt.mjs` (a line
+  a frame); the driver `fo3/vertical/drv_v1.sh` (the upright batches, then the two identities).
