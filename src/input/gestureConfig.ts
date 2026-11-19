@@ -24,7 +24,7 @@
  */
 import { distanceTurningPoints } from "./orbit";
 import { FREE_TURN_MAX_DEG, ROLL_FOLLOW_MS } from "./roll_follow";
-import { UPRIGHT_FROM_DEG, UPRIGHT_FULL_DEG, UPRIGHT_MAX_DEG_S } from "./upright";
+import { UPRIGHT_DEAD_DEG, UPRIGHT_FROM_DEG, UPRIGHT_FULL_DEG, UPRIGHT_MAX_DEG_S } from "./upright";
 
 export const CAMERA_NEAR_PLANE_M = 0.01;
 
@@ -422,6 +422,13 @@ export interface GestureConfig {
   /** ⭐ (UD6b, fix round 1) the pace of the picture's REST toward upright, everywhere (deg a second; 0 = at once: law U as first built); the carry of the
    * logic's own roll is at once whatever this is (0 – 2 880) */
   uprightMaxDegS: number;
+  /** ⭐⭐⭐ (2026-11-19, `UPRIGHT_ONE_POSE.md` — packet D) ONE POSE (1): the picture IS the logic's pose, one owner of its up, the pass's one half turn at the
+   * logic's crossing; 0: law U as at `c3a8ba6`. Acts only with `freeTurnMaxDeg` > 0 and `uprightPicture` 1 */
+  uprightOnePose: number;
+  /** ⭐ (OP6) one pose's dead band on the picture near the vertical, far out (deg; 0 = none) (0 – 30) */
+  uprightDeadDeg: number;
+  /** ⭐ (OP7) one pose: the gizmo held while 90° or more of a half turn is left (1); 0: never held by it */
+  uprightHalfHold: number;
   /** ⭐⭐⭐ (2026-11-10, POLAR_ORBIT_CLEANUP.md §9.4 — the owner's TILTED POLE) a press on a cap tilts the orbit so the cap is a side (1); off (0): the polar cap as before. ⛔ (2026-11-15, the owner: *"cancel my rule and remove the press action on the orbit"*) no press tilts: 1 the automatic tilt close in (`tiltAutoM`), 0 none. */
   tiltedPole: number;
   /** ⭐⭐⭐ (2026-11-10, the owner: *"limit the speed of the scene tilt at crossing"* → *"one speed for every tilt"*) EVERY tilt — the roll back to upright, the swing of a tilt just made — at this speed (°/s; 0: at once) — ⛔ `tiltRollMinMs` (a whole roll in 250 ms whatever its size) replaced. */
@@ -887,6 +894,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   uprightFromDeg: UPRIGHT_FROM_DEG, // ⭐ (UD1; the owner 2026-11-19) 15°
   uprightFullDeg: UPRIGHT_FULL_DEG, // ⭐ (UD1; the owner 2026-11-19) 50°
   uprightMaxDegS: UPRIGHT_MAX_DEG_S, // ⭐ (UD6b; the owner 2026-11-19) 720° a second, everywhere
+  uprightOnePose: 1, // ⭐⭐⭐ (2026-11-19, `UPRIGHT_ONE_POSE.md`, packet D) one pose on this branch; 0 = law U (`c3a8ba6`)
+  uprightDeadDeg: UPRIGHT_DEAD_DEG, // ⭐ (OP6) 10°
+  uprightHalfHold: 1, // ⭐ (OP7) the gizmo held while 90° or more of a half turn is left
   gizmoEaseMs: 45, // ⭐⭐ (2026-11-04, the owner: *"update the lag the gizmo's position the piece follows to 45ms"*; 62, 55 before, the former GIZMO_TAU_MS 90)
   orbitSpringMs: 30, // ⭐⭐ (2026-11-04) the former boxSmoothMs / 2 for the orbit's spring
   tiltedPole: 1, // ⭐⭐⭐ (2026-11-10, §9.4) the tilted pole on
@@ -1071,6 +1081,9 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.uprightFromDeg >= 0 && cfg.uprightFromDeg <= 45)) throw new Error(`uprightFromDeg (${cfg.uprightFromDeg}) must be in [0, 45] deg.`);
   if (!(cfg.uprightFullDeg >= 0 && cfg.uprightFullDeg <= 60)) throw new Error(`uprightFullDeg (${cfg.uprightFullDeg}) must be in [0, 60] deg (at or under \`uprightFromDeg\`: a step there).`);
   if (!(cfg.uprightMaxDegS >= 0 && cfg.uprightMaxDegS <= 2880)) throw new Error(`uprightMaxDegS (${cfg.uprightMaxDegS}) must be in [0, 2880] deg a second.`);
+  if (cfg.uprightOnePose !== 0 && cfg.uprightOnePose !== 1) throw new Error(`uprightOnePose (${cfg.uprightOnePose}) must be 0 or 1.`);
+  if (!(cfg.uprightDeadDeg >= 0 && cfg.uprightDeadDeg <= 30)) throw new Error(`uprightDeadDeg (${cfg.uprightDeadDeg}) must be in [0, 30] deg.`);
+  if (cfg.uprightHalfHold !== 0 && cfg.uprightHalfHold !== 1) throw new Error(`uprightHalfHold (${cfg.uprightHalfHold}) must be 0 or 1.`);
   if (cfg.freeEntryUpright !== 0 && cfg.freeEntryUpright !== 1) throw new Error(`freeEntryUpright (${cfg.freeEntryUpright}) must be 0 or 1.`);
   if (!(cfg.edgeHoldMm >= 0 && cfg.edgeHoldMm <= 200)) throw new Error(`edgeHoldMm (${cfg.edgeHoldMm}) must be in [0, 200] mm.`);
   if (!(cfg.approachPinchGain > 0 && cfg.approachPinchGain <= 10)) throw new Error(`approachPinchGain (${cfg.approachPinchGain}) must be in (0, 10].`);

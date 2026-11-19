@@ -224,7 +224,7 @@ describe("RB1 — ONE OWNER PER CHANGE (UPRIGHT_PICTURE.md §12, the rebuild): e
     expect(up).toContain("if (r.halfStart > 0 && st.asmEdgeHold === null && st.asmG !== null && was !== null) {");
     expect(up).toContain("st.asmEdgeHold = holdSeen({ timed: true, seenRad: r.halfStart }, sign === 1 ? 1 : sign === -1 ? -1 : 0, was.picture, was.ghost);");
     // ⭐ (RB3) T5's one reader holds the gizmo while the law's half turn closes — no second mechanism
-    expect(aw).toContain("const zoneTurning = (zm !== null && turnHoldsGizmo(zm.out !== undefined, zm.byMm === true, st.asmTiltPending, st.asmBlend !== null, zm.k)) || lawHalfTurn(st.asmRollShadow?.upright?.state);");
+    expect(aw).toContain("const zoneTurning = (zm !== null && turnHoldsGizmo(zm.out !== undefined, zm.byMm === true, st.asmTiltPending, st.asmBlend !== null, zm.k)) || lawHalfTurn(st.asmRollShadow?.upright?.state ?? st.asmRollShadow?.one?.state);"); // ⭐ (2026-11-19, packet D) one pose's half turn read by the same one reader
     expect(aw.match(/lawHalfTurn\(/g)?.length).toBe(1);
     expect((up.match(/changeSeen\(/g) ?? []).length).toBe(1);
     expect((up.match(/changeApply\(/g) ?? []).length).toBe(1);
@@ -345,5 +345,54 @@ describe("RB2 — THE HOLD IS A DIRECTION ON THE PICTURE'S GLASS (UPRIGHT_PICTUR
     expect(pw).not.toContain("edgeHoldDy(");
     const rs = readFileSync("src/render/roll_shadow.ts", "utf8");
     expect(rs).toContain("const hold = ask.hold === undefined ? undefined : holdSeen(seen, ask.hold, drawn ? was.picture : null, drawn ? was.ghost : null);");
+  });
+});
+
+describe("ONE POSE's wiring (UPRIGHT_ONE_POSE.md §5, packet D) — read in the source", () => {
+  const raw = (f: string) => readFileSync(f, "utf8").replace(/\r\n/g, "\n");
+  const aw = raw("src/render/assembly_wiring.ts");
+  const rs = raw("src/render/roll_shadow.ts");
+  const fn = (s: string, sig: string): string => {
+    const i = s.indexOf(sig);
+    expect(i, sig).toBeGreaterThanOrEqual(0);
+    return s.slice(i, s.indexOf("\n}\n", i) + 3);
+  };
+  it("the switch: one pose only with freeTurnMaxDeg over 0 and uprightPicture 1, before law U's branch; its defaults and ranges", () => {
+    const rp = fn(rs, "export function rollPictureFrame(");
+    const i1 = rp.indexOf("if (st.cfg.uprightPicture === 1 && st.cfg.uprightOnePose === 1) return onePoseFrame(st, piece, eye, look, up, dtMs, ghost, sq, tiltHold);");
+    expect(i1).toBeGreaterThan(rp.indexOf("if (!(maxDeg > 0)) {"));
+    expect(i1).toBeLessThan(rp.indexOf("if (st.cfg.uprightPicture === 1) return uprightPictureFrame("));
+    expect([DEFAULT_CONFIG.uprightOnePose, DEFAULT_CONFIG.uprightDeadDeg, DEFAULT_CONFIG.uprightHalfHold]).toEqual([1, 10, 1]);
+    for (const bad of [{ uprightOnePose: 2 }, { uprightDeadDeg: 31 }, { uprightDeadDeg: -1 }, { uprightHalfHold: 0.5 }]) expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, ...bad })).toThrow();
+  });
+  it("OP2: the change resolved ONCE by WHO OWNS THE ROLL (the square camera's complement before and after), never the view's angle; before the logic's pose is drawn", () => {
+    const op = fn(rs, "function onePoseFrame(");
+    expect(op).toContain("const kappa = st.cfg.uprightCloseIn === 1 ? 1 : 1 - share;");
+    expect(op).toContain("const seen = changeSeen({ stays, wBefore: drawn ? was.one!.kappa : 0, wAfter: kappa, turnRad, freeMaxDeg: st.cfg.freeTurnMaxDeg });");
+    expect(op.match(/changeSeen\(/g)?.length).toBe(1);
+    expect(op.match(/changeApply\(/g)?.length).toBe(1);
+    expect(op.indexOf("changeApply(")).toBeLessThan(op.indexOf("const G = zoneMixPose(st, piece, eye, look, up);"));
+    expect(op).not.toMatch(/uprightWeight\(|viewFromVertical\(|uprightStep\(|asmZoneMix =|asmDirEase =/);
+  });
+  it("OP4 – OP8: one writer of the up (upOne, the change's frame its moment); the push held only when its half turn opens, the timed change's on the one glass", () => {
+    const op = fn(rs, "function onePoseFrame(");
+    expect(op.match(/upOne\(/g)?.length).toBe(1);
+    expect(op).toContain("const r = upOne(was?.one?.state ?? ONE_REST, G, line, dtMs, knobs, kappa, change);");
+    expect(op).toContain("const P = poseRolled(G, line, r.phi);");
+    expect(op.match(/asmEdgeHold =(?!=)/g)?.length).toBe(1);
+    expect(op).toContain("if (change && crossed !== undefined) st.asmEdgeHold = r.halfStart > 0 ? holdAtCrossing(crossed) : null;");
+    expect(op).toContain("changeApply(st, ask, seen.timed, seen.timed && ask.hold !== undefined ? holdSeen(seen, ask.hold, null, null) : undefined);");
+    expect(op).not.toMatch(/holdOnPicture\(|fingerOnLogic\(/);
+  });
+  it("OP1: the picture is READ — the finger's frame and the silent entry's picture are P's; the finger never converted; a turn starts from the logic's last pose", () => {
+    const op = fn(rs, "function onePoseFrame(");
+    expect(op).toContain("if (l > 1e-12) st.asmCamLast = { dir: [d[0] / l, d[1] / l, d[2] / l], up: P.up };");
+    expect(op).toContain("if (lv > 1e-9) st.asmSpitPic = { u: sp.u, up: [v[0] / lv, v[1] / lv, v[2] / lv] };");
+    expect(op).toContain("one: { state: r.state, w: r.w, phi: r.phi, kappa, halfStart: r.halfStart, holding: r.holding, change } };");
+    expect(op).not.toContain("upright: {");
+    expect(fn(aw, "export function fingerAtEntry(")).toContain("sh.upright !== undefined ?");
+    expect(fn(aw, "export function fingerAtEntry(")).not.toContain("sh.one");
+    const ps = fn(aw, "function poseShown(");
+    expect(ps.indexOf("if (sh !== null && sh.one !== undefined) return { eye: sh.ghost.eye, look: sh.ghost.look, up: sh.ghost.up, piece: st.asmPieceDrawn };")).toBeGreaterThan(0);
   });
 });

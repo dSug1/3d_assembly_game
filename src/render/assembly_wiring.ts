@@ -1594,6 +1594,8 @@ function poseShown(st: SceneState): CamPose {
   // ⭐⭐⭐ (2026-11-18, `UPRIGHT_PICTURE.md` §2 step 3 — law U) the picture is a function of the logic's pose: a turn starts from the LOGIC's last pose (`G`),
   // so its first frame draws exactly last frame's picture (from the picture drawn, law U would turn it once more inside the band)
   const sh = st.asmRollShadow;
+  // ⭐⭐⭐ (2026-11-19, `UPRIGHT_ONE_POSE.md` OP1) one pose: a turn (close in) starts from the logic's last pose too — the picture is that pose turned by φ
+  if (sh !== null && sh.one !== undefined) return { eye: sh.ghost.eye, look: sh.ghost.look, up: sh.ghost.up, piece: st.asmPieceDrawn };
   if (sh !== null && sh.upright !== undefined) return { eye: sh.ghost.eye, look: sh.ghost.look, up: sh.ghost.up, piece: st.asmPieceDrawn };
   const c = st.camera;
   const t = c.getTarget();
@@ -1716,7 +1718,7 @@ export function tiltClampStep(st: SceneState, yaw0: number, v0: number): boolean
   const zm = st.asmZoneMix;
   // ⭐⭐⭐ (2026-11-16, step C3) …the way out paced by the finger (`out`) never (`turnHoldsGizmo`)
   // ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §12 RB3) …and while law U closes its own half turn (`lawHalfTurn`: a turn the player sees, as any other)
-  const zoneTurning = (zm !== null && turnHoldsGizmo(zm.out !== undefined, zm.byMm === true, st.asmTiltPending, st.asmBlend !== null, zm.k)) || lawHalfTurn(st.asmRollShadow?.upright?.state);
+  const zoneTurning = (zm !== null && turnHoldsGizmo(zm.out !== undefined, zm.byMm === true, st.asmTiltPending, st.asmBlend !== null, zm.k)) || lawHalfTurn(st.asmRollShadow?.upright?.state ?? st.asmRollShadow?.one?.state);
   if (zoneTurning && (st.orbit.yaw !== yaw0 || st.orbit.elevation !== v0)) {
     st.orbit.reset(yaw0, v0);
     return true;
