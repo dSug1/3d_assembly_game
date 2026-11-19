@@ -177,7 +177,7 @@ function uprightPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3,
   const P = poseRolled(G, line, r.phi);
   // ⭐⭐⭐ (2026-11-19, §8 UD11 — fix round 2) a hold belongs to a turn the player SEES: the hold this change set (`crossTurn` replaces any hold at the change)
   // dropped where the change is freed with the picture fully upright at both its ends and nothing left to close — the same push goes on, a come-back at once
-  if (st.asmEdgeHold !== null && !uprightHoldKept(freed > 0, was?.upright?.w ?? 0, r.w, r.closed)) st.asmEdgeHold = null;
+  if (st.asmEdgeHold !== null && !uprightHoldKept(freed > 0)) st.asmEdgeHold = null; // ⭐ (fix round 3, UD11b) every freed change
   const turnTw = fresh ? tw : (was?.turnTw ?? 0);
   const g = { gap: r.phi, speed: 0 };
   st.asmRollShadow = { ghost: G, dir: line.dir, piece, held: g, free: g, turn: zm, turnTw, stays: zm !== null, tw, gizmoFree, spit: spitZone(st) !== null, freshTurn: fresh, picture: P, a2: placeError(st, G, P, piece, line), drawn: true, freed, upright: { state: r.state, w: r.w, phi: r.phi } };

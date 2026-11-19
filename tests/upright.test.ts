@@ -396,13 +396,10 @@ describe("no root: held", () => {
 });
 
 describe("UD11 — a hold belongs to a turn the player sees (fix round 2, UPRIGHT_PICTURE.md §8): `uprightHoldKept`, and law U's `closed`", () => {
-  it("dropped only where the change is FREED, the picture fully upright at both ends (w 1 before and after), nothing left to close", () => {
-    expect(uprightHoldKept(true, 1, 1, true)).toBe(false);
-    expect(uprightHoldKept(false, 1, 1, true)).toBe(true); // a timed turn: 1.0.147-'s hold
-    expect(uprightHoldKept(true, 0.99, 1, true)).toBe(true); // in the band before: the picture follows the logic part of the way
-    expect(uprightHoldKept(true, 1, 0.5, true)).toBe(true);
-    expect(uprightHoldKept(true, 1, 1, false)).toBe(true); // a rest still to close: the picture still turns
-    expect(uprightHoldKept(true, 0, 0, true)).toBe(true); // at the vertical: the picture is the logic's pose, it turns with it
+  it("(round 3, UD11b) dropped wherever the change is FREED, in the band too; kept for a timed turn", () => {
+    // ⭐ (fix round 3, UD11b) every freed change drops its hold, inside the band too; a timed turn keeps 1.0.147-'s hold
+    expect(uprightHoldKept(true)).toBe(false);
+    expect(uprightHoldKept(false)).toBe(true);
   });
   it("closed: a change of 180° at w 1 carried (the picture where it was) is closed; a band crossed with α near 180° leaves a rest (not closed) until it is", () => {
     const K6 = { ...K, maxDegS: 720 };

@@ -142,8 +142,11 @@ export function uprightStep(s: UprightState, pose: CamPose, line: FramedLine, dt
  * nothing left to close (`closed`) — there the picture does not turn (the carry keeps it upright), the same push goes on in the world and only a come-back
  * would be held. Measured (fix round 2, his stretches): 51 of 104 holds set were such. Any other change keeps its hold (`1.0.147-`'s rule).
  */
-export function uprightHoldKept(freed: boolean, wBefore: number, wAfter: number, closed: boolean): boolean {
-  return !(freed && wBefore >= 1 && wAfter >= 1 && closed);
+export function uprightHoldKept(freed: boolean): boolean {
+  // ⭐⭐⭐ (2026-11-19, §10 UD11b — fix round 3) A FREED CHANGE NEVER HOLDS: freed, the picture turns by less than 90° (under `freeTurnMaxDeg`) or not at
+  // all (`w` 1) — the push that crossed never goes back; inside the band too. ⛔ (round 2) only `w` 1 at both ends with nothing left to close: the holds
+  // of the changes freed in the band kept R7 over `1.0.147-`'s for a third of a second after them. The turns that stay timed keep theirs.
+  return !freed;
 }
 
 /**
