@@ -190,7 +190,8 @@ describe("UD4b — no stop under freeTurnMaxDeg near the vertical (`uprightBandF
   const rs = readFileSync("src/render/roll_shadow.ts", "utf8");
   it("FO3's rule at any w first; the freed frame's twist of G about the framed line handed to law U as a whole carry", () => {
     expect(rs).toContain("if (st.cfg.uprightBandFree === 1 && was.upright !== undefined && turnIsFree(whole, maxDeg)) return true;");
-    expect(rs).toContain("const freedTwist = (freed > 0 || fresh) && st.cfg.uprightBandFree === 1 && was !== null && was.upright !== undefined ? tw : null;");
+    // ⭐ (fix round 2) F3 (a timed turn's first frame, `fresh`) carried by the twist whatever `uprightBandFree`; the freed frame (UD4b) only with it at 1
+    expect(rs).toContain("const freedTwist = (fresh || (freed > 0 && st.cfg.uprightBandFree === 1)) && was !== null && was.upright !== undefined ? tw : null;");
     expect(rs).toContain("const r = uprightStep(was?.upright?.state ?? UPRIGHT_REST, G, line, dtMs, knobs, scale, freedTwist);");
     expect(rs).toContain("const tw = was === null ? 0 : twistAbout(was.ghost, G, line.dir);");
   });
@@ -206,7 +207,7 @@ describe("UD4b — no stop under freeTurnMaxDeg near the vertical (`uprightBandF
 });
 
 describe("law U's sliders (ORBIT › UPRIGHT PICTURE)", () => {
-  it("uprightPicture 1, uprightCloseIn 0, the band 5 – 25°, the rest at 720° a second (UD6b); their ranges", () => {
+  it("uprightPicture 1, uprightCloseIn 0, the band 5 – 25°, the rest at 1 440° a second (UD6b, fix round 1); their ranges", () => {
     expect([DEFAULT_CONFIG.uprightPicture, DEFAULT_CONFIG.uprightCloseIn, DEFAULT_CONFIG.uprightFromDeg, DEFAULT_CONFIG.uprightFullDeg, DEFAULT_CONFIG.uprightMaxDegS]).toEqual([1, 0, 5, 25, 1440]);
     for (const k of ["uprightPicture", "uprightCloseIn"] as const) {
       for (const v of [0, 1]) expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, [k]: v })).not.toThrow();

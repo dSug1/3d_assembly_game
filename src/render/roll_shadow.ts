@@ -169,7 +169,9 @@ function uprightPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3,
   // picture keeps its roll across it (well defined at the vertical, where α is not); the rest then closes at `uprightMaxDegS`
   // ⭐⭐⭐ (fix round 1, F3 — measured: 3 – 5 one-frame flips left on his hand) and on a TIMED turn's first frame too (`fresh`): there the logic's view
   // jumps 33 – 54° across the band and its `Δα` (not a roll) was carried at `c` = 0.69 – 1 — 100 – 140° of the picture in one frame
-  const freedTwist = (freed > 0 || fresh) && st.cfg.uprightBandFree === 1 && was !== null && was.upright !== undefined ? tw : null;
+  // ⭐ (fix round 2) F3 no longer behind `uprightBandFree` (it is not UD4b): a timed turn's first frame carried by the twist with the band's switch at 0 too
+  // (`uprightMaxDegS` 0 — with `uprightBandFree` 0 the identity with e653099 — ignores the carry: the rest closes at once)
+  const freedTwist = (fresh || (freed > 0 && st.cfg.uprightBandFree === 1)) && was !== null && was.upright !== undefined ? tw : null;
   const r = uprightStep(was?.upright?.state ?? UPRIGHT_REST, G, line, dtMs, knobs, scale, freedTwist);
   const P = poseRolled(G, line, r.phi);
   // ⭐⭐⭐ (2026-11-19, §8 UD11 — fix round 2) a hold belongs to a turn the player SEES: the hold this change set (`crossTurn` replaces any hold at the change)

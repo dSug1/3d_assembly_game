@@ -425,7 +425,8 @@ export interface GestureConfig {
   uprightFromDeg: number;
   /** ⭐ (UD1) from this off the vertical (deg) the picture fully upright; a smoothstep between (0 – 60; at or under `uprightFromDeg`: a step there) */
   uprightFullDeg: number;
-  /** ⭐ (UD6) the cap of the picture's roll toward upright inside the band (deg a second; 0 = none; exact outside the band) (0 – 2 880) */
+  /** ⭐ (UD6b, fix round 1) the pace of the picture's REST toward upright, everywhere (deg a second; 0 = at once: law U as first built); the carry of the
+   * logic's own roll is at once whatever this is (0 – 2 880) */
   uprightMaxDegS: number;
   /** ⭐⭐⭐ (2026-11-10, POLAR_ORBIT_CLEANUP.md §9.4 — the owner's TILTED POLE) a press on a cap tilts the orbit so the cap is a side (1); off (0): the polar cap as before. ⛔ (2026-11-15, the owner: *"cancel my rule and remove the press action on the orbit"*) no press tilts: 1 the automatic tilt close in (`tiltAutoM`), 0 none. */
   tiltedPole: number;
@@ -893,7 +894,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   uprightCloseIn: 0, // ⭐ (UD3) the square camera's T1 wins close in
   uprightFromDeg: UPRIGHT_FROM_DEG, // ⭐ (UD1) 5°
   uprightFullDeg: UPRIGHT_FULL_DEG, // ⭐ (UD1) 25°
-  uprightMaxDegS: UPRIGHT_MAX_DEG_S, // ⭐ (UD6) no cap
+  uprightMaxDegS: UPRIGHT_MAX_DEG_S, // ⭐ (UD6b, fix round 1) 1 440° a second, everywhere
   gizmoEaseMs: 45, // ⭐⭐ (2026-11-04, the owner: *"update the lag the gizmo's position the piece follows to 45ms"*; 62, 55 before, the former GIZMO_TAU_MS 90)
   orbitSpringMs: 30, // ⭐⭐ (2026-11-04) the former boxSmoothMs / 2 for the orbit's spring
   tiltedPole: 1, // ⭐⭐⭐ (2026-11-10, §9.4) the tilted pole on
