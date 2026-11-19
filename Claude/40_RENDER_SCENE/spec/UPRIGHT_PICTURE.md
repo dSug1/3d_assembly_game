@@ -634,3 +634,83 @@ gizmo's travel under 15 mm over 100 frames on `z_far` (`1.0.147-`: 11); (4) ever
 sees; (7) under a steady push over the vertical, no going back by itself; (8) the frames turning the camera 45° or more, by cause — the aim
 under 27, with gravity over 20° under 9.3 %; (9) every switch at 0 gives its earlier game frame for frame; (10) the finger's angle not over
 13.4°; then an independent audit before any deploy.
+
+## 13. The rebuild as built and measured (the builder, 2026-11-19, morning; local commits, nothing pushed)
+
+**The result first.** The join is rebuilt with one owner per thing, and the patches of §12 are gone. The dy hold is `1.0.147-`'s again where it
+blocked a push (`z_far`: held 100 and 105 frames, the gizmo 0 mm; the patched build: 2 frames, 129 – 215 mm), and the come-back that the patched build
+refused is honoured in 1 frame. Both identities hold frame for frame. ⛔ Not met: the frames turning the camera by 45 – 90° (51; the aim under 27), the
+finger's angle (R7) 14.7° (the patched build 13.4°), and `b_far`, where no hold is set any longer (§13.4).
+
+### 13.1 What was built (commits on `1.0.148b-`)
+
+| commit | what |
+|---|---|
+| `b0f58a7` | RB1 — `changeSeen` (`src/input/upright.ts`): a change is a timed turn when its kind stays or when the share he sees, `(1 − min(w before, w after))` × the turn, is `freeTurnMaxDeg` or more. ⚠ The turn's angle is NOT known where a change starts (the logic's new pose is built only at the camera's stage), so the study's fallback: every starter calls ONE function, `turnBegin` (`crossTurn`, `tiltOn`, `zoneSwitch`, `freeFaceFrame` — a source test fails if one does not); law U off, it writes today's turn in today's order; law U on, the change is ASKED (`asmChange`) and resolved ONCE at the camera's stage (`changeApply`), before the logic's pose is drawn. Gone: `uprightFrees`, F3, the switches `uprightFreeTurns` and `uprightBandFree`, `uprightHoldKept` |
+| `6e328cd` | RB2 — the hold is applied and released on the RAW finger before its conversion (`edgeHoldGlass`, `edgeHoldAlong`), set only by a turn he sees of 90° or more (`holdSeen`) |
+| `1d5125e` | RB3 — the law's own half turn (a rest of 90° or more) is a seen turn: the gizmo held while it closes through T5's one reader (`lawHalfTurn` in `tiltClampStep`), the push that was on held after it (where no hold is on) |
+| `fdac5f0` | RB2 amended (below): the push held is the dy of the glass he sees |
+
+Each decision a pure function with vectors; mutants 24 of 24 red (the kit's `mut_rb1.json` – `mut_rb3.json`, `mut_rb2b.json`).
+
+### 13.2 Who owns what now
+
+* The logic owns its state: a change of frame is its bookkeeping; it says which push crossed (`crossingEvent`, `exitHoldSign`, `crossingHold`).
+* The law owns the picture's roll (`uprightStep`, unchanged but for F3).
+* `changeSeen` owns whether a change is a turn he sees — decided once; `changeApply` writes the turn, the ease and the hold once.
+* The hold is the dy of the glass he sees, applied to his raw finger (`edgeHoldGlass`).
+* "A seen turn is under way" has one reader, `tiltClampStep`: the timed turns and the law's half turn.
+
+### 13.3 The gates (his ten stretches far out at 60 frames a second unless said; at the default 1 800° a second)
+
+| gate | now | patched (`420dd9e`) | `1.0.147-` (`6f47219`) | pass |
+|---|---|---|---|---|
+| (1) turns and holds written by one owner (source tests) | yes | — | — | ✅ |
+| (2) a change at once leaves nothing turning (vector) | yes | — | — | ✅ |
+| (3) held push, gizmo travel over the come (`z_far` s0, s1) | 0 / 0 mm | 215 / 129 mm | 0 / 0 mm (11 since the crossing) | ✅ |
+| (4) come-backs (`z_far` s2 – s5) | 1 / 1 / 1 / 3 frames | s2 never | 1 / 1 / 1 / 2 | ✅ |
+| (5) holds where the picture turned under 90° / turned 90°+ with no hold | 5 / 51 | 16 / 28 | — | ⛔ partly |
+| (6) timed turns that hardly turn the picture | 2 of 113 | 7 of 127 | — | ✅ better |
+| (7) a steady push over the vertical goes back by itself (`Scene_1` over its top) | 0 reversals | 0 | 1 | ✅ |
+| (8) frames turning the camera 45 – 90° / over 90° | 51 / 0 | 47 / 0 | 5 / 0 | ⛔ (aim < 27) |
+| (8) gravity over 20° · its roll a metre | 7.9 % · 56.4° | 7.8 % · 58.8° | 35.4 % · 101.5° | ✅ |
+| (9) `uprightPicture` 0 = `7bcae02`; `freeTurnMaxDeg` 0 = `6f47219` (3 replays + `ilmj_23s`) | identical | identical | — | ✅ |
+| (10) R7 away from the vertical | 14.7° / 79.4° | 13.4° / 71.9° | 12.1° / 61.1° | ⛔ |
+| R7 where the picture is within 5° / turned 5°+ | 13.4° / 52.8° (242 frames) | 12.5° / 49.9° (199) | — | — |
+| frames held a metre | 1.2 | 1.6 | 2.7 | ✅ |
+
+The 51 frames by cause: 36 within 6 frames of a change applied at once (in 19 the logic itself turns 45°+ — FO3's own jump), 9 after a timed
+turn's start, 6 elsewhere. Also run: 143 frames a second — `ilmj_23s` 0 frames over 45°, gravity over 20° 7.6 %; `ogse_3s` 0, 15.8 %; the three
+replays as the patched build (`Scene_0bis` 1.1 %, its camera's largest frame 37°); `Scene_1` over its top as the patched build (worst 26.7°); the
+level entry's walks: drift 0; the straight dy off straight on the glass 8.5 – 12.1° (`1.0.147-` 7.6 – 10.8°, read alike), its drift in the leg
+186 – 473 mm (`1.0.147-` 125 – 279); the three close-in stretches as the patched build.
+
+**The pace (RB5)**: 1 440° a second — gravity over 20° 9.7 % (over 9.3 %), 37 frames of 45 – 90°; 1 800 — 7.9 %, 51; 2 160 — 6.7 %, 104. None over
+90° at any. So 1 800 stays: no code change, its pins stand.
+
+**RB4 — not built.** Read offline on the patched build's recordings: `w` off the piece's direction crosses the band in one frame on 191 frames,
+off the camera's view on 210 — the direction itself crosses the band in a frame at his pace, so the premise does not hold; and near the vertical
+it would act on 28 of the 89 frames where gravity has no direction on the logic's glass (5 of them within 2°). `w` stays off the camera's view.
+
+### 13.4 Amendments the frames asked for — ⭐ for his review
+
+* **RB2 as briefed held the LOGIC's dy axis turned onto his glass.** `z_far` s1 then held 2 frames (`1.0.147-`: 104) and the gizmo slid 37 mm along
+  the edge: his straight push had a part across that turned axis, which passed. Amended (`fdac5f0`): the hold is the dy of the glass he sees, of the
+  sign the logic's dy takes there. At φ 0 it is today's hold, bit for bit. Measured after: s1 held 105 frames, 0 mm.
+* **`b_far` (the bottom, far out) sets no hold any longer** (`1.0.147-`: s0, s1 held 98 and 103 frames). Its crossing is made at `w` 1 with no timed
+  turn: the law keeps the picture, so the turn he sees is 0 and `changeSeen` applies it at once — §12's rule. The gate as briefed assumed that
+  change is seen; the frames say it is not. The come leg then goes on round the body (a second crossing 43 – 79 frames in), as on the patched
+  build's s1 – s5. Not amended: a rule keyed on "the logic's turn" would be the patch §12 removed. Open for him: whether a crossing he does not see
+  should hold.
+* **(8) and (10) are not met**, and no amendment is proposed from these frames. Two thirds of the 45° frames sit right after a change applied at
+  once (FO3's own jump in half of them, which no roll can hide); R7 rose on both the steady frames and the turned ones, and was not separated
+  further.
+
+### 13.5 What he will feel
+
+The scene stays upright far out, as on the patched build. Pushing over a ridge, the push is held as in `1.0.147-` — no sideways creep along the
+edge — and pulling back is answered at once. When the picture flips itself after a pass over the vertical, the gizmo waits that tenth of a second
+and the push he was making is held after it. Under the bottom, far out, a push back no longer stops: the gizmo goes on round the body. Close in
+nothing changed. Sliders left (ORBIT › UPRIGHT PICTURE): `uprightPicture`, `uprightCloseIn`, `uprightFromDeg`, `uprightFullDeg`, `uprightMaxDegS`
+(1 800° a second). Decisions for his review: UD12 – UD17 (§12) as built; the hold as the dy of his glass (§13.4); no hold at a crossing he does
+not see (`b_far`); RB4 not built; 1 800 kept.

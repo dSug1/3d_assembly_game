@@ -737,3 +737,7 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
 * **2026-11-19 (fix round 3, `UPRIGHT_PICTURE.md` §11)**: the carry is the logic's twist undone (UD6c, `fb80fd0`), a freed change never holds
   (UD11b, `f1f9b55`), the rest at 1 800° a second (`4d4f658`): no frame over 90° on his ten stretches, 47 of 45 – 90°, gravity over 20° 7.8 %, its
   roll 58.8° a metre, R7 13.4°; the hold walks as round 2's; ⛔ the identity with `e653099` lost since round 2 (the mirror fix, the holds dropped).
+* **2026-11-19 (the rebuild, `UPRIGHT_PICTURE.md` §12 – §13)**: one owner per thing — a change of frame decided once as he sees it (`changeSeen`,
+  `b0f58a7`), the dy hold the dy of the glass he sees, on the raw finger (`6e328cd`, `fdac5f0`), the law's own half turn a seen turn (`1d5125e`);
+  RB4 not built (its proof failed), the pace kept at 1 800° a second. The hold walks as `1.0.147-`'s on `z_far` (held 100 / 105 frames, 0 mm);
+  ⛔ open: 51 frames of 45 – 90° (aim under 27), R7 14.7° (patched 13.4°), `b_far` sets no hold (§13.4).

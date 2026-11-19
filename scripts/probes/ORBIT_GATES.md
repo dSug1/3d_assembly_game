@@ -527,3 +527,9 @@ node scripts/probes/gravity_read.mjs <rec.json> ...          # JSON=1: one objec
   drawn glass) by the auditor's `audit/t_read.mjs` (`audit/rd_hand.sh <dir> <tag> 60 far`, `ALL` line, `awayAll`): `1.0.147-` 12.1 / 61.1°; split by
   the frames since a freed change (`r7_freed.mjs`, needs the shadow's `fe`) and by the view (`r7_buckets.mjs`). The holds set and by what change:
   `ud11_read.mjs` (needs the hand record's `h`, `efa08a5`).
+* **The rebuild** (`UPRIGHT_PICTURE.md` §12 – §13, 2026-11-19): the same batches (`upright_batch.sh <tag> hold hand fps143 reps over le close`, then
+  `EXTRA="&uprightMaxDegS=1440"` / `=2160` hand for the pace). Readers, all in the kit: the hold walks by `audit/hold_tab.mjs <base bhw_analysis>
+  <new analysis>` and `audit/come_split.mjs <hold rec>` (the come leg's gizmo along the axis / round it / still); the ten stretches by
+  `audit/t_read.mjs` (`ALL=1`), `rebuild/big_frames.mjs` (the 45° frames by cause), `rebuild/pic_turns.mjs` (holds against the turn SEEN); RB4's
+  offline proof `rebuild/rb4.mjs` (`w` off the camera's view against off the piece's direction); the straight dy `upright/dy_glass.mjs`; the identities
+  `scripts/probes/replay_cmp.mjs` (replays) and the kit's `same.mjs` (a stretch). The driver `rebuild/drv_rb.sh`, `drv_rb2.sh`.
