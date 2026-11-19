@@ -533,3 +533,12 @@ node scripts/probes/gravity_read.mjs <rec.json> ...          # JSON=1: one objec
   `audit/t_read.mjs` (`ALL=1`), `rebuild/big_frames.mjs` (the 45° frames by cause), `rebuild/pic_turns.mjs` (holds against the turn SEEN); RB4's
   offline proof `rebuild/rb4.mjs` (`w` off the camera's view against off the piece's direction); the straight dy `upright/dy_glass.mjs`; the identities
   `scripts/probes/replay_cmp.mjs` (replays) and the kit's `same.mjs` (a stretch). The driver `rebuild/drv_rb.sh`, `drv_rb2.sh`.
+* **One pose** (`Claude/40_RENDER_SCENE/spec/UPRIGHT_ONE_POSE.md` §6, §11, packet D, 2026-11-19): offline first — the kit's `rebuild_d/od.mjs`
+  (an up rule on `1.0.147-`'s route: the logic's target `sh.gh3`, only the up replaced; it writes recordings the readers take), `rd_od.sh`. In the game
+  the same batches (`upright_batch.sh <tag> hand hold reps over le close fps143`, then `EXTRA` variants on `hand`; driver `rebuild_d/drv_d.sh`). The
+  record carries one pose (`sh.oh` the half turn opened, rad; `ohd` the gizmo held; `oc` a change applied at once; `ok` the square camera's
+  complement). Readers in the kit: `rebuild_d/ht_read.mjs` (the half turns by place — edge, a level face's exit or entry, none — their view from the
+  vertical, duration and gizmo wait; G2 per crossing; A5 re-crossings: on the hold walks from the logic's `side`, on the hand off the eye — not valid
+  for one pose, `rx_read.mjs`), `jit_read.mjs` (the jitter's arrivals by the logic quantity that wobbles), the backlash at `Scene_1`'s top (a synthetic
+  stretch `bl_s1_top.jsonl` from `bl_make.mjs`, replayed by `hand_replay.mjs` on `sceneIndex=1`; `bl_read.mjs`, `bl_yaw.mjs`), `rd_d.sh hand|hold|rest|id`.
+  `hand_replay.mjs` now stops when the page is replaced mid-run (the recorder gone) instead of crashing at its end.

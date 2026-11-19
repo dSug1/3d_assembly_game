@@ -268,3 +268,82 @@ CROSSING within the reader's 48-frame tail has two legitimate half turns (§6); 
 | OD6 | a dead band of 10° on the picture near the vertical (the jitter) | T11 extended | `uprightDeadDeg` (0: none) |
 | OD7 | a level face far out: its layout near the vertical, upright beyond the band; its half turn still at its exit | C4, ES, T7 kept | `uprightFromDeg` / `uprightFullDeg` (variant 10 / 30) |
 | OD8 | a logic pose 150° or more from upright is never blended toward upright: its half turn waits for the logic's change | IDEAL (there) | — |
+
+## 11. As built and measured (P2, 2026-11-19, evening; the lead's amendments A1 – A8; local commits, nothing pushed) — ⭐ for his review
+
+**The result first.** One pose works as designed where it was aimed: the circle is gone as a second turn (`vb.mjs`'s B2: 1 event against 74 for the
+defaults), each pass's half turn opens at the logic's own crossing, the dy hold is set on the same frame as in `1.0.147-`, and no frame turns the
+camera over 90°. ⛔ But four gates fail: the finger's way right after a half turn (R7 18.8° against 14.3°), the jitter at a pole (17 of 35 arrivals,
+not better), a fast yaw at a pole capped by the pace (the picture 70 – 80° behind, 0.1 s late on a reversal), and close in is micrometres apart
+from the live build, not bit for bit. `uprightOnePose` 0 gives the defaults' game frame for frame.
+
+### 11.1 What was built (commits on `1.0.148d-`)
+
+| commit | kind | what |
+|---|---|---|
+| `fe3e42f` | (C) | `upOne` (OP3 – OP7) with A1 (at a logic change the half turn is re-decided, the shortest way); 11 vectors, 10 of 10 mutants red |
+| `7f68eac` | (C) | `onePoseFrame` behind `uprightOnePose` (1; 0 = `c3a8ba6`): the change decided by the square camera's complement; OP8's holds; `asmCamLast` and the silent entry's picture from the pose drawn; T5's one reader; sliders `uprightOnePose`, `uprightDeadDeg` 10, `uprightHalfHold` 1 (128); source tests, 6 of 6 mutants red |
+| `21c72c4` | (P) | the shadow record carries one pose (`oh`, `ohd`, `oc`, `ok`); `hand_replay.mjs` fails fast when the page is replaced mid-run (A6) |
+| `bc6af1b` | (C) | three source pins follow T5's one reader; `npm run verify` 171 files, 2 189 vectors |
+
+### 11.2 The gates (his ten stretches, `Scene_0bis`, far out, 60 frames a second; the same readers on every build)
+
+| gate | ONE POSE (720°/s, held, 15 – 50°, band 10°) | defaults `74a247e` | `6f47219` | V1 | the fix | 360°/s | dead band 0 | band 10 – 30° | never held |
+|---|---|---|---|---|---|---|---|---|---|
+| G1 the circle: `vb` B2 · `au_read` B2 | **1** · 26 | 74 · 24 | 81 · 10 | 3 · 1 | 3 · 14 | 4 · 13 | 1 · 22 | 1 · 18 | 3 · 27 |
+| G2 bursts entry / exit / else · passes 2+ | 6 / 176 / 0 · 18 | 7 / 161 / 2 · 11 | 2 / 115 / 3 · 14 | 6 / 164 / 3 · 14 | 6 / 169 / 3 · 9 | 7 / 145 / 4 · 8 | 3 / 180 / 1 · 20 | 8 / 170 / 2 · 15 | 2 / 169 / 0 · 10 |
+| G2 per crossing: 0 / 1 / 2+ bursts | 49 / 106 / 6 | — | — | — | — | 81 / 94 / 2 | 47 / 106 / 5 | 53 / 104 / 10 | 66 / 105 / 5 |
+| G3 the jitter at a pole | 17 of 35 | 16 of 26 | 18 of 45 | 9 of 24 | 14 of 23 | 20 of 30 | 16 of 29 | 18 of 31 | 16 of 29 |
+| G5 gravity over 20° · its roll a metre | 22.4 % · 83.3° | 21.7 % · 88.8° | 35.4 % · 101.5° | 29.4 % · 107.6° | 21.9 % · 89.4° | 43.8 % · 101.2° | 22.5 % · 83.8° | 21.7 % · 83.7° | 23.3 % · 84.2° |
+| G6 frames over 90° / 45 – 90° | **0 / 13** | 1 / 27 | 0 / 5 | 0 / 7 | 0 / 6 | 0 / 10 | 0 / 10 | 0 / 11 | 0 / 13 |
+| G7 R7 median / p90 | 18.8° / 90.4° | 14.3° / 65.9° | 12.1° / 61.1° | 15.7° / 71.3° | 16.0° / 72.7° | 15.5° / 76.5° | 18.6° / 90.2° | 16.7° / 88.1° | 21.0° / 111.4° |
+
+**A4 — his two places apart** (the default): at a zenith / nadir edge (the spit's side flip) 90 half turns, 15.6° from the vertical (median; p90
+32.5°), 144°, 200 ms, the gizmo waiting 83 ms; at a level face's exit 62, 12.5° (p90 23.8°), 165°, 233 ms, 100 ms. ⚠ 3 more open at a level face's
+ENTRY with the view about 85° from the vertical, and 6 with no logic change (42°): G2 wants none there.
+
+**G4 — the dy hold** (the hold walks, frame by frame): `z_far` sets its hold on the SAME frame as `6f47219` (f69, the crossing), blocks the push 112 /
+112 frames (100 / 104), the come never crosses again, every come-back in 1 frame. `b_far` holds 112 / 112 (`6f47219` 98 / 103): the bottom face's exit
+far out opens a half turn he sees (Q4 as decided). The gizmo's travel after the crossing rose (79 / 135 mm against 11): read frame by frame, the push
+stays blocked; the gizmo is free again after the first 90° of the half turn (0.13 s) and the `back` leg's finger carries it back 11 mm a frame —
+`1.0.147-` held it the whole 0.48 s. **A5** — re-crossings under one steady push on the hold walks: 0 (all builds 0). On his hand the count read off the
+camera's eye is not valid for one pose: 23 of its 61 fall inside a half turn's first frames (the turn rolls the eye about the framed line, across
+the axis plane); the logic's own side is not recorded in the hand runs.
+
+**The rest**: the seeded replays 0.6 / 3.4 / 1.7 % over 20° (heptagon / `Scene_0bis` / cube; defaults 0.2 / 4.5 / 1.1 %), jitter 4 of 36; the level
+entry's walks B2 4 (defaults 16), bursts at an entry 0; 143 frames a second 0 frames over 45°; `Scene_1` over its top 2 reversals (defaults 1),
+worst 22.8° (22.4°); ⛔ close in identical to the live build for 150 frames, then apart from frame 179, at most 7.2·10⁻⁶ (OP2 decides the approach's
+blend by `κ`, law U by `w`). **G9**: `uprightOnePose` 0 = `74a247e`, `uprightPicture` 0 and `freeTurnMaxDeg` 0 = their recordings — three seeded
+replays and `ilmj_23s`, every one identical, largest difference 0. **G10**: the source tests, 16 mutants red, 2 189 vectors.
+
+### 11.3 What the frames say (the roots; measured unless said)
+
+1. **R7**: outside the 20 frames after a half turn opens, 14.4° / 61.0° (the defaults' 14.3°); inside, with the dy hold on, 60.6° (561 frames) —
+   his finger pushes the held way while the gizmo, free again after 0.1 s, can only move sideways. Without the hold, 17.7°.
+2. **The jitter** (A2 (b), at dead band 0, 16 arrivals): 9 are the spit's side flip at the pole — the logic's heading jumps 150 – 180° in a frame,
+   the half turn opens there and its target wobbles after it; 6 a level face; 1 the spit heading's own wobble. Read: near the top the spit's heading
+   is `atan2(u_level + side · 0.3 · r)` — 2 – 5° from the vertical it swings up to ±17°. A fix at the SOURCE exists (the side's own heading within a
+   few degrees of the vertical); not built.
+3. **The dead band** changes nothing measurable in the game (17 of 35 against 16 of 29 without), and its BACKLASH (A2 (a)) could not be isolated:
+   at `Scene_1`'s top a dx at his mean pace yaws the logic at 769° a second, the picture capped at 719° a second falls 70 – 80° behind and follows
+   the reversal after 100 ms and 17.6 mm of finger — at band 10 and at 0 alike. ⭐ The root (opinion, read in `upOne`): OP4 carries ALL the logic's
+   twist, its continuous, finger-driven yaw at a pole too, so the pace caps a yaw the finger asks for. The candidate: the carry whole only for a
+   change applied at once; law U's weight for the logic's continuous motion. Not built (A8).
+4. **The pace**: 360° a second doubles the tilt (43.8 %) and the wait (167 – 200 ms) for no gain elsewhere.
+5. **A6**: the fix round's `f0` `ilmj_23s` run lasted about 50 s where the stretch takes 4.5 min: the page was replaced early, every step a no-op.
+   No commit or mutant touched `src` that minute; the cause outside the probe is not identified. The probe now stops with that diagnosis.
+
+### 11.4 What he will feel
+
+Over a top or under the bottom, one quick half turn where the camera passes the edge — a fifth of a second, mostly a spin of the floor seen from
+above — and no second turn after it. Pushing over a ridge, the push is held exactly where `1.0.147-` held it; but the gizmo waits only a tenth of
+a second, so pulling back moves it back at once. Gravity is tilted as often as with the live defaults. The small jitter at a pole is still there.
+At `Scene_1`'s top a fast sideways drag turns the view at most 720° a second, so the picture trails a fast finger. Close in nothing he can see.
+
+### 11.5 Decisions for his review
+
+* **OD9** — keep `uprightOnePose` 1 on this branch, or 0 (the live defaults, frame for frame) until the next round.
+* **OD10** — the carry's rule: whole only at a logic change, the logic's continuous motion followed near the vertical (11.3, 3).
+* **OD11** — the spit's heading at the pole fixed at its source (11.3, 2).
+* **OD12** — the gizmo held for the whole half turn rather than its first 90° (the hold walks and R7 show the cost of releasing it early).
+* OD1 – OD8 (§10) as built; the pace stays 720° a second (360 measured worse).
