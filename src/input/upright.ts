@@ -94,6 +94,8 @@ export interface UprightState {
   readonly wp?: number;
   /** ⭐ (fix round 3, UD6c) the logic's pose last frame — the carry is its twist about the framed line over this frame (`twistAbout`) */
   readonly gp?: CamPose;
+  /** ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §12 RB3) THE LAW'S OWN HALF TURN UNDER WAY: a rest of 90° or more opened and not yet closed (`lawHalfTurn`) */
+  readonly half?: boolean;
 }
 export const UPRIGHT_REST: UprightState = Object.freeze({ au: null, phi: 0, ap: null });
 
@@ -113,6 +115,8 @@ export interface UprightFrame {
   readonly alpha: number | null;
   /** ⭐ (fix round 2, UD11) nothing left to close: `phi` is this frame's target (the rest closed, or no pace) */
   readonly closed: boolean;
+  /** ⭐⭐⭐ (RB3) this frame the rest the law has to close reached 90° or more (not under way before): a turn the player SEES — its size (rad); 0: none */
+  readonly halfStart: number;
 }
 
 /**
@@ -133,7 +137,7 @@ export function uprightStep(s: UprightState, pose: CamPose, line: FramedLine, dt
   else au = s.au + wrapPi(alpha - s.au);
   const phi = au === null ? 0 : w * au;
   const state: UprightState = phi === 0 && au === null ? UPRIGHT_REST : { au, phi, ap: w > 0 ? alpha : null };
-  return { state, phi, w, nu, alpha, closed: true };
+  return { state, phi, w, nu, alpha, closed: true, halfStart: 0 };
 }
 
 /** ⭐ The change of frame as the decision reads it (RB1). */
@@ -166,6 +170,14 @@ export function changeSeen(c: ChangeIn): ChangeSeen {
   const w1 = Math.min(1, Math.max(0, Number.isFinite(c.wAfter) ? c.wAfter : 0));
   const seenRad = Number.isFinite(c.turnRad) ? (1 - Math.min(w0, w1)) * Math.abs(c.turnRad) : Infinity;
   return { timed: c.stays || !turnIsFree(seenRad, c.freeMaxDeg), seenRad };
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §12 RB3 — the lead's) IS THE LAW'S OWN HALF TURN UNDER WAY? A turn the player sees, read by the ONE reader of "a turn
+ * the player sees is under way" (T5's, `tiltClampStep`): the gizmo held while it closes. No state (law U off): no.
+ */
+export function lawHalfTurn(s: UprightState | undefined): boolean {
+  return s !== undefined && s.half === true;
 }
 
 /** ⭐ A turn seen of this much or more holds the push that made it (deg) — his "90°" (R6, T9). */
@@ -212,6 +224,10 @@ function uprightPaced(s: UprightState, pose: CamPose, line: FramedLine, dtMs: nu
   const e = wrapPi(target - pc);
   const cap = dtMs > 0 ? ((maxDegS * Math.PI) / 180) * (dtMs / 1000) : 0;
   const phi = Math.abs(e) <= cap ? target : wrapPi(pc + Math.sign(e) * cap);
-  const state: UprightState = { au: null, phi, ap: alpha, wp: w, gp: pose };
-  return { state, phi, w, nu, alpha, closed: phi === target };
+  // ⭐⭐⭐ (2026-11-19, §12 RB3) THE LAW'S OWN HALF TURN: a rest of 90° or more (after a pass over the vertical) is a turn the player sees — under way
+  // until it closes (`half`: the gizmo held meanwhile, T5's one reader); its start reported (`halfStart`: the push that was on held after it, RB2)
+  const big = Math.abs(e) >= Math.PI / 2;
+  const half = (big || s.half === true) && phi !== target;
+  const state: UprightState = { au: null, phi, ap: alpha, wp: w, gp: pose, ...(half ? { half: true } : {}) };
+  return { state, phi, w, nu, alpha, closed: phi === target, halfStart: big && s.half !== true ? Math.abs(e) : 0 };
 }

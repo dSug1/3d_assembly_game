@@ -41,6 +41,7 @@ import { assignCharts, capTiltHeading, chartContour, chartZones, DEFAULT_CHART_O
 import { holdAtCrossing, poseAboutPiece, poseFramingTwo, type CamPose, type EdgeHold } from "../input/orbit_tilt";
 import { poleCrossingDue, poleSeam } from "../input/pole_crossing";
 import { fingerOnLogic, gapStep, restShare } from "../input/roll_follow";
+import { lawHalfTurn } from "../input/upright";
 import { dirGap, easedDir, easeRest, poleYawKept, seamOutPaced, seamOutShare, seamOutStep, seamOutTarget, seamTurnPace, seamTurnStep, seamWholeRad, tiltLeavesNow, turnHoldsGizmo } from "../input/seam_turn";
 import { bandedFacet } from "../input/face_band";
 import { contourFaceAt, crossingEvent, entryBlendHeading, entryDepth, entryEdgeOf, exitHoldSign, headingStep, pictureOffset, transportUp, viewLevelTurned, exitTurnRad, faceOwnUp, freeEdges, freeEntryHeading, freeHeadingAngle, isFreeFace } from "../input/free_face";
@@ -1714,7 +1715,8 @@ export function tiltClampStep(st: SceneState, yaw0: number, v0: number): boolean
   // or by the finger (`seamTurnHolds`); any other turn while short of whole, as ever
   const zm = st.asmZoneMix;
   // ⭐⭐⭐ (2026-11-16, step C3) …the way out paced by the finger (`out`) never (`turnHoldsGizmo`)
-  const zoneTurning = zm !== null && turnHoldsGizmo(zm.out !== undefined, zm.byMm === true, st.asmTiltPending, st.asmBlend !== null, zm.k);
+  // ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §12 RB3) …and while law U closes its own half turn (`lawHalfTurn`: a turn the player sees, as any other)
+  const zoneTurning = (zm !== null && turnHoldsGizmo(zm.out !== undefined, zm.byMm === true, st.asmTiltPending, st.asmBlend !== null, zm.k)) || lawHalfTurn(st.asmRollShadow?.upright?.state);
   if (zoneTurning && (st.orbit.yaw !== yaw0 || st.orbit.elevation !== v0)) {
     st.orbit.reset(yaw0, v0);
     return true;

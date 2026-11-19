@@ -218,7 +218,14 @@ describe("RB1 — ONE OWNER PER CHANGE (UPRIGHT_PICTURE.md §12, the rebuild): e
     expect(fn(aw, "function changeAsk(")).not.toMatch(/asmZoneMix =|asmEdgeHold =|seamTurnStart|seamOutStart/);
     expect(aw).toContain("return st.cfg.freeTurnMaxDeg > 0 && st.cfg.uprightPicture === 1;");
     const up = fn(rs, "function uprightPictureFrame(");
-    expect(up).not.toMatch(/asmZoneMix =|asmEdgeHold =|asmDirEase =/);
+    expect(up).not.toMatch(/asmZoneMix =|asmDirEase =/);
+    // ⭐ (RB3) the one hold written here: the law's own half turn's, by the same rule as a change's (`holdSeen`), only where no hold is on
+    expect(up.match(/asmEdgeHold =(?!=)/g)?.length).toBe(1);
+    expect(up).toContain("if (r.halfStart > 0 && st.asmEdgeHold === null && st.asmG !== null && was !== null) {");
+    expect(up).toContain("st.asmEdgeHold = holdSeen({ timed: true, seenRad: r.halfStart }, sign === 1 ? 1 : sign === -1 ? -1 : 0, was.picture, was.ghost);");
+    // ⭐ (RB3) T5's one reader holds the gizmo while the law's half turn closes — no second mechanism
+    expect(aw).toContain("const zoneTurning = (zm !== null && turnHoldsGizmo(zm.out !== undefined, zm.byMm === true, st.asmTiltPending, st.asmBlend !== null, zm.k)) || lawHalfTurn(st.asmRollShadow?.upright?.state);");
+    expect(aw.match(/lawHalfTurn\(/g)?.length).toBe(1);
     expect((up.match(/changeSeen\(/g) ?? []).length).toBe(1);
     expect((up.match(/changeApply\(/g) ?? []).length).toBe(1);
     expect(up.indexOf("changeApply(")).toBeLessThan(up.indexOf("const G = zoneMixPose(st, piece, eye, look, up);"));

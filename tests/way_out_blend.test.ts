@@ -237,7 +237,7 @@ describe("⭐⭐⭐ the wiring (source pins, comments stripped)", () => {
     const z = fnCode(W, "function zoneStep(");
     expect(z).toContain("if (zm !== null && zm.axis !== null && zm.byMm !== true && zm.out === undefined) {");
     const h = fnCode(W, "export function tiltClampStep(");
-    expect(h).toContain("const zoneTurning = zm !== null && turnHoldsGizmo(zm.out !== undefined, zm.byMm === true, st.asmTiltPending, st.asmBlend !== null, zm.k);");
+    expect(h).toContain("const zoneTurning = (zm !== null && turnHoldsGizmo(zm.out !== undefined, zm.byMm === true, st.asmTiltPending, st.asmBlend !== null, zm.k)) || lawHalfTurn(st.asmRollShadow?.upright?.state);");
   });
   it("⭐ coming back in: `tiltOn` starts its own turn (a new `asmZoneMix`, no `out`) and its own ease — nothing of the out-turn survives", () => {
     const s = fnCode(W, "function seamTurnStart(");

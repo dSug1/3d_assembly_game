@@ -190,6 +190,12 @@ function uprightPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3,
   // ⭐⭐⭐ (fix round 3, §10 UD6c) the carry is the logic's twist undone, in the law (`uprightStep`): WHOLE on a change applied at once, else `min(w, w before)`
   const r = uprightStep(was?.upright?.state ?? UPRIGHT_REST, G, line, dtMs, knobs, scale, freed > 0);
   const P = poseRolled(G, line, r.phi);
+  // ⭐⭐⭐ (2026-11-19, §12 RB3) THE LAW'S OWN HALF TURN is a turn he sees: the gizmo held while it closes (`lawHalfTurn`, T5's reader) and the push that was on
+  // held after it — as any seen turn's (`holdSeen`, last frame's picture: the glass the push was made on); a hold already on (the change's) kept
+  if (r.halfStart > 0 && st.asmEdgeHold === null && st.asmG !== null && was !== null) {
+    const sign = Math.sign(st.asmDySign);
+    st.asmEdgeHold = holdSeen({ timed: true, seenRad: r.halfStart }, sign === 1 ? 1 : sign === -1 ? -1 : 0, was.picture, was.ghost);
+  }
   const turnTw = fresh ? tw : (was?.turnTw ?? 0);
   const g = { gap: r.phi, speed: 0 };
   st.asmRollShadow = { ghost: G, dir: line.dir, piece, held: g, free: g, turn: zm, turnTw, stays: zm !== null, tw, gizmoFree, spit: spitZone(st) !== null, freshTurn: fresh, picture: P, a2: placeError(st, G, P, piece, line), drawn: true, freed, upright: { state: r.state, w: r.w, phi: r.phi } };

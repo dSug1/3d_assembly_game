@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import type { Vec3 } from "../src/core/vec";
 import { rotateAbout, type CamPose } from "../src/input/orbit_tilt";
 import { framedLine, onGlass, poseRolled, twistAbout } from "../src/input/roll_follow";
-import { gravityTilt, UPRIGHT_FROM_DEG, UPRIGHT_FULL_DEG, UPRIGHT_MAX_DEG_S, UPRIGHT_REST, changeSeen, uprightAngle, uprightStep, uprightWeight, viewFromVertical, type UprightState } from "../src/input/upright";
+import { gravityTilt, UPRIGHT_FROM_DEG, UPRIGHT_FULL_DEG, UPRIGHT_MAX_DEG_S, UPRIGHT_REST, changeSeen, lawHalfTurn, uprightAngle, uprightStep, uprightWeight, viewFromVertical, type UprightState } from "../src/input/upright";
 
 const DEG = Math.PI / 180;
 const wrap = (a: number): number => Math.atan2(Math.sin(a), Math.cos(a));
@@ -428,6 +428,57 @@ describe("RB1 — changeSeen: a change of frame as the player SEES it, decided o
     expect(changeSeen({ ...C, wBefore: 2, wAfter: 1.5, turnRad: 170 * DEG }).timed).toBe(false);
     expect(changeSeen({ ...C, wBefore: Number.NaN, turnRad: 170 * DEG }).timed).toBe(true);
     expect(changeSeen({ ...C, wBefore: -1, turnRad: 170 * DEG }).seenRad).toBeCloseTo(170 * DEG, 12);
+  });
+});
+
+describe("RB3 — the law's own half turn is a turn he sees (UPRIGHT_PICTURE.md §12): `halfStart`, `half`, `lawHalfTurn`", () => {
+  const K6 = { ...K, maxDegS: 720 };
+  const dt = 1000 / 60;
+  it("off the vertical in one frame with the logic near half a turn from upright: the rest opens at 170° — started once, under way until it closes, then over", () => {
+    let v: UprightState = UPRIGHT_REST;
+    for (let n = 0; n < 5; n++) v = pic(v, poseAt(89, 20, 0), dt, K6).r.state;
+    expect(lawHalfTurn(v)).toBe(false);
+    const first = pic(v, poseAt(40, 20, 170), dt, K6).r;
+    expect(first.halfStart).toBeGreaterThan(165 * DEG); // ~170° (the look point a little off the piece)
+    expect(first.halfStart).toBeLessThan(175 * DEG);
+    expect(lawHalfTurn(first.state)).toBe(true);
+    let s = first.state;
+    let n = 0;
+    let starts = 0;
+    for (; n < 40 && lawHalfTurn(s); n++) {
+      const r = pic(s, poseAt(40, 20, 170), dt, K6).r;
+      if (r.halfStart > 0) starts++;
+      s = r.state;
+    }
+    expect(starts).toBe(0);
+    expect(lawHalfTurn(s)).toBe(false);
+    expect(n).toBeGreaterThanOrEqual(13); // ~170° at 12° a frame: about 15 frames in all, the first above
+    expect(n).toBeLessThanOrEqual(15);
+  });
+  it("a rest under 90°, a rest closed in its own frame (no pace), at rest, at the vertical: no half turn", () => {
+    let v: UprightState = UPRIGHT_REST;
+    for (let n = 0; n < 5; n++) v = pic(v, poseAt(89, 20, 0), dt, K6).r.state;
+    const small = pic(v, poseAt(40, 20, 80), dt, K6).r;
+    expect(small.halfStart).toBe(0);
+    expect(lawHalfTurn(small.state)).toBe(false);
+    const atOnce = pic(v, poseAt(40, 20, 170), dt, K).r; // maxDegS 0: law U as first built
+    expect(atOnce.halfStart).toBe(0);
+    expect(lawHalfTurn(atOnce.state)).toBe(false);
+    expect(lawHalfTurn(undefined)).toBe(false);
+    let w: UprightState = UPRIGHT_REST;
+    for (let n = 0; n < 30; n++) {
+      const r = pic(w, poseAt(50, 20, 30), dt, K6).r;
+      if (n > 0) expect(r.halfStart).toBe(0);
+      w = r.state;
+    }
+  });
+  it("a rigid roll of the logic by half a turn at w 1 is carried (the picture where it was): no half turn", () => {
+    let s: UprightState = UPRIGHT_REST;
+    for (let n = 0; n < 40; n++) s = pic(s, poseAt(50, 20, 30), dt, K6).r.state;
+    const g0 = poseAt(50, 20, 30);
+    const r = pic(s, poseRolled(g0, framedLine(g0, piece), Math.PI), dt, K6).r;
+    expect(r.halfStart).toBe(0);
+    expect(lawHalfTurn(r.state)).toBe(false);
   });
 });
 
