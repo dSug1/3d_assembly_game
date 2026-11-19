@@ -537,3 +537,7 @@ node scripts/probes/gravity_read.mjs <rec.json> ...          # JSON=1: one objec
   level face carried or dropped, an arrival within 4° of the vertical; `V=1` a line an event, `SUM=1` the totals), `turns.mjs` (every timed turn:
   entry / exit / crossing, near or far from the vertical, the logic's turn about the view against the picture's, law U's fast rolls), `vt.mjs` (a line
   a frame); the driver `fo3/vertical/drv_v1.sh` (the upright batches, then the two identities).
+* **Rule V1 as built** (`UPRIGHT_PICTURE.md` §16, packet V1-B): the same readers, plus `fo3/vertical/bursts.mjs` (B1 split by place on a pass over
+  the vertical: a pass from the view within `IN` deg of it — 25 in §16 — to beyond 45°; each roll of 90°+ in 0.3 s placed at its centroid frame:
+  entry / exit / elsewhere, and the passes with more than one roll out; `V=1`, `VV=1` the details). Driver `fo3/vertical/drv_b.sh` (tag `k`: hand
+  hold reps over le close fps143; then `k0` = `uprightKeepRoll=0`, `q`, `z` identities); `drv_k0b.sh` reruns the `k0` replays.

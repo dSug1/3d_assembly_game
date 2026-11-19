@@ -371,75 +371,9 @@ at 0.736: pass.
   on the ten stretches together; U-G1 to U-G4 as before; the cheap minors (the stale texts, a behavioural vector for the finger, F3 out of
   `uprightBandFree`); `vyah_11s` close in looked at, its root said.
 
-## 9. Fix round 2 as built and measured (the builder, 2026-11-19, night; local commits, nothing pushed)
+## 9. Fix round 2 as built and measured — MOVED
 
-**The result first.** The dy hold reads the logic's own glass again (UD8b): over `Scene_0bis`'s top and bottom far out the hold is set where
-`1.0.147-` sets it and nothing re-crosses under a steady push. A finding on the way: the finger turned off the picture was **mirrored** since FO3's S2
-(the glass's right taken as `forward × up`, Babylon's is `up × forward`): every move was turned by −φ instead of φ; fixed. UD11 is built (51 of 104
-holds on six of his stretches were set by a change freed fully upright). ⛔ **Two gates missed**: the finger's way (R7) 14.9° median against the
-target 14.1° (16.3° before this round; `1.0.147-` 12.1°), and **one frame turns the camera 98°** on one stretch (before this round: none).
-
-### 9.1 What was built
-
-| commit | kind | what |
-|---|---|---|
-| `7fe646c` | C | **R1, UD8b** — `fingerOnLogic` (`roll_follow.ts`, pure) called once in the pointer's step (`fingerAtEntry`) BEFORE `dySignPushing`, `edgeHoldDy`, `edgeHoldFinger`, `zoneFinger`; `zoneFinger` reads `asmCamLast` in a spit and converts nothing outside one; `asmPicLast` deleted. ⭐ `fingerOnGhost`'s mirror fixed (found by the new spit vector: 1.83 px off on a 5 px move). 5 vectors (the same world move at 0, 90, 143, 180°; the dy sign the hold reads is the logic's; the hold and its band on the logic's glass; the finger in a spit = the move read on the picture's frame; the picture's right is `up × forward`); 5 mutants red |
-| `efa08a5` | P | the hand replay records the hold (`h`, `ds`), the shadow the freed angle (`fe`) |
-| `25477c7` | C | **R2, UD11** — `uprightHoldKept` (`upright.ts`) and law U's `closed`: the hold a change set is dropped where that change is freed with `w` 1 before and after and nothing left to close; 7 vectors, 5 mutants red |
-| `7516ce3` | C | **R3** — the rest's slider label (*"upright: the rest to upright, its pace (deg a second; 0 = at once)"*), two `gestureConfig` comments, the test title (1 440); F3 out of `uprightBandFree` (with `uprightMaxDegS` 0 the carry is ignored, so `e653099`'s identity holds); 1 mutant red |
-
-### 9.2 The gates (his ten stretches far out at 60 frames a second unless said; before = `0816078`'s code as the auditor measured it)
-
-| gate | now | before this round | `1.0.147-` (`6f47219`) | verdict |
-|---|---|---|---|---|
-| (i) hold walks, set where 6f sets it | `z_far`, `z_close`, `b_close` 6/6, `zT_far` 2/2, `b_far` s0; `b_far` s1, s2: the level face's exit FREED, no hold, the back honoured at once | `b_far` none of 6 | as base | ✅ |
-| (i) no re-crossing under a steady push | none anywhere | — | — | ✅ |
-| (i) come-back honoured as in 6f | `z_close`, `b_close`, `zT`, `zC` as base; `z_far` s2 not (s3 – s5 yes) | `b_far` s2, s4 never | | ⛔ `z_far` s2 |
-| (i) refused both ways | nowhere | | | ✅ |
-| (ii) R7 away, median / p95 | **14.9 / 83.6** (target ≤ 14.1) | 16.3 / 92.7 | 12.1 / 61.1 | ⛔ +0.8° |
-| (ii) R7 near the vertical | 19.7 / 103.4 | 20.5 / 102.9 | 11.6 / 52.2 | |
-| (ii) R7 picture under 5° / 5° or more from the logic | 14.0 / 79.7 · 37.2 / 146.2 | 15.1 / 87.7 · 41.7 / 156.8 | | |
-| (iii) gravity over 20° | 7.3 % | 7.1 % | 35.4 % | ✅ |
-| (iii) gravity's roll a metre | 57.2° | 57.0° | 101.5° | ✅ |
-| (iii) a frame turning the camera over 90° / 45° | **1** (98.3°, `ilmj_39s`) / 55 | 0 / 45 | 0 / 5 | ⛔ |
-| (iii) frames held a metre (the auditor's measure) | 1.4 | 1.7 | 2.7 | ✅ |
-| (iv) `uprightPicture` 0 = `7bcae02`; `freeTurnMaxDeg` 0 = `6f47219` | three replays 2 794 / 2 794 and `ilmj_23s` 886 / 886 identical, both | | | ✅ |
-| (v) `Scene_1` over its top | 169 frames (168), turning 632°, no reversal, 0 errors | | | ✅ |
-| (v) level entry | the a walks: 0 errors, drift 0; straight dy drift (mm) −177, 139, −271, 187, −444, 289 | −179, 135, −244, 192, −337, 280 | −96, 92, −167, 154, −251, 235 | ⛔ px 6 |
-| (v) close in | `ilmj_23s` = 6f; `ilmj_99s` roll 32.0 (49.6); `vyah_11s` 48.4° a metre (29.0) | the same | | ⛔ `vyah_11s` (§9.3) |
-| (v) 143 frames a second | 0 errors; largest camera turn 43° and 21°; over 20° 6.9 and 7.8 % | | | ✅ |
-
-### 9.3 What the frames say (roots)
-
-* **R7's loss is not the finger's reading.** Split by the frames since the last FREED change: from 21 frames on, the median is 11.9° (n 706, `1.0.147-`
-  12.1°); 3 – 20 frames after one it was 51° before UD11 and is 21 – 33° now. The holds those changes set last 20 – 50 frames: the dy held, only the
-  dx passes, the gizmo goes sideways. The ones left are freed IN the band (UD4b, `w` under 1 after the change), which UD11 as briefed keeps.
-* **The 98° frame** (`ilmj_39s` f629): the frame AFTER a freed change, the logic's view jumping 13 → 33° from the vertical across the band; φ 57 → 9°
-  in one frame — the carry `c` = 0.70 of a `Δα` that is not a roll: F3's shape, one frame later (F3 covers only the change's own frame).
-* **`z_far` s2**: the back (12.2 mm) fell inside the timed turn; law U has the picture upright by frame 86 while the logic is still turning (6f: frame
-  98), so on the logic's glass most of the back is a dx — the hold's band counted 5.1 mm, not 12.2, and kept the come blocked.
-* **`vyah_11s` close in (R4)**: all the excess roll is ONE timed turn (f672 – 690: 160°, law U inactive there, `w` 0) that rolls gravity the long way
-  (−80 → ±180 → −1°) where `1.0.147-`'s goes −80 → −1°. The trajectory parted from f0 (the rest made upright far out, UD5, 1.4°) and the gizmo was
-  7.6 cm elsewhere by f670. Not law U's code: no fix.
-* Like for like: the walker steers by the glass; a pure glass dy on an upright picture 7° from the logic leaks ~0.25 px a frame of dx — a held push
-  slides slowly along the axis (`z_far`: 100 – 215 mm over 100 frames; 6f still). On `zT_far` the dx round the tip, a small logic dy, sets the hold
-  again (6f: the hold ends there); the dy still moves both ways (blocked 0 – 2 frames).
-
-### 9.4 Amendments the frames ask for (none built) — ⭐ for his review
-
-1. **UD11 to every change freed where the picture keeps its roll** (UD4b's in the band too): the frames 3 – 20 after such a change are what keeps R7
-   over target. The question for the owner: after a freed change in the band the picture rights itself in up to 1/8 s — a turn he sees, or not?
-2. **F3 extended to the frame after a freed change** when the logic's view crosses the band (the 98° frame) — or the carry `c` taken as `min(w)`
-   over the change and the next frame.
-3. **The hold's band during a timed turn read on the turn's end frame** (`z_far` s2) — a rule about the hold, so the owner's.
-
-### 9.5 What he will feel
-
-Far out the scene stays upright as before. Over the top and the bottom face the dy hold behaves as in `1.0.147-`: the push that crossed never brings
-the gizmo back; after a crossing he does not see turn (a freed change, fully upright), no hold: the finger goes on, and back at once. The finger
-steers a little better than last night (the mirror) but still worse than `1.0.147-` for a third of a second after a fast pass over a ridge. One flick
-of 98° on one of his ten stretches. Close in as before. **Slider label changed**: ☰ › ORBIT › UPRIGHT PICTURE, *the rest to upright, its pace*.
-**Not run**: the corner loops, the stretches at 0.736, `Scene_0` up, the edge and ridge walks; `z_far` s2 not re-run under amendment 3.
+⭐ (2026-11-19, packet V1-B, for the 800-line cap) moved whole, unchanged → [`../history/2026-11-19_upright_fix_round_2_moved.md`](../history/2026-11-19_upright_fix_round_2_moved.md).
 
 ## 10. Fix round 3 as briefed — the carry is the logic's twist undone (the lead, 2026-11-19, 04:00; ⭐ for his review)
 
@@ -768,3 +702,87 @@ section's new-default figures): (1) B1 and B2 by the logic's turns near the vert
 the camera 45°+ at once not above the live build's 51; (5) the hold walks: `z_far` blocked as now (100 / 104) and every come-back honoured; (6)
 `uprightPicture` 0 and `freeTurnMaxDeg` 0 frame for frame; (7) vectors red on mutants (the carry's weight, the kept roll, `changeSeen`'s share);
 then an independent auditor measuring A, B1, B2 the same way, then his look.
+
+## 16. Rule V1 as built and measured (packet V1-B, 2026-11-19, afternoon; local commits, nothing pushed) — ⛔ GATES FAILED, ⭐ for his review
+
+**The result first.** The circle is gone: the camera's turn in the level plane that his finger did not ask for, 90° or more, fell from 74 events to
+3 on his ten stretches (`1.0.147-`: 81). The jitter at a pole fell from 16 arrivals of 26 to 9 of 24 (`1.0.147-`: 18 of 45). ⛔ But the rapid half
+turn is still there, once a pass, on the way out — now the law's, at 720° a second, not the logic's. And four gates fail: the dy hold over a ridge
+far out is gone, gravity is tilted far more often (the seeded replays about 30 % of the frames instead of 1 %), the finger's angle is worse, and 6
+rapid rolls remain at an entry. Close in nothing changed. The switch `uprightKeepRoll` (ORBIT › UPRIGHT PICTURE) is 1 on this branch; at 0 the game
+is the defaults commit `74a247e`, frame for frame.
+
+### 16.1 What was built (commits on `1.0.148c-`)
+
+| commit | what |
+|---|---|
+| `56d3ebe` | V1's pure law (`src/input/upright.ts`, `uprightKept`): the carry undoes the logic's twist with the square camera's complement alone, never `w`; the kept roll `ψ`; `changeWeight` (a change seen through the carry's weight); vectors |
+| `740f474` | the wiring behind ONE switch `uprightKeepRoll` (1; 0 = `74a247e`): the law told by the slider, `changeSeen` fed by `changeWeight` at both ends, the record's `sc`; gestureConfig, the menu (126 sliders), source vectors |
+| `25b82ae` | ⭐ amendment (below): the kept roll is a RATCHET — held while the weight falls, turned toward upright by the share of the way left while it rises |
+
+Mutants: 15 of 15 red on the first build, 13 of 13 on the amended law (the kit's `fo3/vertical/mut_v1*.json`).
+
+**The amendment the frames asked for.** As briefed (§15) the target was `ψ + w·wrap(α − ψ)`, with `ψ` set upright only where `w` is 1. On his
+stretches a way out that stopped short of `w` 1 left `ψ` half a turn stale, and the next approach rolled the picture 140° BACK to it — at an entry
+(`vyah_42s` f39 – 50). Now `ψ` is held while `w` falls and moves by `(w − w before)/(1 − w before)` of the gap while it rises: from the vertical
+outward it is §15's target exactly; inward it keeps the roll the picture has.
+
+### 16.2 Who owns what
+
+* The logic owns its state; it no longer makes a timed turn far out: every change there is applied at once (its seen share is 0) — measured, 0° of
+  timed turns on his stretches (14 985° at the defaults).
+* Law U owns the picture's roll everywhere: the carry undoes every turn of the logic; the rest goes to the kept roll or toward upright.
+* `changeWeight` → `changeSeen` decides once whether a change is seen; nothing deletes a turn or a hold afterwards (source vectors).
+
+### 16.3 The gates (his ten stretches, `Scene_0bis`, far out, 60 frames a second, unless said)
+
+| gate | now (`25b82ae`) | defaults (`74a247e`) | `1.0.147-` (`6f47219`) | pass |
+|---|---|---|---|---|
+| B2 — the camera turned 90°+ in the level plane, unasked (events) | 3 (median 1°) | 74 (73°) | 81 (81°) | ✅ (aim 0) |
+| B1 — the picture's roll of 90°+ within 0.3 s, by place on a pass (arrival within 25°): entry / exit / elsewhere | 6 / 164 / 3 | 7 / 161 / 2 | 2 / 115 / 3 | ⛔ entry not 0 |
+| passes with one roll out / more than one | 135 / 14 | 137 / 11 | 86 / 14 | ⛔ partly |
+| A — a jitter at a pole (arrivals) | 9 of 24 | 16 of 26 | 18 of 45 | ✅ |
+| frames turning the camera over 90° / 45 – 90° | 0 / 7 | 1 / 27 | 0 / 5 | ✅ |
+| gravity tilted over 20° · its roll a metre | 29.4 % · 107.6° | 21.7 % · 88.8° | 35.4 % · 101.5° | ⛔ |
+| frames held a metre | 0.0 | 1.4 | 2.7 | ✅ |
+| R7, away from the vertical (median / p90) | 15.7° / 71.3° | 14.3° / 65.9° | 12.1° / 61.1° | ⛔ |
+| hold walks `z_far` s0, s1: held | none set (0 / 0 frames) | 100 / 104 | 100 / 104 | ⛔ |
+| hold walks close in (`z_close`, `b_close`) | as the defaults (98 / 102, every come-back as before) | 98 / 102 | — | ✅ |
+| seeded replays: A · gravity over 20° (heptagon / `Scene_0bis` / cube) | 3 of 24 · 30.7 / 14.2 / 28.9 % | 6 of 34 · 0.2 / 4.5 / 1.1 % | 6 of 35 | ⛔ gravity |
+| `Scene_1` over its top (1 200 px/s): A · reversals · worst frame | 0 of 2 · 1 · 20.9° | 0 of 2 · 1 · 22.4° | — | ✅ |
+| level entry's walks: B1 90°+ · B2 90°+ | 17 · 4 | 17 · 16 | — | ✅ |
+| close in, three stretches | identical to the live build (6.9e-18) | — | — | ✅ |
+| 143 frames a second (`ilmj_23s`, `ogse_3s`): frames over 45° | 0 | — | — | ✅ |
+| `uprightKeepRoll` 0 = `74a247e`; `uprightPicture` 0 = `7bcae02`; `freeTurnMaxDeg` 0 = `6f47219` (three replays + `ilmj_23s`) | identical, largest 0 (one first run of the heptagon 2.2e-9 from its boot; its rerun 0) | — | — | ✅ |
+
+Readers (the kit's `fo3/vertical`): `vb.mjs` (A, B1, B2), the new `bursts.mjs` (B1 by place on a pass), `vt.mjs`; the auditors' `t_read.mjs`,
+`hold_tab.mjs`, `come_split.mjs`; `same.mjs`. Checkpoint: `fo3/vertical/CHECKPOINT_B.md`.
+
+### 16.4 What the frames refute in §15
+
+1. **"That rest is the law's own half turn (RB3: the gizmo held while it closes, the push held after it)."** With the target turned toward upright
+   by the weight, the half turn is PACED BY THE VIEW leaving the band. On a steady push the rest never opens 90° in one frame, so RB3 never fires:
+   `z_far` sets no hold and the push goes on round the body (the come leg 0.4 – 1.1 m along the body). Holding the gizmo while it closes cannot
+   work either: the gizmo held, the view stops, the weight stops, the turn never closes. On his hand RB3 still fires where the view jumps out of
+   the band.
+2. **"Near the vertical".** With his band 15 – 50°, near the vertical is everything within 50° of it. There the picture
+   no longer follows a fast swing of the logic's heading; it is caught up later at 720° a second (`ilmj_4s` f424 – 436: 86°; these are the 6 entry
+   rolls). Gravity stays tilted wherever the view lingers in the band (the replays: about 30 % of the frames against 1 %).
+3. **"The one half turn, paid once, calmer."** It is still a half turn of about 180° within 0.3 s on 135 passes — the rapid roll he named — only
+   made by the law instead of the logic. What V1 removes is the circle after it (B2), and most of the jitter.
+
+### 16.5 What he will feel (if he tries `uprightKeepRoll` 1)
+
+Crossing a level face or a zenith edge in polar orbit, the extra circle in the level plane is gone, and the jitter at a pole is about half as
+frequent. The quick half turn is still there once, as the view leaves the vertical. Pushing straight over a ridge far out, the push is no longer
+stopped: the camera goes on round the body. Hovering 20 – 50° off the vertical the scene stays tilted instead of righting itself. Close in nothing
+changes.
+
+### 16.6 Decisions for his review
+
+* V1-a — whether to keep `uprightKeepRoll` at 1 on this branch (the circle gone, the hold over a ridge gone) or at 0 (the defaults commit, frame for
+  frame). As built it is 1; nothing is pushed or deployed. ⚠ A deploy of this branch's head ships V1: deploy `74a247e`'s code, or set it to 0 first.
+* V1-b — the ratchet (§16.1) in place of §15's `ψ + w·wrap(α − ψ)`.
+* V1-c — the next study, from the root of §16.4: whether the one half turn should be decided as a TURN (timed at its own pace, the gizmo held,
+  the push held — T5, T9) at the moment the kept roll and upright part by 90° or more, instead of paced by the view; and whether the kept roll
+  should hold only within `uprightFromDeg` of the vertical, upright in the rest of the band.

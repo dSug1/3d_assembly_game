@@ -753,3 +753,7 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   crossings, the picture turning 154° on average); the rapid 180° roll is law U's own rest back to the logic's pose (118 at 1 800°/s, 67 at 720);
   the jitter at a pole is that same turn starting, held and released. The rule to build (V1, nothing built): near the vertical the picture keeps the
   roll it arrives with, the logic's twist undone whole at every view, the one half turn paid on the way out → `UPRIGHT_PICTURE.md` §15.
+* **2026-11-19, afternoon — rule V1 BUILT on `1.0.148c-` (packet V1-B; local, nothing pushed), ⛔ gates failed.** `56d3ebe`, `740f474`, `25b82ae` (the kept roll
+  a ratchet, an amendment the frames asked for) behind ONE switch `uprightKeepRoll` (1; 0 = `74a247e` frame for frame): the circle gone (B2 74 → 3), the
+  jitter at a pole 16 → 9 arrivals; but the half turn still once a pass, the dy hold over a ridge far out gone (`z_far` 0 frames held, 100 / 104 before),
+  gravity tilted 29.4 % (21.7) and ~30 % on the replays (~1 %), R7 worse → `UPRIGHT_PICTURE.md` §16 (what §15 assumed and the frames refute).
