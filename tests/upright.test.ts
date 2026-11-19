@@ -25,7 +25,9 @@ function poseAt(el: number, yaw: number, roll: number, off: Vec3 = [0.005, 0.002
   const u0 = Math.abs(k) > 0.999999 ? ([1, 0, 0] as Vec3) : unit([-f[0] * k, 1 - f[1] * k, -f[2] * k]);
   return { eye, look, up: rotateAbout(u0, f, roll * DEG) };
 }
-const K = { fromDeg: UPRIGHT_FROM_DEG, fullDeg: UPRIGHT_FULL_DEG, maxDegS: 0 };
+// ⭐ the law's vectors below are written on the band 5 – 25° (their fixtures' views sit in it and beyond it); the defaults moved to 15 – 50° on the
+// owner's word (2026-11-19) and are pinned on their own just below — the law is the same function of its knobs
+const K = { fromDeg: 5, fullDeg: 25, maxDegS: 0 };
 const pic = (s: UprightState, g: CamPose, dt = 1000 / 60, k = K, scale = 1) => {
   const line = framedLine(g, piece);
   const r = uprightStep(s, g, line, dt, k, scale);
@@ -33,8 +35,13 @@ const pic = (s: UprightState, g: CamPose, dt = 1000 / 60, k = K, scale = 1) => {
 };
 
 describe("law U's defaults and its weight", () => {
-  it("the band 5 – 25°, the rest at 1 800° a second (UD6b, set by the gates of fix round 3); w a smoothstep, 0 within 5°, 1 from 25°", () => {
-    expect([UPRIGHT_FROM_DEG, UPRIGHT_FULL_DEG, UPRIGHT_MAX_DEG_S]).toEqual([5, 25, 1800]);
+  it("the defaults: the band 15 – 50°, the rest at 720° a second (the owner 2026-11-19: \"Changing both together is much better\"; 5 – 25°, 1 800 before)", () => {
+    expect([UPRIGHT_FROM_DEG, UPRIGHT_FULL_DEG, UPRIGHT_MAX_DEG_S]).toEqual([15, 50, 720]);
+    expect(uprightWeight(14.99 * DEG, UPRIGHT_FROM_DEG, UPRIGHT_FULL_DEG)).toBe(0);
+    expect(uprightWeight(50 * DEG, UPRIGHT_FROM_DEG, UPRIGHT_FULL_DEG)).toBe(1);
+    expect(uprightWeight(32.5 * DEG, UPRIGHT_FROM_DEG, UPRIGHT_FULL_DEG)).toBeCloseTo(0.5, 12);
+  });
+  it("w a smoothstep on the band 5 – 25° (the knobs as given): 0 within 5°, 1 from 25°", () => {
     expect(uprightWeight(4.99 * DEG, 5, 25)).toBe(0);
     expect(uprightWeight(25 * DEG, 5, 25)).toBe(1);
     expect(uprightWeight(15 * DEG, 5, 25)).toBeCloseTo(0.5, 12);
