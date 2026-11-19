@@ -566,3 +566,71 @@ Far out the scene stays upright; the rare flick of the whole view over a ridge i
 night. Over a top the floor rights itself in about a tenth of a second (1 800° a second). After a crossing he does not see turn, no hold.
 **Slider**: ☰ › ORBIT › UPRIGHT PICTURE, *the rest to upright, its pace* — 1 800 now (1 440 is calmer frame to frame, tilts more; 2 160 the reverse).
 **Not run**: the corner loops, the stretches at 0.736, close in, the straight dy walks; `ogse_3s` at 143 frames a second.
+
+## 12. Root or patch? The audit — and THE REBUILD as briefed (the lead, 2026-11-19, 05:50; ⭐ for his review)
+
+**The owner** (2026-11-19, on waking, verbatim): *"make sure your three fixes addressed deep root causes, and are not patches which rules may
+conflict with other rules. If they are patches, do a proper rebuild of 1.0.148b."*
+
+**The answer: partly roots, partly patches — so the join is rebuilt.** Read by the lead in `roll_shadow.ts` (l. 101 – 204), then by one Opus
+study, offline, nothing built (the kit's `fo3/upright/REBUILD.md`: every rule since `545152b`, the conflict map, its readers).
+
+| | the rule | why |
+|---|---|---|
+| ROOT | law U's target and the picture drawn (`e82ae2e`, `bb4b5fa`); the way to upright paced (`5d1f17c`); the carry read as the logic's twist undone (`fb80fd0`); the finger turned ONCE at the entry, and its mirror fixed (`7fe646c`) | each is one rule of the picture's law, or one conversion; none overrides the logic |
+| PATCH | `uprightFrees` (`8348ce1`, `d7ec0d2`): the timed turn the logic makes in its step is DELETED at the camera's stage, behind three switches | created, then undone: two owners of `asmZoneMix`; `freeShownHeading` runs in between and still sees a turn |
+| PATCH | `uprightHoldKept` (`25477c7`, `f1f9b55`): the dy hold the crossing set is DROPPED afterwards | two owners of `asmEdgeHold`; keyed on "freed" — a property of the join — not on what the player sees |
+| PATCH | F3 (`9cf3fda`): the carry forced whole on a timed turn's first frame | an event's rule — and dead: measured, the logic's twist is exactly 0 on all 141 such frames |
+| TUNING | the pace 1 800° a second | a number between two gates; its root is elsewhere: the weight `w` is read off the CAMERA's view, which a turn swings through the band 5 – 25° in one or two frames |
+
+**The conflicts these make** (measured — the builders', the two auditors', the study's): the dy hold is applied on the LOGIC's glass, after the
+finger's conversion — a held straight push lets the gizmo slide 129 – 215 mm (`1.0.147-`: 11 mm; the hold blocks 2 frames where it blocked
+100), one come-back is counted 5.1 mm of its 12.2; 16 holds of 134 are set where the picture turned under 90°, and 14 of the 42 changes freed
+inside the band turn the picture 90° or more within 0.2 s with NO hold; 7 timed turns of 127 stop the gizmo while the picture hardly turns;
+the level entry's straight dy goes 1.2 – 1.8 times further off; 47 frames turn the camera 45 – 90° at once (5 in `1.0.147-` — 22 of them are
+the logic's own jump at a freed change, FO3's, which no roll can hide). ⭐ Where the picture is within 5° of the logic's pose the finger steers
+as in `1.0.147-` (12.5° / 55.0° against 12.1° / 61.1°); where it is turned away (10 % of the frames, the picture rolling) 49.9° / 142.9°.
+
+**THE REBUILD — one owner per thing** (the study's design B2, the lead's amendment on RB3):
+
+* **The logic owns its state** — a change of frame is its bookkeeping. **The law owns the picture's roll.** **What the finger means, and when
+  the gizmo stops, belongs to the turn the player SEES** — decided ONCE, where the change happens, never undone later.
+* **RB1 — `changeSeen`**, a pure function in `src/input/upright.ts`, called once in every place that starts a turn (`crossTurn`, the two others)
+  BEFORE anything is created: a change is a timed turn when its kind stays (the square camera's, `byMm`, `out`, a tilt's) or when the share of it
+  the player sees, `(1 − min(w before, w after)) × the turn`, is `freeTurnMaxDeg` or more; else it is applied at once, its roll carried whole by
+  the law. A turn the player does not see is never created: no deletion at the camera's stage, `uprightFrees` gone. `uprightPicture` 0: FO3's
+  rule, frame for frame.
+* **RB2 — the hold is a DIRECTION on the picture's glass.** The logic's geometry still says which push crossed; the hold is that push as the
+  player sees it, set, applied and released on the RAW finger BEFORE the conversion: the part along it blocked, the rest passes, released by
+  `edgeHoldMm` of travel the other way. With the picture the logic's pose it is today's dy hold, bit for bit. Set only by a turn he sees of 90°
+  or more. `uprightHoldKept` gone.
+* **RB3 — the law's own half turn is a turn he sees** (the lead's; the study would measure first). When the rest the law has to close is 90° or
+  more — the half turn after a pass over the vertical — it is his T5 and T9 as for any turn: the gizmo held while it closes (a tenth of a
+  second), the push that was on held after it. Without it the same push goes back over the vertical once the picture has righted itself.
+* **RB4 — `w` read off the ORBIT's direction** (the piece's direction from the centre: known in the logic's step, eased, never swung by a turn),
+  not off the camera's view — after an offline proof on the recordings (the camera's offsets put the two 2 – 2.5° apart near the vertical); if
+  the proof fails, `w` stays as it is and the reason is written.
+* **RB5 — one pace** (`uprightMaxDegS`, chosen again on his ten stretches once RB1 – RB4 stand); F3 removed; the switches `uprightFreeTurns`
+  and `uprightBandFree` deleted — four sliders: `uprightPicture`, `uprightFromDeg`, `uprightFullDeg`, `uprightMaxDegS` (and `uprightCloseIn`).
+* **Kept as built**: the law (`e82ae2e`, `bb4b5fa`, `5d1f17c`, `fb80fd0`), the finger's entry (`7fe646c`), the probes, the 160 ms default.
+  **Not taken**: the logic's own camera made upright at the source — it would move T4, T6, T7, T9 and the charts' rule at once: a rebuild of
+  the orbit, not of the picture; the long-term option if he decides against T7.
+
+**The lead's decisions until his word** (UD4b, UD11, UD11b and UD2's switches are withdrawn with their code):
+
+| # | the decision | his rule it touches |
+|---|---|---|
+| UD12 | the logic still goes upside down over a top or an axis (his T7, T4); the picture hides it | T7 / T4 against "gravity always vertical" |
+| UD13 | the dy hold is a direction on the glass he sees, not "the dy" of the logic's glass | T9, D1 – D5 (identical when the picture is the logic's pose) |
+| UD14 | a turn's angle is read as SEEN: the gizmo stops only for a turn he sees of 90° or more — whoever makes it, the law's own half turn too | R6, T5 |
+| UD15 | one pace for the picture far out; his 160 ms acts with `uprightPicture` 0 | his "160 ms" |
+| UD16 | on a level face near the vertical the silent entry's heading is seen once, gravity's correction on top | E1 – E7 |
+| UD17 | close in the square camera owns the roll (UD3, kept) | T1 |
+
+**The gates**: §3 as amended in §6, §8, §10 — and one per conflict: (1) nothing writes `asmZoneMix` or `asmEdgeHold` outside the logic's step
+and the pointer's (a source test); (2) a change applied at once leaves no "turning" for `freeShownHeading` (a vector); (3) a held push: the
+gizmo's travel under 15 mm over 100 frames on `z_far` (`1.0.147-`: 11); (4) every come-back of the hold walks honoured as in `1.0.147-`;
+(5) holds set only where the turn seen is 90° or more — none missing, none extra (the study's reader); (6) the gizmo stopped only by a turn he
+sees; (7) under a steady push over the vertical, no going back by itself; (8) the frames turning the camera 45° or more, by cause — the aim
+under 27, with gravity over 20° under 9.3 %; (9) every switch at 0 gives its earlier game frame for frame; (10) the finger's angle not over
+13.4°; then an independent audit before any deploy.
