@@ -884,9 +884,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   freeTurnMaxDeg: FREE_TURN_MAX_DEG, // ⭐⭐⭐ (FO3 S1) 90: the changes under 90° free (R6); 0 = today's game
   uprightPicture: 1, // ⭐⭐⭐ (2026-11-18, `UPRIGHT_PICTURE.md` UD1) law U on; 0 = FO3 S1's follower
   uprightCloseIn: 0, // ⭐ (UD3) the square camera's T1 wins close in
-  uprightFromDeg: UPRIGHT_FROM_DEG, // ⭐ (UD1) 5°
-  uprightFullDeg: UPRIGHT_FULL_DEG, // ⭐ (UD1) 25°
-  uprightMaxDegS: UPRIGHT_MAX_DEG_S, // ⭐ (UD6b; fix round 3) 1 800° a second, everywhere
+  uprightFromDeg: UPRIGHT_FROM_DEG, // ⭐ (UD1; the owner 2026-11-19) 15°
+  uprightFullDeg: UPRIGHT_FULL_DEG, // ⭐ (UD1; the owner 2026-11-19) 50°
+  uprightMaxDegS: UPRIGHT_MAX_DEG_S, // ⭐ (UD6b; the owner 2026-11-19) 720° a second, everywhere
   gizmoEaseMs: 45, // ⭐⭐ (2026-11-04, the owner: *"update the lag the gizmo's position the piece follows to 45ms"*; 62, 55 before, the former GIZMO_TAU_MS 90)
   orbitSpringMs: 30, // ⭐⭐ (2026-11-04) the former boxSmoothMs / 2 for the orbit's spring
   tiltedPole: 1, // ⭐⭐⭐ (2026-11-10, §9.4) the tilted pole on
