@@ -731,3 +731,6 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   finger read off a picture that differs from the logic's — `freeShownHeading` cleared).
 * **Experiment, not committed**: the cap at `w` = 1 too, 720° a second — one-frame flips 84 → 10, over 20° 12.0 %, roll 51° a metre. For the lead.
 * **2026-11-19 (fix round 1)**: law U in time (`5d1f17c`, `d7ec0d2`, `9cf3fda`, `06d9faa`): no frame turns the camera over 90° on his hand (84 → 0), gravity over 20° 7.1 %, roll 57° a metre, the rest at 1 440° a second; ⛔ open: 45 – 90° frames (45 vs 5), A6, held frames vs deployed on 5 of 10 → `UPRIGHT_PICTURE.md` §7.
+* **2026-11-19 (fix round 2, `UPRIGHT_PICTURE.md` §9)**: the finger turned once at the entry (UD8b, `7fe646c`; and its mirror since FO3's S2 fixed), a
+  hold dropped where its change is freed fully upright (UD11, `25477c7`), the minors (`7516ce3`): the dy hold as `1.0.147-`'s on the hold walks, the
+  identities kept; ⛔ R7 14.9° (target 14.1°), one frame of 98° on one stretch, `z_far` s2's come-back, the straight dy at 6 px a frame — open (§9.4).

@@ -521,3 +521,9 @@ node scripts/probes/gravity_read.mjs <rec.json> ...          # JSON=1: one objec
 * **Fix round 1** (`UPRIGHT_PICTURE.md` §7): the kit's `sum_fr1.sh <tag>` (vsum + A6 split), `a6split.mjs` (A6 apart on the frames where law U's rest
   is under 5° and where it is closing — α recomputed from the recorded `gh3`, `pp`), `j90.sh <tag> [deg]` (the frames turning the whole camera over
   `deg` a stretch, with `1.0.147-`'s count over 45°), `jrep.sh <tag>` (the same on the replays and `Scene_1` over its top), `id_fr1.sh` (U-G1).
+* **Fix round 2** (`UPRIGHT_PICTURE.md` §9): the dy hold's walks (`upright_batch.sh <tag> hold`) are an upright gate — read LIKE FOR LIKE, the
+  walker steering by the glass: the kit's `hw_world.mjs` (per sub-walk the gizmo toward / away from the edge per leg, the picture's tilt before and
+  after, a re-crossing, refused both ways) beside `hold_walk_analyse.mjs`; base `fo3/runs/base/bhw_*`. R7 (the finger's way against the gizmo's on the
+  drawn glass) by the auditor's `audit/t_read.mjs` (`audit/rd_hand.sh <dir> <tag> 60 far`, `ALL` line, `awayAll`): `1.0.147-` 12.1 / 61.1°; split by
+  the frames since a freed change (`r7_freed.mjs`, needs the shadow's `fe`) and by the view (`r7_buckets.mjs`). The holds set and by what change:
+  `ud11_read.mjs` (needs the hand record's `h`, `efa08a5`).
