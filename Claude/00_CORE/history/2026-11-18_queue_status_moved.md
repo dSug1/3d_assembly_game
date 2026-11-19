@@ -23,3 +23,24 @@
 tilted pole close in on the carried heading (the way out blended); the level face's entry; ⭐ live since 2026-11-18: the dy hold released by a true
 hysteresis (8 mm of finger) and the SILENT ENTRY (a level face entered over an edge keeps the picture — the switch `freeEntryUpright`). **2091
 vectors.** ⛔ No device look on the last two yet.
+
+## Moved on 2026-11-19, when the upright picture went live (main `675ec23` = `1.0.148b-` at `d6f200e`): the lines of QUEUE.md's YOU ARE HERE block and CLAUDE.md's status as they stood
+
+### From QUEUE.md
+
+## ⭐⭐⭐ YOU ARE HERE (2026-11-18, branch `1.0.148-`, live main `4eabab8` = `48ae89c`)
+
+⭐⭐⭐ **LIVE**: the orbit on charts, always on; the tilted pole close in on the carried heading; the level face's entry (A); the dy hold (8 mm hysteresis); the silent entry, version 7; ⭐ the fast orbit FO3 S1 + S2 (below). ⛔ Built, measured, reverted, NOT in the game: package A, R1, the timing rule, the fast orbit's three builds of 2026-11-17. ⚠ `Scene_2` never ran with the charts; the iPhone's black screen (RND6) is diagnosed, not fixed.
+⭐⭐⭐ **THE FAST ORBIT FO3 (2026-11-18, late evening)**: S1 and S2 DEPLOYED on his word — LIVE main `4eabab8` = `1.0.148-` at `48ae89c` (not independently tested). ⚠ LIVE holds S2, which the builder reverted on the branch (`f198b3a`: a feedback at a pole, `FAST_ORBIT.md` §14.4). **2118 vectors**, 120 sliders. His look: *"the build is very good at 160 ms and 90degrees: set them as default"*, and he wants no roll of the scene on the screen (§15).
+⭐ The upright study (offline): gravity tilted over 20° on the glass 15 – 19 % of the frames on the seeded replays against about 1 % before FO3; law U (`UPRIGHT_PICTURE.md` on `1.0.148b-`) gives 0.2 – 8 % on his hand. The mitigation study: [`FAST_ORBIT_MITIGATIONS.md`](../../40_RENDER_SCENE/spec/FAST_ORBIT_MITIGATIONS.md).
+⭐ **NEXT (his order of 2026-11-18, in his sleep, no questions)**: the upright picture built, tested and deployed on `1.0.148b-Fast_orbit_upright_gravity` (from this branch's tip); then, on his word in the morning, the charts' full audit or a rework of the fast orbit; the merge prepared on his word → [`RND5.md`](../queue_notes/RND5.md); the handover (its section 6) → [`HANDOVER_2026-11-18.md`](../queue_notes/HANDOVER_2026-11-18.md).
+
+✅ `npm run verify`: **2091 vectors** (166 files), green — MEASURED 2026-11-18 on `1.0.147-` at `3c66eb9`.
+
+### From CLAUDE.md
+
+## Where it stands (2026-11-18)
+
+⭐⭐⭐ **NOW — LIVE main `4eabab8` = `1.0.148-` at `48ae89c`** (the fast orbit FO3 S1 + S2; the orbit on charts, the dy hold, the silent entry). His look: *"the build is very good at 160 ms and 90degrees"*,
+and he wants no roll of the scene on the screen. The work goes on on `1.0.148b-Fast_orbit_upright_gravity` (law U; `FAST_ORBIT.md` §15). **2118 vectors** at `f198b3a`
+(S2 reverted on the branch, still LIVE). The earlier status moved → [`2026-11-18_queue_status_moved.md`](2026-11-18_queue_status_moved.md).
