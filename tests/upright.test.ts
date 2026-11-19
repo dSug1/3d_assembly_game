@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import type { Vec3 } from "../src/core/vec";
 import { rotateAbout, type CamPose } from "../src/input/orbit_tilt";
 import { framedLine, onGlass, poseRolled, twistAbout } from "../src/input/roll_follow";
-import { gravityTilt, UPRIGHT_FROM_DEG, UPRIGHT_FULL_DEG, UPRIGHT_MAX_DEG_S, UPRIGHT_REST, uprightAngle, uprightHoldKept, uprightStep, uprightWeight, viewFromVertical, type UprightState } from "../src/input/upright";
+import { gravityTilt, UPRIGHT_FROM_DEG, UPRIGHT_FULL_DEG, UPRIGHT_MAX_DEG_S, UPRIGHT_REST, changeSeen, uprightAngle, uprightStep, uprightWeight, viewFromVertical, type UprightState } from "../src/input/upright";
 
 const DEG = Math.PI / 180;
 const wrap = (a: number): number => Math.atan2(Math.sin(a), Math.cos(a));
@@ -395,12 +395,43 @@ describe("no root: held", () => {
   });
 });
 
-describe("UD11 — a hold belongs to a turn the player sees (fix round 2, UPRIGHT_PICTURE.md §8): `uprightHoldKept`, and law U's `closed`", () => {
-  it("(round 3, UD11b) dropped wherever the change is FREED, in the band too; kept for a timed turn", () => {
-    // ⭐ (fix round 3, UD11b) every freed change drops its hold, inside the band too; a timed turn keeps 1.0.147-'s hold
-    expect(uprightHoldKept(true)).toBe(false);
-    expect(uprightHoldKept(false)).toBe(true);
+describe("RB1 — changeSeen: a change of frame as the player SEES it, decided once (UPRIGHT_PICTURE.md §12, the rebuild)", () => {
+  const C = { stays: false, wBefore: 1, wAfter: 1, turnRad: Math.PI, freeMaxDeg: 90 };
+  it("upright at both ends (w 1): any turn applied at once — its roll the law hides; the share seen 0", () => {
+    for (const t of [10, 89, 90, 135, 180]) {
+      const r = changeSeen({ ...C, turnRad: t * DEG });
+      expect(r.timed).toBe(false);
+      expect(r.seenRad).toBe(0);
+    }
   });
+  it("at the vertical (w 0 at either end): FO3's rule — timed from freeTurnMaxDeg (its 2° tolerance), at once under it", () => {
+    expect(changeSeen({ ...C, wBefore: 0, turnRad: 120 * DEG }).timed).toBe(true);
+    expect(changeSeen({ ...C, wAfter: 0, turnRad: 89 * DEG }).timed).toBe(true); // 89 ≥ 90 − 2
+    expect(changeSeen({ ...C, wAfter: 0, turnRad: 87 * DEG }).timed).toBe(false);
+    expect(changeSeen({ ...C, wBefore: 0, turnRad: 87 * DEG }).seenRad).toBeCloseTo(87 * DEG, 12);
+  });
+  it("in the band: the share seen (1 − min w) × the turn — the SMALLER weight of the two ends", () => {
+    const r = changeSeen({ ...C, wBefore: 0.25, wAfter: 0.75, turnRad: 160 * DEG });
+    expect(r.seenRad).toBeCloseTo(0.75 * 160 * DEG, 12);
+    expect(r.timed).toBe(true); // 120° seen
+    const q = changeSeen({ ...C, wBefore: 0.6, wAfter: 0.9, turnRad: 160 * DEG });
+    expect(q.seenRad).toBeCloseTo(0.4 * 160 * DEG, 12);
+    expect(q.timed).toBe(false); // 64° seen
+  });
+  it("a kind that stays is timed whatever is seen; an unknown angle is timed; freeTurnMaxDeg 0: every change timed", () => {
+    expect(changeSeen({ ...C, stays: true, turnRad: 1 * DEG }).timed).toBe(true);
+    expect(changeSeen({ ...C, turnRad: Number.NaN }).timed).toBe(true);
+    expect(changeSeen({ ...C, turnRad: Number.NaN }).seenRad).toBe(Infinity);
+    expect(changeSeen({ ...C, wBefore: 0, turnRad: 1 * DEG, freeMaxDeg: 0 }).timed).toBe(true);
+  });
+  it("weights out of [0, 1] or not finite read as clamped (not finite: 0 — the vertical, the safe side)", () => {
+    expect(changeSeen({ ...C, wBefore: 2, wAfter: 1.5, turnRad: 170 * DEG }).timed).toBe(false);
+    expect(changeSeen({ ...C, wBefore: Number.NaN, turnRad: 170 * DEG }).timed).toBe(true);
+    expect(changeSeen({ ...C, wBefore: -1, turnRad: 170 * DEG }).seenRad).toBeCloseTo(170 * DEG, 12);
+  });
+});
+
+describe("law U's `closed`", () => {
   it("closed: a change of 180° at w 1 carried (the picture where it was) is closed; a band crossed with α near 180° leaves a rest (not closed) until it is", () => {
     const K6 = { ...K, maxDegS: 720 };
     const dt = 1000 / 60;

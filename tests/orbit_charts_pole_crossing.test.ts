@@ -322,8 +322,7 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`)", () => {
       "const m = mapGizmo(st, mq.yaw, mq.pitch);",
       "if (Math.hypot(v[0], v[1], v[2]) > 1e-6) st.asmGOff = { v, left: 1, timeMs: 0, durMs: rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS) };",
       "st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch }; faceBandRead(st, m.t);",
-      "else if (st.asmCamLast !== null) seamTurnStart(st, false);",
-      "st.orbitInertia.stop(); st.asmEdgeHold = holdAtCrossing(c.hold);",
+      "turnBegin(st, { paced: c.paced, byMm: false, noCamNull: false, uWas: c.uWas, carry: c.carry, tilt: c.tilt === true, stopCoast: true, hold: c.hold });", // ⭐ (2026-11-19, RB1) the turn, the ease, the coast and the hold through the one starter
     ];
     let at2 = -1;
     for (const s of order2) {

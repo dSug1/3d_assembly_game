@@ -8,6 +8,8 @@ import { fingerOnGhost, fingerOnLogic, framedLine, poseAxes, poseRolled } from "
 import { dySignPushing, edgeHoldDy, edgeHoldFinger } from "../src/input/orbit_tilt";
 import { fingerInFrame } from "../src/input/polar_zone";
 import { DEFAULT_CONFIG, validateGestureConfig } from "../src/input/gestureConfig";
+import { changeApply } from "../src/render/assembly_wiring";
+import type { SceneState } from "../src/render/scene_state";
 
 const DEG = Math.PI / 180;
 const unit = (a: Vec3): Vec3 => {
@@ -172,38 +174,98 @@ describe("law U's wiring (`roll_shadow.ts` uprightPictureFrame, `assembly_wiring
   });
 });
 
-describe("U3 — a change of frame freed only where the picture is fully upright at both ends (`uprightFrees`) — read in the source", () => {
-  const rs = readFileSync("src/render/roll_shadow.ts", "utf8");
-  it("asked only of the changes S1 would judge (first frame, none of the kinds that stay); w 1 before and after; any angle with uprightFreeTurns 1", () => {
-    expect(rs).toContain("if (st.cfg.uprightPicture === 1 ? uprightFrees(st, was, ghost, whole, maxDeg) : turnIsFree(whole, maxDeg)) {");
-    expect(rs).toContain("if (was.upright === undefined || !(was.upright.w >= 1)) return false;");
-    expect(rs).toContain("if (!(uprightWeight(viewFromVertical(ghost), st.cfg.uprightFromDeg, st.cfg.uprightFullDeg) * scale >= 1)) return false;");
-    expect(rs).toContain("return st.cfg.uprightFreeTurns === 1 ? Number.isFinite(whole) : turnIsFree(whole, maxDeg);");
+describe("RB1 — ONE OWNER PER CHANGE (UPRIGHT_PICTURE.md §12, the rebuild): every turn starts in `turnBegin`; under law U asked, resolved once — read in the source", () => {
+  const raw = (f: string) => readFileSync(f, "utf8").replace(/\r\n/g, "\n");
+  const aw = raw("src/render/assembly_wiring.ts");
+  const rs = raw("src/render/roll_shadow.ts");
+  /** one function's source, from its signature to the first closing brace at the line's start */
+  const fn = (s: string, sig: string): string => {
+    const i = s.indexOf(sig);
+    expect(i, sig).toBeGreaterThanOrEqual(0);
+    return s.slice(i, s.indexOf("\n}\n", i) + 3);
+  };
+  it("(1) a turn is created only by `seamTurnStart` (and `seamOutStart` through it), called only by the one starter `turnBegin` and the resolver `changeApply`", () => {
+    const creates = aw.match(/asmZoneMix = (\{|st\.asmCamLast === null \? null : \{)/g) ?? [];
+    expect(creates.length).toBe(1);
+    expect(fn(aw, "function seamTurnStart(")).toContain("st.asmZoneMix = st.asmCamLast === null ? null : {");
+    const callers = (name: string) => {
+      const out: string[] = [];
+      for (const m of aw.matchAll(new RegExp(`(?<!function )\\b${name}\\(st`, "g"))) {
+        const before = aw.slice(0, m.index);
+        const sig = before.match(/\n(?:export )?function (\w+)\(/g);
+        out.push(sig === null ? "?" : sig[sig.length - 1]!.replace(/\n(?:export )?function /, "").replace("(", ""));
+      }
+      return out.sort();
+    };
+    expect(callers("seamTurnStart")).toEqual(["changeApply", "seamOutStart", "turnBegin"]);
+    expect(callers("seamOutStart")).toEqual(["changeApply", "turnBegin"]);
   });
-  it("uprightFreeTurns 1 by default, 0 or 1", () => {
-    expect(DEFAULT_CONFIG.uprightFreeTurns).toBe(1);
-    for (const v of [0.5, 2, Number.NaN]) expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, uprightFreeTurns: v })).toThrow();
+  it("(1) every starter calls `turnBegin` — `crossTurn` (the pole, the tilt's exit, the free face's exit, the spit), `tiltOn`, `zoneSwitch`, `freeFaceFrame` — and writes no turn, ease or hold itself", () => {
+    for (const s of ["function crossTurn(", "function tiltOn(", "function zoneSwitch(", "function freeFaceFrame("]) {
+      const b = fn(aw, s);
+      expect(b, s).toContain("turnBegin(st, {");
+      expect(b, s).not.toMatch(/seamEase\(|easeCarry\(|asmEdgeHold = holdAtCrossing|asmZoneMix\.tilt = true/);
+    }
+    expect((aw.match(/turnBegin\(st, \{/g) ?? []).length).toBe(4);
+  });
+  it("(1) law U on: `turnBegin` creates nothing (asks); the hold is written only off law U there, and under law U only by `changeApply`; the camera's stage writes no turn and no hold itself", () => {
+    const tb = fn(aw, "function turnBegin(");
+    expect(tb).toContain("if (uprightDecides(st)) changeAsk(st, a);\n  else {\n");
+    expect(tb).toContain("if (a.hold !== undefined && !uprightDecides(st)) st.asmEdgeHold = holdAtCrossing(a.hold);");
+    expect(fn(aw, "function changeAsk(")).not.toMatch(/asmZoneMix =|asmEdgeHold =|seamTurnStart|seamOutStart/);
+    expect(aw).toContain("return st.cfg.freeTurnMaxDeg > 0 && st.cfg.uprightPicture === 1;");
+    const up = fn(rs, "function uprightPictureFrame(");
+    expect(up).not.toMatch(/asmZoneMix =|asmEdgeHold =|asmDirEase =/);
+    expect((up.match(/changeSeen\(/g) ?? []).length).toBe(1);
+    expect((up.match(/changeApply\(/g) ?? []).length).toBe(1);
+    expect(up.indexOf("changeApply(")).toBeLessThan(up.indexOf("const G = zoneMixPose(st, piece, eye, look, up);"));
+    expect(rs).not.toMatch(/uprightFrees\(|uprightHoldKept\(|cfg\.uprightBandFree|cfg\.uprightFreeTurns/);
+  });
+  it("FO3's freeing (a turn made then dropped) runs only with law U off; F3 gone: the carry whole only on a change applied at once", () => {
+    const rp = fn(rs, "export function rollPictureFrame(");
+    expect(rp.indexOf("if (st.cfg.uprightPicture === 1) return uprightPictureFrame(")).toBeLessThan(rp.indexOf("st.asmZoneMix = null;"));
+    expect(fn(rs, "function uprightPictureFrame(")).toContain("const r = uprightStep(was?.upright?.state ?? UPRIGHT_REST, G, line, dtMs, knobs, scale, freed > 0);");
   });
 });
 
-describe("UD4b — no stop under freeTurnMaxDeg near the vertical (`uprightBandFree`, fix round 1) — read in the source", () => {
-  const rs = readFileSync("src/render/roll_shadow.ts", "utf8");
-  it("FO3's rule at any w first; the freed frame's twist of G about the framed line handed to law U as a whole carry", () => {
-    expect(rs).toContain("if (st.cfg.uprightBandFree === 1 && was.upright !== undefined && turnIsFree(whole, maxDeg)) return true;");
-    // ⭐ (fix round 2) F3 (a timed turn's first frame, `fresh`) carried by the twist whatever `uprightBandFree`; the freed frame (UD4b) only with it at 1
-    // ⭐ (fix round 3, UD6c) the twist read by the law; the wiring says only when the carry is WHOLE (a timed turn's first frame; a freed one with the band's switch on)
-    expect(rs).toContain("const whole = fresh || (freed > 0 && st.cfg.uprightBandFree === 1);");
-    expect(rs).toContain("const r = uprightStep(was?.upright?.state ?? UPRIGHT_REST, G, line, dtMs, knobs, scale, whole);");
-    expect(rs).toContain("const tw = was === null ? 0 : twistAbout(was.ghost, G, line.dir);");
+describe("RB1 — `changeApply`: a change applied at once leaves nothing turning (`freeShownHeading`, T5, the shown direction read `asmZoneMix`)", () => {
+  const pose: CamPose = { eye: [1, 1, 1], look: [0, 0, 0], up: [0, 1, 0] };
+  const mk = () => {
+    const tok = {};
+    return {
+      tok,
+      st: {
+        asmChange: { tok, paced: false, byMm: false, tilt: false, hold: 1 as const },
+        asmDirEase: { axis: [0, 1, 0] as Vec3, angle: 0.3, mix: tok },
+        asmZoneMix: null as unknown,
+        asmEdgeHold: { sign: -1 as const, back: 2 },
+        asmCamLast: { dir: [1, 0, 0], up: [0, 1, 0] },
+        asmRollShadow: { upright: { state: {}, w: 1, phi: 0 }, ghost: pose },
+        asmPieceDrawn: null,
+      },
+    };
+  };
+  it("at once: no turn, the ease on its own clock (its whole angle left), the hold as decided; the change consumed", () => {
+    const { st } = mk();
+    changeApply(st as unknown as SceneState, st.asmChange as never, false, null);
+    expect(st.asmZoneMix).toBeNull();
+    expect(st.asmChange).toBeNull();
+    expect(st.asmEdgeHold).toBeNull();
+    const e = st.asmDirEase as { own?: { gap: number; speed: number }; angle: number };
+    expect(e.own).toEqual({ gap: 0.3, speed: 0 });
   });
-  it("⭐ (fix round 2, UD11) the hold a change set dropped by law U where that change is freed fully upright with nothing left to close — after the picture is made", () => {
-    const g = "if (st.asmEdgeHold !== null && !uprightHoldKept(freed > 0)) st.asmEdgeHold = null;";
-    expect(rs).toContain(g);
-    expect(rs.indexOf("const P = poseRolled(G, line, r.phi);")).toBeLessThan(rs.indexOf(g));
-  });
-  it("uprightBandFree 1 by default, 0 or 1", () => {
-    expect(DEFAULT_CONFIG.uprightBandFree).toBe(1);
-    for (const v of [0.5, 2, Number.NaN]) expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, uprightBandFree: v })).toThrow();
+  it("timed: one turn from the logic's last pose, the ease handed to it; a tilt keeps its kind; the hold absent: left as it is", () => {
+    const { st } = mk();
+    const ask = { ...(st.asmChange as object), tilt: true } as never;
+    st.asmChange = ask;
+    changeApply(st as unknown as SceneState, ask, true, undefined);
+    const zm = st.asmZoneMix as { from: CamPose; k: number; tilt?: true };
+    expect(zm).not.toBeNull();
+    expect(zm.k).toBe(0);
+    expect(zm.tilt).toBe(true);
+    expect(zm.from.eye).toEqual(pose.eye);
+    expect((st.asmDirEase as { mix: object }).mix).toBe(zm);
+    expect(st.asmEdgeHold).toEqual({ sign: -1, back: 2 });
   });
 });
 

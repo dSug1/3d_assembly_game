@@ -413,12 +413,6 @@ export interface GestureConfig {
   /** ⭐⭐⭐ (2026-11-18, `UPRIGHT_PICTURE.md` §2 — law U, UD1) THE UPRIGHT PICTURE: the logic's pose turned about the line through the piece and its look
    * point so that gravity is on the glass's vertical (1); 0: FO3 S1's follower (the build the owner looked at, less S2). Acts only with `freeTurnMaxDeg` > 0 */
   uprightPicture: number;
-  /** ⭐ (UD2, step 4 — U3) under law U a change of frame of ANY angle makes no timed turn where the picture is fully upright at both its ends (1); 0: only
-   * under `freeTurnMaxDeg` there (FO3 S1's rule). Where the picture is not fully upright, every change is a timed turn either way (UD4) */
-  uprightFreeTurns: number;
-  /** ⭐⭐⭐ (2026-11-18, `UPRIGHT_PICTURE.md` §6 UD4b — fix round 1) under law U a change of frame under `freeTurnMaxDeg` makes no timed turn at ANY
-   * angle of the view (the picture keeps its roll across it, then rights itself at `uprightMaxDegS`) (1); 0: UD4 — within the band every change timed */
-  uprightBandFree: number;
   /** ⭐ (UD3) law U under the close-in square camera too (1); 0: not while the square camera holds the picture (its share) — his rule T1 wins */
   uprightCloseIn: number;
   /** ⭐ (UD1) within this of the vertical (deg) the picture is the logic's pose — gravity has no direction on the glass there (0 – 45) */
@@ -889,8 +883,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
   rollFollowMs: ROLL_FOLLOW_MS, // ⭐⭐⭐ (2026-11-18, FO3 S1) 160 ms — the owner's word on the deployed build (`UPRIGHT_PICTURE.md` §0, UD7); 200 before
   freeTurnMaxDeg: FREE_TURN_MAX_DEG, // ⭐⭐⭐ (FO3 S1) 90: the changes under 90° free (R6); 0 = today's game
   uprightPicture: 1, // ⭐⭐⭐ (2026-11-18, `UPRIGHT_PICTURE.md` UD1) law U on; 0 = FO3 S1's follower
-  uprightFreeTurns: 1, // ⭐ (UD2) any angle freed where the picture is upright at both ends
-  uprightBandFree: 1, // ⭐⭐⭐ (§6 UD4b) no stop under freeTurnMaxDeg near the vertical either
   uprightCloseIn: 0, // ⭐ (UD3) the square camera's T1 wins close in
   uprightFromDeg: UPRIGHT_FROM_DEG, // ⭐ (UD1) 5°
   uprightFullDeg: UPRIGHT_FULL_DEG, // ⭐ (UD1) 25°
@@ -1075,8 +1067,6 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.rollFollowMs >= 60 && cfg.rollFollowMs <= 600)) throw new Error(`rollFollowMs (${cfg.rollFollowMs}) must be in [60, 600] ms.`);
   if (!(cfg.freeTurnMaxDeg >= 0 && cfg.freeTurnMaxDeg <= 90)) throw new Error(`freeTurnMaxDeg (${cfg.freeTurnMaxDeg}) must be in [0, 90] deg.`);
   if (cfg.uprightPicture !== 0 && cfg.uprightPicture !== 1) throw new Error(`uprightPicture (${cfg.uprightPicture}) must be 0 or 1.`);
-  if (cfg.uprightBandFree !== 0 && cfg.uprightBandFree !== 1) throw new Error(`uprightBandFree (${cfg.uprightBandFree}) must be 0 or 1.`);
-  if (cfg.uprightFreeTurns !== 0 && cfg.uprightFreeTurns !== 1) throw new Error(`uprightFreeTurns (${cfg.uprightFreeTurns}) must be 0 or 1.`);
   if (cfg.uprightCloseIn !== 0 && cfg.uprightCloseIn !== 1) throw new Error(`uprightCloseIn (${cfg.uprightCloseIn}) must be 0 or 1.`);
   if (!(cfg.uprightFromDeg >= 0 && cfg.uprightFromDeg <= 45)) throw new Error(`uprightFromDeg (${cfg.uprightFromDeg}) must be in [0, 45] deg.`);
   if (!(cfg.uprightFullDeg >= 0 && cfg.uprightFullDeg <= 60)) throw new Error(`uprightFullDeg (${cfg.uprightFullDeg}) must be in [0, 60] deg (at or under \`uprightFromDeg\`: a step there).`);

@@ -204,8 +204,6 @@ export function installTuningMenu(st: SceneState): void {
           title: "UPRIGHT PICTURE",
           sliders: [
             tunable(st, "upright picture: gravity on the screen's vertical (1 on, 0 = the roll follower)", "uprightPicture", 0, 1, 1),
-            tunable(st, "upright: a change of frame of any angle makes no timed turn where upright (1; 0 = only under the angle above)", "uprightFreeTurns", 0, 1, 1),
-            tunable(st, "upright: a change under the angle above makes no timed turn near the vertical either (1; 0 = timed in the band)", "uprightBandFree", 0, 1, 1),
             tunable(st, "upright close in under the square camera too (1 on, 0 = its layout wins)", "uprightCloseIn", 0, 1, 1),
             tunable(st, "upright: none within this of the vertical (deg)", "uprightFromDeg", 0, 45, 1),
             tunable(st, "upright: in full from this off the vertical (deg)", "uprightFullDeg", 0, 60, 1),

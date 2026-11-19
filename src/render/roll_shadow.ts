@@ -16,11 +16,11 @@
  */
 import type { Vec3 } from "../core/vec";
 import { upSquareToView } from "../input/camera_frame";
-import { squareTurning, type CamPose } from "../input/orbit_tilt";
+import { holdAtCrossing, squareTurning, type CamPose } from "../input/orbit_tilt";
 import { followStep, FREE_TURN_MAX_DEG, framedLine, GAP_ZERO, onGlass, poseRolled, poseTurnAngle, ROLL_FOLLOW_MS, turnIsFree, twistAbout, type FollowMode } from "../input/roll_follow";
 import { easeRest } from "../input/seam_turn";
-import { UPRIGHT_REST, uprightHoldKept, uprightStep, uprightWeight, viewFromVertical } from "../input/upright";
-import { spitZone, zoneMixPose } from "./assembly_wiring";
+import { changeSeen, UPRIGHT_REST, uprightStep, uprightWeight, viewFromVertical } from "../input/upright";
+import { changeApply, spitZone, zoneMixPose } from "./assembly_wiring";
 import type { SceneState } from "./scene_state";
 
 const DEG = Math.PI / 180;
@@ -111,12 +111,14 @@ export function rollPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: V
   const sq = squareTurning(st.asmSquare.n, st.asmSquare.target, st.asmSquare.q);
   const tl = st.asmTilt;
   const tiltHold = tl !== null && (tl.exit || tl.off);
+  // ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §12 RB1) law U decides each change ONCE (`changeSeen`, in `uprightPictureFrame`): nothing below runs for it
+  if (st.cfg.uprightPicture === 1) return uprightPictureFrame(st, piece, eye, look, up, dtMs, ghost, sq, tiltHold);
   let zm = st.asmZoneMix;
   const fresh = zm !== null && zm !== was?.turn;
   let freed = 0;
   if (zm !== null && fresh && was !== null && was.drawn && was.turn === null && zm.byMm !== true && zm.out === undefined && zm.tilt !== true && !sq && !tiltHold) {
     const whole = poseTurnAngle(was.ghost, ghost);
-    if (st.cfg.uprightPicture === 1 ? uprightFrees(st, was, ghost, whole, maxDeg) : turnIsFree(whole, maxDeg)) {
+    if (turnIsFree(whole, maxDeg)) {
       // O3: the piece's shown direction's ease on this turn — its rest — on a clock of its own
       const e = st.asmDirEase;
       if (e !== null && e.mix === zm) {
@@ -128,7 +130,6 @@ export function rollPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: V
       freed = whole > 0 ? whole : Number.MIN_VALUE;
     }
   }
-  if (st.cfg.uprightPicture === 1) return uprightPictureFrame(st, piece, eye, look, up, dtMs, zm, fresh, freed, zm === null && !sq && !tiltHold);
   const tw = was === null ? 0 : twistAbout(was.ghost, ghost, line.dir);
   const gizmoFree = zm === null && !sq && !tiltHold;
   const afterStay = was !== null && was.turn !== null && zm === null;
@@ -155,50 +156,42 @@ export function rollPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: V
  * the framed line that puts gravity on the glass's vertical, weighted by the view's angle from the vertical and the square camera's complement — UD3,
  * `uprightCloseIn` 0); the picture `P = poseRolled(G, L, φ)` — the piece and the look point exact on the glass; `φ` 0: `G` itself. `st.asmCamLast` stays
  * the logic's (`zoneMixPose` wrote it); the record in `st.asmRollShadow` (`ghost` = `G`).
+ * ⭐⭐⭐ (2026-11-19, §12 RB1 — the rebuild) FIRST, the change of frame ASKED this frame (`asmChange`, by `turnBegin`) resolved ONCE (`changeSeen`): its angle
+ * the logic's pose last frame to this frame's (`ghost`, before any turn), `w` before it the picture's last frame, after it this ghost's; a timed turn or at
+ * once (`changeApply`) — never a turn made and then deleted (⛔ `uprightFrees`, fix rounds 0 – 3). At once: the law's carry WHOLE on this frame (the logic's
+ * twist about the framed line undone — UD4b's rule, now a property of the decision). ⛔ (fix round 1, F3) the carry whole on a timed turn's first frame too:
+ * measured inert (the logic's twist 0 on all 141 such frames), removed.
  */
-function uprightPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Vec3, dtMs: number, zm: object | null, fresh: boolean, freed: number, gizmoFree: boolean): CamPose {
+function uprightPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Vec3, dtMs: number, ghost: CamPose, sqTurning: boolean, tiltHold: boolean): CamPose {
   const was = st.asmRollShadow;
-  const G = zoneMixPose(st, piece, eye, look, up);
-  const line = framedLine(G, piece);
   const sq = st.asmSquare;
   const share = sq.n === null || !(sq.q > 0) ? 0 : sq.q;
   const scale = st.cfg.uprightCloseIn === 1 ? 1 : 1 - share;
   const knobs = { fromDeg: st.cfg.uprightFromDeg, fullDeg: st.cfg.uprightFullDeg, maxDegS: st.cfg.uprightMaxDegS };
+  let freed = 0;
+  const ask = st.asmChange;
+  if (ask !== null) {
+    const drawn = was !== null && was.drawn && was.upright !== undefined;
+    const turnRad = drawn ? poseTurnAngle(was.ghost, ghost) : Number.NaN;
+    const stays = !drawn || was.turn !== null || ask.paced || ask.byMm || ask.tilt || sqTurning || tiltHold;
+    const wAfter = uprightWeight(viewFromVertical(ghost), knobs.fromDeg, knobs.fullDeg) * scale;
+    const seen = changeSeen({ stays, wBefore: drawn ? was.upright!.w : 0, wAfter, turnRad, freeMaxDeg: st.cfg.freeTurnMaxDeg });
+    // the hold the change asked: a freed change never holds (its push never goes back)
+    const hold = ask.hold === undefined ? undefined : seen.timed ? holdAtCrossing(ask.hold) : null;
+    changeApply(st, ask, seen.timed, hold);
+    if (!seen.timed) freed = turnRad > 0 ? turnRad : Number.MIN_VALUE;
+  }
+  const zm = st.asmZoneMix;
+  const fresh = zm !== null && zm !== was?.turn;
+  const gizmoFree = zm === null && !sqTurning && !tiltHold;
+  const G = zoneMixPose(st, piece, eye, look, up);
+  const line = framedLine(G, piece);
   const tw = was === null ? 0 : twistAbout(was.ghost, G, line.dir);
-  // ⭐⭐⭐ (§6 UD4b, `uprightBandFree` 1) on the frame a change is FREED the carry is whole: the frame's twist of G about the framed line undone — the
-  // picture keeps its roll across it (well defined at the vertical, where α is not); the rest then closes at `uprightMaxDegS`
-  // ⭐⭐⭐ (fix round 1, F3 — measured: 3 – 5 one-frame flips left on his hand) and on a TIMED turn's first frame too (`fresh`): there the logic's view
-  // jumps 33 – 54° across the band and its `Δα` (not a roll) was carried at `c` = 0.69 – 1 — 100 – 140° of the picture in one frame
-  // ⭐ (fix round 2) F3 no longer behind `uprightBandFree` (it is not UD4b): a timed turn's first frame carried by the twist with the band's switch at 0 too
-  // (`uprightMaxDegS` 0 — with `uprightBandFree` 0 the identity with e653099 — ignores the carry: the rest closes at once)
-  // ⭐⭐⭐ (fix round 3, §10 UD6c) the carry is the logic's twist undone, in the law (`uprightStep`): WHOLE on those frames, else `min(w, w before)`
-  const whole = fresh || (freed > 0 && st.cfg.uprightBandFree === 1);
-  const r = uprightStep(was?.upright?.state ?? UPRIGHT_REST, G, line, dtMs, knobs, scale, whole);
+  // ⭐⭐⭐ (fix round 3, §10 UD6c) the carry is the logic's twist undone, in the law (`uprightStep`): WHOLE on a change applied at once, else `min(w, w before)`
+  const r = uprightStep(was?.upright?.state ?? UPRIGHT_REST, G, line, dtMs, knobs, scale, freed > 0);
   const P = poseRolled(G, line, r.phi);
-  // ⭐⭐⭐ (2026-11-19, §8 UD11 — fix round 2) a hold belongs to a turn the player SEES: the hold this change set (`crossTurn` replaces any hold at the change)
-  // dropped where the change is freed with the picture fully upright at both its ends and nothing left to close — the same push goes on, a come-back at once
-  if (st.asmEdgeHold !== null && !uprightHoldKept(freed > 0)) st.asmEdgeHold = null; // ⭐ (fix round 3, UD11b) every freed change
   const turnTw = fresh ? tw : (was?.turnTw ?? 0);
   const g = { gap: r.phi, speed: 0 };
   st.asmRollShadow = { ghost: G, dir: line.dir, piece, held: g, free: g, turn: zm, turnTw, stays: zm !== null, tw, gizmoFree, spit: spitZone(st) !== null, freshTurn: fresh, picture: P, a2: placeError(st, G, P, piece, line), drawn: true, freed, upright: { state: r.state, w: r.w, phi: r.phi } };
   return P;
-}
-
-/**
- * ⭐⭐⭐ (2026-11-18, `UPRIGHT_PICTURE.md` §2 step 4 — U3, UD2, UD4) UNDER LAW U, A CHANGE OF FRAME MADE FREE (no timed turn, the gizmo never held by it) only
- * where the picture is FULLY UPRIGHT at both its ends — `w` 1 on the pose before the change (last frame's) and on the ghost after it (this frame's, the
- * square camera's complement included): the glass does not turn there, a timed turn would only stall the gizmo. `uprightFreeTurns` 1: whatever its angle;
- * 0: under `freeTurnMaxDeg` as FO3 S1 (`turnIsFree`). `w` under 1 at either end: every change `1.0.147-`'s timed turn (UD4). The kinds that stay (the
- * square camera's, `byMm`, `out`, a tilt's) are refused before this is asked.
- */
-function uprightFrees(st: SceneState, was: NonNullable<SceneState["asmRollShadow"]>, ghost: CamPose, whole: number, maxDeg: number): boolean {
-  // ⭐⭐⭐ (2026-11-18, §6 UD4b — fix round 1, `uprightBandFree` 1) no stop under `freeTurnMaxDeg` near the vertical either: FO3's rule at ANY w (the
-  // picture keeps its roll across the freed frame, the rest closes in time — `uprightPictureFrame`); 0: UD4 — in the band every change timed
-  if (st.cfg.uprightBandFree === 1 && was.upright !== undefined && turnIsFree(whole, maxDeg)) return true;
-  if (was.upright === undefined || !(was.upright.w >= 1)) return false;
-  const sq = st.asmSquare;
-  const share = sq.n === null || !(sq.q > 0) ? 0 : sq.q;
-  const scale = st.cfg.uprightCloseIn === 1 ? 1 : 1 - share;
-  if (!(uprightWeight(viewFromVertical(ghost), st.cfg.uprightFromDeg, st.cfg.uprightFullDeg) * scale >= 1)) return false;
-  return st.cfg.uprightFreeTurns === 1 ? Number.isFinite(whole) : turnIsFree(whole, maxDeg);
 }

@@ -199,15 +199,15 @@ describe("⭐⭐⭐ the wiring (source pins, comments stripped)", () => {
     const f = fnCode(W, "function tiltOff(");
     // ⭐⭐⭐ (2026-11-16, step C5) through the one event (`crossTurn`): the paced flag the site's, the turn started there
     expect(f).toContain("const paced = seamOutPaced(tl.off, st.asmTiltAuto, st.cfg.tiltOutBlendMm);");
-    expect(f).toContain("crossTurn(st, { at: { mq: poleYawKept(mq0, ORBIT_PITCH_MAX_RAD, hP), g }, uWas, carry: false, paced, hold: held });");
-    expect(f).toContain("} else st.asmMapQ = null; crossTurn(st, { at: null, uWas, carry: false, paced, hold: held });");
+    expect(f).toContain("crossTurn(st, { at: { mq: poleYawKept(mq0, ORBIT_PITCH_MAX_RAD, hP), g }, uWas, carry: false, paced, hold: held, tilt: true });");
+    expect(f).toContain("} else st.asmMapQ = null; crossTurn(st, { at: null, uWas, carry: false, paced, hold: held, tilt: true });");
     const c = fnCode(W, "function crossTurn(");
-    expect(c).toContain("if (c.paced) seamOutStart(st); else if (st.asmCamLast !== null) seamTurnStart(st, false); if (c.uWas !== null) seamEase(st, c.uWas);");
+    expect(fnCode(W, "function turnBegin(")).toContain("if (a.paced) seamOutStart(st); else if (a.noCamNull || st.asmCamLast !== null) seamTurnStart(st, a.byMm); if (a.uWas !== null) seamEase(st, a.uWas);"); // ⭐ (2026-11-19, RB1)
     // the latch read is LAST frame's: `tiltOff` runs before the latch is stepped
     const a = fnCode(W, "export function assemblyFrame(");
     before(a, "if (st.asmTilt !== null && st.asmTilt.exit) tiltOff(st);", "st.asmTiltAuto = tiltAutoLatch(st.asmTiltAuto, approachDistance(st.cfg, st.approach), st.cfg.tiltAutoM);");
     // the only other place a paced out-turn is started: none
-    expect(codeOnly(raw(W)).match(/seamOutStart\(st\)/g)?.length).toBe(1);
+    expect(codeOnly(raw(W)).match(/seamOutStart\(st\)/g)?.length).toBe(2); // ⭐ (2026-11-19, UPRIGHT_PICTURE.md §12 RB1) the one starter (`turnBegin`) and law U's resolver (`changeApply`)
   });
   it("⭐ `seamOutStart`: the same turn from the pose shown, its progress at 0 and its travels at 0", () => {
     const s = fnCode(W, "function seamOutStart(");
@@ -245,7 +245,7 @@ describe("⭐⭐⭐ the wiring (source pins, comments stripped)", () => {
     expect(s).toContain("st.asmZoneMix = st.asmCamLast === null ? null : { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0, ...(paced ? { byMm: true } : {}) };");
     expect(s).not.toContain("out");
     const t = fnCode(W, "function tiltOn(");
-    expect(t).toContain("st.asmFree = null; seamTurnStart(st, byMm); seamEase(st, uWas);");
+    expect(t).toContain("st.asmFree = null; turnBegin(st, { paced: false, byMm, noCamNull: true, uWas, carry: false, tilt: true, stopCoast: false });"); // ⭐ (2026-11-19, RB1)
     const e = fnCode(W, "function seamEase(");
     expect(e).toContain("st.asmDirEase = null;");
   });

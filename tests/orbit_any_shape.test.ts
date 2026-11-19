@@ -333,7 +333,7 @@ describe("DH — the dy hold: a true hysteresis on the finger, the dy that pushe
     expect(holdAtCrossing(1)).toEqual({ sign: 1, back: 0 });
     expect(holdAtCrossing(-1)).toEqual({ sign: -1, back: 0 });
     const a = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
-    expect(a).toContain("st.orbitInertia.stop(); st.asmEdgeHold = holdAtCrossing(c.hold);");
+    expect(a).toContain("if (a.stopCoast) st.orbitInertia.stop(); if (a.hold !== undefined && !uprightDecides(st)) st.asmEdgeHold = holdAtCrossing(a.hold);"); // ⭐ (2026-11-19, RB1) `turnBegin`
     expect(a).not.toContain("if (c.hold !== 0) st.asmEdgeHold");
   });
 });

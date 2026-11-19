@@ -21,7 +21,7 @@
  */
 import { cross, dot, type Vec3 } from "../core/vec";
 import type { CamPose } from "./orbit_tilt";
-import { poseAxes, twistAbout, type FramedLine } from "./roll_follow";
+import { poseAxes, turnIsFree, twistAbout, type FramedLine } from "./roll_follow";
 
 /** ⭐ within this of the vertical (deg) the picture is the logic's pose (`w` 0) — the slider `uprightFromDeg` */
 export const UPRIGHT_FROM_DEG = 5;
@@ -136,17 +136,36 @@ export function uprightStep(s: UprightState, pose: CamPose, line: FramedLine, dt
   return { state, phi, w, nu, alpha, closed: true };
 }
 
+/** ⭐ The change of frame as the decision reads it (RB1). */
+export interface ChangeIn {
+  /** a kind that stays a timed turn whatever its angle: the square camera's, paced `byMm`, the way out `out`, a tilt's (its entry, its exit), a turn still
+   *  drawn last frame (the new one replaces it from the pose shown), no picture drawn yet */
+  readonly stays: boolean;
+  /** `w` on the picture drawn last frame (before the change) and on the logic's pose after it (the square camera's complement included) */
+  readonly wBefore: number;
+  readonly wAfter: number;
+  /** the logic's whole turn at the change (`poseTurnAngle`: last frame's logic pose to this frame's, rad); not finite: unknown */
+  readonly turnRad: number;
+  /** `freeTurnMaxDeg` (deg) */
+  readonly freeMaxDeg: number;
+}
+/** ⭐ The decision: `timed` — a timed turn (the gizmo held while it runs, T5); else applied at once, its roll carried whole by the law; `seenRad` — the share
+ *  of the turn the player sees, `(1 − min(w before, w after))` × the turn (rad; `Infinity` unknown). */
+export interface ChangeSeen {
+  readonly timed: boolean;
+  readonly seenRad: number;
+}
 /**
- * ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §8 UD11 — fix round 2) A HOLD BELONGS TO A TURN THE PLAYER SEES: the dy hold set by a change of frame (`crossTurn`)
- * is kept unless that change is FREED (no timed turn) where the picture is FULLY UPRIGHT at both its ends (`w` 1 on the frame before and on this one) with
- * nothing left to close (`closed`) — there the picture does not turn (the carry keeps it upright), the same push goes on in the world and only a come-back
- * would be held. Measured (fix round 2, his stretches): 51 of 104 holds set were such. Any other change keeps its hold (`1.0.147-`'s rule).
+ * ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §12 RB1 — the rebuild) A CHANGE OF FRAME AS THE PLAYER SEES IT, decided ONCE, before anything is created: a timed
+ * turn when its kind stays, or when the share of it he sees — `(1 − min(w before, w after))` × the logic's whole turn: where the picture is upright the law
+ * hides the turn's roll — is `freeTurnMaxDeg` or more (FO3's tolerance, `turnIsFree`); else applied at once. An unknown angle: timed. ⛔ (fix rounds 0 – 3)
+ * `uprightFrees`: the timed turn made in the logic's step, then DELETED at the camera's stage behind three switches — two owners of the turn.
  */
-export function uprightHoldKept(freed: boolean): boolean {
-  // ⭐⭐⭐ (2026-11-19, §10 UD11b — fix round 3) A FREED CHANGE NEVER HOLDS: freed, the picture turns by less than 90° (under `freeTurnMaxDeg`) or not at
-  // all (`w` 1) — the push that crossed never goes back; inside the band too. ⛔ (round 2) only `w` 1 at both ends with nothing left to close: the holds
-  // of the changes freed in the band kept R7 over `1.0.147-`'s for a third of a second after them. The turns that stay timed keep theirs.
-  return !freed;
+export function changeSeen(c: ChangeIn): ChangeSeen {
+  const w0 = Math.min(1, Math.max(0, Number.isFinite(c.wBefore) ? c.wBefore : 0));
+  const w1 = Math.min(1, Math.max(0, Number.isFinite(c.wAfter) ? c.wAfter : 0));
+  const seenRad = Number.isFinite(c.turnRad) ? (1 - Math.min(w0, w1)) * Math.abs(c.turnRad) : Infinity;
+  return { timed: c.stays || !turnIsFree(seenRad, c.freeMaxDeg), seenRad };
 }
 
 /**

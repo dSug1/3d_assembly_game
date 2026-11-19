@@ -109,13 +109,14 @@ describe("the wiring (`roll_shadow.ts` rollPictureFrame) — read in the source"
   it("a turn made free only at its first frame, none of the kinds that stay, nothing that stays drawn last frame, on its whole angle", () => {
     expect(rs).toContain("if (zm !== null && fresh && was !== null && was.drawn && was.turn === null && zm.byMm !== true && zm.out === undefined && zm.tilt !== true && !sq && !tiltHold) {");
     expect(rs).toContain("const whole = poseTurnAngle(was.ghost, ghost);");
-    expect(rs).toContain("if (st.cfg.uprightPicture === 1 ? uprightFrees(st, was, ghost, whole, maxDeg) : turnIsFree(whole, maxDeg)) {");
+    expect(rs).toContain("if (turnIsFree(whole, maxDeg)) {"); // ⭐ (2026-11-19, UPRIGHT_PICTURE.md §12 RB1) law U returns before: its changes are decided once (`changeSeen`)
     expect(rs).toContain('const mode: FollowMode = was === null || !was.drawn || was.upright !== undefined || zm !== null || afterStay ? "ZERO" : gizmoFree ? "TAKE" : "SKIP";');
     expect(rs).toContain("const g = followStep(was?.free ?? GAP_ZERO, tw, dtMs, st.cfg.rollFollowMs, mode);");
   });
-  it("the tilt's turns tagged to stay (its entry, its exit); the direction's rest on its own clock, stepped before it is read", () => {
-    expect(aw.match(/st\.asmZoneMix\.tilt = true;/g)?.length).toBe(2);
-    expect(aw).toContain("return easedDir(s, e, e.own !== undefined ? restShare(e.own, e.angle) : e.mix === st.asmZoneMix && st.asmZoneMix !== null ? st.asmZoneMix.k : 1);");
+  it("the tilt's turns tagged to stay (its entry, its exit — through the one starter, RB1); the direction's rest on its own clock, stepped before it is read", () => {
+    expect(aw.match(/st\.asmZoneMix\.tilt = true;/g)?.length).toBe(2); // ⭐ (RB1) `turnBegin` and `changeApply`
+    expect(aw.match(/tilt: true, stopCoast: false \}\);|hold: held, tilt: true \}\);/g)?.length).toBe(3);
+    expect(aw).toContain("return easedDir(s, e, e.own !== undefined ? restShare(e.own, e.angle) : e.mix === st.asmZoneMix && st.asmZoneMix !== null ? st.asmZoneMix.k : st.asmChange !== null && e.mix === st.asmChange.tok ? 0 : 1);");
     expect(aw).toContain("const r = gapStep(de.own, dtMs, st.cfg.rollFollowMs);");
   });
 });
