@@ -714,3 +714,42 @@ and the push he was making is held after it. Under the bottom, far out, a push b
 nothing changed. Sliders left (ORBIT › UPRIGHT PICTURE): `uprightPicture`, `uprightCloseIn`, `uprightFromDeg`, `uprightFullDeg`, `uprightMaxDegS`
 (1 800° a second). Decisions for his review: UD12 – UD17 (§12) as built; the hold as the dy of his glass (§13.4); no hold at a crossing he does
 not see (`b_far`); RB4 not built; 1 800 kept.
+
+## 14. The rebuild audited — PASS; one conflict left, in the law (the lead, 2026-11-19, 08:15; ⭐ for his review)
+
+**The independent audit** (one Opus auditor at `2556011`; its own runs — bit-identical to the builder's —, its own readers, six mutants red,
+`npm run verify` 2 173 vectors; the kit's `fo3/upright/audit/CHECKPOINT_T3.md`): **PASS — no blocker.**
+
+* **One owner per thing — read in the code, rule by rule: ROOT.** A turn is created in one place only, by the one decision (`changeSeen`,
+  then `changeApply`); nothing deletes a turn or a hold afterwards. The hold is written from `holdSeen`, applied on the raw finger BEFORE the
+  conversion and released along it. "A turn he sees is under way" has one reader (`tiltClampStep`), for the timed turns and for the law's own
+  half turn. `uprightFrees`, `uprightHoldKept`, F3 and the two switches are gone from `src`. No rule names a scene, a face or a geometry; neither
+  the piece's pose nor the solver reads the picture. (FO3's own create-then-delete, `roll_shadow.ts` l. 128, stays on the `uprightPicture` 0
+  path: the earlier game, untouched.)
+* **The gates** — his ten stretches far out, 60 frames a second: now / the patched build `420dd9e` / `1.0.147-` / the build deployed last
+  evening (`48ae89c`): gravity tilted over 20°: 7.9 % / 7.8 % / 35.4 % / 47.0 %; gravity's roll a metre: 56.4° / 58.8° / 101.5° / 127.3°; frames
+  turning the camera by more than 90°: 0 / 0 / 0 / 0; by 45 – 90°: 51 / 47 / 5 / 8 (the aim, under 27, NOT met: 36 fall within 6 frames of a
+  change applied at once, 19 of them the logic's own jump); frames held a metre: 1.2 / 1.6 / 2.7 / 1.5; the finger's angle (R7) away from the
+  vertical, median: 14.7° / 13.4° / 12.1° / 14.3°. At 143 frames a second: no error, no frame over 45°. The seeded replays: the cube 0.0 %
+  over 20° (`1.0.147-`: 1.1 %), the heptagon 0.0 % (0.4 %), `Scene_0bis` 1.1 % (16.3 %). Both switches give their earlier game frame for frame.
+* **The hold walks**: over the zenith ridge the hold blocks 100 and 105 frames (`1.0.147-`: 100 and 104), the gizmo 0 mm while held (the
+  patched build: 215 and 129 mm), every come-back honoured after 1 – 3 frames (the patched build: one never). Under the bottom far out no hold
+  is set any more: on the frames the picture stays upright there, the same push goes on round the body, a move back is honoured at once — the
+  rule at work, and a difference from `1.0.147-` for his eye.
+* ⛔ **THE CONFLICT LEFT — in the law, not in the join: the picture rolls there and back near the vertical.** `vyah_42s` frames 67 – 76: the
+  picture rights itself (+120° in 4 frames), then, the view dropping to the vertical, goes back to the logic's pose (−128° in 6 frames) — a
+  third of a turn and back in 0.17 s, where `1.0.147-` shows about 0°. Seven such on his ten stretches (the patched build: 9; `1.0.147-` and
+  last evening's build: 0). **Its root is UD12 itself**: far out the picture is upright while the LOGIC's pose stays as it was carried over a
+  top or an axis — two poses up to half a turn apart, on 11 % of the frames (there the finger is also least true: 52.8° median against 13.4°
+  where the two agree); near the vertical the picture goes back to the logic's. The band 5 – 25° only sets where it shows.
+* **Minors**: the level entry's straight dy 8.5 – 12.1° off straight down on the glass (`1.0.147-`: 7.6 – 10.8°); close in one stretch of
+  three worse (`vyah_11s` 48.4° a metre against 29.0°: its route parts from frame 0); three holds set where the picture turned 30 – 61°; read,
+  not measured: under law U a timed turn is created one stage later in its frame, and a diagonal push may leak into a held dy.
+
+**For him to decide** (the lead's recommendation first):
+1. **Look at this build on the device** — the upright picture with a join from the root.
+2. **The small next step, inside the law**: each owner's target approached at that owner's own pace — toward the logic's pose near the
+   vertical at the tilts' one speed, not at 1 800° a second. The there-and-back should shrink about five times (⚠ an estimate, not measured).
+3. **The deep one**: the logic's own camera upright at the source far out, so that no pose is carried upside down and the half turn exists
+   once (UD12 reversed: his T4, T7, T9 and the charts' rule move together) — a rebuild of the orbit's passage over a pole; a study in his four
+   parts before anything is built.
