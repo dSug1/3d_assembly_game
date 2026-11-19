@@ -362,8 +362,9 @@ describe("ONE POSE's wiring (UPRIGHT_ONE_POSE.md §5, packet D) — read in the 
     const i1 = rp.indexOf("if (st.cfg.uprightPicture === 1 && st.cfg.uprightOnePose === 1) return onePoseFrame(st, piece, eye, look, up, dtMs, ghost, sq, tiltHold);");
     expect(i1).toBeGreaterThan(rp.indexOf("if (!(maxDeg > 0)) {"));
     expect(i1).toBeLessThan(rp.indexOf("if (st.cfg.uprightPicture === 1) return uprightPictureFrame("));
-    expect([DEFAULT_CONFIG.uprightOnePose, DEFAULT_CONFIG.uprightDeadDeg, DEFAULT_CONFIG.uprightHalfHold]).toEqual([1, 10, 1]);
-    for (const bad of [{ uprightOnePose: 2 }, { uprightDeadDeg: 31 }, { uprightDeadDeg: -1 }, { uprightHalfHold: 0.5 }]) expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, ...bad })).toThrow();
+    expect([DEFAULT_CONFIG.uprightOnePose, DEFAULT_CONFIG.uprightHalfHold]).toEqual([1, 1]);
+    expect("uprightDeadDeg" in DEFAULT_CONFIG).toBe(false); // ⭐ (fix round 1, F1) the dead band deleted with its slider
+    for (const bad of [{ uprightOnePose: 2 }, { uprightHalfHold: 0.5 }]) expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, ...bad })).toThrow();
   });
   it("OP2: the change resolved ONCE by WHO OWNS THE ROLL (the square camera's complement before and after), never the view's angle; before the logic's pose is drawn", () => {
     const op = fn(rs, "function onePoseFrame(");

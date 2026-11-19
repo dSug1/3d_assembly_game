@@ -218,7 +218,7 @@ function onePoseFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Ve
   const sq = st.asmSquare;
   const share = sq.n === null || !(sq.q > 0) ? 0 : sq.q;
   const kappa = st.cfg.uprightCloseIn === 1 ? 1 : 1 - share;
-  const knobs = { fromDeg: st.cfg.uprightFromDeg, fullDeg: st.cfg.uprightFullDeg, maxDegS: st.cfg.uprightMaxDegS, deadDeg: st.cfg.uprightDeadDeg, halfHold: st.cfg.uprightHalfHold === 1 };
+  const knobs = { fromDeg: st.cfg.uprightFromDeg, fullDeg: st.cfg.uprightFullDeg, maxDegS: st.cfg.uprightMaxDegS, halfHold: st.cfg.uprightHalfHold === 1 };
   let freed = 0;
   let change = false;
   let crossed: 1 | -1 | 0 | undefined;

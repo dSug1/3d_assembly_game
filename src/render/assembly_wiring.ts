@@ -36,7 +36,7 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { crossingHold, crossingPitch, distanceToFacets, fingerInFrame, fingerSwapped, SPIT_CROSSING_PITCH_RAD, spitCameraHeading, spitSide, zoneAt, type PolarZone } from "../input/polar_zone";
+import { crossingHold, crossingPitch, distanceToFacets, fingerInFrame, fingerSwapped, SPIT_CROSSING_PITCH_RAD, spitCameraHeading, spitCameraHeadingOne, spitSide, zoneAt, type PolarZone } from "../input/polar_zone";
 import { assignCharts, capTiltHeading, chartContour, chartZones, DEFAULT_CHART_OPTS, type ChartAssignment, type ChartFace } from "../input/orbit_charts";
 import { holdAtCrossing, poseAboutPiece, poseFramingTwo, type CamPose, type EdgeHold } from "../input/orbit_tilt";
 import { poleCrossingDue, poleSeam } from "../input/pole_crossing";
@@ -359,6 +359,12 @@ function seamOutStart(st: SceneState): void {
 }
 
 /** ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §12 RB1) LAW U DECIDES THE CHANGES OF FRAME (`uprightPicture` 1, `freeTurnMaxDeg` over 0): each asked, resolved once. */
+/** ⭐⭐⭐ (2026-11-19, `UPRIGHT_ONE_POSE.md` §12 — fix round 1, F3) the spit camera's heading: at the pole the side's own under one pose
+ *  (`spitCameraHeadingOne`); else as it was (`uprightOnePose` 0: `c3a8ba6` untouched) */
+function spitHeadingFor(st: SceneState, u: Vec3, a: Vec3, side: number): number {
+  return uprightDecides(st) && st.cfg.uprightOnePose === 1 ? spitCameraHeadingOne(u, a, side) : spitCameraHeading(u, a, side);
+}
+
 export function uprightDecides(st: SceneState): boolean {
   return st.cfg.freeTurnMaxDeg > 0 && st.cfg.uprightPicture === 1;
 }
@@ -1626,7 +1632,7 @@ function assemblyCameraFrameRaw(st: SceneState, cam: OrbitAt, off?: CameraAngleO
     const side = st.asmSpitSide !== 0 ? st.asmSpitSide : spitSide(uW, st.asmZone!.zone.axis, 0);
     // ⭐⭐⭐ (2026-11-18, ES — the silent entry) the heading SHOWN: entered over an edge, the picture the bound face's camera would show kept, turned to the
     // layout by the face's middle at most the tilts' one speed a frame (`freeShownHeading`)
-    const hS = st.asmFree !== null ? freeHeadingAngle(freeShownHeading(st, uW, side, dtMs), uW) : spitCameraHeading(uW, st.asmZone!.zone.axis, side);
+    const hS = st.asmFree !== null ? freeHeadingAngle(freeShownHeading(st, uW, side, dtMs), uW) : spitHeadingFor(st, uW, st.asmZone!.zone.axis, side);
     st.asmSpitPic = { u: uW, up: offsetFrame(uW, hS, 0, 0).up }; // ⭐ (ES) this frame's picture before the offsets (the next entry continues it)
     return offsetFrame(uW, hS, o.yawRad, o.pitchRad);
   }
@@ -2366,7 +2372,7 @@ function freeShownHeading(st: SceneState, uW: Vec3, side: number, dtMs: number |
   const side0 = fr.offset === null ? side : fr.side;
   // the TARGET: the picture the ENTRY side's bound camera shows HERE (its offset read THIS frame — an exit back over the entry edge, anywhere along it,
   // meets it), the layout by the face's middle
-  const offB = pictureOffset(uW, offsetFrame(uW, spitCameraHeading(uW, st.asmZone!.zone.axis, side0), 0, 0).up);
+  const offB = pictureOffset(uW, offsetFrame(uW, spitHeadingFor(st, uW, st.asmZone!.zone.axis, side0), 0, 0).up);
   const target = entryBlendHeading(viewLevelTurned(uW, offB), fr.layout, fr.depth, fr.entry.centreDepth, share, st.cfg.freeEntryUpright);
   let h: Vec3;
   if (fr.offset === null) {
