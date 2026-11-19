@@ -20,8 +20,8 @@
  * ⛔ ENGINE-FREE. Prior art, old and free: the world-up look-at camera (gluLookAt, early 1990s), a smoothstep; no patent, no orientation widget.
  */
 import { cross, dot, type Vec3 } from "../core/vec";
-import type { CamPose } from "./orbit_tilt";
-import { poseAxes, turnIsFree, twistAbout, type FramedLine } from "./roll_follow";
+import type { CamPose, EdgeHold } from "./orbit_tilt";
+import { fingerOnLogic, poseAxes, turnIsFree, twistAbout, type FramedLine } from "./roll_follow";
 
 /** ⭐ within this of the vertical (deg) the picture is the logic's pose (`w` 0) — the slider `uprightFromDeg` */
 export const UPRIGHT_FROM_DEG = 5;
@@ -166,6 +166,31 @@ export function changeSeen(c: ChangeIn): ChangeSeen {
   const w1 = Math.min(1, Math.max(0, Number.isFinite(c.wAfter) ? c.wAfter : 0));
   const seenRad = Number.isFinite(c.turnRad) ? (1 - Math.min(w0, w1)) * Math.abs(c.turnRad) : Infinity;
   return { timed: c.stays || !turnIsFree(seenRad, c.freeMaxDeg), seenRad };
+}
+
+/** ⭐ A turn seen of this much or more holds the push that made it (deg) — his "90°" (R6, T9). */
+export const SEEN_HOLD_DEG = 90;
+
+/**
+ * ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §12 RB2) THE PUSH HELD, AS THE PLAYER SEES IT: the logic's dy of `sign` (`[0, sign]` on the logic's glass `ghost`)
+ * turned onto the glass of the picture drawn with it (`picture`) — a unit `[right, up]` on the glass he sees. The picture the logic's pose: `[0, sign]`
+ * exactly (today's dy hold).
+ */
+export function holdOnPicture(sign: 1 | -1, picture: CamPose, ghost: CamPose): readonly [number, number] {
+  const m = fingerOnLogic(0, sign, ghost, picture);
+  const l = Math.hypot(m.dx, m.fdy);
+  return l > 1e-12 ? [m.dx / l, m.fdy / l] : [0, sign];
+}
+
+/**
+ * ⭐⭐⭐ (RB2) THE HOLD A CHANGE SETS — ONLY a turn the player sees of `SEEN_HOLD_DEG` or more (`changeSeen`'s answer: timed, and its share seen): the sign that
+ * crossed (`crossingEvent`, `exitHoldSign`, `crossingHold`: the logic's geometry), held as the push he made (`holdOnPicture`, last frame's picture and
+ * logic's pose — the conversion the finger used when it crossed). Any other change: none (it replaces a hold still on, as every crossing does).
+ * ⛔ (fix rounds 2 – 3) `uprightHoldKept`: the hold set at every crossing, then DROPPED at the camera's stage when the change was freed.
+ */
+export function holdSeen(seen: ChangeSeen, sign: 1 | -1 | 0, picture: CamPose | null, ghost: CamPose | null): EdgeHold | null {
+  if (sign === 0 || !seen.timed || !(seen.seenRad >= (SEEN_HOLD_DEG * Math.PI) / 180)) return null;
+  return { sign, back: 0, dir: picture === null || ghost === null ? [0, sign] : holdOnPicture(sign, picture, ghost) };
 }
 
 /**

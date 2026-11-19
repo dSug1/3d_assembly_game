@@ -201,7 +201,6 @@ describe("⭐⭐⭐ the wiring (source pins, comments stripped)", () => {
     expect(f).toContain("const paced = seamOutPaced(tl.off, st.asmTiltAuto, st.cfg.tiltOutBlendMm);");
     expect(f).toContain("crossTurn(st, { at: { mq: poleYawKept(mq0, ORBIT_PITCH_MAX_RAD, hP), g }, uWas, carry: false, paced, hold: held, tilt: true });");
     expect(f).toContain("} else st.asmMapQ = null; crossTurn(st, { at: null, uWas, carry: false, paced, hold: held, tilt: true });");
-    const c = fnCode(W, "function crossTurn(");
     expect(fnCode(W, "function turnBegin(")).toContain("if (a.paced) seamOutStart(st); else if (a.noCamNull || st.asmCamLast !== null) seamTurnStart(st, a.byMm); if (a.uWas !== null) seamEase(st, a.uWas);"); // ⭐ (2026-11-19, RB1)
     // the latch read is LAST frame's: `tiltOff` runs before the latch is stepped
     const a = fnCode(W, "export function assemblyFrame(");

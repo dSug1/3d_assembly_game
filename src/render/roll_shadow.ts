@@ -16,10 +16,10 @@
  */
 import type { Vec3 } from "../core/vec";
 import { upSquareToView } from "../input/camera_frame";
-import { holdAtCrossing, squareTurning, type CamPose } from "../input/orbit_tilt";
+import { squareTurning, type CamPose } from "../input/orbit_tilt";
 import { followStep, FREE_TURN_MAX_DEG, framedLine, GAP_ZERO, onGlass, poseRolled, poseTurnAngle, ROLL_FOLLOW_MS, turnIsFree, twistAbout, type FollowMode } from "../input/roll_follow";
 import { easeRest } from "../input/seam_turn";
-import { changeSeen, UPRIGHT_REST, uprightStep, uprightWeight, viewFromVertical } from "../input/upright";
+import { changeSeen, holdSeen, UPRIGHT_REST, uprightStep, uprightWeight, viewFromVertical } from "../input/upright";
 import { changeApply, spitZone, zoneMixPose } from "./assembly_wiring";
 import type { SceneState } from "./scene_state";
 
@@ -176,8 +176,8 @@ function uprightPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3,
     const stays = !drawn || was.turn !== null || ask.paced || ask.byMm || ask.tilt || sqTurning || tiltHold;
     const wAfter = uprightWeight(viewFromVertical(ghost), knobs.fromDeg, knobs.fullDeg) * scale;
     const seen = changeSeen({ stays, wBefore: drawn ? was.upright!.w : 0, wAfter, turnRad, freeMaxDeg: st.cfg.freeTurnMaxDeg });
-    // the hold the change asked: a freed change never holds (its push never goes back)
-    const hold = ask.hold === undefined ? undefined : seen.timed ? holdAtCrossing(ask.hold) : null;
+    // ⭐⭐⭐ (§12 RB2) the hold the change asked: ONLY a turn he sees of 90° or more, the push held as he made it on the picture (`holdSeen`)
+    const hold = ask.hold === undefined ? undefined : holdSeen(seen, ask.hold, drawn ? was.picture : null, drawn ? was.ghost : null);
     changeApply(st, ask, seen.timed, hold);
     if (!seen.timed) freed = turnRad > 0 ? turnRad : Number.MIN_VALUE;
   }

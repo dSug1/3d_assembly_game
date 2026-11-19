@@ -5,7 +5,8 @@ import { readFileSync } from "node:fs";
 import type { Vec3 } from "../src/core/vec";
 import type { CamPose } from "../src/input/orbit_tilt";
 import { fingerOnGhost, fingerOnLogic, framedLine, poseAxes, poseRolled } from "../src/input/roll_follow";
-import { dySignPushing, edgeHoldDy, edgeHoldFinger } from "../src/input/orbit_tilt";
+import { dySignPushing, edgeHoldAlong, edgeHoldDy, edgeHoldFinger, edgeHoldGlass } from "../src/input/orbit_tilt";
+import { holdOnPicture, holdSeen } from "../src/input/upright";
 import { fingerInFrame } from "../src/input/polar_zone";
 import { DEFAULT_CONFIG, validateGestureConfig } from "../src/input/gestureConfig";
 import { changeApply } from "../src/render/assembly_wiring";
@@ -161,9 +162,11 @@ describe("law U's wiring (`roll_shadow.ts` uprightPictureFrame, `assembly_wiring
     // ⭐ (2026-11-19, UD8b) ONE conversion, at the entry (`fingerAtEntry` in the pointer's step), before the hold; `zoneFinger` reads the logic's frame
     const pw = readFileSync("src/render/pointer_wiring.ts", "utf8");
     expect(aw).toContain("return sh !== null && sh.upright !== undefined ? fingerOnLogic(dx, fdy, sh.picture, sh.ghost) : { dx, fdy };");
-    expect(pw).toContain("const fe = asmOn && !shiftApproach ? fingerAtEntry(st, db.dx, orbitDy(db.dy, asmOn)) : { dx: db.dx, fdy: orbitDy(db.dy, asmOn) };");
+    expect(pw).toContain("const fe = asmOn && !shiftApproach ? fingerAtEntry(st, raw.dx, raw.fdy) : raw;"); // ⭐ (2026-11-19, RB2) the hold on the raw finger first (`held`), then each turned once
+    expect(pw).toContain("const fh = asmOn && !shiftApproach ? fingerAtEntry(st, held.dx, held.fdy) : held;");
+    expect(pw.indexOf("const held = asmOn ? edgeHoldGlass(")).toBeLessThan(pw.indexOf("const fh = asmOn"));
     expect(pw.indexOf("const fe = asmOn")).toBeLessThan(pw.indexOf("st.asmDySign = dySignPushing(st.asmDySign, fdx0, fdy0);"));
-    expect(pw).toContain("const zf = asmOn && !shiftApproach ? zoneFinger(st, fdx0, fdy1) : { dx: fdx0, fdy: fdy1 };");
+    expect(pw).toContain("const zf = asmOn && !shiftApproach ? zoneFinger(st, fh.dx, fh.fdy) : { dx: fh.dx, fdy: fh.fdy };");
     expect(aw).toContain("if (z === null) return { dx, fdy };");
     expect(aw).toContain("const cf = st.asmCamLast;");
     expect(aw).not.toContain("fingerOnGhost(");
@@ -280,5 +283,59 @@ describe("law U's sliders (ORBIT › UPRIGHT PICTURE)", () => {
     for (const v of [-1, 61]) expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, uprightFullDeg: v })).toThrow();
     for (const v of [0, 720, 2880]) expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, uprightMaxDegS: v })).not.toThrow();
     for (const v of [-1, 2881]) expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, uprightMaxDegS: v })).toThrow();
+  });
+});
+
+describe("RB2 — THE HOLD IS A DIRECTION ON THE PICTURE'S GLASS (UPRIGHT_PICTURE.md §12): set by a turn seen of 90° or more, applied and released on the raw finger", () => {
+  const line = framedLine(ghost, pieceOnView);
+  const moves = [[0, 5], [0, -5], [3, 4], [-3, 4], [4, -3], [2.5, 0], [-0.7, 0], [0, 0], [-1.25, -3.3]] as const;
+  it("no direction (law U off), or the direction [0, sign] (the picture the logic's pose): today's dy hold and its release, bit for bit", () => {
+    for (const sign of [1, -1] as const) {
+      for (const h of [{ sign, back: 0 }, { sign, back: 0, dir: [0, sign] as const }]) {
+        for (const [dx, fdy] of moves) {
+          const r = edgeHoldGlass(h, dx, fdy);
+          // ⭐ the same numbers (=== : a −0 for a +0 changes nothing the hold reads — the release asks `along !== 0`)
+          expect(r.dx === dx && r.fdy === edgeHoldDy(h, fdy) && edgeHoldAlong(h, dx, fdy) === fdy).toBe(true);
+        }
+      }
+    }
+    expect(edgeHoldGlass(null, 1.5, -2)).toEqual({ dx: 1.5, fdy: -2 });
+    expect(holdOnPicture(1, ghost, ghost)).toEqual([0, 1]);
+    expect(holdOnPicture(-1, ghost, ghost)).toEqual([0, -1]);
+  });
+  it("the picture turned 143° from the logic's pose: the dy held (sign −1 on the logic's glass) is the push UP he made on the picture — blocked; sideways and back pass", () => {
+    const pic = poseRolled(ghost, line, 143 * DEG);
+    const d = holdOnPicture(-1, pic, ghost);
+    const m = fingerOnLogic(d[0], d[1], pic, ghost);
+    expect(m.dx).toBeCloseTo(0, 9);
+    expect(m.fdy).toBeCloseTo(-1, 9);
+    expect(d[1]).toBeGreaterThan(0.7); // ⭐ up on the picture: the logic's down turned 143°
+    const h = { sign: -1 as const, back: 0, dir: d };
+    const push = edgeHoldGlass(h, 3 * d[0], 3 * d[1]);
+    expect(Math.hypot(push.dx, push.fdy)).toBeLessThan(1e-12);
+    const side = edgeHoldGlass(h, 3 * d[0] - 2 * d[1], 3 * d[1] + 2 * d[0]);
+    expect(side.dx).toBeCloseTo(-2 * d[1], 12);
+    expect(side.fdy).toBeCloseTo(2 * d[0], 12);
+    expect(edgeHoldGlass(h, -d[0], -d[1])).toEqual({ dx: -d[0], fdy: -d[1] });
+    expect(edgeHoldAlong(h, -4 * d[0], -4 * d[1])).toBeCloseTo(4, 9);
+    expect(edgeHoldFinger(h, edgeHoldAlong(h, -4 * d[0], -4 * d[1]), 3)).toBeNull();
+    expect(edgeHoldFinger(h, edgeHoldAlong(h, 4 * d[0], 4 * d[1]), 3)).toEqual(h);
+  });
+  it("set ONLY by a turn seen of 90° or more (`holdSeen`): timed and seen ≥ 90° — the sign as he pushed it; under 90°, applied at once, or no sign: none", () => {
+    const pic = poseRolled(ghost, line, 143 * DEG);
+    expect(holdSeen({ timed: true, seenRad: 120 * DEG }, -1, pic, ghost)).toEqual({ sign: -1, back: 0, dir: holdOnPicture(-1, pic, ghost) });
+    expect(holdSeen({ timed: true, seenRad: 90 * DEG }, 1, ghost, ghost)).toEqual({ sign: 1, back: 0, dir: [0, 1] });
+    expect(holdSeen({ timed: true, seenRad: 89 * DEG }, 1, pic, ghost)).toBeNull();
+    expect(holdSeen({ timed: false, seenRad: 170 * DEG }, 1, pic, ghost)).toBeNull();
+    expect(holdSeen({ timed: true, seenRad: 170 * DEG }, 0, pic, ghost)).toBeNull();
+    expect(holdSeen({ timed: true, seenRad: Infinity }, -1, null, null)).toEqual({ sign: -1, back: 0, dir: [0, -1] });
+  });
+  it("wired: the hold on the raw finger before the conversion; the release along it; law U's resolver the only one to set it, through `holdSeen`", () => {
+    const pw = readFileSync("src/render/pointer_wiring.ts", "utf8").replace(/\r\n/g, "\n");
+    expect(pw).toContain("const held = asmOn ? edgeHoldGlass(st.asmEdgeHold, raw.dx, raw.fdy) : raw;");
+    expect(pw).toContain("const along = asmOn && st.asmEdgeHold !== null ? edgeHoldAlong(st.asmEdgeHold, raw.dx, raw.fdy) : 0;");
+    expect(pw).not.toContain("edgeHoldDy(");
+    const rs = readFileSync("src/render/roll_shadow.ts", "utf8");
+    expect(rs).toContain("const hold = ask.hold === undefined ? undefined : holdSeen(seen, ask.hold, drawn ? was.picture : null, drawn ? was.ghost : null);");
   });
 });
