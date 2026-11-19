@@ -569,22 +569,37 @@ describe("V1 — near the vertical the picture keeps the roll it arrives with (U
       st = r.state;
     }
   });
-  it("(c) on the way out over the far side: upright against the kept roll weighted by k — half way at k 0.5, upright at k 1; the half turn started once at most, about 180° in all", () => {
+  it("(c) on the way out over the far side (§17): upright from where k leaves 0 — gravity on the glass's vertical at k 0.5; the half turn started once, about 180° in all", () => {
     const mid = pass(KV, 105, 90).frames; // ν 15°: k 0.5 on the band 5 – 25°
     const last = mid[mid.length - 1]!;
     expect(last.w).toBeCloseTo(0.5, 9);
-    const t = Math.abs(gravityTilt(last.p)!) / DEG;
-    expect(t).toBeGreaterThan(70);
-    expect(t).toBeLessThan(110);
+    expect(Math.abs(gravityTilt(last.p)!)).toBeLessThan(1e-6);
     const out = pass(KV, 125, 60).frames;
     const end = out[out.length - 1]!;
     expect(Math.abs(gravityTilt(end.p)!)).toBeLessThan(1e-6);
-    expect(out.filter((f) => f.half > 0).length).toBeLessThanOrEqual(1);
+    expect(out.filter((f) => f.half > 0).length).toBe(1);
     const way = out.filter((f) => f.th > 90);
     let turned = 0;
     for (let i = 1; i < way.length; i++) turned += Math.abs(wrap(way[i]!.phi - way[i - 1]!.phi));
     expect(turned / DEG).toBeGreaterThan(150);
     expect(turned / DEG).toBeLessThan(200);
+  });
+  it("(g) in the band, however small k: the picture upright (the roll kept only within fromDeg of the vertical) — §16's gravity tilted in the band refused", () => {
+    const f = pass(KV, 96, 60).frames; // ν 6°: k ≈ 0.008
+    const last = f[f.length - 1]!;
+    expect(last.w).toBeGreaterThan(0);
+    expect(last.w).toBeLessThan(0.02);
+    expect(Math.abs(gravityTilt(last.p)!)).toBeLessThan(1e-6);
+    expect(f.filter((x) => x.th > 95 && x.half > 0).length).toBe(1); // the half turn opened WHOLE where the view left fromDeg
+  });
+  it("(h) the carry's weight is the SMALLER of this frame's and last frame's square-camera complement: leaving close in (sc 0 → 1) the logic's twist is not undone on that frame", () => {
+    const { s, g } = pass(KV, 90, 5);
+    const f: Vec3 = unit([g.look[0] - g.eye[0], g.look[1] - g.eye[1], g.look[2] - g.eye[2]]);
+    const gi: CamPose = { ...g, up: rotateAbout(g.up, f, 10 * DEG) };
+    const r0 = pic({ ...s, sp: 0 }, gi, dt, KV).r;
+    expect(Math.abs(wrap(r0.phi - s.phi))).toBeLessThan(1e-9);
+    const r1 = pic(s, gi, dt, KV).r; // sp 1: undone whole
+    expect(Math.abs(wrap(r1.phi - s.phi)) / DEG).toBeGreaterThan(9);
   });
   it("(d) close in (the square camera's share whole, scale 0): the logic's pose every frame, as the defaults commit (UD3)", () => {
     let a: UprightState = UPRIGHT_REST, b: UprightState = UPRIGHT_REST;
@@ -618,25 +633,26 @@ describe("V1 — near the vertical the picture keeps the roll it arrives with (U
     expect(lawHalfTurn(s)).toBe(false);
     expect(Math.abs(gravityTilt(pic(s, g, dt, KV).p)!)).toBeLessThan(1e-6);
   });
-  it("(c2) the side of the half turn chosen once: upright against the kept roll unwrapped in the band — through 180° the roll goes on, never back the other way", () => {
+  it("(c2) the half turn keeps the side it started on: through 180° the roll goes on, never back the other way", () => {
     const g = poseAt(75, 20, 170, [0, 0, 0]); // ν 15°: k 0.5
     const line = framedLine(g, piece);
     const a = uprightAngle(g, line)!;
-    const prev = a + 2 * Math.PI - 20 * DEG; // last frame upright stood 20° short of half a turn on the positive side; k rising 0.25 → 0.5
-    const s: UprightState = { au: null, phi: 0, ap: a, wp: 0.25, gp: g, sp: 1, psi: 0, dk: prev, kp: 0.25 };
+    const s: UprightState = { au: null, phi: wrap(a + 170 * DEG), ap: a, wp: 0.5, gp: g, sp: 1, psi: a, half: true, hs: 1 }; // upright now 170° the negative way
     const r = uprightStep(s, g, line, dt, KV);
-    expect(r.state.psi!).toBeCloseTo(((a + 2 * Math.PI) * 0.25) / 0.75, 9); // a third of the way left, past 180°: positive
-    expect(r.state.dk!).toBeCloseTo(((a + 2 * Math.PI) * 0.5) / 0.75, 9);
-    expect(wrap(r.phi - s.phi)).toBeGreaterThan(0);
+    expect(wrap(r.phi - s.phi)).toBeGreaterThan(11 * DEG); // 12° a frame at 720° a second, the positive way: 190° left
+    expect(r.state.hs).toBe(1);
+    expect(lawHalfTurn(r.state)).toBe(true);
+    expect(r.halfStart).toBe(0); // under way: not started again
   });
-  it("(c4) back toward the vertical before the way out is over (k falls from 0.97): the roll HELD — the picture does not roll back to where it arrived from", () => {
+  it("(c4) back toward the vertical after the way out (k falls from 0.97): no turn starts, the picture upright then kept — it does not roll back to where it arrived from", () => {
     const { s: s0, g: g0 } = pass(KV, 113, 60); // ν 23°: k ≈ 0.97, the rest closed
     let s = s0, g = g0;
     const first = pic(s, g, dt, KV).r.phi;
     for (let th = 112; th >= 91; th -= 1) {
       g = carried(g, viewAt(th));
       const r = pic(s, g, dt, KV).r;
-      expect(Math.abs(wrap(r.phi - first))).toBeLessThan(1e-6);
+      expect(r.halfStart).toBe(0);
+      expect(Math.abs(wrap(r.phi - first))).toBeLessThan(5 * DEG);
       s = r.state;
     }
   });
