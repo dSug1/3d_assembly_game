@@ -734,3 +734,6 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
 * **2026-11-19 (fix round 2, `UPRIGHT_PICTURE.md` §9)**: the finger turned once at the entry (UD8b, `7fe646c`; and its mirror since FO3's S2 fixed), a
   hold dropped where its change is freed fully upright (UD11, `25477c7`), the minors (`7516ce3`): the dy hold as `1.0.147-`'s on the hold walks, the
   identities kept; ⛔ R7 14.9° (target 14.1°), one frame of 98° on one stretch, `z_far` s2's come-back, the straight dy at 6 px a frame — open (§9.4).
+* **2026-11-19 (fix round 3, `UPRIGHT_PICTURE.md` §11)**: the carry is the logic's twist undone (UD6c, `fb80fd0`), a freed change never holds
+  (UD11b, `f1f9b55`), the rest at 1 800° a second (`4d4f658`): no frame over 90° on his ten stretches, 47 of 45 – 90°, gravity over 20° 7.8 %, its
+  roll 58.8° a metre, R7 13.4°; the hold walks as round 2's; ⛔ the identity with `e653099` lost since round 2 (the mirror fix, the holds dropped).
