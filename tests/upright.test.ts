@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import type { Vec3 } from "../src/core/vec";
 import { rotateAbout, type CamPose } from "../src/input/orbit_tilt";
 import { framedLine, onGlass, poseRolled, twistAbout } from "../src/input/roll_follow";
-import { gravityTilt, UPRIGHT_FROM_DEG, UPRIGHT_FULL_DEG, UPRIGHT_MAX_DEG_S, UPRIGHT_REST, changeSeen, lawHalfTurn, uprightAngle, uprightStep, uprightWeight, viewFromVertical, type UprightState } from "../src/input/upright";
+import { gravityTilt, UPRIGHT_FROM_DEG, UPRIGHT_FULL_DEG, UPRIGHT_MAX_DEG_S, UPRIGHT_REST, changeSeen, changeWeight, lawHalfTurn, uprightAngle, uprightStep, uprightWeight, viewFromVertical, type UprightKnobs, type UprightState } from "../src/input/upright";
 
 const DEG = Math.PI / 180;
 const wrap = (a: number): number => Math.atan2(Math.sin(a), Math.cos(a));
@@ -28,7 +28,7 @@ function poseAt(el: number, yaw: number, roll: number, off: Vec3 = [0.005, 0.002
 // ⭐ the law's vectors below are written on the band 5 – 25° (their fixtures' views sit in it and beyond it); the defaults moved to 15 – 50° on the
 // owner's word (2026-11-19) and are pinned on their own just below — the law is the same function of its knobs
 const K = { fromDeg: 5, fullDeg: 25, maxDegS: 0 };
-const pic = (s: UprightState, g: CamPose, dt = 1000 / 60, k = K, scale = 1) => {
+const pic = (s: UprightState, g: CamPose, dt = 1000 / 60, k: UprightKnobs = K, scale = 1) => {
   const line = framedLine(g, piece);
   const r = uprightStep(s, g, line, dt, k, scale);
   return { r, p: poseRolled(g, line, r.phi), line };
@@ -508,5 +508,133 @@ describe("law U's `closed`", () => {
     expect(last.closed).toBe(true);
     // no pace (maxDegS 0): always closed
     expect(pic(v, poseAt(40, 20, 170)).r.closed).toBe(true);
+  });
+});
+
+describe("V1 — near the vertical the picture keeps the roll it arrives with (UPRIGHT_PICTURE.md §15; the slider uprightKeepRoll)", () => {
+  const KV = { ...K, maxDegS: 720, keep: true };
+  const K6 = { ...K, maxDegS: 720 };
+  const dt = 1000 / 60;
+  /** the view at `th` deg along the great circle through the vertical over heading 20° (60: 30° off the vertical; 90: straight down; 120: 30° off it, the far side) */
+  const viewAt = (th: number): Vec3 => unit([Math.cos(th * DEG) * Math.cos(20 * DEG), -Math.sin(th * DEG), Math.cos(th * DEG) * Math.sin(20 * DEG)]);
+  /** the pose `g` carried to view along `f1` by the minimal rotation (no twist of its own) — the logic over a top, carried upside down (UD12) */
+  const carried = (g: CamPose, f1: Vec3): CamPose => {
+    const f0 = unit([g.look[0] - g.eye[0], g.look[1] - g.eye[1], g.look[2] - g.eye[2]]);
+    const c: Vec3 = [f0[1] * f1[2] - f0[2] * f1[1], f0[2] * f1[0] - f0[0] * f1[2], f0[0] * f1[1] - f0[1] * f1[0]];
+    const sn = Math.hypot(c[0], c[1], c[2]);
+    const ang = Math.atan2(sn, f0[0] * f1[0] + f0[1] * f1[1] + f0[2] * f1[2]);
+    const up = sn < 1e-12 ? g.up : rotateAbout(g.up, mul(c, 1 / sn), ang);
+    return { eye: add(piece, mul(f1, -2)), look: add(piece, mul(f1, 0.5)), up };
+  };
+  /** a pass over the vertical, `step` deg a frame from 60 to `to`, the logic rolled 100° at the start and carried with no twist; `hold` frames at `to` */
+  const pass = (k: UprightKnobs, to: number, hold: number, step = 0.5) => {
+    let g = poseAt(60, 20, 100, [0, 0, 0]);
+    let s: UprightState = UPRIGHT_REST;
+    for (let n = 0; n < 40; n++) s = pic(s, g, dt, k).r.state;
+    const frames: { th: number; phi: number; p: CamPose; half: number; w: number }[] = [];
+    for (let th = 60 + step; th <= to + 1e-9; th += step) {
+      g = carried(g, viewAt(th));
+      const { r, p } = pic(s, g, dt, k);
+      frames.push({ th, phi: r.phi, p, half: r.halfStart, w: r.w });
+      s = r.state;
+    }
+    for (let n = 0; n < hold; n++) {
+      const { r, p } = pic(s, g, dt, k);
+      frames.push({ th: to, phi: r.phi, p, half: r.halfStart, w: r.w });
+      s = r.state;
+    }
+    return { frames, s, g };
+  };
+  it("(a) the roll kept at the vertical: the picture arrives upright and keeps that roll there (the defaults commit: the logic's pose, rolled 100° away)", () => {
+    const at = pass(KV, 90, 0).frames.filter((f) => f.th >= 86 && f.th <= 90);
+    const far = pass(KV, 60.5, 0).frames[0]!.phi; // upright out there: about −100°
+    expect(Math.abs(far)).toBeGreaterThan(80 * DEG);
+    for (const f of at) {
+      expect(f.w).toBe(0);
+      expect(Math.abs(wrap(f.phi - at[0]!.phi))).toBeLessThan(1e-9); // kept
+      expect(Math.abs(wrap(f.phi - far))).toBeLessThan(2 * DEG); // the roll it arrived with (upright, the logic carried with no twist)
+    }
+    for (const f of pass(K6, 90, 0).frames.filter((x) => x.th >= 86)) expect(f.phi).toBe(0); // the defaults commit: the logic's pose
+  });
+  it("(b) the carry whole at the vertical: a roll of the logic about the view (w 0) leaves the picture where it was, frame after frame", () => {
+    const { s, g } = pass(KV, 90, 5);
+    const f: Vec3 = unit([g.look[0] - g.eye[0], g.look[1] - g.eye[1], g.look[2] - g.eye[2]]);
+    let st = s;
+    const p0 = pic(st, g, dt, KV).p;
+    for (let i = 1; i <= 12; i++) {
+      const gi: CamPose = { ...g, up: rotateAbout(g.up, f, i * 37 * DEG) };
+      const { r, p } = pic(st, gi, dt, KV);
+      expect(r.w).toBe(0);
+      for (let j = 0; j < 3; j++) expect(Math.abs(p.up[j]! - p0.up[j]!)).toBeLessThan(1e-9);
+      st = r.state;
+    }
+  });
+  it("(c) on the way out over the far side: upright against the kept roll weighted by k — half way at k 0.5, upright at k 1; the half turn started once at most, about 180° in all", () => {
+    const mid = pass(KV, 105, 90).frames; // ν 15°: k 0.5 on the band 5 – 25°
+    const last = mid[mid.length - 1]!;
+    expect(last.w).toBeCloseTo(0.5, 9);
+    const t = Math.abs(gravityTilt(last.p)!) / DEG;
+    expect(t).toBeGreaterThan(70);
+    expect(t).toBeLessThan(110);
+    const out = pass(KV, 125, 60).frames;
+    const end = out[out.length - 1]!;
+    expect(Math.abs(gravityTilt(end.p)!)).toBeLessThan(1e-6);
+    expect(out.filter((f) => f.half > 0).length).toBeLessThanOrEqual(1);
+    const way = out.filter((f) => f.th > 90);
+    let turned = 0;
+    for (let i = 1; i < way.length; i++) turned += Math.abs(wrap(way[i]!.phi - way[i - 1]!.phi));
+    expect(turned / DEG).toBeGreaterThan(150);
+    expect(turned / DEG).toBeLessThan(200);
+  });
+  it("(d) close in (the square camera's share whole, scale 0): the logic's pose every frame, as the defaults commit (UD3)", () => {
+    let a: UprightState = UPRIGHT_REST, b: UprightState = UPRIGHT_REST;
+    for (const el of [60, 60, 70, 80, 88, 89, 80, 60, 60]) {
+      const g = poseAt(el, 20, 100);
+      const ra = pic(a, g, dt, KV, 0).r, rb = pic(b, g, dt, K6, 0).r;
+      expect(ra.phi).toBe(0);
+      expect(ra.phi).toBe(rb.phi);
+      a = ra.state;
+      b = rb.state;
+    }
+  });
+  it("(e) keep absent or false: the defaults commit's law, bit for bit", () => {
+    const x = pass(K6, 125, 10).frames, y = pass({ ...K6, keep: false }, 125, 10).frames;
+    expect(y.map((f) => f.phi)).toEqual(x.map((f) => f.phi));
+  });
+  it("(c3) out of the vertical at his pace (4° a frame, 240° a second): the half turn is the law's own — started ONCE, the gizmo held while it closes (lawHalfTurn), then upright", () => {
+    let g = poseAt(60, 20, 100, [0, 0, 0]);
+    let s: UprightState = UPRIGHT_REST;
+    for (let n = 0; n < 40; n++) s = pic(s, g, dt, KV).r.state;
+    let starts = 0, under = 0;
+    for (let th = 64; th <= 160; th += 4) {
+      g = carried(g, viewAt(Math.min(th, 124)));
+      const r = pic(s, g, dt, KV).r;
+      if (r.halfStart > 0) starts++;
+      if (lawHalfTurn(r.state)) under++;
+      s = r.state;
+    }
+    expect(starts).toBe(1);
+    expect(under).toBeGreaterThan(2);
+    expect(lawHalfTurn(s)).toBe(false);
+    expect(Math.abs(gravityTilt(pic(s, g, dt, KV).p)!)).toBeLessThan(1e-6);
+  });
+  it("(c2) the side of the half turn chosen once: upright against the kept roll unwrapped in the band — through 180° the target goes on, never back the other way", () => {
+    const g = poseAt(75, 20, 170, [0, 0, 0]); // ν 15°: k 0.5
+    const line = framedLine(g, piece);
+    const a = uprightAngle(g, line)!;
+    const prev = a + 2 * Math.PI - 20 * DEG; // last frame upright stood 20° short of half a turn on the positive side
+    const s: UprightState = { au: null, phi: 0.5 * prev, ap: a, wp: 0.5, gp: g, sp: 1, psi: 0, dk: prev };
+    const r = uprightStep(s, g, line, dt, KV);
+    expect(r.state.dk!).toBeCloseTo(a + 2 * Math.PI, 9); // past 180°, not wrapped back to −170°
+    expect(wrap(r.phi - s.phi)).toBeGreaterThan(0); // on toward 0.5 × (a + 2π), the same way
+  });
+  it("(f) changeWeight: with V1 the carry's weight (the square camera's complement), so a change far out is never seen; without it, or no complement known, w", () => {
+    expect(changeWeight(true, 0, 1)).toBe(1);
+    expect(changeWeight(true, 0.3, 0.6)).toBe(0.6);
+    expect(changeWeight(false, 0.3, 0.6)).toBe(0.3);
+    expect(changeWeight(true, 0.3, undefined)).toBe(0.3);
+    const seen = changeSeen({ stays: false, wBefore: changeWeight(true, 0, 1), wAfter: changeWeight(true, 0, 1), turnRad: Math.PI, freeMaxDeg: 90 });
+    expect(seen.timed).toBe(false);
+    expect(seen.seenRad).toBe(0);
   });
 });
