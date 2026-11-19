@@ -618,15 +618,27 @@ describe("V1 — near the vertical the picture keeps the roll it arrives with (U
     expect(lawHalfTurn(s)).toBe(false);
     expect(Math.abs(gravityTilt(pic(s, g, dt, KV).p)!)).toBeLessThan(1e-6);
   });
-  it("(c2) the side of the half turn chosen once: upright against the kept roll unwrapped in the band — through 180° the target goes on, never back the other way", () => {
+  it("(c2) the side of the half turn chosen once: upright against the kept roll unwrapped in the band — through 180° the roll goes on, never back the other way", () => {
     const g = poseAt(75, 20, 170, [0, 0, 0]); // ν 15°: k 0.5
     const line = framedLine(g, piece);
     const a = uprightAngle(g, line)!;
-    const prev = a + 2 * Math.PI - 20 * DEG; // last frame upright stood 20° short of half a turn on the positive side
-    const s: UprightState = { au: null, phi: 0.5 * prev, ap: a, wp: 0.5, gp: g, sp: 1, psi: 0, dk: prev };
+    const prev = a + 2 * Math.PI - 20 * DEG; // last frame upright stood 20° short of half a turn on the positive side; k rising 0.25 → 0.5
+    const s: UprightState = { au: null, phi: 0, ap: a, wp: 0.25, gp: g, sp: 1, psi: 0, dk: prev, kp: 0.25 };
     const r = uprightStep(s, g, line, dt, KV);
-    expect(r.state.dk!).toBeCloseTo(a + 2 * Math.PI, 9); // past 180°, not wrapped back to −170°
-    expect(wrap(r.phi - s.phi)).toBeGreaterThan(0); // on toward 0.5 × (a + 2π), the same way
+    expect(r.state.psi!).toBeCloseTo(((a + 2 * Math.PI) * 0.25) / 0.75, 9); // a third of the way left, past 180°: positive
+    expect(r.state.dk!).toBeCloseTo(((a + 2 * Math.PI) * 0.5) / 0.75, 9);
+    expect(wrap(r.phi - s.phi)).toBeGreaterThan(0);
+  });
+  it("(c4) back toward the vertical before the way out is over (k falls from 0.97): the roll HELD — the picture does not roll back to where it arrived from", () => {
+    const { s: s0, g: g0 } = pass(KV, 113, 60); // ν 23°: k ≈ 0.97, the rest closed
+    let s = s0, g = g0;
+    const first = pic(s, g, dt, KV).r.phi;
+    for (let th = 112; th >= 91; th -= 1) {
+      g = carried(g, viewAt(th));
+      const r = pic(s, g, dt, KV).r;
+      expect(Math.abs(wrap(r.phi - first))).toBeLessThan(1e-6);
+      s = r.state;
+    }
   });
   it("(f) changeWeight: with V1 the carry's weight (the square camera's complement), so a change far out is never seen; without it, or no complement known, w", () => {
     expect(changeWeight(true, 0, 1)).toBe(1);

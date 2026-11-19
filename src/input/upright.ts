@@ -98,11 +98,13 @@ export interface UprightState {
   readonly half?: boolean;
   /** ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §15 V1 — `keep`) the square camera's complement last frame (the carry's weight is the smaller of it and this one) */
   readonly sp?: number;
-  /** ⭐⭐⭐ (V1) THE ROLL KEPT, `ψ` (rad, far out — before the square camera's share): upright where `w` is 1, then carried as the picture is (the logic's
-   *  twist undone) — the roll the picture arrives with near the vertical */
+  /** ⭐⭐⭐ (V1) THE ROLL KEPT, `ψ` (rad, far out — before the square camera's share): upright where `k` is 1; carried as the picture is (the logic's twist
+   *  undone); HELD while `k` falls (toward the vertical: the roll the picture arrives with); turned toward upright as `k` rises */
   readonly psi?: number;
-  /** ⭐⭐⭐ (V1) upright against `ψ`, unwrapped while `0 < w < 1` (continuous in time; the side of the half turn chosen once, where `w` leaves 0); none at `w` 0 */
+  /** ⭐⭐⭐ (V1) upright against `ψ`, unwrapped while `0 < k < 1` (continuous in time; the side of the half turn chosen once, where `k` leaves 0); none at `k` 0 */
   readonly dk?: number;
+  /** ⭐ (V1) `k` last frame (the weight before the square camera's share) */
+  readonly kp?: number;
 }
 export const UPRIGHT_REST: UprightState = Object.freeze({ au: null, phi: 0, ap: null });
 
@@ -260,10 +262,12 @@ export function changeWeight(keep: boolean, w: number, sc: number | undefined): 
  * (1) THE CARRY, the logic's twist undone with the weight `c` = the square camera's complement alone (the smaller of this frame's and last frame's; `whole`:
  *     1) — never `w`: no turn of the logic (a crossing's half turn, a level face's exit or layout, a heading's settle) rolls the picture, at any view. The
  *     roll kept, `ψ`, is carried alike.
- * (2) THE REST toward the target `sc·(ψ + k·d)`, `k` the weight before the square camera's share, `d` upright against `ψ` (unwrapped in the band, none at
- *     `k` 0): at `k` 1 upright exactly (`ψ` set to it — the defaults commit's target), at `k` 0 the roll kept, between `ψ` turned toward upright by `k`. Closed
- *     at `maxDegS` the short way. Leaving the vertical on the far side upright is up to half a turn from `ψ`: that rest is the law's own half turn (RB3,
- *     `halfStart`, `half`), paid on the way out.
+ * (2) THE REST toward the target `sc·ψ`, `k` the weight before the square camera's share, `d` upright against `ψ` (unwrapped in the band, none at `k` 0):
+ *     at `k` 1 `ψ` upright exactly (the defaults commit's target); while `k` FALLS (toward the vertical) `ψ` is held — the roll kept; while `k` RISES `ψ`
+ *     turns toward upright by the share of the way left, `(k − k_prev)/(1 − k_prev)` of `d` (from `k` 0 to `k` with upright still: `ψ + k·d` — §15's
+ *     target). Closed at `maxDegS` the short way. Leaving the vertical on the far side upright is up to half a turn from `ψ`: that rest is the law's own half
+ *     turn (RB3, `halfStart`, `half`), paid on the way out. ⛔ (first build, measured on his stretches) `ψ + k·d` with `ψ` set only at `k` 1: a pass whose
+ *     way out stopped short of `k` 1 left `ψ` half a turn stale, and the next approach rolled the picture back to it — 140° at an ENTRY (`vyah_42s` f39 – 50).
  */
 function uprightKept(s: UprightState, pose: CamPose, line: FramedLine, dtMs: number, maxDegS: number, k: number, sc: number, nu: number, whole: boolean): UprightFrame {
   const w = k * sc;
@@ -274,20 +278,28 @@ function uprightKept(s: UprightState, pose: CamPose, line: FramedLine, dtMs: num
   const pc = carry(s.phi);
   let psi = carry(s.psi ?? s.phi);
   let dk = s.dk;
+  const kp = s.kp ?? k;
   if (!(k > 0)) dk = undefined;
   else if (alpha !== null) {
     if (k >= 1) {
       psi = alpha;
       dk = 0;
-    } else dk = dk === undefined ? wrapPi(alpha - psi) : dk + wrapPi(alpha - psi - dk);
+    } else {
+      dk = dk === undefined ? wrapPi(alpha - psi) : dk + wrapPi(alpha - psi - dk);
+      if (k > kp) {
+        const share = (k - kp) / (1 - kp);
+        psi = wrapPi(psi + share * dk);
+        dk *= 1 - share;
+      }
+    }
   }
-  const tf = sc * (psi + k * (dk ?? 0));
+  const tf = sc * psi;
   const target = tf === 0 ? 0 : wrapPi(tf); // ⭐ the square camera's share whole: exactly 0, the logic's pose (UD3)
   const e = wrapPi(target - pc);
   const cap = dtMs > 0 ? ((maxDegS * Math.PI) / 180) * (dtMs / 1000) : 0;
   const phi = Math.abs(e) <= cap ? target : wrapPi(pc + Math.sign(e) * cap);
   const big = Math.abs(e) >= Math.PI / 2;
   const half = (big || s.half === true) && phi !== target;
-  const state: UprightState = { au: null, phi, ap: alpha, wp: w, gp: pose, sp: sc, psi, ...(dk !== undefined ? { dk } : {}), ...(half ? { half: true } : {}) };
+  const state: UprightState = { au: null, phi, ap: alpha, wp: w, gp: pose, sp: sc, psi, kp: k, ...(dk !== undefined ? { dk } : {}), ...(half ? { half: true } : {}) };
   return { state, phi, w, nu, alpha, closed: phi === target, halfStart: big && s.half !== true ? Math.abs(e) : 0, sc };
 }
