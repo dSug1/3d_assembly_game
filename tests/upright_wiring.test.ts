@@ -313,10 +313,11 @@ describe("RB2 — THE HOLD IS A DIRECTION ON THE PICTURE'S GLASS (UPRIGHT_PICTUR
   it("the picture turned 143° from the logic's pose: the dy held (sign −1 on the logic's glass) is the push UP he made on the picture — blocked; sideways and back pass", () => {
     const pic = poseRolled(ghost, line, 143 * DEG);
     const d = holdOnPicture(-1, pic, ghost);
-    const m = fingerOnLogic(d[0], d[1], pic, ghost);
-    expect(m.dx).toBeCloseTo(0, 9);
-    expect(m.fdy).toBeCloseTo(-1, 9);
-    expect(d[1]).toBeGreaterThan(0.7); // ⭐ up on the picture: the logic's down turned 143°
+    // ⭐ the dy of HIS glass: up — the logic's down turned 143° points up on the picture (not the logic's axis itself, 37° off his vertical)
+    expect(d).toEqual([0, 1]);
+    expect(fingerOnLogic(0, 1, pic, ghost).fdy).toBeLessThan(0);
+    expect(holdOnPicture(-1, poseRolled(ghost, line, 30 * DEG), ghost)).toEqual([0, -1]);
+    expect(holdOnPicture(1, poseRolled(ghost, line, 170 * DEG), ghost)).toEqual([0, -1]);
     const h = { sign: -1 as const, back: 0, dir: d };
     const push = edgeHoldGlass(h, 3 * d[0], 3 * d[1]);
     expect(Math.hypot(push.dx, push.fdy)).toBeLessThan(1e-12);

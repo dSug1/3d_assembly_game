@@ -184,14 +184,15 @@ export function lawHalfTurn(s: UprightState | undefined): boolean {
 export const SEEN_HOLD_DEG = 90;
 
 /**
- * ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §12 RB2) THE PUSH HELD, AS THE PLAYER SEES IT: the logic's dy of `sign` (`[0, sign]` on the logic's glass `ghost`)
- * turned onto the glass of the picture drawn with it (`picture`) — a unit `[right, up]` on the glass he sees. The picture the logic's pose: `[0, sign]`
- * exactly (today's dy hold).
+ * ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §12 RB2) THE PUSH HELD, AS THE PLAYER SEES IT: THE DY OF THE GLASS HE SEES, of the sign the logic's dy of `sign`
+ * takes there (`[0, sign]` on the logic's glass `ghost` turned onto the glass of the picture drawn with it, `picture` — its up or its down). The picture the
+ * logic's pose: `[0, sign]` exactly (today's dy hold). ⛔ (first build, measured on the hold walks: `z_far` s1 held 2 frames where `1.0.147-` held 104,
+ * the gizmo 37 mm along the axis) the logic's dy axis itself turned onto his glass: on a picture rolled from the logic's pose his straight push had a part
+ * across that axis, which passed — the gizmo slid along the edge.
  */
 export function holdOnPicture(sign: 1 | -1, picture: CamPose, ghost: CamPose): readonly [number, number] {
   const m = fingerOnLogic(0, sign, ghost, picture);
-  const l = Math.hypot(m.dx, m.fdy);
-  return l > 1e-12 ? [m.dx / l, m.fdy / l] : [0, sign];
+  return [0, m.fdy > 0 ? 1 : m.fdy < 0 ? -1 : sign];
 }
 
 /**
