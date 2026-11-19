@@ -19,7 +19,8 @@ import { upSquareToView } from "../input/camera_frame";
 import { squareTurning, type CamPose } from "../input/orbit_tilt";
 import { followStep, FREE_TURN_MAX_DEG, framedLine, GAP_ZERO, onGlass, poseRolled, poseTurnAngle, ROLL_FOLLOW_MS, turnIsFree, twistAbout, type FollowMode } from "../input/roll_follow";
 import { easeRest } from "../input/seam_turn";
-import { spitZone, zoneMixPose } from "./assembly_wiring";
+import { changeSeen, holdSeen, UPRIGHT_REST, uprightStep, uprightWeight, viewFromVertical } from "../input/upright";
+import { changeApply, spitZone, zoneMixPose } from "./assembly_wiring";
 import type { SceneState } from "./scene_state";
 
 const DEG = Math.PI / 180;
@@ -110,6 +111,8 @@ export function rollPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: V
   const sq = squareTurning(st.asmSquare.n, st.asmSquare.target, st.asmSquare.q);
   const tl = st.asmTilt;
   const tiltHold = tl !== null && (tl.exit || tl.off);
+  // ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §12 RB1) law U decides each change ONCE (`changeSeen`, in `uprightPictureFrame`): nothing below runs for it
+  if (st.cfg.uprightPicture === 1) return uprightPictureFrame(st, piece, eye, look, up, dtMs, ghost, sq, tiltHold);
   let zm = st.asmZoneMix;
   const fresh = zm !== null && zm !== was?.turn;
   let freed = 0;
@@ -130,7 +133,7 @@ export function rollPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: V
   const tw = was === null ? 0 : twistAbout(was.ghost, ghost, line.dir);
   const gizmoFree = zm === null && !sq && !tiltHold;
   const afterStay = was !== null && was.turn !== null && zm === null;
-  const mode: FollowMode = was === null || !was.drawn || zm !== null || afterStay ? "ZERO" : gizmoFree ? "TAKE" : "SKIP";
+  const mode: FollowMode = was === null || !was.drawn || was.upright !== undefined || zm !== null || afterStay ? "ZERO" : gizmoFree ? "TAKE" : "SKIP";
   const g = followStep(was?.free ?? GAP_ZERO, tw, dtMs, st.cfg.rollFollowMs, mode);
   const zp = zoneMixPose(st, piece, eye, look, up);
   let pose = zp;
@@ -145,4 +148,56 @@ export function rollPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: V
   const turnTw = fresh ? tw : (was?.turnTw ?? 0);
   st.asmRollShadow = { ghost, dir: line.dir, piece, held: g, free: g, turn: zm, turnTw, stays: zm !== null, tw, gizmoFree, spit: spitZone(st) !== null, freshTurn: fresh, picture, a2: placeError(st, ghost, picture, piece, line), drawn: true, freed };
   return pose;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-18, `UPRIGHT_PICTURE.md` §2 steps 3 – 4 — law U, `uprightPicture` 1) ONE FRAME OF THE UPRIGHT PICTURE, at the camera's stage: `G` the logic's
+ * pose (`zoneMixPose`: the ghost, or a timed turn's pose where a turn stays — FO3's gap NOT applied, UD4); `φ` from law U (`uprightStep`: the turn about
+ * the framed line that puts gravity on the glass's vertical, weighted by the view's angle from the vertical and the square camera's complement — UD3,
+ * `uprightCloseIn` 0); the picture `P = poseRolled(G, L, φ)` — the piece and the look point exact on the glass; `φ` 0: `G` itself. `st.asmCamLast` stays
+ * the logic's (`zoneMixPose` wrote it); the record in `st.asmRollShadow` (`ghost` = `G`).
+ * ⭐⭐⭐ (2026-11-19, §12 RB1 — the rebuild) FIRST, the change of frame ASKED this frame (`asmChange`, by `turnBegin`) resolved ONCE (`changeSeen`): its angle
+ * the logic's pose last frame to this frame's (`ghost`, before any turn), `w` before it the picture's last frame, after it this ghost's; a timed turn or at
+ * once (`changeApply`) — never a turn made and then deleted (⛔ `uprightFrees`, fix rounds 0 – 3). At once: the law's carry WHOLE on this frame (the logic's
+ * twist about the framed line undone — UD4b's rule, now a property of the decision). ⛔ (fix round 1, F3) the carry whole on a timed turn's first frame too:
+ * measured inert (the logic's twist 0 on all 141 such frames), removed.
+ */
+function uprightPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Vec3, dtMs: number, ghost: CamPose, sqTurning: boolean, tiltHold: boolean): CamPose {
+  const was = st.asmRollShadow;
+  const sq = st.asmSquare;
+  const share = sq.n === null || !(sq.q > 0) ? 0 : sq.q;
+  const scale = st.cfg.uprightCloseIn === 1 ? 1 : 1 - share;
+  const knobs = { fromDeg: st.cfg.uprightFromDeg, fullDeg: st.cfg.uprightFullDeg, maxDegS: st.cfg.uprightMaxDegS };
+  let freed = 0;
+  const ask = st.asmChange;
+  if (ask !== null) {
+    const drawn = was !== null && was.drawn && was.upright !== undefined;
+    const turnRad = drawn ? poseTurnAngle(was.ghost, ghost) : Number.NaN;
+    const stays = !drawn || was.turn !== null || ask.paced || ask.byMm || ask.tilt || sqTurning || tiltHold;
+    const wAfter = uprightWeight(viewFromVertical(ghost), knobs.fromDeg, knobs.fullDeg) * scale;
+    const seen = changeSeen({ stays, wBefore: drawn ? was.upright!.w : 0, wAfter, turnRad, freeMaxDeg: st.cfg.freeTurnMaxDeg });
+    // ⭐⭐⭐ (§12 RB2) the hold the change asked: ONLY a turn he sees of 90° or more, the push held as he made it on the picture (`holdSeen`)
+    const hold = ask.hold === undefined ? undefined : holdSeen(seen, ask.hold, drawn ? was.picture : null, drawn ? was.ghost : null);
+    changeApply(st, ask, seen.timed, hold);
+    if (!seen.timed) freed = turnRad > 0 ? turnRad : Number.MIN_VALUE;
+  }
+  const zm = st.asmZoneMix;
+  const fresh = zm !== null && zm !== was?.turn;
+  const gizmoFree = zm === null && !sqTurning && !tiltHold;
+  const G = zoneMixPose(st, piece, eye, look, up);
+  const line = framedLine(G, piece);
+  const tw = was === null ? 0 : twistAbout(was.ghost, G, line.dir);
+  // ⭐⭐⭐ (fix round 3, §10 UD6c) the carry is the logic's twist undone, in the law (`uprightStep`): WHOLE on a change applied at once, else `min(w, w before)`
+  const r = uprightStep(was?.upright?.state ?? UPRIGHT_REST, G, line, dtMs, knobs, scale, freed > 0);
+  const P = poseRolled(G, line, r.phi);
+  // ⭐⭐⭐ (2026-11-19, §12 RB3) THE LAW'S OWN HALF TURN is a turn he sees: the gizmo held while it closes (`lawHalfTurn`, T5's reader) and the push that was on
+  // held after it — as any seen turn's (`holdSeen`, last frame's picture: the glass the push was made on); a hold already on (the change's) kept
+  if (r.halfStart > 0 && st.asmEdgeHold === null && st.asmG !== null && was !== null) {
+    const sign = Math.sign(st.asmDySign);
+    st.asmEdgeHold = holdSeen({ timed: true, seenRad: r.halfStart }, sign === 1 ? 1 : sign === -1 ? -1 : 0, was.picture, was.ghost);
+  }
+  const turnTw = fresh ? tw : (was?.turnTw ?? 0);
+  const g = { gap: r.phi, speed: 0 };
+  st.asmRollShadow = { ghost: G, dir: line.dir, piece, held: g, free: g, turn: zm, turnTw, stays: zm !== null, tw, gizmoFree, spit: spitZone(st) !== null, freshTurn: fresh, picture: P, a2: placeError(st, G, P, piece, line), drawn: true, freed, upright: { state: r.state, w: r.w, phi: r.phi } };
+  return P;
 }

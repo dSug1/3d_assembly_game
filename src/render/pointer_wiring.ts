@@ -19,7 +19,7 @@ import type { Sample } from "../input";
 import { alignRestingFace, orbitTravelStep, orbitDvPerMm, restOnTappedFace, restTargetKey, topPauseOn } from "./green_box_wiring";
 import { pauseYawStep } from "../input/top_pause";
 import { approachDistance, closeInGain, isApproachKey, ORBIT_PITCH_MAX_RAD, orbitDy } from "../input/assembly_orbit";
-import { approachInput, approachRelease, assemblyOn, pieceOrbitOn, seamOutFeed, tiltClampStep, zoneFinger } from "./assembly_wiring";
+import { approachInput, approachRelease, assemblyOn, fingerAtEntry, pieceOrbitOn, seamOutFeed, tiltClampStep, zoneFinger } from "./assembly_wiring";
 import { orbitDegPerMm } from "../input/follow_camera"; // ⏸ (2026-10-12) orbitRollStepRad, rollRestingFace — with the commented-out way in
 import { restingFaceTap } from "../input/orbit_tap";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
@@ -35,7 +35,7 @@ import { type SceneState } from "./scene_state";
 import { applyCamera, retargetGizmo, syncCentre } from "./camera_rig";
 import { sampleOf } from "./hud_paint";
 import { nudgeOthersWorld, swingBlock } from "./sway_pass";
-import { dySignPushing, edgeHoldDy, edgeHoldFinger } from "../input/orbit_tilt"; // ⭐ (2026-11-12, ORBIT_ANY_SHAPE.md §8) the dy hold
+import { dySignPushing, edgeHoldAlong, edgeHoldFinger, edgeHoldGlass } from "../input/orbit_tilt"; // ⭐ (2026-11-12, ORBIT_ANY_SHAPE.md §8) the dy hold
 
 export function installPointerHandler(st: SceneState): void {
   // ⭐⭐ (2026-10-29, *"A should replace shift"*) THE APPROACH KEY held (`isApproachKey`): its release ends the approach (its coast); a lost window forgets it
@@ -333,17 +333,28 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     const shiftApproach = pieceOrbitOn(st) && st.orbitShift;
     if (shiftApproach) approachInput(st, db.dy / mmToPx(1));
     // ⭐⭐⭐ (2026-11-04) around the assembly the dy with the finger (`orbitDy`: finger down, the gizmo down)
-    const fdy0 = orbitDy(db.dy, asmOn);
-    // ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8) the finger's dy sign remembered; after a pole-holding face's far edge, the sign that crossed HELD (`edgeHoldDy`)
-    // ⭐⭐⭐ (2026-11-18, `DY_HOLD_REVERSAL.md` §5.3) …the dy that pushes NOW (`dySignPushing`: a sideways step none) — ⛔ the last dy sign for ever
-    if (asmOn && !shiftApproach) st.asmDySign = dySignPushing(st.asmDySign, db.dx, fdy0);
-    const fdy1 = asmOn ? edgeHoldDy(st.asmEdgeHold, fdy0) : fdy0;
-    // ⭐⭐⭐ (2026-11-14) …and released by the finger the other way past `edgeHoldMm` (`edgeHoldFinger` — the owner's hysteresis, a finger's, at any distance)
-    if (asmOn && st.asmEdgeHold !== null && fdy0 !== 0 && !shiftApproach) st.asmEdgeHold = edgeHoldFinger(st.asmEdgeHold, fdy0 / mmToPx(1), st.cfg.edgeHoldMm);
+    // ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §8 UD8b) …turned ONCE from the picture drawn onto the LOGIC's glass, before anything reads it (`fingerAtEntry`;
+    // law U off: as it is) — the hold, the spit and the orbit then read a finger drawn on the logic's own glass, as in `1.0.147-`
+    const raw = { dx: db.dx, fdy: orbitDy(db.dy, asmOn) };
+    // ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8) after a pole-holding face's far edge, the push that crossed HELD — ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §12
+    // RB2) on the RAW finger, before its conversion: the part of the move along the push as he sees it blocked (`edgeHoldGlass`; law U off: the dy of its
+    // sign, `edgeHoldDy`, bit for bit) — ⛔ (fix rounds 2 – 3) applied after the conversion on the logic's glass: a held push slid 129 – 215 mm
+    const held = asmOn ? edgeHoldGlass(st.asmEdgeHold, raw.dx, raw.fdy) : raw;
+    const fe = asmOn && !shiftApproach ? fingerAtEntry(st, raw.dx, raw.fdy) : raw;
+    const fh = asmOn && !shiftApproach ? fingerAtEntry(st, held.dx, held.fdy) : held;
+    const fdx0 = fe.dx;
+    const fdy0 = fe.fdy;
+    // ⭐⭐⭐ (2026-11-18, `DY_HOLD_REVERSAL.md` §5.3) the dy that pushes NOW (`dySignPushing`: a sideways step none; the move before the hold, on the logic's
+    // glass — the sign a crossing holds) — ⛔ the last dy sign for ever
+    if (asmOn && !shiftApproach) st.asmDySign = dySignPushing(st.asmDySign, fdx0, fdy0);
+    // ⭐⭐⭐ (2026-11-14) …and released by the finger the other way past `edgeHoldMm` (`edgeHoldFinger` — the owner's hysteresis, a finger's, at any distance),
+    // read along the held direction on the raw finger (`edgeHoldAlong`; law U off: the dy itself)
+    const along = asmOn && st.asmEdgeHold !== null ? edgeHoldAlong(st.asmEdgeHold, raw.dx, raw.fdy) : 0;
+    if (asmOn && st.asmEdgeHold !== null && along !== 0 && !shiftApproach) st.asmEdgeHold = edgeHoldFinger(st.asmEdgeHold, along / mmToPx(1), st.cfg.edgeHoldMm);
     // ⭐⭐⭐ (2026-11-13, POLAR_ZONES.md §3.5) in a polar zone's spit: the finger read in F's upright screen (a dx pole to pole, a dy round the axis — the way
     // it goes on the glass); a crossing's hold is §8's, above (`spitStep` sets it)
     // ⭐ (2026-11-14) a dx only: the finger's OWN dy none, before any mapping — the mapped pitch kept (in a spit seen from above it is the finger's dx)
-    const zf = asmOn && !shiftApproach ? zoneFinger(st, db.dx, fdy1) : { dx: db.dx, fdy: fdy1 };
+    const zf = asmOn && !shiftApproach ? zoneFinger(st, fh.dx, fh.fdy) : { dx: fh.dx, fdy: fh.fdy };
     const fdy = zf.fdy;
     const fdx = zf.dx;
     const dyPx = (shiftApproach ? 0 : fdy) * st.cfg.boxGainPitch;

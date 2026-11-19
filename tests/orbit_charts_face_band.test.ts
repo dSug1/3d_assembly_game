@@ -288,7 +288,7 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): one band", () => {
     expect(c).toContain("st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch }; faceBandRead(st, m.t);");
     before(c, "st.asmFaceBand = null;", "faceBandRead(st, m.t);");
     const off = fnCode(W, "function tiltOff(");
-    expect(off).toContain("crossTurn(st, { at: { mq: poleYawKept(mq0, ORBIT_PITCH_MAX_RAD, hP), g }, uWas, carry: false, paced, hold: held });");
+    expect(off).toContain("crossTurn(st, { at: { mq: poleYawKept(mq0, ORBIT_PITCH_MAX_RAD, hP), g }, uWas, carry: false, paced, hold: held, tilt: true });");
     expect(off).toContain("st.asmShown = { t: m.t, yaw: mq0.yaw, pitch: mq0.pitch }; faceBandRead(st, m.t);"); // no place to keep
     before(off, "st.asmFaceBand = null;", "faceBandRead(st, m.t);");
     expect(fnCode(W, "function poleCross(")).toContain("crossTurn(st, { at: { mq: { yaw: seam.yaw, pitch: seam.pitch }, g: P }, uWas, carry: false, paced: false, hold });");

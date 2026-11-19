@@ -696,3 +696,48 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
 * ⛔ **Refuted on his own hand** (`Scene_0bis`, far out and at 0.736): the gap over 90° in 9 of 10 stretches (up to 178°) — the ghost turns up to 42°
   a frame with the gizmo free near a tip's axis; `Scene_1` over its top: 161°, outside any spit. O6's fallback sized offline does not meet A7.
   **S1 not started**: the amendments for the owner's decision → [`FAST_ORBIT.md`](../../40_RENDER_SCENE/spec/FAST_ORBIT.md) §13.6.
+
+### 2026-11-18 (night) — FO3 S1, the picture drawn: built; S2 built and reverted; partly built
+
+* ✅ Built on `1.0.148-` (`87cd6c2`, local): the changes of frame under `freeTurnMaxDeg` (90°, less 2°) make no timed turn; the roll about the line
+  through the piece and its look point follows the logic (`rollFollowMs` 200 ms); `freeTurnMaxDeg` 0 = today's game, bit for bit (checked on the
+  replays, his hand, the fast, dy hold and level entry walks).
+* ✅ The corner loops of `Scene_0bis`: the roll a metre a fifth to a tenth of today's, the gizmo never stopped, the gap under 90° to 2 000 px a second.
+* ⛔ His hand: the worst frame of roll cut to a third or less, but the roll a metre only −13 %; the finger against the gizmo worse where the gap is over
+  45° (A5, A6 not met). The level entry's straight dy drifts twice as far.
+* ⛔ S2 (the finger turned by the gap outside a spit, `48ae89c`) REVERTED (`f198b3a`): a feedback at a pole (`Scene_1`'s top: 288° a metre against
+  129° today). The figures and the decisions → [`FAST_ORBIT.md`](../../40_RENDER_SCENE/spec/FAST_ORBIT.md) §14.
+
+### 2026-11-18 (late night) — the lead: the deploy of S1 + S2, his look, his order, the studies; the upright picture goes to `1.0.148b-`
+
+* **Deploy** on his word (*"can you deploy so I can test in parallel ? and tell me where are the sliders located"*): LIVE main `4eabab8` = `1.0.148-` at `48ae89c`, 21:23; the Pages build passed `npm run verify`; not independently tested. ⚠ LIVE holds S2, reverted on the branch an hour later (`f198b3a`). Sliders: ☰, ORBIT › SMOOTHING (`rollFollowMs`, `freeTurnMaxDeg`).
+* **His look** (about 21:50): *"the build is very good at 160 ms and 90degrees: set them as default. However, I want to modify something: is it possible to maintain the gravity align with the screen's vertical axis, or at least : for the vertical axis and gravity alignment to be as the initial game (for example in previous branch 1.0.147-) ? That would avoid the scene to roll on the screen view (which is annoying). note that a pitch in the screen view or a yaw in the screen view is ok, in my opinion as I judge it from the screen. I want to avoid the roll of the scene in the screen view. Propose a logic, test the logic on simple geometries, then build it in a new branch 1.0.148b-Fast_orbit_upright_gravity."*
+* **His order** (about 22:00): *"I will go to sleep. finish the builder's report, update the md files in branch 1.0.148- then proceed with the build of branch 1.0.148b, test, finetune until the result is acceptable, update the md files, deploy. then I will test tomorrow morning and we shall advise the next step (full audit of orbit charts or rework of the fast orbit). In the meantime, do not ask me question nor decisions as I won't be able to answer until tomorrow morning."*
+* **Mitigation study** (one Opus agent, offline, nothing built): the fast roll near a tip's axis is the logic's upright camera whose heading swings near the vertical; it does not cancel with the crossing's half turn (21 of 27 passes). Largely superseded by his look → [`FAST_ORBIT_MITIGATIONS.md`](../../40_RENDER_SCENE/spec/FAST_ORBIT_MITIGATIONS.md).
+* **Upright study** (one Opus agent, offline): gravity tilted over 20° on the glass, share of frames, before FO3 (`6f47219`) → `48ae89c`: the cube 1.1 → 15.2 %, the heptagon 0.4 → 18.7 %, his hand 28 – 42 → 44 – 53 %. Law U (the picture turned about the line through the piece and the look point to put gravity on the glass's vertical, in full from 25° off the vertical, none within 5°) gives 0.2 – 8 % on his hand offline. Spec: `UPRIGHT_PICTURE.md` on `1.0.148b-` (not on this branch).
+* **Not run**: the independent test of S1 as built (the picture's rule changes in `1.0.148b-`; tested there once). `FAST_ORBIT.md` 14.7 stays open.
+* **Branch**: `1.0.148b-Fast_orbit_upright_gravity` made from this branch's tip after the docs commit. `1.0.148-` is pushed to origin at `48ae89c` only.
+* **The lead's choices in his absence** (each reversible by a switch or a slider): defaults `rollFollowMs` 160, `freeTurnMaxDeg` 90 (first commit of `1.0.148b-`); law U behind a switch (off = the build he looked at, without S2); "acceptable" = on his replayed hand gravity's tilt and the scene's roll no worse than `1.0.147-`'s, the gizmo never stopped under 90°, nothing worse than tonight's build elsewhere; two fix rounds at most; if the gates still fail: `1.0.148b-` deployed with the upright switch OFF and the 160 ms default, nothing undone.
+
+### 2026-11-18 (night, later) — law U built on `1.0.148b-`: gravity upright, but the half turn over a top in one frame; partly passing
+
+* **Built** (local, not pushed): `7bcae02` `rollFollowMs` 160; `e82ae2e` `src/input/upright.ts` (law U, closed form); `bb4b5fa` the picture drawn
+  behind `uprightPicture` (default 1), the finger off the picture; `8348ce1` a change freed only where the picture is upright at both ends;
+  `e615a61` `gravity_read.mjs`, `upright_batch.sh`. Six sliders in ☰ › ORBIT › UPRIGHT PICTURE. → `UPRIGHT_PICTURE.md` §5.
+* **Measured on his ten stretches**: gravity over 20° 35.4 % (`1.0.147-`) → 3.2 %; its roll 101.5 → 19.9° a metre; corner loops 0; U-G1 (both
+  switches off: bit for bit) and U-G4 pass. ⛔ 84 frames turn the camera over 90° in ONE frame (`1.0.147-` 0): the view crosses the 5 – 25° band in
+  one frame at his pace; the cap inside the band cannot act. ⛔ A6 on the picture over `1.0.147-` + 5° on 7 of 10; held frames a metre over the
+  deployed build's on 9 of 10; close in not identical to the switch off (UD5); the level entry's straight dy drifts 1.2 – 1.9 × (root traced: the
+  finger read off a picture that differs from the logic's — `freeShownHeading` cleared).
+* **Experiment, not committed**: the cap at `w` = 1 too, 720° a second — one-frame flips 84 → 10, over 20° 12.0 %, roll 51° a metre. For the lead.
+* **2026-11-19 (fix round 1)**: law U in time (`5d1f17c`, `d7ec0d2`, `9cf3fda`, `06d9faa`): no frame turns the camera over 90° on his hand (84 → 0), gravity over 20° 7.1 %, roll 57° a metre, the rest at 1 440° a second; ⛔ open: 45 – 90° frames (45 vs 5), A6, held frames vs deployed on 5 of 10 → `UPRIGHT_PICTURE.md` §7.
+* **2026-11-19 (fix round 2, `UPRIGHT_PICTURE.md` §9)**: the finger turned once at the entry (UD8b, `7fe646c`; and its mirror since FO3's S2 fixed), a
+  hold dropped where its change is freed fully upright (UD11, `25477c7`), the minors (`7516ce3`): the dy hold as `1.0.147-`'s on the hold walks, the
+  identities kept; ⛔ R7 14.9° (target 14.1°), one frame of 98° on one stretch, `z_far` s2's come-back, the straight dy at 6 px a frame — open (§9.4).
+* **2026-11-19 (fix round 3, `UPRIGHT_PICTURE.md` §11)**: the carry is the logic's twist undone (UD6c, `fb80fd0`), a freed change never holds
+  (UD11b, `f1f9b55`), the rest at 1 800° a second (`4d4f658`): no frame over 90° on his ten stretches, 47 of 45 – 90°, gravity over 20° 7.8 %, its
+  roll 58.8° a metre, R7 13.4°; the hold walks as round 2's; ⛔ the identity with `e653099` lost since round 2 (the mirror fix, the holds dropped).
+* **2026-11-19 (the rebuild, `UPRIGHT_PICTURE.md` §12 – §13)**: one owner per thing — a change of frame decided once as he sees it (`changeSeen`,
+  `b0f58a7`), the dy hold the dy of the glass he sees, on the raw finger (`6e328cd`, `fdac5f0`), the law's own half turn a seen turn (`1d5125e`);
+  RB4 not built (its proof failed), the pace kept at 1 800° a second. The hold walks as `1.0.147-`'s on `z_far` (held 100 / 105 frames, 0 mm);
+  ⛔ open: 51 frames of 45 – 90° (aim under 27), R7 14.7° (patched 13.4°), `b_far` sets no hold (§13.4).

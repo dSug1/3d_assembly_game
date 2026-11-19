@@ -113,8 +113,8 @@ describe("the camera turned about the piece (a polar zone's turn)", () => {
   it("wired: the zone's switch and the spit's crossing start from the pose on the glass; the camera's stage turns it about the piece", () => {
     const aw = readFileSync("src/render/assembly_wiring.ts", "utf8");
     const gb = readFileSync("src/render/green_box_wiring.ts", "utf8");
-    expect(aw).toContain("st.asmZoneMix = st.asmCamLast === null ? null : { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0 };");
-    expect(aw).toContain("if (st.asmCamLast !== null) st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0 };");
+    expect(aw).toContain("st.asmZoneMix = st.asmCamLast === null ? null : { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0, ...(paced ? { byMm: true } : {}) };"); // ⭐ (2026-11-19, UPRIGHT_PICTURE.md §12 RB1) the one creation, `seamTurnStart`, through `turnBegin`
+    expect(aw).toContain("else if (a.noCamNull || st.asmCamLast !== null) seamTurnStart(st, a.byMm);"); // ⭐ (2026-11-19, RB1) the free entry's turn: `noCamNull` false
     // ⭐⭐⭐ (2026-11-14) the turn by ANGLE at one speed; the spit's side off the camera's own direction
     // ⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4c) over the turn's WHOLE angle (`turnWhole`: the camera's own with no eased direction — as before)
     expect(aw).toContain("const whole = turnWhole(st, zm);");

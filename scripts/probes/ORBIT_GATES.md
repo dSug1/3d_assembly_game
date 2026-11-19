@@ -484,3 +484,52 @@ node scripts/probes/shadow_read.mjs <folder>/<tag>_*.json <a fast walk's OUTJSON
   metre of gizmo travel today and as S1 would draw on the route, the gap (largest, frames over 45° / 90°), the free twists, the frames with a gap
   outside a spit (O8), A2, the gap at the end (A3), the turns by their twist, and on the hand A6 (the finger's way against the gizmo's on the glass).
 * The figures at `580913f` – `aa1aa8f`: `FAST_ORBIT.md` §13; the recordings: `_saved_patches/orbit_chain_2026-11-18/fo3/runs` (`base` at `6f47219`).
+
+## 12. FO3 S1 — the gates read base against S1 (`Claude/40_RENDER_SCENE/spec/FAST_ORBIT.md` §14)
+
+* **The base** for his hand and the fast walks is S0's recordings (`fo3/runs/new`: the game as drawn today, identical to `6f47219`'s); the dy hold's
+  and the level entry's base was recorded at `6f47219` (`git checkout 6f47219 -- src`, one batch, `git checkout HEAD -- src`). A0: the same batches
+  with `EXTRA="&freeTurnMaxDeg=0"`, compared frame for frame (`replay_cmp.mjs`; the kit's `same.mjs` for the other recorders).
+* **The readers** (the kit's `_saved_patches/orbit_chain_2026-11-18/fo3/`, outside the repository): `gates_s1.mjs <base> <s1> …` — one line a pair:
+  the roll a metre drawn (A5), its worst frame, the gap (A7, reported), A2, A3, the held frames and the turns ≥ 88° (A4), A6's largest; `a6_detail.mjs`
+  — A6 split by the gap and inside / outside a spit; `cancel.mjs` — the half turn's length from the pose shown (14.5); `wrap_sim.mjs` — the follower
+  re-run on S1's twists, the gap wrapped or not.
+* ⚠ On `Scene_0bis` the finger outside a spit never meets a gap (0 frames on his hand and the loops): S2 changed nothing there, and the runs made with
+  it stand for S1 alone (checked: `ilmj_23s` with and without S2 identical).
+
+## 13. Law U — the upright picture (`Claude/40_RENDER_SCENE/spec/UPRIGHT_PICTURE.md` §3, §5)
+
+```bash
+STRETCHES=<stretches.json> OUT=<folder> bash scripts/probes/upright_batch.sh <tag> hand close half fps143 reps over loops more le hold
+node scripts/probes/gravity_read.mjs <rec.json> ...          # JSON=1: one object a recording
+```
+
+* **`gravity_read.mjs`** reads the camera DRAWN of any recording (`c`, `t`, `up`; the gizmo `g`): gravity's tilt on the glass (world-down projected
+  on the glass against the glass's down; not counted within 10° of the vertical, `CUT`) — the share of frames over 20°, 45°, 90° and its largest;
+  gravity's roll per metre of gizmo travel (|Δtilt| a frame × the sine of the view's angle from the vertical) and its largest frame; the frames held
+  by a turn per metre; with law U's record (`sh.uw`, `sh.uf`, added to `SHADOW_REC`) the largest φ and the frames held by a turn whose frame before
+  had `w` = 1.
+* **The bases**: `1.0.147-`'s game = the kit's `fo3/runs/new` (`6f47219`); the deployed build = `fo3/runs/s1` (`48ae89c`); the dy hold's and the
+  level entry's base `fo3/runs/base` (`6f47219`). U-G1: `EXTRA="&uprightPicture=0"` against step 1's code (`git checkout 7bcae02 -- src`, one batch,
+  `git checkout HEAD -- src`), `EXTRA="&freeTurnMaxDeg=0"` against `fo3/runs/new` — the kit's `same.mjs`.
+* **The kit's readers** (`_saved_patches/orbit_chain_2026-11-18/fo3/upright/`, outside the repository): `vsum.mjs` (a line a stretch and the ten's
+  totals, with the frames whose camera turns over 90° / 45° in ONE frame), `jumps.mjs` (those frames: the view from the vertical, `w`, φ, the turn),
+  `viewjump.mjs` (the view's own turn a frame, at a turn's start and elsewhere), `a6p.sh` (A6 on the picture: largest / 95th / n), `dy_cmp.sh` and
+  `dy_glass.mjs` (the straight dy walks: the world drift and the gizmo's way on the drawn glass), `id_cmp.sh` (U-G1, U-G7).
+* ⚠ A whole-camera turn over 90° in one frame is the measure gravity's tilt misses: law U as built makes 84 of them on his ten stretches (the base 0) —
+  `UPRIGHT_PICTURE.md` §5.
+* **Fix round 1** (`UPRIGHT_PICTURE.md` §7): the kit's `sum_fr1.sh <tag>` (vsum + A6 split), `a6split.mjs` (A6 apart on the frames where law U's rest
+  is under 5° and where it is closing — α recomputed from the recorded `gh3`, `pp`), `j90.sh <tag> [deg]` (the frames turning the whole camera over
+  `deg` a stretch, with `1.0.147-`'s count over 45°), `jrep.sh <tag>` (the same on the replays and `Scene_1` over its top), `id_fr1.sh` (U-G1).
+* **Fix round 2** (`UPRIGHT_PICTURE.md` §9): the dy hold's walks (`upright_batch.sh <tag> hold`) are an upright gate — read LIKE FOR LIKE, the
+  walker steering by the glass: the kit's `hw_world.mjs` (per sub-walk the gizmo toward / away from the edge per leg, the picture's tilt before and
+  after, a re-crossing, refused both ways) beside `hold_walk_analyse.mjs`; base `fo3/runs/base/bhw_*`. R7 (the finger's way against the gizmo's on the
+  drawn glass) by the auditor's `audit/t_read.mjs` (`audit/rd_hand.sh <dir> <tag> 60 far`, `ALL` line, `awayAll`): `1.0.147-` 12.1 / 61.1°; split by
+  the frames since a freed change (`r7_freed.mjs`, needs the shadow's `fe`) and by the view (`r7_buckets.mjs`). The holds set and by what change:
+  `ud11_read.mjs` (needs the hand record's `h`, `efa08a5`).
+* **The rebuild** (`UPRIGHT_PICTURE.md` §12 – §13, 2026-11-19): the same batches (`upright_batch.sh <tag> hold hand fps143 reps over le close`, then
+  `EXTRA="&uprightMaxDegS=1440"` / `=2160` hand for the pace). Readers, all in the kit: the hold walks by `audit/hold_tab.mjs <base bhw_analysis>
+  <new analysis>` and `audit/come_split.mjs <hold rec>` (the come leg's gizmo along the axis / round it / still); the ten stretches by
+  `audit/t_read.mjs` (`ALL=1`), `rebuild/big_frames.mjs` (the 45° frames by cause), `rebuild/pic_turns.mjs` (holds against the turn SEEN); RB4's
+  offline proof `rebuild/rb4.mjs` (`w` off the camera's view against off the piece's direction); the straight dy `upright/dy_glass.mjs`; the identities
+  `scripts/probes/replay_cmp.mjs` (replays) and the kit's `same.mjs` (a stretch). The driver `rebuild/drv_rb.sh`, `drv_rb2.sh`.

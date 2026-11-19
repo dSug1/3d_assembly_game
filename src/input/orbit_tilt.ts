@@ -95,6 +95,28 @@ export interface EdgeHold {
    * 6 swings, the finger never reversed)
    */
   readonly back: number;
+  /**
+   * ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §12 RB2) THE PUSH HELD AS THE PLAYER SEES IT: a unit direction on the glass he sees (`[right, up]`, the raw
+   * finger's, before any conversion) — the logic's `sign` (`[0, sign]` on the logic's glass) as the picture drew it when it crossed. Absent: `[0, sign]`
+   * (law U off: the picture is the logic's pose — today's dy hold, bit for bit).
+   */
+  readonly dir?: readonly [number, number];
+}
+/**
+ * ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §12 RB2) THE HOLD APPLIED ON THE RAW FINGER, before the finger is turned onto the logic's glass: the part of the move
+ * along the held direction (`dir`; absent: the dy of its sign — `edgeHoldDy`, bit for bit) blocked, the rest passes. None: the move as it is.
+ */
+export function edgeHoldGlass(h: EdgeHold | null, dx: number, fdy: number): { readonly dx: number; readonly fdy: number } {
+  if (h === null) return { dx, fdy };
+  const d = h.dir;
+  if (d === undefined) return { dx, fdy: edgeHoldDy(h, fdy) };
+  const a = dx * d[0] + fdy * d[1];
+  return a > 0 ? { dx: dx - a * d[0], fdy: fdy - a * d[1] } : { dx, fdy };
+}
+/** ⭐⭐⭐ (RB2) the raw finger's move along the hold, signed as `edgeHoldFinger` reads it (the held way of the hold's `sign`): no `dir` — the dy itself. */
+export function edgeHoldAlong(h: EdgeHold, dx: number, fdy: number): number {
+  const d = h.dir;
+  return d === undefined ? fdy : h.sign * (dx * d[0] + fdy * d[1]);
 }
 /** ⛔ (2026-11-14) `edgeHoldDepth` (the release by the gizmo's depth on the SURFACE) deleted — the release is the finger's (`edgeHoldFinger`). */
 /**

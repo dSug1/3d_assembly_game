@@ -87,6 +87,8 @@ const PENDING: Record<string, string> = {
   PLATE_DIMS_M: "the workbench's plate — `Scene_0`'s content until 2026-11-12 (the heptagon); read by the fixture `tests/helpers/workbench.ts`",
   PYRAMID_DIMS_M: "the workbench's pyramid — `Scene_0`'s content until 2026-11-12 (the heptagon); read by `frustum.test.ts` and the workbench fixture",
   NO_SWAY: "a named zero for `SwayOffsets`; only tests construct one today",
+  // ⭐ (2026-11-18, law U — UPRIGHT_PICTURE.md §2 step 2) the measure law U drives to 0, its vectors' witness; the game reads it off recordings (`gravity_read.mjs`)
+  gravityTilt: "law U's own measure (gravity's tilt on the glass); read by `upright.test.ts`",
   // ⭐ (2026-11-13, the owner) the launch messages' texts and platform, ready for the sheet that shows them — OWED (`QUEUE.md`, `BROWSER_GUARDS.md` §3)
   LAUNCH_MESSAGES: "the launch messages sheet is owed (`BROWSER_GUARDS.md` §3); read by `browser_guards.test.ts`",
   LAUNCH_TITLE: "the launch messages sheet is owed (`BROWSER_GUARDS.md` §3); read by `browser_guards.test.ts`",

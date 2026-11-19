@@ -199,6 +199,17 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "camera catch-up after release, from rest (ms)", "cameraCatchUpMs", 20, 1000, 10),
           ],
         },
+        // ⭐⭐⭐ (2026-11-18, `UPRIGHT_PICTURE.md` §2 — law U) the picture upright: gravity on the glass's vertical (a section of its own: SMOOTHING holds 9 at most)
+        {
+          title: "UPRIGHT PICTURE",
+          sliders: [
+            tunable(st, "upright picture: gravity on the screen's vertical (1 on, 0 = the roll follower)", "uprightPicture", 0, 1, 1),
+            tunable(st, "upright close in under the square camera too (1 on, 0 = its layout wins)", "uprightCloseIn", 0, 1, 1),
+            tunable(st, "upright: none within this of the vertical (deg)", "uprightFromDeg", 0, 45, 1),
+            tunable(st, "upright: in full from this off the vertical (deg)", "uprightFullDeg", 0, 60, 1),
+            tunable(st, "upright: the rest to upright, its pace (deg a second; 0 = at once)", "uprightMaxDegS", 0, 2880, 60),
+          ],
+        },
         {
           // ⭐ The face-span share (`input/orbit_calm.ts`): the orbit's angle shown in a face's middle, whole toward its edges — dx and dy.
           title: "CALM ON A FACE",

@@ -11,3 +11,15 @@
 ⭐⭐ **2026-11-13, `1.0.131-`**: the browser's gestures kept off the game — the iOS loupe, Safari's pinch, the double click; the screen kept awake; the player's launch messages specified (not built) → [`BROWSER_GUARDS.md`](../../10_INPUT_TOUCH/spec/BROWSER_GUARDS.md).
 ⭐⭐⭐ **2026-11-14 — THE PICK-UP FLOW** (`1.0.143from1.0.142-Pick-up-of-parts`, 🔧 built headless, ⛔ no device look; §12): a TAP picks a part (its step available, outlined), a DOUBLE TAP puts it down; the scene orbit ↔ the piece orbit by the clock; `CL1` the clean-up first → [`PICK_AND_PLACE.md`](../../20_GAME_RULES/spec/PICK_AND_PLACE.md). The tilted orbit's 11-04 – 11-09 lines → [`2026-11-14_queue_lines_moved.md`](2026-11-14_queue_lines_moved.md).
 ✅ `npm run verify`: **1712 golden vectors, all passing** — MEASURED 2026-11-13 on `1.0.131-` (the browser guards; 1706 `1.0.130from1.0.128-`; 1716 `1.0.128-`; 1737 `1.0.127from1.0.125-`; 1799 `1.0.125-`; 1716 `1.0.126-`; older: `CLAUDE.md`; moved lines: `history/2026-11-13_queue_lines_moved.md`).
+
+## Moved on 2026-11-18 (late evening), when the fast orbit FO3 S1 + S2 went live: the lines of QUEUE.md's YOU ARE HERE block and CLAUDE.md's status as they stood
+
+## ⭐⭐⭐ YOU ARE HERE (2026-11-18, branch `1.0.147-`, live main `bc8dc9e` = `31fec5b`)
+
+⭐⭐⭐ **LIVE**: the orbit on charts, always on (the switches `chartLayout` / `chartCalm` and the old detectors deleted at step 2.5); the tilted pole close in on the carried heading (C0 to C5, the way out blended); the level face's entry (A); the dy hold released by a true hysteresis, 8 mm of finger (`1562bd1`, `DY_HOLD_REVERSAL.md`); the silent entry, version 7 (`3c66eb9`, switch `freeEntryUpright` default 1, `LEVEL_FACE_ENTRY.md` §15 - §17; one gate missed by 0.3 degree, accepted: `FAST_ORBIT.md` §11.4). ⛔ No device look yet on the last two. ⛔ Built, measured, reverted, NOT in the game: package A, R1, the timing rule, the fast orbit's three builds of 2026-11-17. ⚠ `Scene_2` never ran with the charts; the iPhone's black screen (RND6) is diagnosed, not fixed.
+⭐ **NEXT (the owner's order, 2026-11-18)**: (2) the fast orbit FO3 built, tested, deployed (`FAST_ORBIT.md` §12, agreed, not built; branch `1.0.148-`); (3) a lean audit on his word; (4) the merge into the main folder prepared (the merge on his word); then the surface study before the charts' step B → [`RND5.md`](../queue_notes/RND5.md); the handover → [`HANDOVER_2026-11-18.md`](../queue_notes/HANDOVER_2026-11-18.md).
+
+⭐⭐⭐ **NOW — branch `1.0.148-` (made 2026-11-18 from `1.0.147-`: FO3 is built here); LIVE main `bc8dc9e` = `1.0.147-` at `31fec5b`.** The orbit runs ON CHARTS, always on (the old switches and detectors deleted); the
+tilted pole close in on the carried heading (the way out blended); the level face's entry; ⭐ live since 2026-11-18: the dy hold released by a true
+hysteresis (8 mm of finger) and the SILENT ENTRY (a level face entered over an edge keeps the picture — the switch `freeEntryUpright`). **2091
+vectors.** ⛔ No device look on the last two yet.

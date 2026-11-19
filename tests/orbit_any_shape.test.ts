@@ -269,9 +269,10 @@ describe("⭐⭐⭐ §8 — THE DY HOLD after a pole-holding face's FAR edge (th
     expect(a).toContain("if (st.asmEdgeHold !== null && (!assemblyOn(st) || st.asmG === null)) st.asmEdgeHold = null;");
     expect(a).not.toContain("edgeHoldDepth");
     const p = readFileSync(new URL("../src/render/pointer_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
-    expect(p).toContain("const fdy1 = asmOn ? edgeHoldDy(st.asmEdgeHold, fdy0) : fdy0;");
-    expect(p).toContain("if (asmOn && !shiftApproach) st.asmDySign = dySignPushing(st.asmDySign, db.dx, fdy0);");
-    expect(p).toContain("if (asmOn && st.asmEdgeHold !== null && fdy0 !== 0 && !shiftApproach) st.asmEdgeHold = edgeHoldFinger(st.asmEdgeHold, fdy0 / mmToPx(1), st.cfg.edgeHoldMm);");
+    expect(p).toContain("const held = asmOn ? edgeHoldGlass(st.asmEdgeHold, raw.dx, raw.fdy) : raw;"); // ⭐ (2026-11-19, UPRIGHT_PICTURE.md §12 RB2) on the raw finger, before its conversion
+    expect(p).toContain("const raw = { dx: db.dx, fdy: orbitDy(db.dy, asmOn) };");
+    expect(p).toContain("if (asmOn && !shiftApproach) st.asmDySign = dySignPushing(st.asmDySign, fdx0, fdy0);");
+    expect(p).toContain("if (asmOn && st.asmEdgeHold !== null && along !== 0 && !shiftApproach) st.asmEdgeHold = edgeHoldFinger(st.asmEdgeHold, along / mmToPx(1), st.cfg.edgeHoldMm);"); // ⭐ (RB2) along the held direction
   });
 });
 
@@ -333,7 +334,7 @@ describe("DH — the dy hold: a true hysteresis on the finger, the dy that pushe
     expect(holdAtCrossing(1)).toEqual({ sign: 1, back: 0 });
     expect(holdAtCrossing(-1)).toEqual({ sign: -1, back: 0 });
     const a = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
-    expect(a).toContain("st.orbitInertia.stop(); st.asmEdgeHold = holdAtCrossing(c.hold);");
+    expect(a).toContain("if (a.stopCoast) st.orbitInertia.stop(); if (a.hold !== undefined && !uprightDecides(st)) st.asmEdgeHold = holdAtCrossing(a.hold);"); // ⭐ (2026-11-19, RB1) `turnBegin`
     expect(a).not.toContain("if (c.hold !== 0) st.asmEdgeHold");
   });
 });

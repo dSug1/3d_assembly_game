@@ -38,9 +38,10 @@ import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { crossingHold, crossingPitch, distanceToFacets, fingerInFrame, fingerSwapped, SPIT_CROSSING_PITCH_RAD, spitCameraHeading, spitSide, zoneAt, type PolarZone } from "../input/polar_zone";
 import { assignCharts, capTiltHeading, chartContour, chartZones, DEFAULT_CHART_OPTS, type ChartAssignment, type ChartFace } from "../input/orbit_charts";
-import { holdAtCrossing, poseAboutPiece, poseFramingTwo, type CamPose } from "../input/orbit_tilt";
+import { holdAtCrossing, poseAboutPiece, poseFramingTwo, type CamPose, type EdgeHold } from "../input/orbit_tilt";
 import { poleCrossingDue, poleSeam } from "../input/pole_crossing";
-import { fingerOnGhost, gapStep, restShare } from "../input/roll_follow";
+import { fingerOnLogic, gapStep, restShare } from "../input/roll_follow";
+import { lawHalfTurn } from "../input/upright";
 import { dirGap, easedDir, easeRest, poleYawKept, seamOutPaced, seamOutShare, seamOutStep, seamOutTarget, seamTurnPace, seamTurnStep, seamWholeRad, tiltLeavesNow, turnHoldsGizmo } from "../input/seam_turn";
 import { bandedFacet } from "../input/face_band";
 import { contourFaceAt, crossingEvent, entryBlendHeading, entryDepth, entryEdgeOf, exitHoldSign, headingStep, pictureOffset, transportUp, viewLevelTurned, exitTurnRad, faceOwnUp, freeEdges, freeEntryHeading, freeHeadingAngle, isFreeFace } from "../input/free_face";
@@ -109,7 +110,7 @@ export function ensureAssembly(st: SceneState): void {
 type OrbitStateStart = Pick<
   SceneState,
   | "asmGizmo" | "asmSupport" | "asmSupportLevel" | "pieceHold" | "pieceHoldPrev" | "asmLook" | "asmFacePoint" | "asmG" | "asmPrevQ" | "asmShown" | "asmFaceBand" | "asmFree" | "asmPlaceWas" | "asmMapQ"
-  | "asmEdgeHold" | "asmZone" | "asmZoneMix" | "asmPieceDrawn" | "asmDirEase" | "asmCamLast" | "asmRollShadow" | "asmSpitSide" | "asmSpitU" | "asmSpitPic" | "asmSpitPicWas" | "asmZoneAlpha" | "asmDySign" | "asmHeadO"
+  | "asmEdgeHold" | "asmZone" | "asmZoneMix" | "asmChange" | "asmPieceDrawn" | "asmDirEase" | "asmCamLast" | "asmRollShadow" | "asmSpitSide" | "asmSpitU" | "asmSpitPic" | "asmSpitPicWas" | "asmZoneAlpha" | "asmDySign" | "asmHeadO"
   | "asmHeadW" | "asmHeadYaw" | "asmTilt" | "asmGOff" | "asmTiltAuto" | "asmTiltPending" | "asmOrbitMm" | "asmBlend" | "asmCalmWhole" | "asmCalmWholeV"
   | "asmSquare" | "asmCalm" | "asmMouth" | "asmRawPrev" | "asmGizmoAt" | "asmGizmoLag"
 >;
@@ -140,6 +141,7 @@ export function orbitStateStart(): OrbitStateStart {
     asmEdgeHold: null,
     asmZone: null,
     asmZoneMix: null,
+    asmChange: null,
     asmPieceDrawn: null,
     asmDirEase: null,
     asmCamLast: null,
@@ -278,7 +280,8 @@ function dirAt(st: SceneState, yaw: number, v: number): Vec3 {
   const e = st.asmDirEase;
   if (e === null) return s;
   // ⭐⭐⭐ (2026-11-18, `FAST_ORBIT.md` §14 — FO3 S1, O3) no turn carries it (a change made free): its rest on its own clock (`own`)
-  return easedDir(s, e, e.own !== undefined ? restShare(e.own, e.angle) : e.mix === st.asmZoneMix && st.asmZoneMix !== null ? st.asmZoneMix.k : 1);
+  // ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §12 RB1) a change ASKED and not yet resolved (`asmChange`, law U): its share 0 — the direction drawn before it
+  return easedDir(s, e, e.own !== undefined ? restShare(e.own, e.angle) : e.mix === st.asmZoneMix && st.asmZoneMix !== null ? st.asmZoneMix.k : st.asmChange !== null && e.mix === st.asmChange.tok ? 0 : 1);
 }
 
 /** ⭐⭐⭐ (2026-11-15, §12 2.4c) the direction the piece is DRAWN along now (the spring's angles — `greenBoxFrame`'s `shownOffset`): a change of frame's start. */
@@ -353,6 +356,94 @@ function seamTurnFrame(st: SceneState, dtMs: number): void {
 function seamOutStart(st: SceneState): void {
   seamTurnStart(st, false);
   if (st.asmZoneMix !== null) st.asmZoneMix.out = { p: 0, outMm: 0, orbitMm: 0 };
+}
+
+/** ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §12 RB1) LAW U DECIDES THE CHANGES OF FRAME (`uprightPicture` 1, `freeTurnMaxDeg` over 0): each asked, resolved once. */
+export function uprightDecides(st: SceneState): boolean {
+  return st.cfg.freeTurnMaxDeg > 0 && st.cfg.uprightPicture === 1;
+}
+
+/** ⭐ A camera turn asked by a change of frame (`turnBegin`). */
+interface TurnAsk {
+  /** the way out of close in paced by the finger (`seamOutStart`) */
+  readonly paced: boolean;
+  /** the tilt's entry made pending (`seamTurnStart`'s `paced`) */
+  readonly byMm: boolean;
+  /** no camera frame yet: no turn (the switch, the tilt's entry); else a turn running left as it is */
+  readonly noCamNull: boolean;
+  /** the direction drawn before the change (the piece's ease starts from it, `seamEase`), or the ease running carried onto the turn (`carry`) */
+  readonly uWas: Vec3 | null;
+  readonly carry: boolean;
+  /** a tilt's turn (its kind stays) */
+  readonly tilt: boolean;
+  readonly stopCoast: boolean;
+  /** the sign that crossed (`holdAtCrossing`); absent: the hold left as it is */
+  readonly hold?: 1 | -1 | 0;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §12 RB1 — the rebuild) THE ONE PLACE A CHANGE OF FRAME STARTS ITS CAMERA TURN — every starter calls it (`crossTurn`,
+ * `tiltOn`, `zoneSwitch`, `freeFaceFrame`; a source test). Law U off: today's writes, in today's order (FO3, `7bcae02`, frame for frame). Law U on
+ * (`uprightDecides`): NOTHING is created here — the change is ASKED (`changeAsk`) and resolved ONCE at the camera's stage (`changeApply`, from
+ * `rollPictureFrame`), where its angle and the weights are known: the turn's angle is the logic's pose last frame to this frame's, built only there. The
+ * coast stops either way (a change stops it, timed or not).
+ */
+function turnBegin(st: SceneState, a: TurnAsk): void {
+  if (uprightDecides(st)) changeAsk(st, a);
+  else {
+    const mixWas = st.asmZoneMix;
+    if (a.paced) seamOutStart(st);
+    else if (a.noCamNull || st.asmCamLast !== null) seamTurnStart(st, a.byMm);
+    if (a.uWas !== null) seamEase(st, a.uWas);
+    else if (a.carry) easeCarry(st, mixWas);
+    if (a.tilt && st.asmZoneMix !== null) st.asmZoneMix.tilt = true;
+  }
+  if (a.stopCoast) st.orbitInertia.stop();
+  if (a.hold !== undefined && !uprightDecides(st)) st.asmEdgeHold = holdAtCrossing(a.hold); // ⭐⭐⭐ (2026-11-18, `DY_HOLD_REVERSAL.md` §5.3) it REPLACES any hold still on
+}
+
+/**
+ * ⭐⭐⭐ (RB1) A CHANGE ASKED under law U: the piece's shown direction's ease set NOW on the change's own clock (`tok`, its share 0 until resolved — the piece
+ * drawn where it was), from the direction drawn before (`uWas`) or carried by its rest from the change asked before or the turn running (`carry`); a change
+ * asked twice before the camera's stage: the later's kind, the earlier's hold unless the later has one.
+ */
+function changeAsk(st: SceneState, a: TurnAsk): void {
+  const was = st.asmChange;
+  const tok: object = {};
+  const e = st.asmDirEase;
+  if (a.uWas !== null) {
+    const gap = st.asmCamLast === null ? null : dirGap(a.uWas, drawnDir(st));
+    st.asmDirEase = gap === null ? null : { axis: gap.axis, angle: gap.angle, mix: tok };
+  } else if (a.carry && e !== null && e.own === undefined) {
+    const k = was !== null && e.mix === was.tok ? 0 : st.asmZoneMix !== null && e.mix === st.asmZoneMix ? st.asmZoneMix.k : null;
+    if (k !== null) {
+      const rest = easeRest(e, k);
+      st.asmDirEase = rest === null ? null : { axis: rest.axis, angle: rest.angle, mix: tok };
+    }
+  }
+  const hold = a.hold !== undefined ? a.hold : was?.hold;
+  st.asmChange = { tok, paced: a.paced, byMm: a.byMm, tilt: a.tilt, ...(hold !== undefined ? { hold } : {}) };
+}
+
+/** a token: the piece's shown direction's ease no turn carries (`asmDirEase.own`) */
+const OWN_EASE: object = Object.freeze({ own: true });
+
+/**
+ * ⭐⭐⭐ (RB1) THE CHANGE ASKED, RESOLVED ONCE at the camera's stage (`rollPictureFrame`, law U), by `changeSeen`'s answer (`timed`): a timed turn from the pose
+ * shown (the way out paced, the tilt's paced entry, a tilt's kind kept), the ease handed to it — or applied at once: no turn, nothing "turning" for any
+ * reader, the ease on a clock of its own; `hold` the hold written (absent: left as it is). No camera frame yet: no turn.
+ */
+export function changeApply(st: SceneState, c: NonNullable<SceneState["asmChange"]>, timed: boolean, hold: EdgeHold | null | undefined): void {
+  st.asmChange = null;
+  const e = st.asmDirEase;
+  const mine = e !== null && e.mix === c.tok;
+  if (timed && st.asmCamLast !== null) {
+    if (c.paced) seamOutStart(st);
+    else seamTurnStart(st, c.byMm);
+    if (c.tilt && st.asmZoneMix !== null) st.asmZoneMix.tilt = true;
+    if (mine) st.asmDirEase = st.asmZoneMix === null ? null : { axis: e.axis, angle: e.angle, mix: st.asmZoneMix };
+  } else if (mine) st.asmDirEase = timed ? null : { axis: e.axis, angle: e.angle, mix: OWN_EASE, own: { gap: e.angle, speed: 0 } };
+  if (hold !== undefined) st.asmEdgeHold = hold;
 }
 
 /**
@@ -1500,6 +1591,10 @@ export function zoneMixPose(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, 
 
 /** ⭐ The pose on the glass now (the camera drawn last frame) — a zone's turn starts from it. */
 function poseShown(st: SceneState): CamPose {
+  // ⭐⭐⭐ (2026-11-18, `UPRIGHT_PICTURE.md` §2 step 3 — law U) the picture is a function of the logic's pose: a turn starts from the LOGIC's last pose (`G`),
+  // so its first frame draws exactly last frame's picture (from the picture drawn, law U would turn it once more inside the band)
+  const sh = st.asmRollShadow;
+  if (sh !== null && sh.upright !== undefined) return { eye: sh.ghost.eye, look: sh.ghost.look, up: sh.ghost.up, piece: st.asmPieceDrawn };
   const c = st.camera;
   const t = c.getTarget();
   return { eye: [c.position.x, c.position.y, c.position.z], look: [t.x, t.y, t.z], up: [c.upVector.x, c.upVector.y, c.upVector.z], piece: st.asmPieceDrawn };
@@ -1620,7 +1715,8 @@ export function tiltClampStep(st: SceneState, yaw0: number, v0: number): boolean
   // or by the finger (`seamTurnHolds`); any other turn while short of whole, as ever
   const zm = st.asmZoneMix;
   // ⭐⭐⭐ (2026-11-16, step C3) …the way out paced by the finger (`out`) never (`turnHoldsGizmo`)
-  const zoneTurning = zm !== null && turnHoldsGizmo(zm.out !== undefined, zm.byMm === true, st.asmTiltPending, st.asmBlend !== null, zm.k);
+  // ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §12 RB3) …and while law U closes its own half turn (`lawHalfTurn`: a turn the player sees, as any other)
+  const zoneTurning = (zm !== null && turnHoldsGizmo(zm.out !== undefined, zm.byMm === true, st.asmTiltPending, st.asmBlend !== null, zm.k)) || lawHalfTurn(st.asmRollShadow?.upright?.state);
   if (zoneTurning && (st.orbit.yaw !== yaw0 || st.orbit.elevation !== v0)) {
     st.orbit.reset(yaw0, v0);
     return true;
@@ -1776,9 +1872,8 @@ function tiltOn(st: SceneState, mouthHi: boolean | null = null): void {
   st.asmFree = null; // ⭐⭐⭐ (2026-11-16, step C4) a tilt: no free face carried (never in a zone — `tiltOn` refuses one), no turn of its own
   // ⭐⭐⭐ (§12 2.4c) 4. the picture carried from the pose SHOWN by ONE camera turn, paced as the swing was (made pending: `byMm` — held, then by the finger,
   // then by time; else by time, the gizmo held), and the piece's shown direction eased on the same clock
-  seamTurnStart(st, byMm);
-  seamEase(st, uWas);
-  if (st.asmZoneMix !== null) st.asmZoneMix.tilt = true; // ⭐⭐⭐ (2026-11-18, FO3 S1, §13.7 (d)) a tilt's turn stays today's, by its kind
+  // ⭐⭐⭐ (2026-11-18, FO3 S1, §13.7 (d)) a tilt's turn stays today's, by its kind — (2026-11-19, §12 RB1) through the one starter (`turnBegin`)
+  turnBegin(st, { paced: false, byMm, noCamNull: true, uWas, carry: false, tilt: true, stopCoast: false });
   st.lastVerdict = `orbit: the tilted pole (automatic) — the face holding the ${top ? "top" : "bottom"} pole is a side (heading ${Math.round((hs * 180) / Math.PI)}°, swing ${Math.round((delta * 180) / Math.PI)}°)`;
   st.hudDirty = true;
 }
@@ -1864,7 +1959,7 @@ function tiltOff(st: SceneState): void {
     // ⭐⭐⭐ (2026-11-16, §13, step C5) THE ONE EVENT (`crossTurn`): the rebase, ONE camera turn from the pose shown — ⭐⭐⭐ (§8, step C3, D-T1) LEFT BY
     // DISTANCE (`off`, `seamOutPaced`) with `tiltOutBlendMm` over 0 paced by the approach finger's travel outward, the gizmo free; an edge's exit, a
     // zone's, or 0: timed, the gizmo held — the piece's shown direction eased from the one drawn, the coast stopped, the hold
-    crossTurn(st, { at: { mq: poleYawKept(mq0, ORBIT_PITCH_MAX_RAD, hP), g }, uWas, carry: false, paced, hold: held });
+    crossTurn(st, { at: { mq: poleYawKept(mq0, ORBIT_PITCH_MAX_RAD, hP), g }, uWas, carry: false, paced, hold: held, tilt: true });
   } else {
     if (mq0 !== null && g !== null) {
       st.asmMapQ = mq0;
@@ -1877,9 +1972,9 @@ function tiltOff(st: SceneState): void {
       }
     } else st.asmMapQ = null;
     // ⭐ (no place to keep — unreachable while a tilt holds one: the turn alone, the angles turned as today)
-    crossTurn(st, { at: null, uWas, carry: false, paced, hold: held });
+    crossTurn(st, { at: null, uWas, carry: false, paced, hold: held, tilt: true });
   }
-  if (st.asmZoneMix !== null) st.asmZoneMix.tilt = true; // ⭐⭐⭐ (2026-11-18, FO3 S1, §13.7 (d)) a tilt's exit stays today's turn, by its kind
+  // ⭐⭐⭐ (2026-11-18, FO3 S1, §13.7 (d)) a tilt's exit stays today's turn, by its kind (`crossTurn`'s `tilt`, 2026-11-19 RB1)
   st.lastVerdict = byTime ? "orbit: the tilt off (out past the threshold) — the world's frame again" : "orbit: off the tilted face — the world's frame again";
   st.hudDirty = true;
 }
@@ -1935,7 +2030,7 @@ function seamRebase(st: SceneState, mq: { readonly yaw: number; readonly pitch: 
  *   `DY_HOLD_REVERSAL.md` §5.3) a hold still on ended too (`holdAtCrossing`: the hold guards the LAST edge crossed; ⛔ left as it was).
  * ⭐ Everything in the MODEL's space (the map, `g`); the camera's pose read only to start the turn from the picture on the glass.
  */
-function crossTurn(st: SceneState, c: { readonly at: { readonly mq: { readonly yaw: number; readonly pitch: number }; readonly g: Vec3 } | null; readonly uWas: Vec3 | null; readonly carry: boolean; readonly paced: boolean; readonly hold: 1 | -1 | 0 }): void {
+function crossTurn(st: SceneState, c: { readonly at: { readonly mq: { readonly yaw: number; readonly pitch: number }; readonly g: Vec3 } | null; readonly uWas: Vec3 | null; readonly carry: boolean; readonly paced: boolean; readonly hold: 1 | -1 | 0; readonly tilt?: boolean }): void {
   if (c.at !== null) {
     const { mq, g } = c.at;
     seamRebase(st, mq);
@@ -1950,13 +2045,9 @@ function crossTurn(st: SceneState, c: { readonly at: { readonly mq: { readonly y
       faceBandRead(st, m.t);
     }
   }
-  const mixWas = st.asmZoneMix;
-  if (c.paced) seamOutStart(st);
-  else if (st.asmCamLast !== null) seamTurnStart(st, false);
-  if (c.uWas !== null) seamEase(st, c.uWas);
-  else if (c.carry) easeCarry(st, mixWas);
-  st.orbitInertia.stop();
-  st.asmEdgeHold = holdAtCrossing(c.hold); // ⭐⭐⭐ (2026-11-18, `DY_HOLD_REVERSAL.md` §5.3) it REPLACES any hold still on — ⛔ a 0 left the last edge's on
+  // ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §12 RB1) the turn, the ease, the coast, the hold (it REPLACES any hold still on — ⛔ a 0 left the last edge's on,
+  // `DY_HOLD_REVERSAL.md` §5.3): through the one starter (`turnBegin`)
+  turnBegin(st, { paced: c.paced, byMm: false, noCamNull: false, uWas: c.uWas, carry: c.carry, tilt: c.tilt === true, stopCoast: true, hold: c.hold });
 }
 
 /**
@@ -2139,9 +2230,8 @@ function zoneSwitch(st: SceneState, next: PolarZone | null): void {
     }
   } else st.asmMapQ = null;
   // the camera's turn from the frame it shows now (none before the first frame: at once)
-  st.asmZoneMix = st.asmCamLast === null ? null : { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0 };
-  // ⭐⭐⭐ (§12 2.4c) …and the piece's shown direction eased on it
-  if (seam && uWas !== null) seamEase(st, uWas);
+  // ⭐⭐⭐ (§12 2.4c) …and the piece's shown direction eased on it — (2026-11-19, `UPRIGHT_PICTURE.md` §12 RB1) through the one starter (`turnBegin`)
+  turnBegin(st, { paced: false, byMm: false, noCamNull: true, uWas: seam ? uWas : null, carry: false, tilt: false, stopCoast: false });
   st.lastVerdict =
     next === null
       ? "orbit: out of the polar zone — the world's frame again"
@@ -2247,9 +2337,8 @@ function freeFaceFrame(st: SceneState, t: MapTarget, prev: { readonly map: FaceM
   // face's middle (the camera's frame, `freeShownHeading`); 0, or no edge: the layout at once (as before). Any free face, any outline, any edge
   const entry = st.cfg.freeEntryUpright === 1 ? entryEdgeOf(at.contour, ci, from, WORLD_UP) : null;
   st.asmFree = { map, facet: t.stack, ci, heading, layout: heading, entry, depth: entry === null ? 0 : entryDepth(entry, mulM(B, t.surface)), offset: null, side: 0, turning: false };
-  const mixWas = st.asmZoneMix;
-  if (st.asmCamLast !== null) st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0 };
-  easeCarry(st, mixWas);
+  // ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §12 RB1) the turn and the ease carried: through the one starter (`turnBegin`)
+  turnBegin(st, { paced: false, byMm: false, noCamNull: false, uWas: null, carry: true, tilt: false, stopCoast: false });
   st.lastVerdict = `orbit: onto the spit's level face — the heading carried in ${from >= 0 && from !== ci ? "over its edge" : "from the picture shown"}`;
   st.hudDirty = true;
 }
@@ -2317,19 +2406,23 @@ function freeFaceExit(st: SceneState, fr: NonNullable<SceneState["asmFree"]>, co
 }
 
 /**
+ * ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §8 UD8b) THE FINGER AT THE ENTRY: the orbit finger's step (`dx`, `fdy` up, px) turned ONCE from the picture
+ * drawn (law U's, last frame's) onto the logic's glass (`fingerOnLogic`) — before the dy hold and the spit read it. Law U off: as it is.
+ */
+export function fingerAtEntry(st: SceneState, dx: number, fdy: number): { readonly dx: number; readonly fdy: number } {
+  const sh = st.asmRollShadow;
+  return sh !== null && sh.upright !== undefined ? fingerOnLogic(dx, fdy, sh.picture, sh.ghost) : { dx, fdy };
+}
+
+/**
  * ⭐⭐⭐ (§3.5) THE FINGER IN A SPIT (the pointer's `dx`, `fdy` in px — `fdy` up positive; the §8 hold after a crossing already applied): the move read in
  * F's upright screen (`fingerInFrame`: a dx pole to pole, a dy round the axis — the way it goes on the glass). Elsewhere as it is.
  */
 export function zoneFinger(st: SceneState, dx: number, fdy: number): { readonly dx: number; readonly fdy: number } {
   const z = spitZone(st);
-  if (z === null) {
-    // ⭐⭐⭐ (2026-11-18, `FAST_ORBIT.md` §14 — FO3 S2, R7, O8) outside a spit the finger read OFF THE PICTURE DRAWN (rolled from the logic's by the gap):
-    // the same move on the logic's glass (`fingerOnGhost`). No gap, or the shadow only (`freeTurnMaxDeg` 0): as it is
-    const sh = st.asmRollShadow;
-    if (sh === null || !sh.drawn || sh.picture === sh.ghost) return { dx, fdy };
-    const f = fingerOnGhost(dx, fdy, sh.picture, sh.ghost);
-    return { dx: f.dx, fdy: f.dy };
-  }
+  // ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §8 UD8b) the finger is already on the logic's glass (`fingerAtEntry`): outside a spit as it is; in a spit read
+  // on the logic's own frame (`asmCamLast`), as in `1.0.147-` — ⛔ (fix round 1) turned off the picture HERE, after the hold had read the raw glass's dy
+  if (z === null) return { dx, fdy };
   const dy = fdy;
   const cf = st.asmCamLast;
   if (cf === null) return { dx, fdy: dy };

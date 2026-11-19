@@ -39,6 +39,7 @@ const RESET: Record<string, unknown> = {
   asmEdgeHold: null,
   asmZone: null,
   asmZoneMix: null,
+  asmChange: null,
   asmPieceDrawn: null,
   asmDirEase: null,
   asmCamLast: null,
@@ -75,9 +76,9 @@ const KEPT = [
 ];
 
 describe("⭐⭐⭐ the orbit's starting state (`orbitStateStart`, `resetOrbitState`)", () => {
-  it("every `asm…` / `pieceHold…` field of the scene's state is decided: reset or kept (60)", () => {
+  it("every `asm…` / `pieceHold…` field of the scene's state is decided: reset or kept (61)", () => {
     const decl = [...raw("render/scene_state.ts").matchAll(/^ {2}((?:asm|pieceHold)\w*)\??:/gm)].map((m) => m[1]!);
-    expect(decl.length).toBe(60); // ⭐ (2026-11-18, FO3 S0) + `asmRollShadow`; ⭐ (2026-11-18, ES) + `asmSpitPic`, `asmSpitPicWas`; ⭐ (2026-11-16, C2W) + `asmPlaceWas`; ⛔ (step 2.5) − `asmZoneFacetsF` (`zoneFacetOf`'s memo, deleted with the old calm)
+    expect(decl.length).toBe(61); // ⭐ (2026-11-19, UPRIGHT_PICTURE.md §12 RB1) + `asmChange` (a change asked, resolved at the camera's stage); ⭐ (2026-11-19, UD8b) − `asmPicLast` (the finger turned once at the entry); ⭐ (2026-11-18, law U) + `asmPicLast`; ⭐ (2026-11-18, FO3 S0) + `asmRollShadow`; ⭐ (2026-11-18, ES) + `asmSpitPic`, `asmSpitPicWas`; ⭐ (2026-11-16, C2W) + `asmPlaceWas`; ⛔ (step 2.5) − `asmZoneFacetsF` (`zoneFacetOf`'s memo, deleted with the old calm)
     expect([...Object.keys(RESET), ...KEPT].sort()).toEqual([...decl].sort());
   });
 

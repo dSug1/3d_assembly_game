@@ -46,10 +46,9 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-11-18)
 
-⭐⭐⭐ **NOW — branch `1.0.148-` (made 2026-11-18 from `1.0.147-`: FO3 is built here); LIVE main `bc8dc9e` = `1.0.147-` at `31fec5b`.** The orbit runs ON CHARTS, always on (the old switches and detectors deleted); the
-tilted pole close in on the carried heading (the way out blended); the level face's entry; ⭐ live since 2026-11-18: the dy hold released by a true
-hysteresis (8 mm of finger) and the SILENT ENTRY (a level face entered over an edge keeps the picture — the switch `freeEntryUpright`). **2091
-vectors.** ⛔ No device look on the last two yet.
+⭐⭐⭐ **NOW — LIVE main `4eabab8` = `1.0.148-` at `48ae89c`** (the fast orbit FO3 S1 + S2; the orbit on charts, the dy hold, the silent entry). His look: *"the build is very good at 160 ms and 90degrees"*,
+and he wants no roll of the scene on the screen. The work goes on on `1.0.148b-Fast_orbit_upright_gravity` (law U; `FAST_ORBIT.md` §15). **2118 vectors** at `f198b3a`
+(S2 reverted on the branch, still LIVE). The earlier status moved → [`Claude/00_CORE/history/2026-11-18_queue_status_moved.md`](Claude/00_CORE/history/2026-11-18_queue_status_moved.md).
 
 **Read first:** [`Claude/00_CORE/queue_notes/HANDOVER_2026-11-18.md`](Claude/00_CORE/queue_notes/HANDOVER_2026-11-18.md) — what is next, in the
 owner's order, and the working rules (the usage limit, the chains, the deploy).

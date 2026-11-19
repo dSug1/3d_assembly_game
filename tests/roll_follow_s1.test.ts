@@ -89,9 +89,9 @@ describe("restShare — the piece's shown direction's rest on its own clock (O3)
   });
 });
 
-describe("the two sliders (FO3 S1): rollFollowMs 200 (60 – 600), freeTurnMaxDeg 90 (0 – 90)", () => {
+describe("the two sliders (FO3 S1): rollFollowMs 160 — the owner's word, UPRIGHT_PICTURE.md UD7 — (60 – 600), freeTurnMaxDeg 90 (0 – 90)", () => {
   it("the defaults and the bounds", () => {
-    expect(DEFAULT_CONFIG.rollFollowMs).toBe(200);
+    expect(DEFAULT_CONFIG.rollFollowMs).toBe(160);
     expect(DEFAULT_CONFIG.freeTurnMaxDeg).toBe(90);
     for (const v of [60, 600]) expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, rollFollowMs: v })).not.toThrow();
     for (const v of [59, 601, Number.NaN]) expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, rollFollowMs: v })).toThrow();
@@ -109,13 +109,14 @@ describe("the wiring (`roll_shadow.ts` rollPictureFrame) — read in the source"
   it("a turn made free only at its first frame, none of the kinds that stay, nothing that stays drawn last frame, on its whole angle", () => {
     expect(rs).toContain("if (zm !== null && fresh && was !== null && was.drawn && was.turn === null && zm.byMm !== true && zm.out === undefined && zm.tilt !== true && !sq && !tiltHold) {");
     expect(rs).toContain("const whole = poseTurnAngle(was.ghost, ghost);");
-    expect(rs).toContain("if (turnIsFree(whole, maxDeg)) {");
-    expect(rs).toContain('const mode: FollowMode = was === null || !was.drawn || zm !== null || afterStay ? "ZERO" : gizmoFree ? "TAKE" : "SKIP";');
+    expect(rs).toContain("if (turnIsFree(whole, maxDeg)) {"); // ⭐ (2026-11-19, UPRIGHT_PICTURE.md §12 RB1) law U returns before: its changes are decided once (`changeSeen`)
+    expect(rs).toContain('const mode: FollowMode = was === null || !was.drawn || was.upright !== undefined || zm !== null || afterStay ? "ZERO" : gizmoFree ? "TAKE" : "SKIP";');
     expect(rs).toContain("const g = followStep(was?.free ?? GAP_ZERO, tw, dtMs, st.cfg.rollFollowMs, mode);");
   });
-  it("the tilt's turns tagged to stay (its entry, its exit); the direction's rest on its own clock, stepped before it is read", () => {
-    expect(aw.match(/st\.asmZoneMix\.tilt = true;/g)?.length).toBe(2);
-    expect(aw).toContain("return easedDir(s, e, e.own !== undefined ? restShare(e.own, e.angle) : e.mix === st.asmZoneMix && st.asmZoneMix !== null ? st.asmZoneMix.k : 1);");
+  it("the tilt's turns tagged to stay (its entry, its exit — through the one starter, RB1); the direction's rest on its own clock, stepped before it is read", () => {
+    expect(aw.match(/st\.asmZoneMix\.tilt = true;/g)?.length).toBe(2); // ⭐ (RB1) `turnBegin` and `changeApply`
+    expect(aw.match(/tilt: true, stopCoast: false \}\);|hold: held, tilt: true \}\);/g)?.length).toBe(3);
+    expect(aw).toContain("return easedDir(s, e, e.own !== undefined ? restShare(e.own, e.angle) : e.mix === st.asmZoneMix && st.asmZoneMix !== null ? st.asmZoneMix.k : st.asmChange !== null && e.mix === st.asmChange.tok ? 0 : 1);");
     expect(aw).toContain("const r = gapStep(de.own, dtMs, st.cfg.rollFollowMs);");
   });
 });
