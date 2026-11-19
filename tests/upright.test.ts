@@ -33,8 +33,8 @@ const pic = (s: UprightState, g: CamPose, dt = 1000 / 60, k = K, scale = 1) => {
 };
 
 describe("law U's defaults and its weight", () => {
-  it("the band 5 – 25°, the rest at 1 440° a second (UD6b, set by the gates); w a smoothstep, 0 within 5°, 1 from 25°", () => {
-    expect([UPRIGHT_FROM_DEG, UPRIGHT_FULL_DEG, UPRIGHT_MAX_DEG_S]).toEqual([5, 25, 1440]);
+  it("the band 5 – 25°, the rest at 1 800° a second (UD6b, set by the gates of fix round 3); w a smoothstep, 0 within 5°, 1 from 25°", () => {
+    expect([UPRIGHT_FROM_DEG, UPRIGHT_FULL_DEG, UPRIGHT_MAX_DEG_S]).toEqual([5, 25, 1800]);
     expect(uprightWeight(4.99 * DEG, 5, 25)).toBe(0);
     expect(uprightWeight(25 * DEG, 5, 25)).toBe(1);
     expect(uprightWeight(15 * DEG, 5, 25)).toBeCloseTo(0.5, 12);

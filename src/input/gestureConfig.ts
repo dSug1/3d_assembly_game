@@ -894,7 +894,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   uprightCloseIn: 0, // ⭐ (UD3) the square camera's T1 wins close in
   uprightFromDeg: UPRIGHT_FROM_DEG, // ⭐ (UD1) 5°
   uprightFullDeg: UPRIGHT_FULL_DEG, // ⭐ (UD1) 25°
-  uprightMaxDegS: UPRIGHT_MAX_DEG_S, // ⭐ (UD6b, fix round 1) 1 440° a second, everywhere
+  uprightMaxDegS: UPRIGHT_MAX_DEG_S, // ⭐ (UD6b; fix round 3) 1 800° a second, everywhere
   gizmoEaseMs: 45, // ⭐⭐ (2026-11-04, the owner: *"update the lag the gizmo's position the piece follows to 45ms"*; 62, 55 before, the former GIZMO_TAU_MS 90)
   orbitSpringMs: 30, // ⭐⭐ (2026-11-04) the former boxSmoothMs / 2 for the orbit's spring
   tiltedPole: 1, // ⭐⭐⭐ (2026-11-10, §9.4) the tilted pole on

@@ -208,8 +208,8 @@ describe("UD4b — no stop under freeTurnMaxDeg near the vertical (`uprightBandF
 });
 
 describe("law U's sliders (ORBIT › UPRIGHT PICTURE)", () => {
-  it("uprightPicture 1, uprightCloseIn 0, the band 5 – 25°, the rest at 1 440° a second (UD6b, fix round 1); their ranges", () => {
-    expect([DEFAULT_CONFIG.uprightPicture, DEFAULT_CONFIG.uprightCloseIn, DEFAULT_CONFIG.uprightFromDeg, DEFAULT_CONFIG.uprightFullDeg, DEFAULT_CONFIG.uprightMaxDegS]).toEqual([1, 0, 5, 25, 1440]);
+  it("uprightPicture 1, uprightCloseIn 0, the band 5 – 25°, the rest at 1 800° a second (UD6b, fix round 3); their ranges", () => {
+    expect([DEFAULT_CONFIG.uprightPicture, DEFAULT_CONFIG.uprightCloseIn, DEFAULT_CONFIG.uprightFromDeg, DEFAULT_CONFIG.uprightFullDeg, DEFAULT_CONFIG.uprightMaxDegS]).toEqual([1, 0, 5, 25, 1800]);
     for (const k of ["uprightPicture", "uprightCloseIn"] as const) {
       for (const v of [0, 1]) expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, [k]: v })).not.toThrow();
       for (const v of [0.5, 2, Number.NaN]) expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, [k]: v })).toThrow();
