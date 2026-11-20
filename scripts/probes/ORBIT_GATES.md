@@ -558,3 +558,17 @@ node scripts/probes/gravity_read.mjs <rec.json> ...          # JSON=1: one objec
   20°, gravity's tilt; `his.mjs`; `jr.mjs`; `hold_tab.mjs` against `1.0.147-`'s `bhw` and the live `jfhw`), `near_v.mjs` (frames with the camera near
   the vertical), `o8_g.mjs` (the centre, the look point, the placed box). Offline: `follow_g.mjs` = packet F's prototype + the raw target (`tgt=a`),
   the one ease (`swing=0`), the pace-opened ceiling (`vrel=1,psrc=inst`), the hanging piece (`pose=hang`), the right centre (`lc=box`).
+
+## 15. The top and bottom far out — packet H2 (`Claude/40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md` §16, 2026-11-20, night)
+
+* **The recorder**: unchanged — the follower's own record (`sh.fx.f`) carries `top` under `followTop` 1: the levelled reading `L` (rad, `null`:
+  carried), the heading target `T`, the turn's share `k` (−1: none), its angle `dl` and duration `dur` (ms), this frame's crossing angle `x`, the hold
+  decided there `h`, his pace `p` (rad a second). With the switch 0 the record is `de4a10e`'s.
+* **The batch** (the kit's `fo3/follow/h/drv_h2.sh`, one phase after another, each its own server, 34 minutes): the identity (`followTop=0`: two
+  stretches, `nP`, `s1_over`); H1's eleven `Scene_1` stroke walks (`drv_h.sh`, `walk_h.mjs`); the dy hold's base walks; his ten stretches at 60 far
+  and two at 143; the pole walks at 143 (`drv_jg.sh`); two close stretches.
+* **The readers** (the kit): `rd_h3.mjs` — the camera's largest turn in one frame and in 33 ms, the follower's turns (count, angles, the wait, the
+  frames against the duration, the orbit and the drawn gizmo during a turn, the reading's own jump at the edges), the holds, the exits from a level
+  top, G4 (the camera against the orbit yaw's heading on a level top), G2 (the heading change on legs with no dx, until the facet change / the whole
+  leg); `rd_h2b.sh hand|f143|walks|hold|close` (`his.mjs`, `jr.mjs`, `follow_g.mjs`, `hold_tab.mjs`, `same.mjs` against packet G's `runs_g2` and
+  `1.0.147-`). The mutants: `mut_h2.mjs` with `mut_h2_pure.json` / `mut_h2_wiring.json` (each applied alone, the named tests run, restored).

@@ -639,3 +639,88 @@ re-run; the logic's own changes far out (the spit's side, a free face's exit) no
   that crossed stops; he lifts or moves back 8 mm, then pushes again — one pass over `Scene_0bis`'s top or bottom per gesture. By close in's functions.
 → H2 launched on `1.0.151-` (the owner: *"create a new branch 1.0.151- and build from there"*).
 
+## 16. AS BUILT AND MEASURED — H2, the top and bottom far out (2026-11-20, night, branch `1.0.151-`, switch `followTop`)
+
+> Commits (local, not pushed): (C) `84f0c21` the pure rules + 17 vectors · (C) `178459a` the wiring + 5 source tests · (D) this section. The kit
+> `fo3/follow/h/`: `CHECKPOINT_H2.md` (every figure, the frames read), `drv_h2.sh` (the one batch, 34 min), `rd_h3.mjs`, `rd_h2b.sh` (the readers),
+> `mut_h2.mjs` + `mut_h2_pure.json` (20 mutants) + `mut_h2_wiring.json` (6), recordings `runs_h2/`. ⛔ No device look. ⛔ No fix round (the brief).
+
+### 16.1 The result first
+* **`followTop` 0 is `de4a10e` frame for frame** (two of his stretches, `nP`, `s1_over`: every frame identical). **Close in is unchanged** (the close
+  stretches and the dy hold walks close in identical to `de4a10e`'s).
+* **What he asked for works**: a pure dy no longer yaws the camera (`ov`, up to the pole and back: 73° → **1.8°**; the climbs 0.0 – 0.4°; at the
+  heptagon's ridge and bottom 0.0° before the edge); the half turn sits ON the edge, the gizmo waits while it runs, and the dy that crossed is held
+  after it — `z_far` set 6 of 6, **`b_far` set 6 of 6 (`de4a10e`: never)**, a steady push never crosses back, the gizmo 11 – 12 mm past the edge (as
+  `1.0.147-`; `de4a10e` 79 – 135 mm). On his ten stretches: moves he did not ask **1°** (`de4a10e` 1 804°), back and forth pitch / yaw / roll 85 / 19 / 43
+  (176 / 67 / 47), gravity never tilted.
+* ⛔ **What fails, and it is serious on his own play** (`Scene_0bis`, 155 s at 60 frames a second): the camera turned over 45° in ONE frame **77
+  times** (`de4a10e` 0, `1.0.147-` 5); the piece jumped **94 a minute** (26.8, 13.6); sudden turns 155.9 a minute (162.5 — no better); the camera
+  turned 180° within 33 ms. 379 turns started, 322 of them over 90°. **Three roots, all read frame by frame (§16.4); none patched.**
+
+### 16.2 As built
+* **Pure** (`input/camera_follow.ts`): `levelledHeading` — the calm asked read LEVEL at the orbit's yaw (`calmLevelHeading`, the angle ROUND the
+  vertical of F, its share), turned into the world: the heading target; carried (`null`) on a level face (`isFreeFace`) or with no calm near the vertical;
+  kept on its face's side of the vertical. `followTopTarget` (that heading, the asked elevation capped at 60°), `followTurnDelta` (the angle, the half
+  turn's tie the way the heading went), `followTurnStart` / `followTurnStep` (none under the band; the duration `rollDurationMs`; the clock by time),
+  `followTurnDegS` (D-H6), `followTurnHoldsGizmo` (`turnHoldsGizmo`), `followTurnHold` (D-H8: `turnHolds` over 90° AND `crossingEvent`'s hold),
+  `followTopStep` (one frame: at a facet change of the gizmo the turn and the hold decided; during the turn it owns the heading, the spring the height).
+* **Wiring**: `levelledAsked` at the rig's angles beside `askedDir` (`st.asmAskLevel`); `gizmoFacetW` (the face map's facet under the gizmo, the MODEL's);
+  `followFrame`'s `followTop` branch (his pace on the orbit's own direction in the world; the hold written ONLY there, through `holdAtCrossing`; the
+  logic's `ask.hold` not written far out); `tiltClampStep`'s one more term. The detour and `polarStep`'s cap stay for the switch's 0.
+* **Two readings amended against §15.4 (the frames are in the kit)**: (A1) ⛔ `calmShown(u, {sV: 0})` — on `Scene_1`'s cap the calm reads ACROSS
+  (`wA` ≈ 1 at a side's top edge: the LATITUDE toward the face's axis), which shrinks to 0 at the pole, so a pure dy turned the heading back to the face's
+  normal (and the pole fade on top of it); `calmLevelHeading` reads the angle round the vertical, which a dy cannot move (a vector at `wA` 1). (A2) the
+  reading kept on its face's side: the calm is whole at an edge, so over the ridge it passed the vertical where the orbit did, not where the facet changes.
+  And his pace is the ORBIT's own direction's speed (a step of the asked direction at a change was read as his pace by a vector).
+* **The logic's own changes far out, traced first**: no zone switch in play on the scenes in scope (`Scene_0bis` one whole spit zone, `Scene_1` none);
+  the spit's side and a free face's exit change no angle and no reading (their holds not written); the follower turns at the facet change, one band
+  before the logic's free-face exit. None broke the design. **A consequence for his eye**: in the spit the reading is F's, so a dx along the heptagon's
+  axis no longer yaws the camera toward a tip (the red section does not turn with that dx — R1 as written).
+
+### 16.3 The gates (`runs_h2`; in brackets `de4a10e` = packet G's `runs_g2`, H1's `runs_h1`)
+| gate | measured | verdict |
+|---|---|---|
+| G1 identity at 0 | `ilmj_23s` 886/886, `vyah_11s` 993/993, `nP` 242/242, `s1_over` 1909/1909 frames identical | ✅ |
+| G2 no yaw on a pure dy before the edge (≤ 2°) | climbs 0.0 – 0.4°, `ov` 1.8° (73.0°), ridge / bottom walks 0.0° before the facet change; the descents after a dx drift 12.6 – 20° (the spring paying the drift, the reading constant) | ✅ pure dy; ⚠ after a dx |
+| G3 the exit (33 ms ≤ 10°) | 6.5 – 7.8° on eight walks (`ov` 22.8 → 6.8); `nP` 18.8 (27.8), `sP` 18.7 (32.5), `nM` 19.7 (9.9) — root (a) | ❌ 3 of 11 |
+| G4 the red against the view (≤ 35°, never past 90°) | walks 3.1 – 32.1°, but `nM` 42.0, `sP` 53.8 (123.9; past 90° on 16 frames → 0); `s1_over` max 140.6, past 90° on 45 of 391 frames (180, 747 of 1 714) | ❌ better, not met |
+| G5 the wait = its angle / its speed ± 1 frame, the gizmo still | walks: within 0.9 frame, the orbit 0°; his ten: up to 17 frames, the gizmo up to 215 mm — root (c) | ✅ walks ❌ his play |
+| G6 the dy hold | `z_far` set 6/6, `b_far` 6/6 (never), a steady push never back, 11 – 12 mm past the edge (79 – 135) | ✅ |
+| G7 his ten | §16.1; the wait 41.4 s of 155 s; holds set 167 | ❌ frames > 45°, piece jumps |
+| G8 the pole walks at 143 | sudden turns 115 / 116 a minute (29.0 / 31.5), piece jumps 20 / 23 (0 / 9); `s1_over` crossed in 736 frames (1 908) | ❌ |
+| G9 close in | the close stretches identical to `de4a10e` (1059/1059, 1166/1166); the dy hold walks close in identical | ✅ |
+| G10 at 143 | his two: sudden turns 138 (147.6), piece jumps 95.8 (34.5), back and forth 6 / 12 / 5 (29 / 14 / 11); frame cost not measured | ❌ piece jumps |
+| G11 vectors red on mutants | 20 of 20 (the reading, the carry, the cap, the band, the clock, the gizmo waiting, the hold's two conditions, his pace, the tie) + 6 of 6 wiring (the switch's 0, the holds, the wait) | ✅ |
+
+### 16.4 What still fails, and why (read frame by frame; not fixed — no fix round)
+* **(a) The turn's angle is read against the heading DRAWN** (§15.5 as written: the reading after the edge − the camera). After a dx the 120 ms
+  spring trails the reading by τ × his pace (25° at 213°/s, 144° at 1 200°/s); at the next edge that lag is paid as a turn at his pace — on `nP` the
+  reading was 135.0° on both sides of the edge (it costs 0, as designed) and still a 27° turn ran in 50 ms; on `s1_over` 107 – 135° turns after a
+  spin. **Cure to decide (D-H9)**: start a turn only when the READING jumps across the edge by the band; the lag stays the spring's.
+* **(b) His pace is read on the orbit's direction**, which near `Scene_0bis`'s bottom sweeps 2 500 – 6 500°/s (the orbit's yaw −687° → −388° in six
+  frames on `vyah_42s`): the half turn then lasts 32 ms (95° in one frame). D-H6 as built (his pace whenever faster). **D-H10**: the pace from his
+  FINGER on the glass, or close in's speed (`followTurnPace` 0 — then, estimated from the angles turned on his ten, ~150 s of waiting in 155 s).
+* **(c) The wait holds the orbit's angles, not the map's place**: on a fast sweep the orbit runs ahead of the map's place (its catch-up), so after the
+  orbit is held the gizmo still travels on — up to three facets and 200 mm a frame — each facet a new turn (94 turns started during a turn). Close in's
+  crossing sets every angle to the map's place (`seamRebase`). **D-H11**: the follower's crossing does the same.
+* **G4 at his dx pace**: the same spring lag as (a) leaves the camera up to 140° off the red over `Scene_1`'s top during a fast spin (`de4a10e` 180°).
+
+### 16.5 What he will feel (plain words)
+Far out, a straight push up or down no longer swings the camera: it keeps its heading until the gizmo crosses an edge. Over the heptagon's ridge and
+across its bottom the camera makes one half turn while the gizmo waits, and the push that crossed is held until he lifts or moves back 8 mm — one
+pass a gesture, as at the tilted pole. Leaving `Scene_1`'s top is usually smooth. But when he moves fast the half turn happens at his speed — on his
+own play often within two frames, a flip rather than a turn — and the gizmo can still slide on during it; the piece jumps four times more often
+than on `de4a10e`. Near the pole a fast dx leaves the camera trailing the red section. Close in nothing changed. `followTop` 0 gives `de4a10e` back.
+
+### 16.6 The sliders — ORBIT › CAMERA FOLLOWER (`TUNING_MENU.md`)
+`followTop` 1 (0 = `de4a10e`, the detour) · `followTurnMinDeg` 10° (0 – 45; under it the spring pays) · `followTurnPace` 1 (0 – 1: 1 his pace whenever
+faster than close in's `tiltRollDegS`, 0 close in's speed). By URL too (`?followTop=0`). 137 sliders.
+
+### 16.7 Decisions for his review
+| # | the question | the advice |
+|---|---|---|
+| D-H9 | a turn only when the levelled reading itself jumps at the edge (the camera's lag left to the spring) | yes — root (a) |
+| D-H10 | the turn's pace: his finger's on the glass, or close in's speed (`followTurnPace` 0: ~150 s waited on his ten, estimated) | his finger's — root (b); his eye |
+| D-H11 | at the follower's crossing every angle set to the map's place, as close in's crossing | yes — root (c) |
+| D-H12 | in the spit a dx along the axis no longer yaws the camera toward a tip | his eye |
+After a fix round on these, if a gate still fails: stop and study (lessons row 2).
