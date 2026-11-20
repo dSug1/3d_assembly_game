@@ -629,3 +629,13 @@ the follower does not draw there; the piece's slide at a change — the logic's 
 `followTop` (ORBIT › CAMERA FOLLOWER, 0 = `de4a10e`), `followTurnMinDeg` 10°, the wait's pace slider (D-H6). After a second fix round, stop and study.
 **Not done here**: the levelled reading is not in any recording (S2's figures use the raw asked heading); `Scene_0` not walked; his stretches at 143 not
 re-run; the logic's own changes far out (the spit's side, a free face's exit) not traced under the new turn — H2's first reading.
+
+### 15.9 HIS WORD on D-H6 – D-H8 (2026-11-20, night — his answers to the study's three questions)
+* **D-H6 — the wait's pace: (b) HIS PACE + A SLIDER** (*"Your pace + a slider"*): the edge turn runs at least as fast as his own orbit at the crossing,
+  never slower than close in's speed (`tiltRollDegS`, 360°/s); a slider takes it down to close in's speed on the device. (The study's figure on his ten
+  stretches: the gizmo still ~50.9 s of 155 s at 520°/s, less when he goes faster.)
+* **D-H7 — the top's heading WITH THE CALM'S SHARE** (*"With the calm"*): leaving the top costs no turn; the red section may sit up to ~34° off the view.
+* **D-H8 — after a half turn made by a dy push: THE SAME AS THE TILTED POLE** (*"Same as tilted pole"* — D-H4 confirmed knowing the cost): the push
+  that crossed stops; he lifts or moves back 8 mm, then pushes again — one pass over `Scene_0bis`'s top or bottom per gesture. By close in's functions.
+→ H2 launched on `1.0.151-` (the owner: *"create a new branch 1.0.151- and build from there"*).
+
