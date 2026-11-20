@@ -867,8 +867,16 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // along the arc, the exact slide at the gap kept, a work cap. The eye eases toward the SOLVED place on the orbit's spring (never toward a
   // refused target: no pull-back); the camera is driven by the solved place.
   const b0 = st.greenBox;
-  // ⭐ (2026-10-14) a piece captured onto its goal stays placed: no solve (the camera still rides the rings)
-  if (pieceSolveRuns(st)) {
+  // ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` §9 — packet K, K4: fix round 1's F-E2 alone, behind `uprightPayers`) while the half turn holds (C7 ran above), NO
+  // SOLVE: the place solved IS the target, the solver's memory of the target (`orbitRawPrev`) set to it — its first step after the hold is the finger's own —
+  // and a travel of the rig's blend asked meanwhile refused. ⛔ (the first build) the solve ran on the orbit reset to the place and read that reset as a finger
+  // step BACK (the work cap's backlog dropped as a reversal): the "held" gizmo 20 – 185 mm a frame for 1 – 3 frames (82 frames on his ten stretches; 1 with it)
+  if (st.cfg.uprightPayers === 1 && lawHalfTurn(st.asmRollShadow?.one?.state) && st.boxSpring !== null && st.pieceQ !== null && pieceSolveRuns(st)) {
+    rig = { ...st.pieceQ };
+    st.orbitRawPrev = { yaw: st.orbit.yaw, v: st.orbit.elevation };
+    st.gizmoTravelPending = null;
+  } else if (pieceSolveRuns(st)) {
+    // ⭐ (2026-10-14) a piece captured onto its goal stays placed: no solve (the camera still rides the rings)
     const t0 = performance.now();
     const env = pieceSolverEnv(st);
     // ⭐ (2026-11-04, the audit) the frame's cap less what the last frame's checks carried in (⛔ the carry was counted, never taken off: the frame's total

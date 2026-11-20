@@ -116,4 +116,13 @@ describe("the payers' wiring — read in the source", () => {
     expect(pw).toContain("if (raw.dx !== 0 || raw.fdy !== 0) st.asmFingerMoved = true;");
     expect(count(pw, "asmFingerMoved")).toBe(1);
   });
+  it("K4 (F-E2, behind `uprightPayers`): while the half turn holds NO SOLVE — the place is the target, the solver's memory of the target set to it", () => {
+    const gb = raw("src/render/green_box_wiring.ts");
+    const freeze = gb.indexOf("if (lawHalfTurn(st.asmRollShadow?.one?.state) && st.boxSpring !== null) {");
+    const h = gb.indexOf("if (st.cfg.uprightPayers === 1 && lawHalfTurn(st.asmRollShadow?.one?.state) && st.boxSpring !== null && st.pieceQ !== null && pieceSolveRuns(st)) {\n    rig = { ...st.pieceQ };\n    st.orbitRawPrev = { yaw: st.orbit.yaw, v: st.orbit.elevation };\n    st.gizmoTravelPending = null;\n  } else if (pieceSolveRuns(st)) {");
+    expect(freeze).toBeGreaterThan(0);
+    expect(h).toBeGreaterThan(freeze);
+    expect(gb.indexOf("const fr = orbitFrame(", h)).toBeGreaterThan(h);
+    expect(count(gb, "orbitFrame(")).toBe(1);
+  });
 });

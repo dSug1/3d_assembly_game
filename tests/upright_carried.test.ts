@@ -181,6 +181,49 @@ describe("the carried up — C6: the push held from the same answer", () => {
 const wrapPi = (a: number): number => Math.atan2(Math.sin(a), Math.cos(a));
 const KP: CarriedKnobs = { ...K, payers: true, alignPerYaw: 0.5 };
 const K0: CarriedKnobs = { ...KP, maxDegS: 0 };
+describe("the carried up — packet K: a change while the alignment is paid (the owner: what happens when the gizmo crosses another edge then)", () => {
+  it("(a) a dx paying when a change under 90° arrives: the payment goes on toward the NEW target from where the picture is — no jump, nothing undone", () => {
+    const g0 = poseAt(87, 30, 0);
+    const a = one({ phi: 1.2 }, g0, { k: KP });
+    const g1 = poseRolled(g0, framedLine(g0, piece), 20 * DEG);
+    const b = one(a.r.state, g1, { k: KP, change: true, dxYaw: 20 * DEG, moved: true });
+    expect(b.r.halfStart).toBe(0);
+    expect(pictureRoll(a.p, b.p, g1)).toBeCloseTo(-10, 3);
+    const c = one(b.r.state, g1, { k: KP, dxYaw: 20 * DEG, moved: true });
+    expect((c.r.phi - b.r.phi) / DEG).toBeCloseTo(-10, 6);
+  });
+  it("(b) a change whose new gap is 90° or more: the half turn opens there, at its pace — the dx's payment paused until it closes", () => {
+    const g0 = poseAt(87, 30, 0);
+    const a = one(CARRIED_REST, g0, { k: KP });
+    const g1 = poseRolled(g0, framedLine(g0, piece), 170 * DEG);
+    const pc = wrapPi(a.r.phi - twistAbout(g0, g1, framedLine(g1, piece).dir));
+    const b = one(a.r.state, g1, { k: KP, change: true, dxYaw: 20 * DEG, moved: true });
+    expect(b.r.halfStart / DEG).toBeCloseTo(170, 3);
+    expect(Math.abs(wrapPi(b.r.phi - pc)) / DEG).toBeCloseTo(12, 6);
+    const c = one(b.r.state, g1, { k: KP, dxYaw: 20 * DEG, moved: true });
+    expect(c.r.state.hs).toBe(true);
+    expect(Math.abs(wrapPi(c.r.phi - b.r.phi)) / DEG).toBeCloseTo(12, 6);
+  });
+  it("(c) a change during a half turn re-decides it: 120° left the SHORT way (not by the turn's own roll); under 90° it ends", () => {
+    const g0 = poseAt(87, 30, 0);
+    let f = one(CARRIED_REST, g0, { k: KP });
+    const g1 = poseRolled(g0, framedLine(g0, piece), 170 * DEG);
+    f = one(f.r.state, g1, { k: KP, change: true });
+    f = one(f.r.state, g1, { k: KP });
+    expect(f.r.state.hs).toBe(true);
+    // the turn rolls the picture + (its own roll, `rr`); the new gap's short way is − : taken the short way, not the turn's
+    expect(f.r.state.rr ?? 0).toBeGreaterThan(0);
+    const th = f.r.phi - 120 * DEG;
+    const g2 = poseRolled(g1, framedLine(g1, piece), th);
+    const r = one(f.r.state, g2, { k: KP, change: true });
+    expect(r.r.halfStart / DEG).toBeCloseTo(120, 3);
+    const g3 = poseRolled(g1, framedLine(g1, piece), f.r.phi - 40 * DEG);
+    const e = one(f.r.state, g3, { k: KP, change: true });
+    expect(e.r.halfStart).toBe(0);
+    expect(e.r.state.hs).not.toBe(true);
+  });
+});
+
 describe("the carried up — packet K: the alignment's payers", () => {
   it("K1 what a dx pays: k × its own yaw, at most the one pace (12° a frame at 720° a second)", () => {
     const cap = 12 * DEG;
