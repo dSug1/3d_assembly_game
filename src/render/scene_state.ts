@@ -445,6 +445,10 @@ export interface SceneState {
      *  `zoneMixPose` gives — a turn that stays included), `picture` = `G` turned by `phi` about the framed line; the law's state (`upright.ts`), its weight
      *  `w` (the square camera's complement included) and `phi` (rad); absent: FO3 S1's follower or the shadow */
     readonly upright?: { readonly state: import("../input/upright").UprightState; readonly w: number; readonly phi: number };
+    /** ⭐⭐⭐ (2026-11-19, `UPRIGHT_ONE_POSE.md` — packet D, `uprightOnePose` 1) ONE POSE: `ghost` the logic's pose `G`, `picture` the pose drawn AND read; the law's
+     *  state (`upOne`), its weight `w`, `phi` (rad), the square camera's complement `kappa`, this frame's half turn opened (`halfStart`, rad), the gizmo held
+     *  (`holding`), a logic change applied at once this frame (`change`); absent: law U, FO3 or the shadow */
+    readonly one?: { readonly state: import("../input/upright").OneState; readonly w: number; readonly phi: number; readonly kappa: number; readonly halfStart: number; readonly holding: boolean; readonly change: boolean };
   } | null;
   /** ⭐⭐⭐ (2026-11-13, the owner: *"replicate the behavior of scene 0 when crossing the zenith edge"*) the spit's side of the axis (`spitSide`; 0: none) */
   asmSpitSide: number;

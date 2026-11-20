@@ -16,10 +16,10 @@
  */
 import type { Vec3 } from "../core/vec";
 import { upSquareToView } from "../input/camera_frame";
-import { squareTurning, type CamPose } from "../input/orbit_tilt";
+import { holdAtCrossing, rotateAbout, squareTurning, type CamPose } from "../input/orbit_tilt";
 import { followStep, FREE_TURN_MAX_DEG, framedLine, GAP_ZERO, onGlass, poseRolled, poseTurnAngle, ROLL_FOLLOW_MS, turnIsFree, twistAbout, type FollowMode } from "../input/roll_follow";
 import { easeRest } from "../input/seam_turn";
-import { changeSeen, holdSeen, UPRIGHT_REST, uprightStep, uprightWeight, viewFromVertical } from "../input/upright";
+import { changeSeen, holdSeen, ONE_REST, upOne, UPRIGHT_REST, uprightStep, uprightWeight, viewFromVertical } from "../input/upright";
 import { changeApply, spitZone, zoneMixPose } from "./assembly_wiring";
 import type { SceneState } from "./scene_state";
 
@@ -112,6 +112,8 @@ export function rollPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: V
   const tl = st.asmTilt;
   const tiltHold = tl !== null && (tl.exit || tl.off);
   // ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §12 RB1) law U decides each change ONCE (`changeSeen`, in `uprightPictureFrame`): nothing below runs for it
+  // ⭐⭐⭐ (2026-11-19, `UPRIGHT_ONE_POSE.md` — packet D) ONE POSE: the picture IS the logic's pose, one owner of its up (`onePoseFrame`); 0: law U (`c3a8ba6`)
+  if (st.cfg.uprightPicture === 1 && st.cfg.uprightOnePose === 1) return onePoseFrame(st, piece, eye, look, up, dtMs, ghost, sq, tiltHold);
   if (st.cfg.uprightPicture === 1) return uprightPictureFrame(st, piece, eye, look, up, dtMs, ghost, sq, tiltHold);
   let zm = st.asmZoneMix;
   const fresh = zm !== null && zm !== was?.turn;
@@ -199,5 +201,62 @@ function uprightPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3,
   const turnTw = fresh ? tw : (was?.turnTw ?? 0);
   const g = { gap: r.phi, speed: 0 };
   st.asmRollShadow = { ghost: G, dir: line.dir, piece, held: g, free: g, turn: zm, turnTw, stays: zm !== null, tw, gizmoFree, spit: spitZone(st) !== null, freshTurn: fresh, picture: P, a2: placeError(st, G, P, piece, line), drawn: true, freed, upright: { state: r.state, w: r.w, phi: r.phi } };
+  return P;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-19, `UPRIGHT_ONE_POSE.md` §5 — packet D, `uprightOnePose` 1) ONE POSE, at the camera's stage: the picture IS the logic's pose and ONE owner turns
+ * its up (`upOne`). FIRST the change asked this frame resolved ONCE (`changeSeen`) by WHO OWNS THE ROLL — the square camera's complement `κ` before and after
+ * (OP2), never the view's angle: far out applied at once (no timed camera turn of the logic), close in as the live build; a timed change's hold as today, on
+ * the one glass (`holdSeen`, no conversion). Then `G` (`zoneMixPose`), `upOne` (the change's frame is its moment), `P = poseRolled(G, L, φ)`. OP8: at a change
+ * applied at once the push that crossed is held ONLY if its half turn opened (`holdAtCrossing`: the logic's sign, the dy of the one glass), else a hold still
+ * on is ended (every crossing ends the last edge's). OP1: `P` is read — `asmCamLast` (the finger in a spit, a level face's layout at its entry) and the
+ * silent entry's picture (`asmSpitPic`) are `P`'s; the finger is never converted (`fingerAtEntry` reads law U's record only).
+ */
+function onePoseFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Vec3, dtMs: number, ghost: CamPose, sqTurning: boolean, tiltHold: boolean): CamPose {
+  const was = st.asmRollShadow;
+  const sq = st.asmSquare;
+  const share = sq.n === null || !(sq.q > 0) ? 0 : sq.q;
+  const kappa = st.cfg.uprightCloseIn === 1 ? 1 : 1 - share;
+  const knobs = { fromDeg: st.cfg.uprightFromDeg, fullDeg: st.cfg.uprightFullDeg, maxDegS: st.cfg.uprightMaxDegS, halfHold: st.cfg.uprightHalfHold === 1 };
+  let freed = 0;
+  let change = false;
+  let crossed: 1 | -1 | 0 | undefined;
+  const ask = st.asmChange;
+  if (ask !== null) {
+    const drawn = was !== null && was.drawn && was.one !== undefined;
+    const turnRad = drawn ? poseTurnAngle(was.ghost, ghost) : Number.NaN;
+    const stays = !drawn || was.turn !== null || ask.paced || ask.byMm || ask.tilt || sqTurning || tiltHold;
+    const seen = changeSeen({ stays, wBefore: drawn ? was.one!.kappa : 0, wAfter: kappa, turnRad, freeMaxDeg: st.cfg.freeTurnMaxDeg });
+    changeApply(st, ask, seen.timed, seen.timed && ask.hold !== undefined ? holdSeen(seen, ask.hold, null, null) : undefined);
+    if (!seen.timed) {
+      change = true;
+      crossed = ask.hold;
+      freed = turnRad > 0 ? turnRad : Number.MIN_VALUE;
+    }
+  }
+  const zm = st.asmZoneMix;
+  const fresh = zm !== null && zm !== was?.turn;
+  const gizmoFree = zm === null && !sqTurning && !tiltHold;
+  const G = zoneMixPose(st, piece, eye, look, up);
+  const line = framedLine(G, piece);
+  const tw = was === null ? 0 : twistAbout(was.ghost, G, line.dir);
+  const r = upOne(was?.one?.state ?? ONE_REST, G, line, dtMs, knobs, kappa, change);
+  const P = poseRolled(G, line, r.phi);
+  if (change && crossed !== undefined) st.asmEdgeHold = r.halfStart > 0 ? holdAtCrossing(crossed) : null;
+  const d: Vec3 = [P.eye[0] - P.look[0], P.eye[1] - P.look[1], P.eye[2] - P.look[2]];
+  const l = Math.hypot(d[0], d[1], d[2]);
+  if (l > 1e-12) st.asmCamLast = { dir: [d[0] / l, d[1] / l, d[2] / l], up: P.up };
+  const sp = st.asmSpitPic;
+  if (sp !== null && r.phi !== 0) {
+    const u2 = rotateAbout(sp.up, line.dir, r.phi);
+    const k = u2[0] * sp.u[0] + u2[1] * sp.u[1] + u2[2] * sp.u[2];
+    const v: Vec3 = [u2[0] - k * sp.u[0], u2[1] - k * sp.u[1], u2[2] - k * sp.u[2]];
+    const lv = Math.hypot(v[0], v[1], v[2]);
+    if (lv > 1e-9) st.asmSpitPic = { u: sp.u, up: [v[0] / lv, v[1] / lv, v[2] / lv] };
+  }
+  const turnTw = fresh ? tw : (was?.turnTw ?? 0);
+  const g = { gap: r.phi, speed: 0 };
+  st.asmRollShadow = { ghost: G, dir: line.dir, piece, held: g, free: g, turn: zm, turnTw, stays: zm !== null, tw, gizmoFree, spit: spitZone(st) !== null, freshTurn: fresh, picture: P, a2: placeError(st, G, P, piece, line), drawn: true, freed, one: { state: r.state, w: r.w, phi: r.phi, kappa, halfStart: r.halfStart, holding: r.holding, change } };
   return P;
 }

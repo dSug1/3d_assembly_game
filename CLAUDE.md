@@ -44,11 +44,12 @@ npm run dev:lan     # dev server on the LAN (⚠ read 50_BUILD_DEPLOY first)
 npm run build       # production bundle into dist/
 ```
 
-## Where it stands (2026-11-18)
+## Where it stands (2026-11-19)
 
-⭐⭐⭐ **NOW — LIVE main `4eabab8` = `1.0.148-` at `48ae89c`** (the fast orbit FO3 S1 + S2; the orbit on charts, the dy hold, the silent entry). His look: *"the build is very good at 160 ms and 90degrees"*,
-and he wants no roll of the scene on the screen. The work goes on on `1.0.148b-Fast_orbit_upright_gravity` (law U; `FAST_ORBIT.md` §15). **2118 vectors** at `f198b3a`
-(S2 reverted on the branch, still LIVE). The earlier status moved → [`Claude/00_CORE/history/2026-11-18_queue_status_moved.md`](Claude/00_CORE/history/2026-11-18_queue_status_moved.md).
+⭐⭐⭐ **NOW — LIVE main `675ec23` = `1.0.148b-Fast_orbit_upright_gravity` at `d6f200e`** (the upright picture), on his word (*"Do 1 and start 3."*). ⛔ No device look yet.
+Gravity tilted over 20° on the glass: 7.9 % of the frames against 35.4 % on `1.0.147-`; its join with the logic rebuilt from the root, audited PASS, one conflict left (the picture rolling there and back near the vertical). **2173 vectors**.
+Next, on a new branch `1.0.149-Upright_at_the_source`: the logic's own camera upright at the source (a study first). → [`Claude/40_RENDER_SCENE/spec/UPRIGHT_PICTURE.md`](Claude/40_RENDER_SCENE/spec/UPRIGHT_PICTURE.md).
+The earlier status moved → [`Claude/00_CORE/history/2026-11-18_queue_status_moved.md`](Claude/00_CORE/history/2026-11-18_queue_status_moved.md).
 
 **Read first:** [`Claude/00_CORE/queue_notes/HANDOVER_2026-11-18.md`](Claude/00_CORE/queue_notes/HANDOVER_2026-11-18.md) — what is next, in the
 owner's order, and the working rules (the usage limit, the chains, the deploy).

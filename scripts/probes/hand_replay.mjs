@@ -129,11 +129,11 @@ try {
     }
     if (fdx !== 0 || fdy !== 0) await ev(`window.__fd = [${fdx}, ${fdy}]`);
     await step(1);
-    f++;
+    f++; if (f % 120 === 0 && !(await ev("Array.isArray(window.__rows)"))) throw new Error(`the page was replaced during the replay (the recorder window.__rows is gone at frame ${f}): rerun this stretch`); // (packet D, A6) a reload mid-run made every step a no-op and crashed at the end
   }
   if (down && last) { await mouse("mouseReleased", last[0], last[1], 0); await ev(`window.__leg = "end-release"`); }
   await ev(`window.__leg = "settle"`); await step(Math.round(1.5 * FPS));
-  const rows = await ev("window.__rows");
+  const rows = await ev("window.__rows"); if (!Array.isArray(rows)) throw new Error("the page was replaced during the replay (the recorder window.__rows is gone): rerun this stretch");
   const recErr = await ev("window.__recErr ?? window.__stepErr ?? null");
   const boxes = await ev(`[...document.querySelectorAll('pre[data-role="error"]')].map((x) => x.textContent.slice(0, 200))`);
   writeFileSync(env.OUTJSON, JSON.stringify({ url: URL, fps: FPS, src: env.SRC.split("/").pop(), t0: T0, t1: T1, pre, errors, recErr, boxes, rows }));

@@ -24,12 +24,12 @@ import type { CamPose, EdgeHold } from "./orbit_tilt";
 import { fingerOnLogic, poseAxes, turnIsFree, twistAbout, type FramedLine } from "./roll_follow";
 
 /** ⭐ within this of the vertical (deg) the picture is the logic's pose (`w` 0) — the slider `uprightFromDeg` */
-export const UPRIGHT_FROM_DEG = 5;
+export const UPRIGHT_FROM_DEG = 15; // ⭐ (2026-11-19, the owner's trial: "Changing both together is much better") — 5° before
 /** ⭐ from this off the vertical (deg) the picture is fully upright (`w` 1) — the slider `uprightFullDeg` */
-export const UPRIGHT_FULL_DEG = 25;
+export const UPRIGHT_FULL_DEG = 50; // ⭐ (2026-11-19, the owner's trial) — 25° before
 /** ⭐⭐⭐ (2026-11-18, `UPRIGHT_PICTURE.md` §6 UD6b — fix round 1) the pace of THE REST, everywhere (deg a second; 0 = at once: law U as first built,
  *  bit for bit) — the slider `uprightMaxDegS` */
-export const UPRIGHT_MAX_DEG_S = 1800; // ⭐ (fix round 3, UD6c, measured on his ten stretches: 1 440 left gravity over 20° 9.6 % and its roll 69.5° a metre, over round 2 + 2 points / 5°; 1 800: 7.8 %, 58.8°, 47 frames of 45 – 90°, none over 90; 2 160: 6.3 %, 58.3°, but 97 frames of 45 – 90°) — ⭐ (fix round 1, measured: 1 440 the faster of 720 / 1 440 with no frame turning the camera over 90° on his hand; 720 left one)
+export const UPRIGHT_MAX_DEG_S = 720; // ⭐ (2026-11-19, the owner's trial with the band 15 – 50°: "much better for scene 1 arrival at pole jitter resolution and it calms the 180 degree realignment") — 1 800 before; ⭐ (fix round 3, UD6c, measured on his ten stretches: 1 440 left gravity over 20° 9.6 % and its roll 69.5° a metre, over round 2 + 2 points / 5°; 1 800: 7.8 %, 58.8°, 47 frames of 45 – 90°, none over 90; 2 160: 6.3 %, 58.3°, but 97 frames of 45 – 90°) — ⭐ (fix round 1, measured: 1 440 the faster of 720 / 1 440 with no frame turning the camera over 90° on his hand; 720 left one)
 
 const Y: Vec3 = [0, 1, 0];
 const wrapPi = (a: number): number => {
@@ -176,7 +176,7 @@ export function changeSeen(c: ChangeIn): ChangeSeen {
  * ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §12 RB3 — the lead's) IS THE LAW'S OWN HALF TURN UNDER WAY? A turn the player sees, read by the ONE reader of "a turn
  * the player sees is under way" (T5's, `tiltClampStep`): the gizmo held while it closes. No state (law U off): no.
  */
-export function lawHalfTurn(s: UprightState | undefined): boolean {
+export function lawHalfTurn(s: { readonly half?: boolean } | undefined): boolean {
   return s !== undefined && s.half === true;
 }
 
@@ -231,4 +231,91 @@ function uprightPaced(s: UprightState, pose: CamPose, line: FramedLine, dtMs: nu
   const half = (big || s.half === true) && phi !== target;
   const state: UprightState = { au: null, phi, ap: alpha, wp: w, gp: pose, ...(half ? { half: true } : {}) };
   return { state, phi, w, nu, alpha, closed: phi === target, halfStart: big && s.half !== true ? Math.abs(e) : 0 };
+}
+
+/* ⭐⭐⭐ (2026-11-19, `Claude/40_RENDER_SCENE/spec/UPRIGHT_ONE_POSE.md` — packet D, `uprightOnePose` 1) ONE POSE: the picture IS the logic's pose and ONE
+ * function owns how its up moves. The logic says what the up should be (its heading rules inside the band) and WHEN its frame changes (`change`); far out
+ * it never turns the camera itself (OP2, `changeSeen` read with the square camera's complement). ⭐⭐⭐ (fix round 1, §12 — F1, F2; the lead's §8) THE
+ * PICTURE = ITS TARGET + A GAP: the target followed EXACTLY, the gap opened only by a logic change and closed at one pace. ⛔ (P2, §11) the whole picture
+ * paced (the logic's twist carried whole every frame): a yaw the finger asks at a pole capped at 720° a second, 70 – 80° behind (§11.3); the dead band
+ * (OP6) measured useless — DELETED with its slider `uprightDeadDeg`. ------------------------------------------------------------------------------- */
+
+/** ⭐ (OP3) the correction toward upright fades out between these angles of the logic's pose from upright (deg): never a half-turn blend (L2) */
+export const ONE_FADE_FROM_DEG = 90;
+export const ONE_FADE_TO_DEG = 150;
+
+/** ⭐ One pose's state: `phi` the picture's turn off the logic's pose about the framed line (rad); the logic's pose last frame (`gp`: a change's carry);
+ *  the GAP `g` (rad, signed: what is left of the turn a logic change opened, closing toward 0); the last target `tp` (held where `α` has no root); `hs`
+ *  a half turn under way (its gap opened at 90° or more); `half` while it holds the gizmo (T5's one reader, `lawHalfTurn`) */
+export interface OneState {
+  readonly phi: number;
+  readonly gp?: CamPose;
+  readonly g?: number;
+  readonly tp?: number;
+  readonly hs?: boolean;
+  readonly half?: boolean;
+}
+export const ONE_REST: OneState = Object.freeze({ phi: 0 });
+
+export interface OneKnobs {
+  readonly fromDeg: number;
+  readonly fullDeg: number;
+  /** the gap's pace, deg a second (0 or less: at once) */
+  readonly maxDegS: number;
+  /** the gizmo held for the WHOLE half turn (`uprightHalfHold` 1); 0: never held by it */
+  readonly halfHold: boolean;
+}
+
+export interface OneFrame {
+  readonly state: OneState;
+  readonly phi: number;
+  readonly w: number;
+  readonly nu: number;
+  readonly alpha: number | null;
+  /** this frame a half turn OPENED (a logic change's gap of 90° or more): its size (rad); 0: none */
+  readonly halfStart: number;
+  /** a half turn under way after this frame, and `halfHold`: the gizmo held */
+  readonly holding: boolean;
+}
+
+/**
+ * ⭐⭐⭐ ONE FRAME OF THE ONE POSE (`UPRIGHT_ONE_POSE.md` §5.2, §12): `φ = target + g` for the logic's pose `pose` about `line`; `kappa` the square camera's
+ * complement (who owns the roll: 1 far out, 0 close in); `change` a logic change applied at once this frame (the moment).
+ * * OP3 THE TARGET, followed EXACTLY (F1): `w · h · α` — `w` the band's weight times `κ`, `α` the turn to upright, `h` 1 up to 90° from upright fading to 0 at
+ *   150°: inside the band the logic's own pose (its continuous motion, a yaw the finger asks at a pole, shown 1:1), beyond it upright exactly.
+ * * THE GAP (F1): on a change's frame the picture's last up carried to the new view (the logic's twist undone, `twistAbout`) against the new target, the
+ *   shortest way (A1: re-decided at every change); on every frame it closes toward 0 at `maxDegS`, its sense kept (a number, never re-read off the poses).
+ *   A half turn = a gap of 90° or more at its opening: so a half turn opens ONLY at a logic change.
+ * * F2 (T5 as written): the gizmo held for the whole half turn (`halfHold`).
+ */
+export function upOne(s: OneState, pose: CamPose, line: FramedLine, dtMs: number, k: OneKnobs, kappa = 1, change = false): OneFrame {
+  const nu = viewFromVertical(pose);
+  const kap = Math.min(1, Math.max(0, Number.isFinite(kappa) ? kappa : 0));
+  const w = uprightWeight(nu, k.fromDeg, k.fullDeg) * kap;
+  const alpha = w > 0 ? uprightAngle(pose, line) : null;
+  let target = 0;
+  if (w > 0) {
+    if (alpha === null) target = s.tp ?? 0;
+    else {
+      const x = Math.min(1, Math.max(0, ((Math.abs(alpha) * 180) / Math.PI - ONE_FADE_FROM_DEG) / (ONE_FADE_TO_DEG - ONE_FADE_FROM_DEG)));
+      target = w * (1 - x * x * (3 - 2 * x)) * alpha;
+    }
+  }
+  let g = s.g ?? 0;
+  let hs = s.hs === true;
+  let halfStart = 0;
+  if (change) {
+    const tau = s.gp !== undefined ? twistAbout(s.gp, pose, line.dir) : 0;
+    const pc = Number.isFinite(tau) ? wrapPi(s.phi - tau) : s.phi;
+    g = wrapPi(pc - target);
+    hs = Math.abs(g) >= Math.PI / 2;
+    if (hs) halfStart = Math.abs(g);
+  }
+  const cap = !(k.maxDegS > 0) ? Infinity : dtMs > 0 ? ((k.maxDegS * Math.PI) / 180) * (dtMs / 1000) : 0;
+  g = Math.sign(g) * Math.max(0, Math.abs(g) - cap);
+  if (g === 0) hs = false;
+  const phi = wrapPi(target + g);
+  const holding = hs && k.halfHold;
+  const state: OneState = { phi, gp: pose, g, tp: target, ...(hs ? { hs: true } : {}), ...(holding ? { half: true } : {}) };
+  return { state, phi, w, nu, alpha, halfStart, holding };
 }

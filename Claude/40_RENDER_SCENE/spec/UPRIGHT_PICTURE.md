@@ -753,3 +753,5 @@ not see (`b_far`); RB4 not built; 1 800 kept.
 3. **The deep one**: the logic's own camera upright at the source far out, so that no pose is carried upside down and the half turn exists
    once (UD12 reversed: his T4, T7, T9 and the charts' rule move together) — a rebuild of the orbit's passage over a pole; a study in his four
    parts before anything is built.
+
+⭐⭐⭐ **Next (2026-11-19, evening, packet D on `1.0.148d-`): the rebuild from the root — ONE POSE** (the picture is the logic's pose; one owner of the up; the pass's one half turn at the logic's crossing, its holds from the same decision; studied and checked offline, nothing built) → [`UPRIGHT_ONE_POSE.md`](UPRIGHT_ONE_POSE.md).
