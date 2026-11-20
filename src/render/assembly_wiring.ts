@@ -110,7 +110,7 @@ export function ensureAssembly(st: SceneState): void {
 type OrbitStateStart = Pick<
   SceneState,
   | "asmGizmo" | "asmSupport" | "asmSupportLevel" | "pieceHold" | "pieceHoldPrev" | "asmLook" | "asmFacePoint" | "asmG" | "asmPrevQ" | "asmShown" | "asmFaceBand" | "asmFree" | "asmPlaceWas" | "asmMapQ"
-  | "asmEdgeHold" | "asmZone" | "asmZoneMix" | "asmChange" | "asmPieceDrawn" | "asmDirEase" | "asmCamLast" | "asmRollShadow" | "asmSpitSide" | "asmSpitU" | "asmSpitPic" | "asmSpitPicWas" | "asmZoneAlpha" | "asmDySign" | "asmDxSign" | "asmCarriedYaw" | "asmHeadO"
+  | "asmEdgeHold" | "asmZone" | "asmZoneMix" | "asmChange" | "asmPieceDrawn" | "asmDirEase" | "asmCamLast" | "asmRollShadow" | "asmSpitSide" | "asmSpitU" | "asmSpitPic" | "asmSpitPicWas" | "asmZoneAlpha" | "asmDySign" | "asmFingerDxMm" | "asmDxSign" | "asmCarriedYaw" | "asmHeadO"
   | "asmHeadW" | "asmHeadYaw" | "asmTilt" | "asmGOff" | "asmTiltAuto" | "asmTiltPending" | "asmOrbitMm" | "asmBlend" | "asmCalmWhole" | "asmCalmWholeV"
   | "asmSquare" | "asmCalm" | "asmMouth" | "asmRawPrev" | "asmGizmoAt" | "asmGizmoLag"
 >;
@@ -152,6 +152,7 @@ export function orbitStateStart(): OrbitStateStart {
     asmSpitPicWas: null,
     asmZoneAlpha: 0,
     asmDySign: 0,
+    asmFingerDxMm: 0,
     asmDxSign: 0,
     asmCarriedYaw: null,
     asmHeadO: null,
@@ -2419,13 +2420,9 @@ function freeFaceExit(st: SceneState, fr: NonNullable<SceneState["asmFree"]>, co
 /**
  * ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §8 UD8b) THE FINGER AT THE ENTRY: the orbit finger's step (`dx`, `fdy` up, px) turned ONCE from the picture
  * drawn (law U's, last frame's) onto the logic's glass (`fingerOnLogic`) — before the dy hold and the spit read it. Law U off: as it is.
- * ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` §7 F-E5) the carried up: OUTSIDE a spit the same turn (the orbit's dx / dy read on the logic's glass `G` — the
- * picture is `G` turned by φ); in a spit as it is (`zoneFinger` reads the picture's own frame, `asmCamLast`, one glass). ⛔ (the first build) none outside a
- * spit: the finger read as if on `G` while he saw `G` turned by φ — the gizmo off his finger by 27.9° (median, φ 5° or more, away from the vertical).
  */
 export function fingerAtEntry(st: SceneState, dx: number, fdy: number): { readonly dx: number; readonly fdy: number } {
   const sh = st.asmRollShadow;
-  if (sh !== null && sh.one !== undefined) return spitZone(st) === null ? fingerOnLogic(dx, fdy, sh.picture, sh.ghost) : { dx, fdy };
   return sh !== null && sh.upright !== undefined ? fingerOnLogic(dx, fdy, sh.picture, sh.ghost) : { dx, fdy };
 }
 
