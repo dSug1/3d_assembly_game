@@ -539,3 +539,7 @@ node scripts/probes/gravity_read.mjs <rec.json> ...          # JSON=1: one objec
   `gz2.mjs`, frames `gz3.mjs` / `gz4.mjs`), a walk's largest camera turns `ov.mjs` / `ov2.mjs`, the tips `tip.mjs`, far out by φ `far.mjs` / `far2.mjs`.
   ⚠ `hold_walk_analyse.mjs`'s BLOCKED excludes timed-turn frames (`mix`) only: a half turn is none, so the dy hold after a come-back's second crossing
   counts as blocked (8 frames) where `1.0.147-`'s turn hid them — read the `come` leg frame by frame before calling it a regression.
+* ⭐ (2026-11-20, packet J — `UPRIGHT_CARRIED_UP.md` §8) `fast_walk_check.mjs` takes `FPS` (60 by default; its waits keep their time, a finger step
+  stays one frame): his desktop at 143 with `LPX` 8.4 (1 200 px a second). The jump reader and the walks through the poles (`Scene_0bis`'s bottom, its
+  tip, its ridge, `Scene_1` over its top, `Scene_0`'s bottom) are the kit's `rebuild_e/j/` (`jr.mjs`, `chg.mjs`, `drv_j.sh`). ⚠ `hand_replay.mjs` reads
+  the owner's raw sessions where `stretches.json` points (his external drive): copy them inside before a hand batch when that drive is not to be read.

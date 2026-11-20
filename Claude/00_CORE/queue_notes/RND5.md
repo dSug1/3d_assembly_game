@@ -754,3 +754,9 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   ⛔ worse: a dy over `Scene_1`'s top now rolls the picture near the pole (250° against 61°: the dx's budget reads the orbit's yaw, which a dy swings
   there), a rest after a half turn still closes with no finger (any outward drift of the view pays it), an upside-down picture lingers on ~1 % of the
   replays' frames. The 8 "blocked" frames of the come-backs: a reader artifact (the dy hold after the second crossing, no `mix`). No device look.
+* **2026-11-20 (packet J — his verdict on the live build `28a29ca`: jumps of the camera and the piece at a level face, `Scene_0bis` and `Scene_1`).**
+  His two videos read by numbers, a reader of his words (33 ms bins), every build on one table (`UPRIGHT_CARRIED_UP.md` §8.3). Two roots: (1) far
+  out a change is applied at once (one pose's OP2) and the carry takes back only its roll about the framed line — the piece lands where the new pose
+  frames it, in one frame (the 2026-11-14 snap, back since one pose); (2) near the pole the dx-paid alignment rolls 80° in 40 ms (`Scene_1`).
+  `Scene_0` has no spit: no change at once. Built for (1), `uprightFraming` 1 (fix round 1's code reverted first): the piece's jumps on his stretches
+  112.8 → 38.8 a minute, at the changes 0; ⛔ the camera's roll jumps near a change +27 % (open, §8.7). No device look.
