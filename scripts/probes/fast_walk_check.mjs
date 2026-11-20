@@ -23,6 +23,9 @@ import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
 const URL = process.env.URL;
+// (packet J, 2026-11-20) FPS: the virtual clock's frame rate (60 by default; 143 = his desktop); the waits keep their time (`F`), a finger step stays one frame
+const FPS = +(process.env.FPS || 60);
+const F = (n) => Math.max(1, Math.round((n * FPS) / 60));
 const port = 9300 + Math.floor(Math.random() * 600);
 const prof = join(tmpdir(), `replay_probe_profile_fast_walk_${process.pid}`);
 const profTmp = join(prof, "tmp");
@@ -38,7 +41,7 @@ guardProbe({ chromePid: chrome.pid, prof, ms: 8 * 60_000 + 30_000 });
 const CLOCK = `(() => { let T = 1000; const q = []; let id = 0;
   performance.now = () => T; Date.now = () => 1.7e12 + T;
   window.requestAnimationFrame = (cb) => { q.push(cb); return ++id; }; window.cancelAnimationFrame = () => {};
-  window.__step = (n) => { for (let i = 0; i < n; i++) { if (window.__pre) window.__pre(); T += 1000 / 60; const cbs = q.splice(0); for (const cb of cbs) { try { cb(T); } catch (e) { window.__stepErr = String(e); } } if (window.__frame) window.__frame(); } return T; }; })();`;
+  window.__step = (n) => { for (let i = 0; i < n; i++) { if (window.__pre) window.__pre(); T += 1000 / ${FPS}; const cbs = q.splice(0); for (const cb of cbs) { try { cb(T); } catch (e) { window.__stepErr = String(e); } } if (window.__frame) window.__frame(); } return T; }; })();`;
 // every frame: the camera drawn, the gizmo, the transition's turn (its id — one per turn object —, share, angle, whole, whether it holds the gizmo:
 // \`hold\` as decided, or as today's rule reads it), the state that must not read the fade (zone, tilt, free face and its heading, spit side, map
 // angles), the pose the camera's stage built (\`probeCamPose\`, when the build has it), the inputs as the frame began (\`pre\`)
@@ -85,7 +88,7 @@ try {
   if (!ready) throw new Error("the scene did not build");
   await sleep(1500);
   await ev(`[...document.querySelectorAll('pre[data-role="error"]')].forEach((x) => x.remove())`);
-  await ev("window.__step(240)");
+  await ev(`window.__step(${F(240)})`);
   await ev(RECORD);
   // every input dispatched, with the frame it reaches (the frames stepped since the recorder started)
   let frame = 0;
@@ -113,13 +116,13 @@ try {
     const drag = async (leg, x, y, dx, dy, n, a) => {
       await ev(`window.__leg = "${leg}"`);
       if (a) await keyA(true);
-      await mouse("mousePressed", x, y, 1); await step(2);
+      await mouse("mousePressed", x, y, 1); await step(F(2));
       for (let k = 0; k < n; k++) { x = Math.max(5, Math.min(1195, x + dx)); y = Math.max(5, Math.min(795, y + dy)); await mouse("mouseMoved", x, y, 1); await step(1); }
-      await step(6);
+      await step(F(6));
       await mouse("mouseReleased", x, y, 0);
       if (a) await keyA(false);
       await ev(`window.__leg = "${leg}-settle"`);
-      await step(40);
+      await step(F(40));
     };
     const s0 = await state();
     console.log(`  boot: approach ${s0.ap.toFixed(3)}`);
@@ -162,11 +165,11 @@ try {
       const cont = CONT && name !== "to-start";
       let frames = 0, ok = false, e0 = null;
       if (!cont) gPrev = null;
-      const release = async () => { await step(6); await mouse("mouseReleased", x, y, 0); await step(2); pressed = false; gPrev = null; };
+      const release = async () => { await step(F(6)); await mouse("mouseReleased", x, y, 0); await step(F(2)); pressed = false; gPrev = null; };
       const push = async (p, er, sp) => {
         const ph = p.phi * Math.PI / 180; const w = [er.ex, er.arc * Math.cos(ph), -er.arc * Math.sin(ph)];
         const [fx, fy] = await glass(w);
-        if (!pressed) { x = 600 - 380 * fx; y = 380 - 240 * fy; await mouse("mousePressed", x, y, 1); await step(2); pressed = true; }
+        if (!pressed) { x = 600 - 380 * fx; y = 380 - 240 * fy; await mouse("mousePressed", x, y, 1); await step(F(2)); pressed = true; }
         x += fx * sp; y += fy * sp; frames++;
         await mouse("mouseMoved", x, y, 1); await step(1);
         if (x < 30 || x > 1170 || y < 30 || y > 720) await release();
@@ -187,7 +190,7 @@ try {
       if (cont && !last) return `${fast < 600} ${fast} fr (chained)`;
       if (cont) await ev(`window.__leg = "end"`); // the lift after the last chained leg: not the loop's
       if (pressed) await release();
-      await step(10);
+      await step(F(10));
       // (2) fine
       if (tg.pass || cont || process.env.FINE === "0") ok = true;
       else {
@@ -199,7 +202,7 @@ try {
         }
         if (pressed) await release();
       }
-      await step(20);
+      await step(F(20));
       const p = await where();
       return `${ok} ${frames} fr (${fast} fast), at ${p ? p.f : "?"} x ${p ? (p.x * 1000).toFixed(0) : "-"} phi ${p ? p.phi.toFixed(1) : "-"}`;
     };

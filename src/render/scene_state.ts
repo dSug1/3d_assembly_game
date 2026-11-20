@@ -448,7 +448,7 @@ export interface SceneState {
     /** ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` — packet E, `uprightCarried` 1) THE CARRIED UP (the field's name `one` kept for the probes' readers): `ghost` the
      *  logic's pose `G`, `picture` the pose drawn AND read; the state (`upCarried`), its weight `w`, `phi` (rad), the square camera's complement `kappa`, this
      *  frame's half turn opened (`halfStart`, rad), the gizmo held (`holding`), a logic change applied at once (`change`); absent: law U, FO3 or the shadow */
-    readonly one?: { readonly state: import("../input/upright").CarriedState; readonly w: number; readonly phi: number; readonly kappa: number; readonly halfStart: number; readonly holding: boolean; readonly change: boolean };
+    readonly one?: { readonly state: import("../input/upright").CarriedState; readonly w: number; readonly phi: number; readonly kappa: number; readonly halfStart: number; readonly holding: boolean; readonly change: boolean; /** ⭐⭐⭐ (packet J, `uprightFraming`) the framing turn under way */ readonly framing?: import("../input/upright").FramingTurn | null };
   } | null;
   /** ⭐⭐⭐ (2026-11-13, the owner: *"replicate the behavior of scene 0 when crossing the zenith edge"*) the spit's side of the axis (`spitSide`; 0: none) */
   asmSpitSide: number;

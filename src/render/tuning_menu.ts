@@ -212,6 +212,8 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "carried up: the picture turns only by what the finger asks (1 on, 0 = law U)", "uprightCarried", 0, 1, 1),
             tunable(st, "carried up: the alignment a dx pays near the vertical (deg a mm)", "uprightAlignDegPerMm", 0, 20, 0.5),
             tunable(st, "carried up: the gizmo still for the whole half turn (1; 0 = never)", "uprightHalfHold", 0, 1, 1),
+            // ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` §8 — packet J) the piece no longer leaps at a change: drawn from the pose shown
+            tunable(st, "carried up: a change drawn from the pose shown, the piece carried straight on the glass (1; 0 = at once)", "uprightFraming", 0, 1, 1),
           ],
         },
         {

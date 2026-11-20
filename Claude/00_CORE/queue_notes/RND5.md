@@ -747,3 +747,16 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   gravity's roll a metre of gizmo travel 56.4° / 101.5° / 127.3°; frames turning the whole camera by more than 90° at once 0 / 0 / 0, by 45 – 90° 51 / 5 / 8; the finger's angle against the gizmo's way, median 14.7° / 12.1° / 14.3°;
   the picture rolling a third of a turn and back near the vertical 7 / 0 / 0 (the one conflict left); the dy hold as `1.0.147-`'s. `npm run verify`: 170 files, 2173 vectors. The record: `UPRIGHT_PICTURE.md` §12 – §14.
   **Next** (option 3): the logic's own camera upright at the source far out, no pose carried upside down, the half turn once; his T4, T7, T9 and the charts' rule move together. On a NEW branch `1.0.149-Upright_at_the_source`; first an offline study in his four parts, nothing built before his word on its decisions.
+* **2026-11-20 (`1.0.148e-`, ONE CARRIED UP — packet E, fix round 1; `UPRIGHT_CARRIED_UP.md` §7)**: built `38a2fdd` (local, not pushed): the alignment
+  paid by the finger alone (E-D6: the dy that leaves; a dx at most half its yaw step; never by time), no solve while the half turn holds (the solver read
+  the orbit's reset as a finger step back), the finger turned onto the logic's glass outside a spit. Measured on his ten stretches: the gizmo still while
+  held (1 frame over 1 mm after the first, 82 before), R7 with φ ≥ 5° 23.9° (27.9°), the dy hold walks s0 / s1 identical, close in and the identity exact;
+  ⛔ worse: a dy over `Scene_1`'s top now rolls the picture near the pole (250° against 61°: the dx's budget reads the orbit's yaw, which a dy swings
+  there), a rest after a half turn still closes with no finger (any outward drift of the view pays it), an upside-down picture lingers on ~1 % of the
+  replays' frames. The 8 "blocked" frames of the come-backs: a reader artifact (the dy hold after the second crossing, no `mix`). No device look.
+* **2026-11-20 (packet J — his verdict on the live build `28a29ca`: jumps of the camera and the piece at a level face, `Scene_0bis` and `Scene_1`).**
+  His two videos read by numbers, a reader of his words (33 ms bins), every build on one table (`UPRIGHT_CARRIED_UP.md` §8.3). Two roots: (1) far
+  out a change is applied at once (one pose's OP2) and the carry takes back only its roll about the framed line — the piece lands where the new pose
+  frames it, in one frame (the 2026-11-14 snap, back since one pose); (2) near the pole the dx-paid alignment rolls 80° in 40 ms (`Scene_1`).
+  `Scene_0` has no spit: no change at once. Built for (1), `uprightFraming` 1 (fix round 1's code reverted first): the piece's jumps on his stretches
+  112.8 → 38.8 a minute, at the changes 0; ⛔ the camera's roll jumps near a change +27 % (open, §8.7). No device look.

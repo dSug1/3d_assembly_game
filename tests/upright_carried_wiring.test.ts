@@ -29,7 +29,7 @@ describe("the carried up's wiring — read in the source", () => {
   it("ONE writer of the up: `upCarried` once, the picture rolled from its φ once", () => {
     expect(count(cf, "upCarried(")).toBe(1);
     expect(cf).toContain("const r = upCarried(was?.one?.state ?? CARRIED_REST, G, line, dtMs, knobs, kappa, change, asked, dxMm);");
-    expect(count(cf, "poseRolled(")).toBe(1);
+    expect(count(cf, "poseRolled(")).toBe(2); // ⭐ (packet J) + the framed pose rolled by φ (the pose shown turned back by the same φ in `framingFrom`)
     expect(cf).toContain("const P = poseRolled(G, line, r.phi);");
   });
   it("no camera turn far out but the half turn: a change resolved by the square camera's authority κ (far out applied at once)", () => {
@@ -62,5 +62,33 @@ describe("the carried up's wiring — read in the source", () => {
     expect(DEFAULT_CONFIG.uprightAlignDegPerMm).toBe(3);
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, uprightCarried: 2 })).toThrow();
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, uprightAlignDegPerMm: 21 })).toThrow();
+  });
+});
+
+// ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` §8 — packet J) THE FRAMING CARRIED FROM THE POSE SHOWN, read in the source: behind `uprightFraming` (1 by
+// default; 0: the picture `P` as at `28a29ca`); opened only by a change applied at once, from the picture shown turned back by the same φ; the pose drawn
+// is the one read (the finger's glass, the next frame's pose shown) and the one returned; φ, the half turn and the holds untouched.
+describe("the framing carried from the pose shown — read in the source (packet J)", () => {
+  const cf = body(rs, "function carriedFrame(");
+  it("the switch: `uprightFraming` 1 by default (a slider 0 / 1); 0 draws the carried picture `P` as before", () => {
+    expect(DEFAULT_CONFIG.uprightFraming).toBe(1);
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, uprightFraming: 2 })).toThrow();
+    expect(cf).toContain("const ft = st.cfg.uprightFraming === 1 ? framingStep(was?.one?.framing ?? null, change, shown, freed, r.halfStart, dtMs, st.cfg.uprightMaxDegS, kappa) : null;");
+    expect(cf).toContain("const D = fd === null ? P : poseRolled(fd.pose, line, r.phi);");
+    expect(raw("src/render/tuning_menu.ts")).toContain('"uprightFraming", 0, 1, 1)');
+  });
+  it("opened only by a change applied at once, from the picture shown last frame turned back by this frame's φ (the piece's place then)", () => {
+    expect(cf).toContain("const shown = change && was !== null && was.one !== undefined && was.picture ? framingFrom(was.picture, was.piece, line, r.phi) : null;");
+  });
+  it("the pose drawn is the one read and returned: the finger's glass, the next frame's pose shown, the camera", () => {
+    expect(cf).toContain("const d: Vec3 = [D.eye[0] - D.look[0], D.eye[1] - D.look[1], D.eye[2] - D.look[2]];");
+    expect(cf).toContain("up: D.up };");
+    expect(cf).toContain("picture: D, a2: placeError(st, G, D, piece, line)");
+    expect(cf).toContain("framing: fd === null ? null : fd.turn } };\n  return D;");
+  });
+  it("φ, the half turn and the holds untouched: upCarried once, before the framing, and the hold from its answer as before", () => {
+    expect(count(cf, "upCarried(")).toBe(1);
+    expect(cf.indexOf("const r = upCarried(")).toBeLessThan(cf.indexOf("framingStep("));
+    expect(cf).toContain("if (change && crossed !== undefined) st.asmEdgeHold = carriedHold(r.halfStart, crossed, st.asmDxSign);");
   });
 });

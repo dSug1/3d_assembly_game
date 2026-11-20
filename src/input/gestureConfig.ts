@@ -429,6 +429,8 @@ export interface GestureConfig {
   uprightAlignDegPerMm: number;
   /** ⭐ (C7) the carried up: the gizmo still for the whole half turn (1); 0: never held by it */
   uprightHalfHold: number;
+  /** ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` §8 — packet J) a change applied at once drawn from the pose shown, the piece carried straight on the glass (1); 0: at once (`28a29ca`) */
+  uprightFraming: number;
   /** ⭐⭐⭐ (2026-11-10, POLAR_ORBIT_CLEANUP.md §9.4 — the owner's TILTED POLE) a press on a cap tilts the orbit so the cap is a side (1); off (0): the polar cap as before. ⛔ (2026-11-15, the owner: *"cancel my rule and remove the press action on the orbit"*) no press tilts: 1 the automatic tilt close in (`tiltAutoM`), 0 none. */
   tiltedPole: number;
   /** ⭐⭐⭐ (2026-11-10, the owner: *"limit the speed of the scene tilt at crossing"* → *"one speed for every tilt"*) EVERY tilt — the roll back to upright, the swing of a tilt just made — at this speed (°/s; 0: at once) — ⛔ `tiltRollMinMs` (a whole roll in 250 ms whatever its size) replaced. */
@@ -897,6 +899,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   uprightCarried: 1, // ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md`, packet E) the carried up on this branch; 0 = law U (`1f62928`)
   uprightAlignDegPerMm: UPRIGHT_ALIGN_DEG_PER_MM, // ⭐ (C4) 3° a mm of dx
   uprightHalfHold: 1, // ⭐ (C7) the gizmo still for the whole half turn
+  uprightFraming: 1, // ⭐⭐⭐ (packet J) a change's framing carried from the pose shown
   gizmoEaseMs: 45, // ⭐⭐ (2026-11-04, the owner: *"update the lag the gizmo's position the piece follows to 45ms"*; 62, 55 before, the former GIZMO_TAU_MS 90)
   orbitSpringMs: 30, // ⭐⭐ (2026-11-04) the former boxSmoothMs / 2 for the orbit's spring
   tiltedPole: 1, // ⭐⭐⭐ (2026-11-10, §9.4) the tilted pole on
@@ -1084,6 +1087,7 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (cfg.uprightCarried !== 0 && cfg.uprightCarried !== 1) throw new Error(`uprightCarried (${cfg.uprightCarried}) must be 0 or 1.`);
   if (!(cfg.uprightAlignDegPerMm >= 0 && cfg.uprightAlignDegPerMm <= 20)) throw new Error(`uprightAlignDegPerMm (${cfg.uprightAlignDegPerMm}) must be in [0, 20] deg a mm.`);
   if (cfg.uprightHalfHold !== 0 && cfg.uprightHalfHold !== 1) throw new Error(`uprightHalfHold (${cfg.uprightHalfHold}) must be 0 or 1.`);
+  if (cfg.uprightFraming !== 0 && cfg.uprightFraming !== 1) throw new Error(`uprightFraming (${cfg.uprightFraming}) must be 0 or 1.`);
   if (cfg.freeEntryUpright !== 0 && cfg.freeEntryUpright !== 1) throw new Error(`freeEntryUpright (${cfg.freeEntryUpright}) must be 0 or 1.`);
   if (!(cfg.edgeHoldMm >= 0 && cfg.edgeHoldMm <= 200)) throw new Error(`edgeHoldMm (${cfg.edgeHoldMm}) must be in [0, 200] mm.`);
   if (!(cfg.approachPinchGain > 0 && cfg.approachPinchGain <= 10)) throw new Error(`approachPinchGain (${cfg.approachPinchGain}) must be in (0, 10].`);

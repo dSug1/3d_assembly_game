@@ -19,7 +19,7 @@ import { upSquareToView } from "../input/camera_frame";
 import { rotateAbout, squareTurning, type CamPose } from "../input/orbit_tilt";
 import { followStep, FREE_TURN_MAX_DEG, framedLine, GAP_ZERO, onGlass, poseRolled, poseTurnAngle, ROLL_FOLLOW_MS, turnIsFree, twistAbout, type FollowMode } from "../input/roll_follow";
 import { easeRest } from "../input/seam_turn";
-import { askedTwist, CARRIED_REST, carriedHold, changeSeen, holdSeen, upCarried, UPRIGHT_REST, uprightStep, uprightWeight, viewFromVertical } from "../input/upright";
+import { askedTwist, CARRIED_REST, carriedHold, changeSeen, framedPose, framingFrom, framingStep, holdSeen, upCarried, UPRIGHT_REST, uprightStep, uprightWeight, viewFromVertical } from "../input/upright";
 import { changeApply, orbitPoleAxis, spitZone, zoneMixPose } from "./assembly_wiring";
 import type { SceneState } from "./scene_state";
 
@@ -253,10 +253,18 @@ function carriedFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Ve
   st.asmFingerDxMm = 0;
   const r = upCarried(was?.one?.state ?? CARRIED_REST, G, line, dtMs, knobs, kappa, change, asked, dxMm);
   const P = poseRolled(G, line, r.phi);
+  // ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` §8 — packet J) THE FRAMING CARRIED FROM THE POSE SHOWN (`uprightFraming` 1; 0: the picture `P` as at `28a29ca`):
+  // a change applied at once draws from the picture shown (turned back by φ about the framed line), the piece and the aim carried straight on the glass
+  // to where the logic frames them, over the change's own time at the half turn's pace (`framingStep`, `framedPose`) — the pose drawn only: φ, the half
+  // turn, the holds as they are. ⛔ (`28a29ca`) the carry took back the change's roll alone: the piece leapt to where the new pose frames it, in one frame
+  const shown = change && was !== null && was.one !== undefined && was.picture ? framingFrom(was.picture, was.piece, line, r.phi) : null;
+  const ft = st.cfg.uprightFraming === 1 ? framingStep(was?.one?.framing ?? null, change, shown, freed, r.halfStart, dtMs, st.cfg.uprightMaxDegS, kappa) : null;
+  const fd = ft === null ? null : framedPose(ft, G, piece);
+  const D = fd === null ? P : poseRolled(fd.pose, line, r.phi);
   if (change && crossed !== undefined) st.asmEdgeHold = carriedHold(r.halfStart, crossed, st.asmDxSign);
-  const d: Vec3 = [P.eye[0] - P.look[0], P.eye[1] - P.look[1], P.eye[2] - P.look[2]];
+  const d: Vec3 = [D.eye[0] - D.look[0], D.eye[1] - D.look[1], D.eye[2] - D.look[2]];
   const l = Math.hypot(d[0], d[1], d[2]);
-  if (l > 1e-12) st.asmCamLast = { dir: [d[0] / l, d[1] / l, d[2] / l], up: P.up };
+  if (l > 1e-12) st.asmCamLast = { dir: [d[0] / l, d[1] / l, d[2] / l], up: D.up };
   const sp = st.asmSpitPic;
   if (sp !== null && r.phi !== 0) {
     const u2 = rotateAbout(sp.up, line.dir, r.phi);
@@ -267,6 +275,6 @@ function carriedFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Ve
   }
   const turnTw = fresh ? tw : (was?.turnTw ?? 0);
   const g = { gap: r.phi, speed: 0 };
-  st.asmRollShadow = { ghost: G, dir: line.dir, piece, held: g, free: g, turn: zm, turnTw, stays: zm !== null, tw, gizmoFree, spit: spitZone(st) !== null, freshTurn: fresh, picture: P, a2: placeError(st, G, P, piece, line), drawn: true, freed, one: { state: r.state, w: r.w, phi: r.phi, kappa, halfStart: r.halfStart, holding: r.holding, change } };
-  return P;
+  st.asmRollShadow = { ghost: G, dir: line.dir, piece, held: g, free: g, turn: zm, turnTw, stays: zm !== null, tw, gizmoFree, spit: spitZone(st) !== null, freshTurn: fresh, picture: D, a2: placeError(st, G, D, piece, line), drawn: true, freed, one: { state: r.state, w: r.w, phi: r.phi, kappa, halfStart: r.halfStart, holding: r.holding, change, framing: fd === null ? null : fd.turn } };
+  return D;
 }

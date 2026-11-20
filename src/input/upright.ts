@@ -20,8 +20,8 @@
  * ⛔ ENGINE-FREE. Prior art, old and free: the world-up look-at camera (gluLookAt, early 1990s), a smoothstep; no patent, no orientation widget.
  */
 import { cross, dot, type Vec3 } from "../core/vec";
-import { holdAtCrossing, rotateAbout, type CamPose, type EdgeHold } from "./orbit_tilt";
-import { fingerOnLogic, poseAxes, turnIsFree, twistAbout, type FramedLine } from "./roll_follow";
+import { holdAtCrossing, poseAboutPiece, poseFramingTwo, rotateAbout, type CamPose, type EdgeHold, type FramingKeep } from "./orbit_tilt";
+import { fingerOnLogic, poseAxes, poseRolled, turnIsFree, twistAbout, type FramedLine } from "./roll_follow";
 
 /** ⭐ within this of the vertical (deg) the picture is the logic's pose (`w` 0) — the slider `uprightFromDeg` */
 export const UPRIGHT_FROM_DEG = 15; // ⭐ (2026-11-19, the owner's trial: "Changing both together is much better") — 5° before
@@ -400,4 +400,76 @@ export function carriedHold(halfStart: number, crossed: 1 | -1 | 0, dxSign: numb
   if (!(halfStart > 0)) return null;
   if (crossed !== 0) return holdAtCrossing(crossed);
   return dxSign > 0 ? { sign: 1, back: 0, dir: [1, 0] } : dxSign < 0 ? { sign: 1, back: 0, dir: [-1, 0] } : null;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` §8 — packet J, the owner on the live build: *"in polar orbit in scene 1 and in scene 0bis, when I leave or enter
+ * a level face or a triangle face close to the level face, there are lots of jumps of camera and piece"*) THE FRAMING CARRIED FROM THE POSE SHOWN. Far out
+ * a logic change is applied at once (one pose's OP2) and the carry takes back only its roll about the framed line — a turn about the line through the
+ * piece and the look point keeps BOTH where the NEW pose frames them: the logic's camera offsets turn with its heading, so the piece leapt on the glass
+ * in one frame (median 103 px, up to 400; the snap the zone's turn cured on 2026-11-14, back since OP2 skipped that turn). Now the drawn pose blends
+ * from the pose shown (turned back by the carried φ) to the logic's, by the 2026-11-14 rule (`poseFramingTwo`: the piece and the aim each carried
+ * straight on the glass; degenerate, about the piece alone), over the change's own time at the half turn's pace — display only: φ, the half turn, the
+ * holds as they were.
+ */
+export interface FramingTurn {
+  /** the pose the blend starts from, with the piece's place then (`piece`) */
+  readonly from: CamPose;
+  /** the time done and the turn's whole (ms) */
+  readonly doneMs: number;
+  readonly wholeMs: number;
+  /** the two-target turn's angles carried (`poseFramingTwo`) */
+  readonly keep: FramingKeep | null;
+  /** 0 its first frame; 1 the two framed; 2 about the piece alone — chosen at its first frame and kept (`zoneMixPose`'s rule) */
+  readonly rule: 0 | 1 | 2;
+  /** about the piece alone: the turn's axis kept frame to frame */
+  readonly axis: Vec3 | null;
+}
+
+/**
+ * ⭐ ONE FRAME OF THE FRAMING TURN'S CLOCK: a change applied at once (`change`, `shown` the pose shown) opens it — its whole the change's angle (`turnRad`) or
+ * the half turn's (`halfRad`), the larger, at `maxDegS`; a change while one runs opens it again from the pose shown; else it runs on by `dtMs` and ends at its
+ * whole. None close in (`kappa` < 1: the square camera owns the pose), at a pace of 0 (at once), or for a turn shorter than the frame. Pure.
+ */
+export function framingStep(f: FramingTurn | null, change: boolean, shown: CamPose | null, turnRad: number, halfRad: number, dtMs: number, maxDegS: number, kappa: number): FramingTurn | null {
+  if (!(kappa >= 1) || !(maxDegS > 0)) return null;
+  const dt = Number.isFinite(dtMs) ? Math.max(0, dtMs) : 0;
+  if (change && shown !== null) {
+    const ang = Math.max(Number.isFinite(turnRad) ? Math.abs(turnRad) : 0, Number.isFinite(halfRad) ? Math.abs(halfRad) : 0);
+    const wholeMs = (ang / ((maxDegS * Math.PI) / 180)) * 1000;
+    return wholeMs > dt ? { from: shown, doneMs: dt, wholeMs, keep: null, rule: 0, axis: null } : null;
+  }
+  if (f === null) return null;
+  const doneMs = f.doneMs + dt;
+  return doneMs >= f.wholeMs ? null : { ...f, doneMs };
+}
+
+/** ⭐ the framing turn's share shown: the smoothstep of its time done (0: the pose shown; 1: the logic's) */
+export function framingShare(f: FramingTurn): number {
+  return smooth01(f.wholeMs > 0 ? f.doneMs / f.wholeMs : 1);
+}
+
+/**
+ * ⭐ THE POSE DRAWN IN A FRAMING TURN, toward `to` (the logic's pose) at its share: the piece (`piece`) and the aim each carried straight on the glass
+ * (`poseFramingTwo`); degenerate — about the piece alone (`poseAboutPiece`); the rule chosen at the turn's first frame and kept. Returns the turn with its
+ * carried angles. Pure.
+ */
+export function framedPose(f: FramingTurn, to: CamPose, piece: Vec3): { readonly pose: CamPose; readonly turn: FramingTurn } {
+  const k = framingShare(f);
+  const t = f.rule === 2 ? null : poseFramingTwo(f.from, to, piece, k, f.keep);
+  if (t !== null) return { pose: t.pose, turn: { ...f, keep: t.keep, rule: 1 } };
+  const r = poseAboutPiece(f.from, to, piece, k, f.axis);
+  return { pose: r.pose, turn: { ...f, rule: f.rule === 0 ? 2 : f.rule, axis: r.axis ?? f.axis } };
+}
+
+/**
+ * ⭐ THE POSE A FRAMING TURN STARTS FROM: the picture drawn last frame (`picture`, the piece where it was then, `piecePrev`) turned back by this frame's φ
+ * about the framed line (`line`) — the WHOLE of it, the piece's place then included: the turn is drawn rolled by φ again, so its first frame is that picture
+ * with the piece where it was on the glass. ⛔ (first built, `f33ef5c`) the pose turned and its piece not: at φ ±180° with a moving piece the blend started
+ * the piece from its mirror across the line (589 px in one frame at his pace — the vectors had a still piece). Pure.
+ */
+export function framingFrom(picture: CamPose, piecePrev: Vec3, line: FramedLine, phi: number): CamPose {
+  const a = line.at;
+  const v = rotateAbout([piecePrev[0] - a[0], piecePrev[1] - a[1], piecePrev[2] - a[2]], line.dir, -phi);
+  return { ...poseRolled(picture, line, -phi), piece: [a[0] + v[0], a[1] + v[1], a[2] + v[2]] };
 }
