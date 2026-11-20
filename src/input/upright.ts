@@ -20,7 +20,7 @@
  * ⛔ ENGINE-FREE. Prior art, old and free: the world-up look-at camera (gluLookAt, early 1990s), a smoothstep; no patent, no orientation widget.
  */
 import { cross, dot, type Vec3 } from "../core/vec";
-import type { CamPose, EdgeHold } from "./orbit_tilt";
+import { holdAtCrossing, rotateAbout, type CamPose, type EdgeHold } from "./orbit_tilt";
 import { fingerOnLogic, poseAxes, turnIsFree, twistAbout, type FramedLine } from "./roll_follow";
 
 /** ⭐ within this of the vertical (deg) the picture is the logic's pose (`w` 0) — the slider `uprightFromDeg` */
@@ -176,7 +176,7 @@ export function changeSeen(c: ChangeIn): ChangeSeen {
  * ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §12 RB3 — the lead's) IS THE LAW'S OWN HALF TURN UNDER WAY? A turn the player sees, read by the ONE reader of "a turn
  * the player sees is under way" (T5's, `tiltClampStep`): the gizmo held while it closes. No state (law U off): no.
  */
-export function lawHalfTurn(s: UprightState | undefined): boolean {
+export function lawHalfTurn(s: { readonly half?: boolean } | undefined): boolean {
   return s !== undefined && s.half === true;
 }
 
@@ -231,4 +231,168 @@ function uprightPaced(s: UprightState, pose: CamPose, line: FramedLine, dtMs: nu
   const half = (big || s.half === true) && phi !== target;
   const state: UprightState = { au: null, phi, ap: alpha, wp: w, gp: pose, ...(half ? { half: true } : {}) };
   return { state, phi, w, nu, alpha, closed: phi === target, halfStart: big && s.half !== true ? Math.abs(e) : 0 };
+}
+
+/* ⭐⭐⭐ (2026-11-20, `Claude/40_RENDER_SCENE/spec/UPRIGHT_CARRIED_UP.md` — packet E, `uprightCarried` 1) ONE CARRIED UP: the picture's up turned only by what the
+ * finger ASKS. The logic computes its pose `G` (its heading from the eye's direction); the picture is `G` turned by `φ` about the framed line, and `φ` takes
+ * back every twist of `G` the finger did not ask (C2) — so near the vertical the logic's heading rules no longer roll the picture (packet A: 172° a second
+ * on his play, `1.0.147-` 25). Three things alone move `φ` toward its target: a dx (near the vertical), time (far out), the ONE half turn at the logic's
+ * crossing. ⛔ One pose (`1.0.148d-`): the target followed exactly — near the vertical the target IS the logic's pose, computed from the eye's direction:
+ * every turn of its heading rules shown. ------------------------------------------------------------------------------------------------------------ */
+
+/** ⭐ (C3) the correction toward upright fades out between these angles of the logic's pose from upright (deg): never a half-turn blend */
+export const ONE_FADE_FROM_DEG = 90;
+export const ONE_FADE_TO_DEG = 150;
+/** ⭐ (C1) the turn asked: the turntable's within this of the vertical (deg) … */
+export const ASKED_TURNTABLE_DEG = 15;
+/** ⭐ … the upright camera's from this one (deg), a smoothstep of the view between */
+export const ASKED_UPRIGHT_DEG = 30;
+/** ⭐ (C5) a half turn within this of 180° (deg) takes the way the picture rolled last … */
+export const CARRIED_SENSE_DEG = 30;
+/** ⭐ … if it rolled this much or more (deg) over the last `CARRIED_ROLL_MEMORY_MS` */
+export const CARRIED_SENSE_MIN_DEG = 2;
+export const CARRIED_ROLL_MEMORY_MS = 100;
+/** ⭐ (C4) the alignment a dx pays near the vertical: degrees of the picture's turn per mm of the finger's dx — the slider `uprightAlignDegPerMm` */
+export const UPRIGHT_ALIGN_DEG_PER_MM = 3;
+
+/** ⭐ The carried up's state: `phi` the picture's turn off the logic's pose about the framed line (rad); `gp` the logic's pose last frame; `g` what is left of
+ *  a half turn (rad, signed, closing toward 0); `hs` a half turn under way; `half` while it holds the gizmo (T5's one reader); `rr` the picture's own roll
+ *  over the last ~100 ms (rad: the half turn's sense) */
+export interface CarriedState {
+  readonly phi: number;
+  readonly gp?: CamPose;
+  readonly g?: number;
+  readonly hs?: boolean;
+  readonly half?: boolean;
+  readonly rr?: number;
+}
+export const CARRIED_REST: CarriedState = Object.freeze({ phi: 0 });
+
+export interface CarriedKnobs {
+  readonly fromDeg: number;
+  readonly fullDeg: number;
+  /** the half turn's pace and far out the alignment's, deg a second (0 or less: at once) */
+  readonly maxDegS: number;
+  /** the alignment a dx pays (deg per mm of the finger's dx) */
+  readonly alignDegPerMm: number;
+  /** the gizmo held for the whole half turn (`uprightHalfHold` 1); false: never held by it */
+  readonly halfHold: boolean;
+}
+
+export interface CarriedFrame {
+  readonly state: CarriedState;
+  readonly phi: number;
+  readonly w: number;
+  readonly nu: number;
+  readonly alpha: number | null;
+  /** this frame a half turn OPENED: its size (rad); 0: none */
+  readonly halfStart: number;
+  /** a half turn under way after this frame, and `halfHold`: the gizmo held */
+  readonly holding: boolean;
+}
+
+const smooth01 = (x: number): number => {
+  const t = Math.min(1, Math.max(0, x));
+  return t * t * (3 - 2 * t);
+};
+const turnedPose = (p: CamPose, axis: Vec3, th: number): CamPose => ({ eye: rotateAbout(p.eye, axis, th), look: rotateAbout(p.look, axis, th), up: rotateAbout(p.up, axis, th) });
+const uprightOf = (p: CamPose): CamPose => ({ eye: p.eye, look: p.look, up: Y });
+
+/**
+ * ⭐⭐⭐ (C1) THE TURN THE FINGER ASKED this frame, as a twist about `dir` (rad, `twistAbout`'s sense): the twist of the camera an honest orbit makes for the eye's
+ * motion from `prev` to `pose` — away from the vertical the UPRIGHT camera's (an upright orbit's own roll is asked), near it the TURNTABLE's: the drawn
+ * orbit's yaw step `dYaw` (rad) about its pole axis `pole` (unit; its sign read off the eye's motion), blended by a smoothstep of the view between
+ * `ASKED_TURNTABLE_DEG` and `ASKED_UPRIGHT_DEG`. A weight on an INCREMENT: it never steps the picture. A view too near the vertical for an upright camera:
+ * the turntable's alone. Pure.
+ */
+export function askedTwist(prev: CamPose, pose: CamPose, dir: Vec3, pole: Vec3, dYaw: number): number {
+  const nu = (viewFromVertical(pose) * 180) / Math.PI;
+  const nu0 = (viewFromVertical(prev) * 180) / Math.PI;
+  const s = smooth01((Math.min(nu, nu0) - ASKED_TURNTABLE_DEG) / (ASKED_UPRIGHT_DEG - ASKED_TURNTABLE_DEG));
+  let tt = 0;
+  if (s < 1 && Number.isFinite(dYaw) && dYaw !== 0) {
+    const [f0] = poseAxes(prev);
+    const [f1] = poseAxes(pose);
+    const fp = rotateAbout(f0, pole, dYaw);
+    const fm = rotateAbout(f0, pole, -dYaw);
+    const th = dot(fp, f1) >= dot(fm, f1) ? dYaw : -dYaw;
+    tt = twistAbout(prev, turnedPose(prev, pole, th), dir);
+  }
+  const tu = s > 0 && Math.min(nu, nu0) > 0.5 ? twistAbout(uprightOf(prev), uprightOf(pose), dir) : 0;
+  const t = (1 - s) * tt + s * tu;
+  return Number.isFinite(t) ? t : 0;
+}
+
+/**
+ * ⭐⭐⭐ ONE FRAME OF THE CARRIED UP (`UPRIGHT_CARRIED_UP.md` §4.2): the logic's pose `pose` about `line`; `kappa` the square camera's complement (1 far out, 0 close
+ * in); `change` a logic change applied at once this frame (the moment); `asked` the turn the finger asked (C1); `dxMm` the finger's dx this frame (mm).
+ * * C2 THE CARRY: `φc = φ − (τ − asked)` — the logic's twist the finger did not ask taken back (a change's jump whole: `asked` ignored there).
+ * * C3 THE TARGET `w · h · α` (one pose's OP3): the logic's pose inside the band, upright beyond, never a half-turn blend.
+ * * C4 THE ALIGNMENT, PAID: toward the target by at most `alignDegPerMm · dxMm`, and beyond the band (`w` 1) by `maxDegS` a second too — never by itself near
+ *   the vertical: a dy never rolls the picture there. Close in (`kappa` < 1): the target itself (the square camera owns the roll; `kappa` 0: the logic's pose).
+ * * C5 THE HALF TURN: at a change, `|φc − target| ≥ 90°` opens it — within `CARRIED_SENSE_DEG` of 180° the way the picture rolled last (`rr`), else the short
+ *   way; it closes in time at `maxDegS`, whatever the view does; `holding` while under way (`halfHold`).
+ */
+export function upCarried(s: CarriedState, pose: CamPose, line: FramedLine, dtMs: number, k: CarriedKnobs, kappa = 1, change = false, asked = 0, dxMm = 0): CarriedFrame {
+  const nu = viewFromVertical(pose);
+  const kap = Math.min(1, Math.max(0, Number.isFinite(kappa) ? kappa : 0));
+  const w = uprightWeight(nu, k.fromDeg, k.fullDeg) * kap;
+  const alpha = w > 0 ? uprightAngle(pose, line) : null;
+  let target = 0;
+  if (w > 0 && alpha !== null) {
+    const x = Math.min(1, Math.max(0, ((Math.abs(alpha) * 180) / Math.PI - ONE_FADE_FROM_DEG) / (ONE_FADE_TO_DEG - ONE_FADE_FROM_DEG)));
+    target = w * (1 - x * x * (3 - 2 * x)) * alpha;
+  } else if (w > 0) target = wrapPi(s.phi);
+  const tau0 = s.gp !== undefined ? twistAbout(s.gp, pose, line.dir) : 0;
+  const tau = Number.isFinite(tau0) ? tau0 : 0;
+  const cap = !(k.maxDegS > 0) ? Infinity : dtMs > 0 ? ((k.maxDegS * Math.PI) / 180) * (dtMs / 1000) : 0;
+  let g = s.g ?? 0;
+  let hs = s.hs === true;
+  let halfStart = 0;
+  let phi: number;
+  if (kap < 1) {
+    phi = target;
+    g = 0;
+    hs = false;
+  } else {
+    let pc = wrapPi(s.phi - (change ? tau : tau - (Number.isFinite(asked) ? asked : 0)));
+    if (change) {
+      let e = wrapPi(pc - target);
+      if (Math.abs(e) >= Math.PI / 2) {
+        const rr = s.rr ?? 0;
+        const pref = Math.abs(rr) >= (CARRIED_SENSE_MIN_DEG * Math.PI) / 180 ? -Math.sign(rr) : 0;
+        if (pref !== 0 && Math.sign(e) !== pref && Math.abs(e) >= Math.PI - (CARRIED_SENSE_DEG * Math.PI) / 180) e += 2 * Math.PI * pref;
+        g = e;
+        hs = true;
+        halfStart = Math.abs(e);
+      }
+    }
+    if (hs) {
+      const step = Math.min(Math.abs(g), cap);
+      pc = wrapPi(pc - Math.sign(g) * step);
+      g = Math.sign(g) * (Math.abs(g) - step);
+      if (g === 0) hs = false;
+    } else {
+      const beta = (Math.max(0, k.alignDegPerMm) * Math.max(0, Number.isFinite(dxMm) ? dxMm : 0) * Math.PI) / 180 + (w >= 1 ? cap : 0);
+      const e = wrapPi(target - pc);
+      pc = Math.abs(e) <= beta ? target : wrapPi(pc + Math.sign(e) * beta);
+    }
+    phi = pc;
+  }
+  const rollNow = wrapPi(tau + wrapPi(phi - s.phi));
+  const rr = (s.rr ?? 0) * Math.exp(-Math.max(0, dtMs) / CARRIED_ROLL_MEMORY_MS) + rollNow;
+  const holding = hs && k.halfHold;
+  const state: CarriedState = { phi, gp: pose, g, rr, ...(hs ? { hs: true } : {}), ...(holding ? { half: true } : {}) };
+  return { state, phi, w, nu, alpha, halfStart, holding };
+}
+
+/**
+ * ⭐⭐⭐ (C6, E-D4 — the owner: *"the dx shall be hold only if the crossing by dx triggers a camera realignment"*) THE PUSH HELD AT A LOGIC CHANGE, from the same
+ * answer as the half turn: none opened (`halfStart` 0) — nothing held (a hold still on ends, OP8); the logic's dy sign that crossed (`crossed`) — OP8's dy
+ * hold exactly (`holdAtCrossing`); none, and a dx pushing (`dxSign`) — THE DX HELD: its way on the glass he sees (`dir` `[±1, 0]`), released as the dy's.
+ */
+export function carriedHold(halfStart: number, crossed: 1 | -1 | 0, dxSign: number): EdgeHold | null {
+  if (!(halfStart > 0)) return null;
+  if (crossed !== 0) return holdAtCrossing(crossed);
+  return dxSign > 0 ? { sign: 1, back: 0, dir: [1, 0] } : dxSign < 0 ? { sign: 1, back: 0, dir: [-1, 0] } : null;
 }

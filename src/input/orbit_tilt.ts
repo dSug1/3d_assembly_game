@@ -145,6 +145,15 @@ export function dySignPushing(prev: number, dx: number, dy: number): number {
   return prev;
 }
 /**
+ * ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` C6 — packet E) THE DX THAT PUSHES NOW, on the glass he sees (the raw finger): a step with a dx — its sign; a step
+ * with a dy and no dx — none; a still step — unchanged. The gesture's end sets none. Read only where a crossing made by a dx opens a half turn (`carriedHold`).
+ */
+export function dxSignPushing(prev: number, dx: number, dy: number): number {
+  if (dx !== 0) return Math.sign(dx);
+  if (dy !== 0) return 0;
+  return prev;
+}
+/**
  * ⭐⭐⭐ (2026-11-18, `DY_HOLD_REVERSAL.md` §5.3) THE HOLD AFTER A HALF-TURN EVENT (`crossTurn`): the event's own (`hold`: the sign that crossed, 0: none) —
  * it REPLACES any hold still on: the hold guards the way back over the LAST edge crossed. ⛔ A hold of 0 left the older hold on: round a tip (a crossing
  * made by the finger's dx) the zenith's hold went on blocking the dy on the tip's triangle.
