@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import type { Vec3 } from "../src/core/vec";
 import { dxSignPushing, rotateAbout, type CamPose } from "../src/input/orbit_tilt";
 import { framedLine, poseRolled, twistAbout } from "../src/input/roll_follow";
-import { askedTwist, CARRIED_REST, carriedHold, upCarried, type CarriedKnobs, type CarriedState } from "../src/input/upright";
+import { askedTwist, CARRIED_REST, carriedHold, dxPays, leaveShare, upCarried, uprightAngle, viewFromVertical, type CarriedKnobs, type CarriedState } from "../src/input/upright";
 
 const DEG = Math.PI / 180;
 const DT = 1000 / 60;
@@ -36,9 +36,9 @@ const yawed = (g: CamPose, deg: number): CamPose => ({
 });
 const K: CarriedKnobs = { fromDeg: 15, fullDeg: 50, maxDegS: 720, alignDegPerMm: 3, halfHold: true };
 /** one frame: the law, and the picture drawn */
-const one = (s: CarriedState, g: CamPose, opt: { kappa?: number; change?: boolean; asked?: number; dxMm?: number; k?: CarriedKnobs } = {}) => {
+const one = (s: CarriedState, g: CamPose, opt: { kappa?: number; change?: boolean; asked?: number; dxMm?: number; dxYaw?: number; moved?: boolean; k?: CarriedKnobs } = {}) => {
   const line = framedLine(g, piece);
-  const r = upCarried(s, g, line, DT, opt.k ?? K, opt.kappa ?? 1, opt.change ?? false, opt.asked ?? 0, opt.dxMm ?? 0);
+  const r = upCarried(s, g, line, DT, opt.k ?? K, opt.kappa ?? 1, opt.change ?? false, opt.asked ?? 0, opt.dxMm ?? 0, opt.dxYaw ?? 0, opt.moved ?? false);
   return { r, p: poseRolled(g, line, r.phi), line };
 };
 /** the picture's own turn about the framed line from one frame to the next (deg) */
@@ -172,5 +172,91 @@ describe("the carried up — C6: the push held from the same answer", () => {
     expect(dxSignPushing(1, -2, 4)).toBe(-1);
     expect(dxSignPushing(1, 0, 2)).toBe(0);
     expect(dxSignPushing(-1, 0, 0)).toBe(-1);
+  });
+});
+
+// ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` §9 — packet K) THE PAYERS (`uprightPayers` 1): K1 a dx by k × its OWN yaw, K2 the dy leaving the pole toward upright in
+// proportion to the view's outward travel while the finger moves, K3 nothing by time; the whole at most the one pace. The vectors above run with the payers
+// off (`K` has none): the first build's C4, `461eeb2`. Mutants: the kit's `fo3/rebuild_e/mut_k.json`.
+const wrapPi = (a: number): number => Math.atan2(Math.sin(a), Math.cos(a));
+const KP: CarriedKnobs = { ...K, payers: true, alignPerYaw: 0.5 };
+const K0: CarriedKnobs = { ...KP, maxDegS: 0 };
+describe("the carried up — packet K: the alignment's payers", () => {
+  it("K1 what a dx pays: k × its own yaw, at most the one pace (12° a frame at 720° a second)", () => {
+    const cap = 12 * DEG;
+    expect(dxPays(20 * DEG, 0.5, cap) / DEG).toBeCloseTo(10, 9);
+    expect(dxPays(-20 * DEG, 0.5, cap) / DEG).toBeCloseTo(10, 9);
+    expect(dxPays(60 * DEG, 0.5, cap) / DEG).toBeCloseTo(12, 9);
+  });
+  it("K1 near the pole: a DY swinging the orbit's yaw pays nothing; the finger's own dx of 20° of yaw pays 10° toward the target; 60°: the pace, 12°", () => {
+    const g0 = poseAt(87, 30, 0);
+    const a = one({ phi: 0.6 }, g0, { k: KP });
+    const g1 = yawed(g0, 20);
+    const asked = askedTwist(g0, g1, framedLine(g1, piece).dir, Y, 20 * DEG);
+    const pc = wrapPi(0.6 - (twistAbout(g0, g1, framedLine(g1, piece).dir) - asked));
+    const dy = one(a.r.state, g1, { k: KP, asked, moved: true });
+    expect(dy.r.phi).toBeCloseTo(pc, 9);
+    const dx = one(a.r.state, g1, { k: KP, asked, dxYaw: 20 * DEG, moved: true });
+    expect((pc - dx.r.phi) / DEG).toBeCloseTo(10, 6);
+    const fast = one(a.r.state, g1, { k: KP, asked, dxYaw: 60 * DEG, moved: true });
+    expect((pc - fast.r.phi) / DEG).toBeCloseTo(12, 6);
+  });
+  it("K3 far out a still finger pays nothing (never by time), a view drifting out with no finger neither", () => {
+    const g = poseAt(10, 30, 30);
+    const a = one(CARRIED_REST, g, { k: KP });
+    const b = one(a.r.state, g, { k: KP });
+    expect(b.r.phi).toBe(0);
+    const g2 = poseAt(8, 30, 30);
+    const c = one(b.r.state, g2, { k: KP });
+    expect(c.r.phi).toBeCloseTo(wrapPi(b.r.phi - twistAbout(g, g2, framedLine(g2, piece).dir)), 9);
+  });
+  it("K2 the dy leaving the pole pays TOWARD UPRIGHT its share of the way across the band (30° → 40° of 15 – 50°: a half), at most the pace; still or back toward the pole nothing", () => {
+    const g0 = poseAt(60, 30, 40);
+    const g1 = poseAt(50, 30, 40);
+    const a = one(CARRIED_REST, g0, { k: K0 });
+    const l1 = framedLine(g1, piece);
+    const pc = wrapPi(a.r.phi - twistAbout(g0, g1, l1.dir));
+    const al = uprightAngle(g1, l1)!;
+    expect(leaveShare(40 * DEG, 30 * DEG, 15, 50, true)).toBeCloseTo(0.5, 9);
+    const f = leaveShare(viewFromVertical(g1), viewFromVertical(g0), 15, 50, true);
+    expect(f).toBeGreaterThan(0.45);
+    const b = one(a.r.state, g1, { k: K0, moved: true });
+    expect(b.r.phi).toBeCloseTo(pc + f * wrapPi(al - pc), 6);
+    const still = one(a.r.state, g1, { k: K0 });
+    expect(still.r.phi).toBeCloseTo(pc, 9);
+    expect(Math.abs(f * wrapPi(al - pc)) / DEG).toBeGreaterThan(15);
+    const paced = one(a.r.state, g1, { k: KP, moved: true });
+    expect(Math.abs(paced.r.phi - pc) / DEG).toBeCloseTo(12, 6);
+    const c = one(b.r.state, g0, { k: K0, moved: true });
+    expect(c.r.phi).toBeCloseTo(wrapPi(b.r.phi - twistAbout(g1, g0, framedLine(g0, piece).dir)), 9);
+  });
+  it("K2 beyond the band: a rest paid in proportion to the outward travel (70° → 80°: half the way left to level); inward nothing", () => {
+    expect(leaveShare(80 * DEG, 70 * DEG, 15, 50, true)).toBeCloseTo(0.5, 9);
+    expect(leaveShare(75 * DEG, 80 * DEG, 15, 50, true)).toBe(0);
+    expect(leaveShare(70.1 * DEG, 70 * DEG, 15, 50, true)).toBeLessThan(0.01);
+    expect(leaveShare(12 * DEG, 5 * DEG, 15, 50, true)).toBe(0);
+    const g0 = poseAt(20, 30, 50);
+    const g1 = poseAt(10, 30, 50);
+    const a = one({ phi: 0 }, g0, { k: K0 });
+    const l1 = framedLine(g1, piece);
+    const pc = wrapPi(a.r.phi - twistAbout(g0, g1, l1.dir));
+    const f = leaveShare(viewFromVertical(g1), viewFromVertical(g0), 15, 50, true);
+    expect(f).toBeGreaterThan(0.45);
+    const b = one(a.r.state, g1, { k: K0, moved: true });
+    expect(b.r.phi).toBeCloseTo(pc + f * wrapPi(uprightAngle(g1, l1)! - pc), 6);
+  });
+  it("K2 near 180° the way the picture rolled last (no flip-flop): 170° short way +, the picture rolling − : it pays −", () => {
+    const g0 = poseAt(60, 30, 0);
+    const g1 = poseAt(50, 30, 0);
+    const l1 = framedLine(g1, piece);
+    const tw = twistAbout(g0, g1, l1.dir);
+    const al = uprightAngle(g1, l1)!;
+    const a = one({ phi: wrapPi(al - 170 * DEG + tw), rr: -0.1 }, g0, { k: K0 });
+    const pc = wrapPi(a.r.phi - tw);
+    expect(wrapPi(al - pc) / DEG).toBeCloseTo(170, 6);
+    const f = leaveShare(viewFromVertical(g1), viewFromVertical(g0), 15, 50, true);
+    const b = one(a.r.state, g1, { k: K0, moved: true });
+    expect(wrapPi(b.r.phi - pc) / DEG).toBeCloseTo(-f * 190, 4);
+    expect(wrapPi(b.r.phi - pc)).toBeLessThan(-1.2);
   });
 });

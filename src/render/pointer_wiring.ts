@@ -353,6 +353,7 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     if (asmOn && !shiftApproach) {
       st.asmDxSign = dxSignPushing(st.asmDxSign, raw.dx, raw.fdy);
       st.asmFingerDxMm += Math.abs(held.dx) / mmToPx(1);
+      if (raw.dx !== 0 || raw.fdy !== 0) st.asmFingerMoved = true; // ⭐⭐⭐ (packet K, K2) the finger moved: the way out of the pole may be paid
     }
     // ⭐⭐⭐ (2026-11-14) …and released by the finger the other way past `edgeHoldMm` (`edgeHoldFinger` — the owner's hysteresis, a finger's, at any distance),
     // read along the held direction on the raw finger (`edgeHoldAlong`; law U off: the dy itself)

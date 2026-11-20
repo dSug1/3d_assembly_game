@@ -28,7 +28,7 @@ describe("the carried up's wiring — read in the source", () => {
   });
   it("ONE writer of the up: `upCarried` once, the picture rolled from its φ once", () => {
     expect(count(cf, "upCarried(")).toBe(1);
-    expect(cf).toContain("const r = upCarried(was?.one?.state ?? CARRIED_REST, G, line, dtMs, knobs, kappa, change, asked, dxMm);");
+    expect(cf).toContain("const r = upCarried(was?.one?.state ?? CARRIED_REST, G, line, dtMs, knobs, kappa, change, asked, dxMm, dxYaw, moved);");
     expect(count(cf, "poseRolled(")).toBe(2); // ⭐ (packet J) + the framed pose rolled by φ (the pose shown turned back by the same φ in `framingFrom`)
     expect(cf).toContain("const P = poseRolled(G, line, r.phi);");
   });
@@ -90,5 +90,30 @@ describe("the framing carried from the pose shown — read in the source (packet
     expect(count(cf, "upCarried(")).toBe(1);
     expect(cf.indexOf("const r = upCarried(")).toBeLessThan(cf.indexOf("framingStep("));
     expect(cf).toContain("if (change && crossed !== undefined) st.asmEdgeHold = carriedHold(r.halfStart, crossed, st.asmDxSign);");
+  });
+});
+
+// ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` §9 — packet K) THE PAYERS' WIRING, read in the source: behind `uprightPayers` (1 by default); 0 = `461eeb2` frame for
+// frame — the knob absent / false sends `upCarried` down the first build's C4, kept verbatim (its line pinned here), and the new inputs are only read there.
+describe("the payers' wiring — read in the source", () => {
+  const cf = body(rs, "function carriedFrame(");
+  const up = raw("src/input/upright.ts");
+  it("the switch: `uprightPayers` 1 by default; 0 = the first build's C4 verbatim (the dx's mm × 3° and time beyond the band)", () => {
+    expect(DEFAULT_CONFIG.uprightPayers).toBe(1);
+    expect(DEFAULT_CONFIG.uprightAlignPerYaw).toBe(0.5);
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, uprightPayers: 2 })).toThrow();
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, uprightAlignPerYaw: 1.05 })).toThrow();
+    expect(cf).toContain("payers: st.cfg.uprightPayers === 1, alignPerYaw: st.cfg.uprightAlignPerYaw };");
+    const k = up.indexOf("} else if (k.payers === true) {");
+    expect(k).toBeGreaterThan(0);
+    expect(up.indexOf("const beta = (Math.max(0, k.alignDegPerMm) * Math.max(0, Number.isFinite(dxMm) ? dxMm : 0) * Math.PI) / 180 + (w >= 1 ? cap : 0);", k)).toBeGreaterThan(k);
+    expect(up).toContain("const state: CarriedState = { phi, gp: pose, g, rr, np: nu,");
+  });
+  it("K1's budget: the yaw the finger's OWN dx asked (its mm × the orbit's yaw gain), never the orbit's yaw step; K2's finger read and cleared once", () => {
+    expect(cf).toContain("const dxYaw = (dxMm * orbitDegPerMm(st.cfg, st.orbit.elevation).yawDegPerMm * Math.PI) / 180;");
+    expect(cf).toContain("const moved = st.asmFingerMoved;\n  st.asmFingerMoved = false;");
+    expect(count(rs, "st.asmFingerMoved = false;")).toBe(1);
+    expect(pw).toContain("if (raw.dx !== 0 || raw.fdy !== 0) st.asmFingerMoved = true;");
+    expect(count(pw, "asmFingerMoved")).toBe(1);
   });
 });

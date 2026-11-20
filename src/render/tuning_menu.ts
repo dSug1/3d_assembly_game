@@ -208,12 +208,20 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "upright: none within this of the vertical (deg)", "uprightFromDeg", 0, 45, 1),
             tunable(st, "upright: in full from this off the vertical (deg)", "uprightFullDeg", 0, 60, 1),
             tunable(st, "upright: the rest to upright, its pace (deg a second; 0 = at once)", "uprightMaxDegS", 0, 2880, 40), // ⭐ (2026-11-20) step 40 so his 520 is on the grid
-            // ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` — packet E) the carried up
+          ],
+        },
+        // ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` — packet E) the carried up — a folder of its own since packet K (11 sliders in one: over the menu's 9)
+        {
+          title: "CARRIED UP",
+          sliders: [
             tunable(st, "carried up: the picture turns only by what the finger asks (1 on, 0 = law U)", "uprightCarried", 0, 1, 1),
             tunable(st, "carried up: the alignment a dx pays near the vertical (deg a mm)", "uprightAlignDegPerMm", 0, 20, 0.5),
             tunable(st, "carried up: the gizmo still for the whole half turn (1; 0 = never)", "uprightHalfHold", 0, 1, 1),
             // ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` §8 — packet J) the piece no longer leaps at a change: drawn from the pose shown
             tunable(st, "carried up: a change drawn from the pose shown, the piece carried straight on the glass (1; 0 = at once)", "uprightFraming", 0, 1, 1),
+            // ⭐⭐⭐ (2026-11-20, packet K) the alignment's payers
+            tunable(st, "carried up: the payers - a dx by its own yaw, the dy leaving toward upright, never by time (1; 0 = the first build's)", "uprightPayers", 0, 1, 1),
+            tunable(st, "carried up, payers: the share of a dx's own yaw it pays (0 - 1)", "uprightAlignPerYaw", 0, 1, 0.05),
           ],
         },
         {

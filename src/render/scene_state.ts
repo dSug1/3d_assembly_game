@@ -466,6 +466,8 @@ export interface SceneState {
   asmDySign: number;
   /** ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` C4) the finger's orbit dx this frame (mm, summed — the carried up's alignment budget, read and zeroed at the camera's stage) */
   asmFingerDxMm: number;
+  /** ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` §9 — packet K, K2) the orbit finger moved since the camera's last stage (read and cleared there): only a moving finger pays the way out */
+  asmFingerMoved: boolean;
   /** ⭐⭐⭐ (C6) the dx that pushes now, on the glass he sees (`dxSignPushing`; 0: none) — held only when a crossing it made opens a half turn */
   asmDxSign: number;
   /** ⭐⭐⭐ (C1) the drawn orbit's yaw at the last camera frame, with its zone and tilt (a step across another frame is no turn asked); null: none */

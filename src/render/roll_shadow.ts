@@ -19,6 +19,7 @@ import { upSquareToView } from "../input/camera_frame";
 import { rotateAbout, squareTurning, type CamPose } from "../input/orbit_tilt";
 import { followStep, FREE_TURN_MAX_DEG, framedLine, GAP_ZERO, onGlass, poseRolled, poseTurnAngle, ROLL_FOLLOW_MS, turnIsFree, twistAbout, type FollowMode } from "../input/roll_follow";
 import { easeRest } from "../input/seam_turn";
+import { orbitDegPerMm } from "../input/follow_camera"; // (packet K, K1) the orbit's yaw gain
 import { askedTwist, CARRIED_REST, carriedHold, changeSeen, framedPose, framingFrom, framingStep, holdSeen, upCarried, UPRIGHT_REST, uprightStep, uprightWeight, viewFromVertical } from "../input/upright";
 import { changeApply, orbitPoleAxis, spitZone, zoneMixPose } from "./assembly_wiring";
 import type { SceneState } from "./scene_state";
@@ -217,7 +218,7 @@ function carriedFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Ve
   const sq = st.asmSquare;
   const share = sq.n === null || !(sq.q > 0) ? 0 : sq.q;
   const kappa = st.cfg.uprightCloseIn === 1 ? 1 : 1 - share;
-  const knobs = { fromDeg: st.cfg.uprightFromDeg, fullDeg: st.cfg.uprightFullDeg, maxDegS: st.cfg.uprightMaxDegS, alignDegPerMm: st.cfg.uprightAlignDegPerMm, halfHold: st.cfg.uprightHalfHold === 1 };
+  const knobs = { fromDeg: st.cfg.uprightFromDeg, fullDeg: st.cfg.uprightFullDeg, maxDegS: st.cfg.uprightMaxDegS, alignDegPerMm: st.cfg.uprightAlignDegPerMm, halfHold: st.cfg.uprightHalfHold === 1, payers: st.cfg.uprightPayers === 1, alignPerYaw: st.cfg.uprightAlignPerYaw };
   let freed = 0;
   let change = false;
   let crossed: 1 | -1 | 0 | undefined;
@@ -251,7 +252,11 @@ function carriedFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Ve
   // C4 the dx's budget this frame (mm), read once
   const dxMm = st.asmFingerDxMm;
   st.asmFingerDxMm = 0;
-  const r = upCarried(was?.one?.state ?? CARRIED_REST, G, line, dtMs, knobs, kappa, change, asked, dxMm);
+  // ⭐⭐⭐ (packet K) K1 the yaw the finger's OWN dx asked (its mm × the orbit's yaw gain — never the orbit's yaw step), K2 the finger moved; read once
+  const dxYaw = (dxMm * orbitDegPerMm(st.cfg, st.orbit.elevation).yawDegPerMm * Math.PI) / 180;
+  const moved = st.asmFingerMoved;
+  st.asmFingerMoved = false;
+  const r = upCarried(was?.one?.state ?? CARRIED_REST, G, line, dtMs, knobs, kappa, change, asked, dxMm, dxYaw, moved);
   const P = poseRolled(G, line, r.phi);
   // ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` §8 — packet J) THE FRAMING CARRIED FROM THE POSE SHOWN (`uprightFraming` 1; 0: the picture `P` as at `28a29ca`):
   // a change applied at once draws from the picture shown (turned back by φ about the framed line), the piece and the aim carried straight on the glass
