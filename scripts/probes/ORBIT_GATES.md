@@ -543,3 +543,18 @@ node scripts/probes/gravity_read.mjs <rec.json> ...          # JSON=1: one objec
   stays one frame): his desktop at 143 with `LPX` 8.4 (1 200 px a second). The jump reader and the walks through the poles (`Scene_0bis`'s bottom, its
   tip, its ridge, `Scene_1` over its top, `Scene_0`'s bottom) are the kit's `rebuild_e/j/` (`jr.mjs`, `chg.mjs`, `drv_j.sh`). ⚠ `hand_replay.mjs` reads
   the owner's raw sessions where `stretches.json` points (his external drive): copy them inside before a hand batch when that drive is not to be read.
+
+## 14. The camera follower — packet G (`Claude/40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md` §13, 2026-11-20)
+
+* **The recorder**: `turn_rec.mjs`'s `FOLLOW_REC`, inside `SHADOW_REC` as `sh.fx` — the direction asked (`a`), the orbit's / solver's / spring's angles
+  (`y`, `v`, `q`, `b`), the gizmo's true normal (`n`), the look point (`L`), the centre (`C`), the follower's record (`f`: `on`, the followed `d`, the
+  spring's `sd`, `psi`, the detour's `side` / `det`, the pace, the hang), and once the placed parts' box (`pb`, O8). The follower writes a shadow
+  record without `one` / `upright` (the recorders and `his.mjs`, `jr.mjs` read it as any other).
+* **The batches** (the kit's `fo3/follow/drv_g.sh`, one phase after another, each its own server): `PH="hand id hold walks close close0" TAG=<tag>` —
+  his ten stretches at 60 far; the identity (`cameraFollower=0`, two stretches, against the live `rebuild_e/j/runs2/jf_*` by the kit's `same.mjs`); the
+  dy hold's base walks (`hold_walk_batch.sh base`); the pole walks at 143 (`drv_jg.sh`, packet J's targets); two close stretches with the switch 1 and
+  0 (identical from the tilt's latch on). About 28 minutes.
+* **The readers** (the kit): `rd_g.sh hand|walks|hold|id <tag>` (`follow_g.mjs base`: the lag behind the logic, the face away, the frames over 45° /
+  20°, gravity's tilt; `his.mjs`; `jr.mjs`; `hold_tab.mjs` against `1.0.147-`'s `bhw` and the live `jfhw`), `near_v.mjs` (frames with the camera near
+  the vertical), `o8_g.mjs` (the centre, the look point, the placed box). Offline: `follow_g.mjs` = packet F's prototype + the raw target (`tgt=a`),
+  the one ease (`swing=0`), the pace-opened ceiling (`vrel=1,psrc=inst`), the hanging piece (`pose=hang`), the right centre (`lc=box`).

@@ -12,8 +12,17 @@
 import { writeFileSync } from "node:fs";
 
 /** ⭐ (FO3 S0) one frame's shadow, an expression read in the page with `st` in scope (null: no shadow — a build before FO3, or none yet) */
+// ⭐⭐⭐ (2026-11-20, packet G — `CAMERA_FOLLOWS_GIZMO.md` §13, F1) + per frame THE FOLLOWER'S INPUTS (`fx`): the direction asked (`a`, `st.asmAsk`: the calm before
+// its ease at the rig's solved angles), the orbit's own angles (`y`, `v`), the solver's (`q`) and the spring's (`b`), the gizmo's true surface normal (`n`), the
+// look point (`L`, `st.asmLook`) and the assembly's centre (`C`); the follower's own record (`f`, `st.asmFollow.rec` — F2); ONCE (the first row with a
+// shadow) the placed parts' box NOW and their ids (`pb`, O8: where the centre should be)
+export const FOLLOW_REC = `({ a: st.asmAsk, y: st.orbit.yaw, v: st.orbit.elevation, q: st.pieceQ ? [st.pieceQ.yaw, st.pieceQ.v] : null, b: st.boxOrbit ? [st.boxOrbit.yaw, st.boxOrbit.v] : null,
+  n: st.gizmoNormal ?? null, L: st.asmLook, C: st.asm ? st.asm.centre : null, f: st.asmFollow ? st.asmFollow.rec : null,
+  pb: window.__pbDone ? undefined : (window.__pbDone = 1, (() => { let lo = null, hi = null; const ids = []; for (const [m, id] of st.idOf) { if (!(st.cfg.lockPlacedPieces === 1 && st.goalCommit.has(id))) continue; ids.push(id);
+    const b = m.getBoundingInfo().boundingBox, x = b.minimumWorld, z = b.maximumWorld; lo = lo ? [Math.min(lo[0], x.x), Math.min(lo[1], x.y), Math.min(lo[2], x.z)] : [x.x, x.y, x.z]; hi = hi ? [Math.max(hi[0], z.x), Math.max(hi[1], z.y), Math.max(hi[2], z.z)] : [z.x, z.y, z.z]; }
+    return { lo, hi, ids, count: st.goalCommit.count, never: st.goalCommit.never, boot: st.sceneSpec.orbit ? st.sceneSpec.orbit.centreM : null }; })()) })`;
 export const SHADOW_REC = `((s) => s ? { tw: s.tw, gh: s.held.gap, gf: s.free.gap, vf: s.free.speed, fr: s.gizmoFree ? 1 : 0, stays: s.stays ? 1 : 0, ttw: s.turnTw, sp: s.spit ? 1 : 0, nt: s.freshTurn ? 1 : 0, a2: s.a2, uw: s.upright ? s.upright.w : s.one ? s.one.w : null, uf: s.upright ? s.upright.phi : s.one ? s.one.phi : null, oh: s.one ? s.one.halfStart : null, ohd: s.one ? (s.one.holding ? 1 : 0) : null, oc: s.one ? (s.one.change ? 1 : 0) : null, ok: s.one ? s.one.kappa : null, fe: s.freed ?? null,
-  pp: s.piece, gh3: [s.ghost.eye, s.ghost.look, s.ghost.up], pi3: [s.picture.eye, s.picture.look, s.picture.up], fov: st.camera.fov, asp: st.camera.getEngine().getAspectRatio(st.camera) } : null)(st.asmRollShadow)`;
+  pp: s.piece, gh3: [s.ghost.eye, s.ghost.look, s.ghost.up], pi3: [s.picture.eye, s.picture.look, s.picture.up], fov: st.camera.fov, asp: st.camera.getEngine().getAspectRatio(st.camera), fx: ${FOLLOW_REC} } : null)(st.asmRollShadow)`;
 
 export const TURN_REC = () => `(() => { const st = window.__st; window.__turnRec = []; const f0 = window.__frame; const ids = new WeakMap(); let nid = 0;
   window.__frame = () => { if (f0) f0(); try {

@@ -35,7 +35,7 @@ import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, dot, length, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
 import { cameraFrameNow, retargetGizmo, rigNow, ringPlaceNow, syncCentre } from "./camera_rig";
-import { assemblyFrame, assemblyOn, resetOrbitState, restDrawn, shownOffset, spitStep, tiltClampStep } from "./assembly_wiring";
+import { askedDir, assemblyFrame, assemblyOn, resetOrbitState, restDrawn, shownOffset, spitStep, tiltClampStep } from "./assembly_wiring";
 import { lawHalfTurn } from "../input/upright";
 import { gizmoShownAt } from "../input/assembly_orbit";
 import { cameraOffsetAt, easeShare, gizmoBlendTravel, horizontalShare, rigSwingNeed } from "../input/orbit_rig";
@@ -43,6 +43,7 @@ import { governedRingStep } from "../input/turn_governor";
 import { GRAVITY_FRAMES, quadFrames } from "../core/orientation_set";
 import { cameraFrameHeld, upSquareToView } from "../input/camera_frame";
 import { rollPictureFrame } from "./roll_shadow";
+import { followFrame } from "./camera_follow_wiring";
 import { elevationGainScale } from "../input/orbit";
 import { UNTURNED } from "../input/orbit_rig";
 import { contactFrame } from "./contact_wiring";
@@ -1077,7 +1078,13 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     // ⭐⭐⭐ (2026-11-18, `FAST_ORBIT.md` §12.6 S0, §14 S1) THE PICTURE A FOLLOWER OF THE LOGIC (`roll_shadow.ts`): the changes of frame under
     // `freeTurnMaxDeg` free, the roll about the line through the piece and its look point eased (`rollFollowMs`) — `freeTurnMaxDeg` 0: the shadow only and
     // today's `zoneMixPose`
-    const zp = rollPictureFrame(st, pp, camAt, lookAt, camFrame.up, dtSec * 1000);
+    // ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §13 — F1) the direction ASKED this frame (the calm before its ease, at the rig's solved angles): recorded
+    st.asmAsk = askedDir(st, rig.yaw, rig.v);
+    // ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §13 — F2) FAR OUT THE CAMERA FOLLOWER (`cameraFollower` 1): a simple polar orbit (world up) about the look
+    // point following the direction asked, the piece hung along the same direction (`followFrame`); `null` close in or with the switch 0: the picture below
+    const c0 = st.orbitCentreM;
+    const fp = followFrame(st, pp, [c0.x, c0.y, c0.z], camAt, lookAt, camFrame.up, gapFull, off, dtSec * 1000);
+    const zp = fp ?? rollPictureFrame(st, pp, camAt, lookAt, camFrame.up, dtSec * 1000);
     camAt = [zp.eye[0], zp.eye[1], zp.eye[2]];
     lookAt = [zp.look[0], zp.look[1], zp.look[2]];
     upIn = zp.up;
