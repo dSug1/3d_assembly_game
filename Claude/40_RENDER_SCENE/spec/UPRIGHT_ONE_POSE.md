@@ -531,7 +531,7 @@ swing, the rest the logic's heading rules — only their source (S5) or the orbi
 * **D-S7 the gates** — G6 on the picture's roll, G8 as 14.6.
 * Not proposed: the up's target by crossings instead of the band weight (measured equal, 14.4); a pace with no ceiling (a half turn in one frame).
 
-## 15. HIS VERDICT on the device (2026-11-20, verbatim) — ⛔ ONE POSE REJECTED; the rebuild starts again on `1.0.148e-`
+## 15. His first message (2026-11-20, verbatim) — ⚠ CORRECTED: he had NOT turned one pose on; it describes `uprightOnePose` 0 (law U, his defaults) — his verdict on one pose is §16
 
 *"I don't like this implementation: when I leave the pole in scene 1 there is a back and forth of the camera, when I leave the zenith edge of
 scene 0 there is also a back and forth of the camera, there is still a circle movement in addition to the camera roll on the bottom face of
@@ -544,3 +544,27 @@ cause analysis, new logic)"*
   §12) — the back and forth leaving the pole — and was set aside. The jitter reader (A) looks at ARRIVALS, he names LEAVING. The circle on
   `Scene_0bis`'s bottom face was read as gone (B2 2) by a reader that does not count a roll and a yaw together.
 * The live site (`1558b55`) keeps `uprightOnePose` 0: the build he had, with his defaults.
+
+## 16. HIS VERDICT ON ONE POSE (2026-11-20, `uprightOnePose` 1 on the device, verbatim) — the analysis packet A follows (BRIEF_D §10)
+
+*"amended:*
+*- scene 0bis: the dy hold is solved, the entry and exit from slanted to level face is solved, upright the rest of the upright : set it by default
+to 520 ms, however the entry and exit from the triangle to the level face triggers a jitter back and forth of the camera which prolungates deep
+inside the level face (it looks like the camera does not know what to choose between the calm and the pitch), when I travel with dx around the
+corned of the zenith edge there is a lot of camera movements (which are correct) because there is no hold when I cross the zenith edge and go back
+to the triangle and back to the zenith edge from the other side etc. (check if a dx hold would do without adding too much complexity to the user's
+inputs)*
+*- scene 0: when I travel and exit along the zenith edge in polar orbit there is jitter of the camera, tilted-pole orbit is good.*
+*- scene 1: lot of camera movements when I travel along the dy on the level face during polar orbit (it seems like the camera rotates in pitch and
+roll to reach a full vertical square alignment on the pole: maybe we don't need the roll alignment and it can be deferred to when a dx is inputted
+during this travel). Tilted-pole orbit is good.*
+*Analyze and if patches won't fix this properly, start again (initial branch 1.0.148b-, new branch, lessons learned from all previous builds, deep
+root cause analysis, new logic with no patch)"*
+
+* Solved by one pose, his eye: the dy hold; a slanted face's entry and exit to a level face; the tilted-pole orbit (`Scene_0`, `Scene_1`).
+* Done: `uprightMaxDegS` **520° a second** by default (`421c2ce`; the slider is in degrees a second, now in steps of 40). ⚠ It changes the switch at
+  0 as well: an identity run against `74a247e` now needs `&uprightMaxDegS=720`.
+* Open, his words: (1) `Scene_0bis` a tip's triangle ↔ the level face: a back and forth deep into the level face ("the calm or the pitch");
+  (2) `Scene_0bis` dx round the zenith edge's corner: many correct camera moves for want of a hold — a dx hold, if simple; (3) `Scene_0` leaving
+  along the zenith edge in polar orbit: a jitter; (4) `Scene_1` dy across the level face in polar orbit: pitch AND roll toward the square vertical
+  alignment at the pole — the roll perhaps deferred to a dx.
