@@ -36,6 +36,7 @@ import type { SceneState } from "./scene_state";
 import { add, dot, length, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
 import { cameraFrameNow, retargetGizmo, rigNow, ringPlaceNow, syncCentre } from "./camera_rig";
 import { assemblyFrame, assemblyOn, resetOrbitState, restDrawn, shownOffset, spitStep, tiltClampStep } from "./assembly_wiring";
+import { lawHalfTurn } from "../input/upright";
 import { gizmoShownAt } from "../input/assembly_orbit";
 import { cameraOffsetAt, easeShare, gizmoBlendTravel, horizontalShare, rigSwingNeed } from "../input/orbit_rig";
 import { governedRingStep } from "../input/turn_governor";
@@ -846,6 +847,14 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // (~23): its solve had ~1 left and its first iteration went past the cap (25 – 38 a frame against the owner's 24, both scenes)
   st.pieceQueries = 0;
   assemblyFrame(st, dtSec * 1000); // ⭐⭐⭐ (2026-10-28) the orbit around the assembly: the gizmo the ray finds, the lock, the approach's coast
+  // ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` C7 — T5 made real) while the carried up's half turn holds the gizmo, the orbit's target IS the orbit drawn, its
+  // spring and the coast stopped: nothing moves the gizmo until the turn closes. ⛔ (one pose, packet S) new steps refused only: the spring carried a flick
+  // on, the "held" gizmo 100 – 250 mm a frame
+  if (lawHalfTurn(st.asmRollShadow?.one?.state) && st.boxSpring !== null) {
+    st.orbit.reset(st.boxSpring.at.yaw, st.boxSpring.at.v);
+    st.boxSpring = { ...st.boxSpring, velYaw: 0, velV: 0, velLnZoom: 0 };
+    st.orbitInertia.stop();
+  }
   let rig: OrbitQ = { yaw: st.orbit.yaw, v: st.orbit.elevation, zoom: GREEN_PIECE_ORBIT_ZOOM };
   // ⭐ (2026-10-13, the second audit) the stuck and turn checks' TIME of the last frame counted too (they run after this frame's mean)
   st.pieceGuardFrameMs = st.pieceGuardCarryMs;
