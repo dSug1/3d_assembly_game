@@ -280,8 +280,8 @@ describe("RB1 — `changeApply`: a change applied at once leaves nothing turning
 });
 
 describe("law U's sliders (ORBIT › UPRIGHT PICTURE)", () => {
-  it("uprightPicture 1, uprightCloseIn 0, the band 15 – 50°, the rest at 720° a second (the owner 2026-11-19; 5 – 25°, 1 800 before); their ranges", () => {
-    expect([DEFAULT_CONFIG.uprightPicture, DEFAULT_CONFIG.uprightCloseIn, DEFAULT_CONFIG.uprightFromDeg, DEFAULT_CONFIG.uprightFullDeg, DEFAULT_CONFIG.uprightMaxDegS]).toEqual([1, 0, 15, 50, 720]);
+  it("uprightPicture 1, uprightCloseIn 0, the band 15 – 50°, the rest at 520° a second (the owner 2026-11-20; 720 on 11-19; 5 – 25°, 1 800 before); their ranges", () => {
+    expect([DEFAULT_CONFIG.uprightPicture, DEFAULT_CONFIG.uprightCloseIn, DEFAULT_CONFIG.uprightFromDeg, DEFAULT_CONFIG.uprightFullDeg, DEFAULT_CONFIG.uprightMaxDegS]).toEqual([1, 0, 15, 50, 520]);
     for (const k of ["uprightPicture", "uprightCloseIn"] as const) {
       for (const v of [0, 1]) expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, [k]: v })).not.toThrow();
       for (const v of [0.5, 2, Number.NaN]) expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, [k]: v })).toThrow();
