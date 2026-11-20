@@ -392,3 +392,13 @@ vertical, blended into the formula by 12° (`spitCameraHeadingOne`, behind the s
 **For the lead** (the owner's rule: the same join failing twice → stop and study): the half turn is now where and as decided; what fails lies in the
 target's own inputs at his pace — the logic's view jumping 35 – 52° in a frame, the band weight read off it, the logic's pose rolling with no change
 event — and in one glass against the framed line's roll (close in, R7).
+
+## 13. Deployed for his look, the switch OFF (2026-11-20; the owner: *"do 1"* — then *"proceed with both 1 and 2"*)
+
+`uprightOnePose` is **0 by default** (`ab2f841`): the site plays exactly as the live build with his defaults (`c3a8ba6` = `74a247e`, law U at
+720° a second, the band 15 – 50°), proven frame for frame (§12, G9). **His A/B look**: ☰ › ORBIT › UPRIGHT PICTURE › `uprightOnePose` → 1 gives one
+pose (§12 as measured: the circle gone, the dy hold as `1.0.147-`, one half turn a crossing at 720° a second with the gizmo waiting through it, a
+yaw at a pole 1:1; still the jitter at a pole, and more camera jumps over 45° at his fastest swipes). Same scene, same session, switch flipped —
+`Scene_0bis` far out over a top and across a level face is where the two differ most. Close in they look the same. Nothing else changed.
+Next (his *"2"*): the study of §12's open roots, offline — the up's target by the faces and edges the orbit crosses rather than by the view's
+angle, and the half turn at a pole made smooth rather than stop-and-go.

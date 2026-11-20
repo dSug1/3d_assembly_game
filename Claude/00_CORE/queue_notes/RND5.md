@@ -764,3 +764,5 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   (the defaults 21.7 %). ⛔ Still failing: 49 frames turning the camera over 45° (P2 13; the logic's own view jumping 35 – 52° in a frame, the band weight
   with it, now followed exactly), the jitter 16 of 30, R7 15.8°, close in apart from frame 179 (one glass against the framed line's roll), 2 half turns
   at a level face's entry. `npm run verify` 2 191 vectors; every switch at 0 identical. The record: `UPRIGHT_ONE_POSE.md` §12. Next: the lead's study.
+* **2026-11-20 — `1.0.148d-` deployed with one pose OFF (`uprightOnePose` 0 = the live build with his defaults, frame for frame), for his A/B look
+  on the device** (his *"do 1"*); then the study of the remaining roots (his *"2"*) → `UPRIGHT_ONE_POSE.md` §13.
