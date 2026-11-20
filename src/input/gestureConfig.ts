@@ -891,7 +891,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   uprightCloseIn: 0, // ⭐ (UD3) the square camera's T1 wins close in
   uprightFromDeg: UPRIGHT_FROM_DEG, // ⭐ (UD1; the owner 2026-11-19) 15°
   uprightFullDeg: UPRIGHT_FULL_DEG, // ⭐ (UD1; the owner 2026-11-19) 50°
-  uprightMaxDegS: UPRIGHT_MAX_DEG_S, // ⭐ (UD6b; the owner 2026-11-19) 720° a second, everywhere
+  uprightMaxDegS: UPRIGHT_MAX_DEG_S, // ⭐ (UD6b; the owner 2026-11-20) 520° a second, everywhere (720 on 2026-11-19)
   uprightOnePose: 0, // ⭐⭐⭐ (2026-11-20, the owner: "do 1" — deployed OFF for his A/B look: 0 = law U = `c3a8ba6` frame for frame, 1 = one pose, `UPRIGHT_ONE_POSE.md`)
   uprightHalfHold: 1, // ⭐ (OP7; fix round 1, F2) the gizmo held for the whole half turn
   gizmoEaseMs: 45, // ⭐⭐ (2026-11-04, the owner: *"update the lag the gizmo's position the piece follows to 45ms"*; 62, 55 before, the former GIZMO_TAU_MS 90)

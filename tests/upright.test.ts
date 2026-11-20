@@ -36,7 +36,7 @@ const pic = (s: UprightState, g: CamPose, dt = 1000 / 60, k = K, scale = 1) => {
 
 describe("law U's defaults and its weight", () => {
   it("the defaults: the band 15 – 50°, the rest at 720° a second (the owner 2026-11-19: \"Changing both together is much better\"; 5 – 25°, 1 800 before)", () => {
-    expect([UPRIGHT_FROM_DEG, UPRIGHT_FULL_DEG, UPRIGHT_MAX_DEG_S]).toEqual([15, 50, 720]);
+    expect([UPRIGHT_FROM_DEG, UPRIGHT_FULL_DEG, UPRIGHT_MAX_DEG_S]).toEqual([15, 50, 520]); // ⭐ (2026-11-20) his 520
     expect(uprightWeight(14.99 * DEG, UPRIGHT_FROM_DEG, UPRIGHT_FULL_DEG)).toBe(0);
     expect(uprightWeight(50 * DEG, UPRIGHT_FROM_DEG, UPRIGHT_FULL_DEG)).toBe(1);
     expect(uprightWeight(32.5 * DEG, UPRIGHT_FROM_DEG, UPRIGHT_FULL_DEG)).toBeCloseTo(0.5, 12);
