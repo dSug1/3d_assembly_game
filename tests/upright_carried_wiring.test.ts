@@ -51,7 +51,7 @@ describe("the carried up's wiring — read in the source", () => {
     expect(count(gb, "asmEdgeHold =")).toBe(0);
   });
   it("T5 made real: while the half turn holds, the orbit's target IS the orbit drawn, its spring and the coast stopped — before the spring steps", () => {
-    const freeze = gb.indexOf("if (lawHalfTurn(st.asmRollShadow?.one?.state) && st.boxSpring !== null) {\n    st.orbit.reset(st.boxSpring.at.yaw, st.boxSpring.at.v);\n    st.boxSpring = { ...st.boxSpring, velYaw: 0, velV: 0, velLnZoom: 0 };\n    st.orbitInertia.stop();\n  }");
+    const freeze = gb.indexOf("if (lawHalfTurn(st.asmRollShadow?.one?.state) && st.boxSpring !== null) {\n    const qd = st.pieceQ ?? st.boxSpring.at; // ⭐ the orbit the gizmo is drawn from (the solved place; ⛔ the spring's: the solver stepped back to it)\n    st.orbit.reset(qd.yaw, qd.v);\n    st.boxSpring = { ...st.boxSpring, velYaw: 0, velV: 0, velLnZoom: 0 };\n    st.orbitInertia.stop();\n  }");
     expect(freeze).toBeGreaterThan(0);
     expect(gb.indexOf("let rig: OrbitQ = { yaw: st.orbit.yaw", freeze)).toBeGreaterThan(freeze);
     expect(gb.indexOf("springOrbit(st.boxSpring, rig", freeze)).toBeGreaterThan(freeze);

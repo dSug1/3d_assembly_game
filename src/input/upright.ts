@@ -357,10 +357,15 @@ export function upCarried(s: CarriedState, pose: CamPose, line: FramedLine, dtMs
   } else {
     let pc = wrapPi(s.phi - (change ? tau : tau - (Number.isFinite(asked) ? asked : 0)));
     if (change) {
+      // ⭐ (C5) RE-DECIDED from the new target at every change: 90° or more — the half turn (re)opens, a turn under way keeps its sense near 180° (its own roll is the last); under
+      // 90° — none (a turn under way ENDS: ⛔ first measured, its old gap kept closing toward a target the change had moved — the picture turned on, away)
       let e = wrapPi(pc - target);
-      if (Math.abs(e) >= Math.PI / 2) {
+      if (Math.abs(e) < Math.PI / 2) {
+        g = 0;
+        hs = false;
+      } else {
         const rr = s.rr ?? 0;
-        const pref = Math.abs(rr) >= (CARRIED_SENSE_MIN_DEG * Math.PI) / 180 ? -Math.sign(rr) : 0;
+        const pref = Math.abs(rr) >= (CARRIED_SENSE_MIN_DEG * Math.PI) / 180 ? -Math.sign(rr) : 0; // (a turn under way: its own roll, so its sense kept)
         if (pref !== 0 && Math.sign(e) !== pref && Math.abs(e) >= Math.PI - (CARRIED_SENSE_DEG * Math.PI) / 180) e += 2 * Math.PI * pref;
         g = e;
         hs = true;

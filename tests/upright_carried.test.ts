@@ -140,6 +140,24 @@ describe("the carried up — C5: THE half turn at a logic change", () => {
   });
 });
 
+describe("the carried up — C5: a change during a half turn re-decides it", () => {
+  it("a change that brings the target within 60° of the picture ENDS the half turn: the picture stops turning", () => {
+    const g0 = poseAt(87, 30, 0);
+    let f = one(CARRIED_REST, g0);
+    const g1 = poseRolled(g0, framedLine(g0, piece), 170 * DEG);
+    f = one(f.r.state, g1, { change: true });
+    f = one(f.r.state, g1);
+    expect(f.r.state.hs).toBe(true);
+    // the logic jumps back near where the picture is now (a level face's entry): the rest is under 90°
+    const left = (f.r.state.g ?? 0) / DEG;
+    const g2 = poseRolled(g1, framedLine(g1, piece), -(left - 40) * DEG);
+    const a = one(f.r.state, g2, { change: true });
+    expect(a.r.state.hs).not.toBe(true);
+    const b = one(a.r.state, g2);
+    expect(Math.abs(pictureRoll(a.p, b.p, g2))).toBeLessThan(0.01);
+  });
+});
+
 describe("the carried up — C6: the push held from the same answer", () => {
   it("no half turn: nothing held; the dy that crossed: OP8's hold exactly; no dy and a dx pushing: the dx held on the glass", () => {
     expect(carriedHold(0, 1, 1)).toBeNull();

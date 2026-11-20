@@ -851,7 +851,8 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // spring and the coast stopped: nothing moves the gizmo until the turn closes. ⛔ (one pose, packet S) new steps refused only: the spring carried a flick
   // on, the "held" gizmo 100 – 250 mm a frame
   if (lawHalfTurn(st.asmRollShadow?.one?.state) && st.boxSpring !== null) {
-    st.orbit.reset(st.boxSpring.at.yaw, st.boxSpring.at.v);
+    const qd = st.pieceQ ?? st.boxSpring.at; // ⭐ the orbit the gizmo is drawn from (the solved place; ⛔ the spring's: the solver stepped back to it)
+    st.orbit.reset(qd.yaw, qd.v);
     st.boxSpring = { ...st.boxSpring, velYaw: 0, velV: 0, velLnZoom: 0 };
     st.orbitInertia.stop();
   }
