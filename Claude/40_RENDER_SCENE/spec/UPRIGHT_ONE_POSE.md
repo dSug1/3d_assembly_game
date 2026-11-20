@@ -530,3 +530,17 @@ swing, the rest the logic's heading rules — only their source (S5) or the orbi
 * **D-S6 the finger's swap band** (R7 in the spit looking down) — a change of how the finger is read, not of the orbit's logic.
 * **D-S7 the gates** — G6 on the picture's roll, G8 as 14.6.
 * Not proposed: the up's target by crossings instead of the band weight (measured equal, 14.4); a pace with no ceiling (a half turn in one frame).
+
+## 15. HIS VERDICT on the device (2026-11-20, verbatim) — ⛔ ONE POSE REJECTED; the rebuild starts again on `1.0.148e-`
+
+*"I don't like this implementation: when I leave the pole in scene 1 there is a back and forth of the camera, when I leave the zenith edge of
+scene 0 there is also a back and forth of the camera, there is still a circle movement in addition to the camera roll on the bottom face of
+scene 0bis. The dy hold seems to be solved. Start again (initial branch 1.0.148b-, new branch, lessons learned from all previous builds, deep root
+cause analysis, new logic)"*
+
+* Kept as the lesson that worked: **the dy hold from the logic's own crossing** (OP8: set on the frame of the crossing, with the logic's sign, on
+  one glass — `z_far` and `b_far` as `1.0.147-`, zero re-crossings).
+* ⛔ What the gates missed: none of the readers counted HIS three symptoms as he names them. `Scene_1` over its top read 2 reversals against 1 (§11,
+  §12) — the back and forth leaving the pole — and was set aside. The jitter reader (A) looks at ARRIVALS, he names LEAVING. The circle on
+  `Scene_0bis`'s bottom face was read as gone (B2 2) by a reader that does not count a roll and a yaw together.
+* The live site (`1558b55`) keeps `uprightOnePose` 0: the build he had, with his defaults.

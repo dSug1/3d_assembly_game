@@ -766,3 +766,5 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   at a level face's entry. `npm run verify` 2 191 vectors; every switch at 0 identical. The record: `UPRIGHT_ONE_POSE.md` §12. Next: the lead's study.
 * **2026-11-20 — `1.0.148d-` deployed with one pose OFF (`uprightOnePose` 0 = the live build with his defaults, frame for frame), for his A/B look
   on the device** (his *"do 1"*); then the study of the remaining roots (his *"2"*) → `UPRIGHT_ONE_POSE.md` §13.
+* **2026-11-20 — one pose REJECTED on the device** (back and forth leaving `Scene_1`'s pole and `Scene_0`'s zenith edge; a circle with the roll on
+  `Scene_0bis`'s bottom face; the dy hold solved) → `UPRIGHT_ONE_POSE.md` §15. The rebuild starts again from `1.0.148b-` on `1.0.148e-`.
