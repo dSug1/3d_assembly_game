@@ -764,3 +764,8 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   gravity tilted 0 %, moves not asked 1 817° against 30 741°, the lag at a pole the cost) → `CAMERA_FOLLOWS_GIZMO.md` §0 – §12; every failure
   before it → `UPRIGHT_LESSONS.md`. Built on the new branch `1.0.150-Camera_follows_gizmo` (from `461eeb2`, the live code). At the end, when the
   orbit charts are completed, everything merges into the `3d_assembly_game` worktree.
+* **2026-11-20, evening — packet G: the camera follower BUILT far out** (branch `1.0.150-Camera_follows_gizmo`, local `2ea35c0` – `fb2fa15`, behind
+  `cameraFollower`, 0 = the live build frame for frame): on his ten stretches gravity tilted 0 % (live 29.8 %), no frame turning over 45° (13),
+  1 804° not asked (30 741°), the piece's jumps 26.8 a minute (38.8); worse: sudden turns near the vertical 162.5 a minute (81.8) and the dy hold at
+  `Scene_0bis`'s bottom far out lost (the finger read off the new glass in the spit); O8 explained (the centre frozen before the parts were placed:
+  the origin, 0.31 m off the heptagon's centre); close in unchanged. No device look → `CAMERA_FOLLOWS_GIZMO.md` §13.

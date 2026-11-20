@@ -1,4 +1,4 @@
-# THE CAMERA FOLLOWS THE GIZMO — a simple polar orbit behind one follower (packet F, 2026-11-20; a STUDY — ⛔ NOTHING BUILT)
+# THE CAMERA FOLLOWS THE GIZMO — a simple polar orbit behind one follower (packet F, 2026-11-20; a STUDY — ⭐ F1, F2 BUILT since: §13)
 
 > The owner's proposal after eleven failed rebuilds of the upright picture, reviewed in his four parts: the rules, the obstacles, a design from the prior art, its audit plan. Offline only: his ten recorded
 > stretches, no game run. Every figure is tagged **measured** (a reader on the recordings), **read** (the code or a document) or **opinion**. The kit: `fo3/follow/` (`follow_f.mjs` the prototype,
@@ -269,3 +269,102 @@ new branch. Remember that at the end, when orbit charts is completed, we will ha
   orbit's angles, the true normal recorded; O8 explained); F2 the follower DRAWN far out behind one switch, the piece riding it; F3 the blend far ↔
   close; F4 `Scene_1` and `Scene_0`; then his look; F5 the removal of what it replaces — only after his look.
 * ⭐ **At the end — when the orbit charts are completed — everything is merged into the `3d_assembly_game` worktree** (his word).
+
+## 13. AS BUILT AND MEASURED — F1 the shadow, F2 the follower drawn far out (packet G, 2026-11-20 evening, branch `1.0.150-Camera_follows_gizmo`)
+
+> Commits (local, not pushed): (C) `2ea35c0` F1 · (P) `a13b708` the recorder · (C) `972c9ad` F2 · (C) `fb2fa15` the ease 120 ms · (D) this section. The kit
+> `fo3/follow/`: `CHECKPOINT_G.md` (every figure), `drv_g.sh`, `rd_g.sh`, `follow_g.mjs`, `o8_g.mjs`, `near_v.mjs`, `mut_f1.json`, `mut_f2.json`. ⛔ No device look.
+
+### 13.1 The result first
+* **`cameraFollower` 0 is the live build, frame for frame** (two stretches); F1 drew nothing (three stretches identical to the live recordings).
+* **On his ten stretches far out** (155 s, 60 frames a second): gravity tilted over 20° on **0 %** of the frames (live 29.8 %, `1.0.147-` 35.4 %); the camera
+  turned over 45° in one frame **never** (13, 5); moves he did not ask **1 804°** (30 741°, 22 293°); the roll back and forth **47** (98, 81); the piece's
+  jumps **26.8 a minute** (38.8, 13.6); the gizmo's face never turned away; the piece off the glass on 0.1 % of the frames (0.5 %).
+* **Worse**: sudden turns of the camera **162.5 a minute** (81.8, 24.8 — the yaw near the vertical, read on his video's 33 ms); the pitch back and forth
+  **176** (139, 115 — D-F8, accepted); the camera **14° behind the logic's at the median, 58° at p95**; and **the dy hold far out at the bottom of
+  `Scene_0bis` is LOST** (§13.6).
+* **Close in is the live build**: the follower never draws once the automatic tilt latches; the close stretches are identical frame for frame from there.
+* **O8**: the look point is the model's origin because the assembly's centre was frozen before the placed parts were known — 0.31 m from the heptagon's
+  centre his rule names. The design is right; the value is not (§13.3, D-G1).
+
+### 13.2 The design read against every row of `UPRIGHT_LESSONS.md`, before the wiring
+
+| # | the rule it binds | the follower as built |
+|---|---|---|
+| 1 | ONE owner of the picture's roll | the up is the world's (`followPose`), squared to the view; far out nothing else writes the camera (a source test) |
+| 2 | root, not patch; no layer undoing the logic | no join: far out `rollPictureFrame` is not called; a change asked is resolved once by the logic's own `changeApply` |
+| 3 | a turn that needs a hold needs a moment; holds never from the picture | the picture makes no turn; the only hold is the dy hold, from the logic's crossing |
+| 4 | holds from the LOGIC's crossing (OP8) | `holdAtCrossing(ask.hold)` at the change — the `1.0.147-` rule (⚠ but see §13.6: the finger that crosses changed) |
+| 5 | one half turn a pass at most | one yaw a pass by construction (the detour's one remembered side): 1.15 runs of 90° a pass measured |
+| 6 | a pace never caps his own motion | the yaw's ceiling never under the pace of the eased direction (`followCeiling`; a vector: a 1 600°/s dx is the same camera with no ceiling) |
+| 7 | the logic's heading rules are no source | the follower reads a DIRECTION (`askedDir`), never a heading or an up; the owner's camera offsets in the world-up frame |
+| 8 | a gate counts what he names | `his.mjs`, `jr.mjs` on his ten stretches, the pole walks, the dy hold walks |
+| 9 | realignments paid by his finger, not time | the yaw at a pole by PLACE (the detour); the time left: the one ease (120 ms) and the last-resort ceiling |
+| 10 | payers read the finger; a vector per decision | no payer; 27 vectors, 30 mutants red (F1 9, F2 21) |
+| 11 | the picture never listens to the logic's heading | the polar camera |
+| P | docs before build; one switch, 0 = live; his pace; one headless job; never E: | his word §12; `cameraFollower` 0 identical frame for frame; 60 and 143 fps; one batch at a time; his sessions from C: |
+
+### 13.3 F1 — the shadow, and O8
+* Recorded per frame (`sh.fx`): the direction ASKED (`askedDir`: the calm's TARGET before its 120 ms ease, the whole shares by position, at the rig's
+  solved angles, no ease after a change), the orbit's, the solver's and the spring's angles, the gizmo's true surface normal, the look point, the centre.
+* **O8, in the game** (`o8_g.mjs`, a page read at boot): the assembly's centre is (0, 0, 0) on every frame; the placed parts (the heptagon and the anchor)
+  are centred at (0.002, 0.244, 0.191); the scene's own orbit centre is (0.0025, 0.2415, 0.191). **Read**: `ensureAssembly` freezes the centre ONCE (*"at
+  boot … don't change it"*) from the placed parts' box, else from the centre blend's target; exactly zero means it ran before any part was placed, with
+  the target at its default origin (the exact frame not traced). Far out the look point IS that centre. **Measured offline**: looking at the right centre,
+  the piece moves on the glass 15 % slower at p95 and 32 % slower at its fastest.
+* **The raw target changes the design's numbers** (offline, the same route): it is jumpier than the logic's eased eye (in the spit it sweeps 25 – 54° a
+  frame over the top at his pace). With D's 50 ms as the one ease, 56 frames turned over 45°; **with the calm's own 120 ms (D-F6) none** — 120 ms ships.
+
+### 13.4 F2 — as built
+* **Pure** (`input/camera_follow.ts`): `sphereSpring` the ONE ease (critically damped on the sphere, `followMs`); `poleDetour` round the vertical by place
+  (`followPoleDeg` 30°, from `followFromDeg` 60°, the side kept from the entry); `polarStep` the camera's yaw toward the detoured direction at most the
+  ceiling, never within 10° of the vertical; `followCeiling` = max(`followMaxDegS` 900°/s, his pace ÷ cos of the latitude) — never under his own pace;
+  `followPose` the piece hung along the followed direction from the gizmo's foot, the camera on the owner's 2.5° / 2° offsets in the world-up frame,
+  1.25 m behind the piece, looking at the look point, up the world's.
+* **The stage** (`render/camera_follow_wiring.ts`): the follower draws while `cameraFollower` is 1, no tilt is on, the automatic tilt is not latched, the
+  square camera's share is 0 and no timed turn runs. A change asked is applied at once with the logic's crossing's dy hold; no half turn exists, so no
+  gizmo hold (D-F4). The finger reads the camera drawn (`asmCamLast`). The upright laws and the carried up are bypassed there, not deleted.
+* **Where far ends**: when the automatic tilt latches (the approach within `tiltAutoM`, 0.6 m of the gizmo). From that frame the live picture draws.
+  **What he sees there**: the camera turns to the live picture in one frame — 0.1° on the close stretches (he was still); moving, up to the follower's lag
+  plus the live picture's roll (F3 blends it). Coming back out, the follower restarts at rest on the piece's drawn direction.
+
+### 13.5 Measured — `Scene_0bis` unless said
+| | the follower | live `b03a4dd` | `1.0.147-` |
+|---|---|---|---|
+| his ten, 60 fps: lag behind the logic p50 / p95 | 14.2° / 58.4° | 0.1° / 5.7° | 0.0° / 6.1° |
+| frames turning over 45° / 20° | 0 / 290 | 13 / 603 | 5 / 286 |
+| back and forth pitch / yaw / roll | 176 / 67 / 47 | 139 / 65 / 98 | 115 / 54 / 81 |
+| runs of 90° or more (passes: 96) | 110 (1.15 a pass) | 180 | 103 (1.7 of its 61) |
+| his two at 143 fps: gravity over 20° · frames over 20° · sudden turns · piece jumps a minute | 0 % · 0 · 147.6 · 34.5 | (the carried up `28a29ca`) 31.9 % · 11 · 61.3 · 145.7 | — |
+| the pole walks at 143 (bottom, tip, ridge, a round): sudden turns · piece jumps a minute · not asked | 29.0 · 0.0 · 663° | 5.0 · 5.0 · 2 551° | — |
+| `Scene_1` over its top at 143: sudden turns · piece jumps · not asked · frames to cross | 31.5 · 9.0 · 470° · 1 908 | 50.7 · 50.7 · 1 465° · 677 | — |
+| the dy hold `z_far`, a steady push: set · re-crossed · surface after the crossing | set · never · 79 / 135 mm | set · never · 11 mm | set · never · 11 mm |
+| the dy hold `b_far`: set | **never (6 of 6)** | set | set |
+| close in (`z_close`, `b_close`, the close stretches) | the live build | — | — |
+
+### 13.6 What still fails, and why (read, not fixed — no fix round in this launch)
+* **The dy hold at `Scene_0bis`'s bottom far out is lost.** The hold is the logic's sign that crossed, through the same code; what changed is the finger:
+  in the spit it is read off the picture drawn, and on the world-up glass the walker's *down* is no longer the spit's dy — it crosses by dx (no sign, no
+  hold). And without the half turn's gizmo hold (D-F4) a steady push carries the gizmo 79 – 135 mm past the edge (11 before). This is O6 come true.
+* **Sudden turns near the vertical** (162.5 a minute; 210 of 9 274 frames with the camera within 25° of the vertical, the nearest 8.4°): the detour's bad
+  point is common on the raw target — the spring cuts across the vertical when the target sweeps over the top in a few frames, and the ceiling, opened by
+  his pace, does not hold it. Packet F's D held it with a second ease on the yaw and a flat 900°/s that caps his dx (row 6).
+* **The walker needed 2.8× the frames to cross `Scene_1`'s top** (1 908 against 677): the glass yaws under the steering finger near the vertical.
+* **O8's centre**; **the boundary** with close in (F3). Not measured: `Scene_0`, `Scene_1` beyond the one walk (F4).
+
+### 13.7 What he will feel (plain words)
+Far out the picture never rolls: the world stays upright, and the camera swings round the top or the bottom as ONE turn that follows his finger. It
+trails his finger a little — a seventh of a right angle typically, more at the poles. Near the top and the bottom it turns fast, at his own pace, and can
+feel quick. The piece stays on the glass. Close in nothing changed. At the bottom of the heptagon with tips, a push across the edge is no longer held.
+
+### 13.8 The sliders — ORBIT › CAMERA FOLLOWER (`TUNING_MENU.md`)
+`cameraFollower` 1 (0 = the live build) · `followMs` 120 ms (0 – 200) · `followPoleDeg` 30° (0 = over the vertical) · `followFromDeg` 60° · `followMaxDegS`
+900°/s (0 = none; never under his pace). By URL too (`?cameraFollower=0`).
+
+### 13.9 Decisions for his review
+| # | the question | the advice |
+|---|---|---|
+| D-G1 | O8: freeze the centre once the placed parts are known (the heptagon's centre, his rule) — it changes the live picture too, so behind its own switch | yes, before F3 |
+| D-G2 | the dy hold far out under the follower: read the finger in the spit off the LOGIC's frame again (not the picture), or keep a gizmo hold at a crossing | a study first (row 2: a join of two readers) |
+| D-G3 | the ease 120 ms (the calm's) against 50 ms (packet F's D): 50 ms trails less (7° median offline) but turned 56 frames over 45° | 120, his eye |
+| D-G4 | the pole: the yaw at his pace (row 6, as built) or a flat ceiling with a second ease (D: smoother, caps his dx) | his eye on the device |
