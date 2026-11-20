@@ -400,7 +400,7 @@ to; it supersedes `12dc4b6` (`POLAR_ORBIT_CLEANUP.md` §9.16). D-G3 (the ease 12
 is down the other side. Two smaller sources: the asked direction passing BESIDE the vertical (its heading whirls — up to 339° on one leg), and the
 logic's own orbit yaw moving with no dx near the top (23 – 55° over a crossing of the zenith edge or the bottom — rows 6, 7, 11 of the lessons).
 
-### 14.2 The advice (proposed — nothing built; his word decides)
+### 14.2 The advice (proposed — nothing built; his word decides) — ⛔ SUPERSEDED by §14.4 (his further points)
 * **Point 1 — yes**: near the top the camera's HEADING belongs to the camera and only his dx turns it (the same mm, the same angle as the red section);
   the pitch still follows the gizmo; the asked direction's heading is not read there at all. It replaces D-F2 (a) on the way IN. ⛔ Its one conflict,
   unavoidable (lessons row 5): a dy carried OVER the top and down the far side reaches faces turned away from a camera that kept its heading (`Scene_1`'s
@@ -436,7 +436,7 @@ camera SQUARE in the face's middle, so the asked direction sits near the vertica
 the red section turns — point 3. ⭐ **He is right that it is one mechanism**: the same detour makes the yaw on a pure dy at `Scene_0bis`'s zenith edge
 (point 1) and blinds the camera to a dx near the pole (points 3, 4); one rule replaces it for all of them (D-H1).
 
-### 14.3 Decisions for his word
+### 14.3 Decisions for his word — ⛔ SUPERSEDED by §14.4
 | # | the question | the advice |
 |---|---|---|
 | D-H1 | near the top the camera's heading turned only by his dx, by the same angle as the red section, at every distance from the pole (no threshold: points 1, 3, 4); the detour deleted; the camera kept off the vertical by a CEILING on its elevation (90° − `followPoleDeg`, 60°), not by a sideways push, so a dx over the top reads as a yaw, not a spin | yes |
@@ -445,3 +445,47 @@ the red section turns — point 3. ⭐ **He is right that it is one mechanism**:
 | D-H4 | the clamp of the red section round the pole | not built |
 Then: a study (his four parts) → one packet on a new branch behind one switch (0 = `de4a10e`) → his look. D-G1 (the look point on the heptagon's
 centre) still waits for his word.
+
+### 14.4 His further points (2026-11-20, night, verbatim) and the advice REVISED — nothing built
+> *"- in tilted-pole orbit, when the gizmo crosses an edge it is waiting that the camera catches up before continuing to follow delta position input.
+> This is a very nice behavior I think we can reuse in the polar orbit to replace the previous hold at zenith or we can reuse when the gizmo crosses the
+> far edge when exiting a level face
+> - there is stil a one frame realignment when the gizmo exit level face in polar orbit (see attachments 1 to 4 : the one frame jitter realignment
+> occurs in attachment 4). This is an exceptional case because in scene 1 polar orbit in general the exit of the level surface is smooth. I don't know
+> what specificity has this particular travel to cause this one frame realignment.
+> - whatever you have proposed in your previous response to fix the polar orbit, make sure this applies both to a level face and also to an edge
+> (because the zenith or nadir edge is the extrapolation of a level face with one dimension reduced to zero)
+> Revise your previous answer accordingly and rewrite it once again."*
+
+**The exit's realignment, read on the recorded `Scene_1` walk** (`g2_s1_over`, frames 232 – 262, the gizmo leaving the top face; not yet his exact travel):
+the asked direction goes from 10° to 86° off the vertical in 8 frames (the calm's square view switching from the top face to the side face), while the
+detour had parked the camera's heading on the OTHER side of the vertical (175° from the exit's); the follower then swings the heading 145° in ~0.15 s
+— a realignment that reads as one frame. It is rare because it needs the travel on the top to end far from the side the detour latched on entry.
+
+**The revised design — ONE rule for the top, a level face or a zenith / nadir edge alike (an edge = a level face of zero width):**
+* **R1 — on the top, the camera's heading is turned ONLY by his dx**, by the same angle as the red section, at every distance from the pole (no
+  threshold); a pure dy never yaws the camera; the asked direction's heading is not read there. The detour is deleted; the camera is kept off the
+  vertical by a CEILING on its height (60°, `followPoleDeg`), so a dx at the pole reads as a yaw, not a spin. The top includes the approach where the
+  gizmo's direction nears the vertical (`Scene_0bis`'s last slanted face). → points 1, 3, 4.
+* **R2 — the edge is the only trigger** (close in's T4): leaving the top over an edge the camera turns by the angle between its heading and the face
+  beyond — none by the near edge, a quarter by a side edge, a half by the far edge (close in's O2, computed). A zenith edge's near and far edges are ONE
+  line: going back, none; crossing onto the far face, the half turn, at the zenith edge itself. The calm's change of view at that edge (the top's square
+  view → the side face's) is part of the same turn.
+* **R3 — the gizmo WAITS while that turn runs and then follows his input again** (his proposal: close in's T5 reused; its duration by its angle, as
+  close in). Nothing is left for the follower to catch up in a few frames → attachment 4.
+* **R4 — the dy hold far out is deleted**: the wait replaces it at the zenith edge and at a level face's far edge; where no turn happens the gizmo never
+  waits. Close in unchanged.
+* **R5 — no clamp** of the red section: R1 keeps it square to the view.
+⚠ **The one question the wait leaves**: after a HALF turn the camera stands on the other side, so the finger's "up" points back where the gizmo came
+from. A quarter turn (a side edge, crossed by dx) does not reverse it: the gizmo simply follows on.
+
+| # | the question | the advice |
+|---|---|---|
+| D-H1 | R1: the top's heading turned only by his dx, a level face and a zenith / nadir edge alike, no threshold; the detour → a 60° height ceiling | yes |
+| D-H2 | R2: none / quarter / half by the edge left; a zenith edge's two edges one line | yes |
+| D-H3 | R3 + R4: the gizmo waits for the camera's turn (close in's T5), the dy hold far out deleted | yes (his proposal) |
+| D-H4 | after a half turn, the push that crossed: (a) as close in (D-T4: it no longer moves the gizmo; his next push does — lift, or 8 mm back); (b) it keeps its meaning until he lifts (the gizmo goes on while it moves toward him on screen); (c) read on the new glass at once (the gizmo would cross back: a bounce) | (a) — one rule with close in |
+| D-H5 | R5: the clamp of the red section | not built |
+Then a study first (S1 attachment 4 replayed in the game; S2 where the top begins and ends so the near edge costs no turn; S3 why the logic turns the
+red section by itself on a pure dy, 23 – 55°; S4 the wait's pace), then one packet on a new branch behind one switch (0 = `de4a10e`), measured, then
+his look. D-G1 (the look point on the heptagon's centre) still waits for his word.
