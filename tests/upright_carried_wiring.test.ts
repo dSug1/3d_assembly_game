@@ -74,17 +74,17 @@ describe("the framing carried from the pose shown — read in the source (packet
     expect(DEFAULT_CONFIG.uprightFraming).toBe(1);
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, uprightFraming: 2 })).toThrow();
     expect(cf).toContain("const ft = st.cfg.uprightFraming === 1 ? framingStep(was?.one?.framing ?? null, change, shown, freed, r.halfStart, dtMs, st.cfg.uprightMaxDegS, kappa) : null;");
-    expect(cf).toContain("const D = fd === null ? P : poseRolled(fd.pose, line, r.phi);");
+    expect(cf).toContain("const D = fd === null ? P : poseRolled(fd, line, r.phi);");
     expect(raw("src/render/tuning_menu.ts")).toContain('"uprightFraming", 0, 1, 1)');
   });
   it("opened only by a change applied at once, from the picture shown last frame turned back by this frame's φ (the piece's place then)", () => {
-    expect(cf).toContain("const shown = change && was !== null && was.one !== undefined && was.picture ? framingFrom(was.picture, was.piece, line, r.phi) : null;");
+    expect(cf).toContain("const shown = change && was !== null && was.one !== undefined && was.picture ? framingFrom(was.picture, line, r.phi) : null;");
   });
   it("the pose drawn is the one read and returned: the finger's glass, the next frame's pose shown, the camera", () => {
     expect(cf).toContain("const d: Vec3 = [D.eye[0] - D.look[0], D.eye[1] - D.look[1], D.eye[2] - D.look[2]];");
     expect(cf).toContain("up: D.up };");
     expect(cf).toContain("picture: D, a2: placeError(st, G, D, piece, line)");
-    expect(cf).toContain("framing: fd === null ? null : fd.turn } };\n  return D;");
+    expect(cf).toContain("framing: ft } };\n  return D;");
   });
   it("φ, the half turn and the holds untouched: upCarried once, before the framing, and the hold from its answer as before", () => {
     expect(count(cf, "upCarried(")).toBe(1);

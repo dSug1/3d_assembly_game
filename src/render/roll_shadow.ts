@@ -254,13 +254,13 @@ function carriedFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Ve
   const r = upCarried(was?.one?.state ?? CARRIED_REST, G, line, dtMs, knobs, kappa, change, asked, dxMm);
   const P = poseRolled(G, line, r.phi);
   // ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` §8 — packet J) THE FRAMING CARRIED FROM THE POSE SHOWN (`uprightFraming` 1; 0: the picture `P` as at `28a29ca`):
-  // a change applied at once draws from the picture shown (turned back by φ about the framed line), the piece and the aim carried straight on the glass
-  // to where the logic frames them, over the change's own time at the half turn's pace (`framingStep`, `framedPose`) — the pose drawn only: φ, the half
-  // turn, the holds as they are. ⛔ (`28a29ca`) the carry took back the change's roll alone: the piece leapt to where the new pose frames it, in one frame
-  const shown = change && was !== null && was.one !== undefined && was.picture ? framingFrom(was.picture, was.piece, line, r.phi) : null;
+  // a change applied at once draws from the picture shown (turned back by φ about the framed line, `framingFrom`), its eye gliding round the look point
+  // to the logic's over the change's own time at the half turn's pace (`framingStep`, `framedPose`) — the pose drawn only: φ, the half turn, the holds
+  // as they are. ⛔ (`28a29ca`) the carry took back the change's roll alone: the piece leapt to where the new pose frames it, in one frame
+  const shown = change && was !== null && was.one !== undefined && was.picture ? framingFrom(was.picture, line, r.phi) : null;
   const ft = st.cfg.uprightFraming === 1 ? framingStep(was?.one?.framing ?? null, change, shown, freed, r.halfStart, dtMs, st.cfg.uprightMaxDegS, kappa) : null;
-  const fd = ft === null ? null : framedPose(ft, G, piece);
-  const D = fd === null ? P : poseRolled(fd.pose, line, r.phi);
+  const fd = ft === null ? null : framedPose(ft, G);
+  const D = fd === null ? P : poseRolled(fd, line, r.phi);
   if (change && crossed !== undefined) st.asmEdgeHold = carriedHold(r.halfStart, crossed, st.asmDxSign);
   const d: Vec3 = [D.eye[0] - D.look[0], D.eye[1] - D.look[1], D.eye[2] - D.look[2]];
   const l = Math.hypot(d[0], d[1], d[2]);
@@ -275,6 +275,6 @@ function carriedFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Ve
   }
   const turnTw = fresh ? tw : (was?.turnTw ?? 0);
   const g = { gap: r.phi, speed: 0 };
-  st.asmRollShadow = { ghost: G, dir: line.dir, piece, held: g, free: g, turn: zm, turnTw, stays: zm !== null, tw, gizmoFree, spit: spitZone(st) !== null, freshTurn: fresh, picture: D, a2: placeError(st, G, D, piece, line), drawn: true, freed, one: { state: r.state, w: r.w, phi: r.phi, kappa, halfStart: r.halfStart, holding: r.holding, change, framing: fd === null ? null : fd.turn } };
+  st.asmRollShadow = { ghost: G, dir: line.dir, piece, held: g, free: g, turn: zm, turnTw, stays: zm !== null, tw, gizmoFree, spit: spitZone(st) !== null, freshTurn: fresh, picture: D, a2: placeError(st, G, D, piece, line), drawn: true, freed, one: { state: r.state, w: r.w, phi: r.phi, kappa, halfStart: r.halfStart, holding: r.holding, change, framing: ft } };
   return D;
 }
