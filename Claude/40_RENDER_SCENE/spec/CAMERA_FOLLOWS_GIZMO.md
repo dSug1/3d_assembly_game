@@ -489,3 +489,11 @@ from. A quarter turn (a side edge, crossed by dx) does not reverse it: the gizmo
 Then a study first (S1 attachment 4 replayed in the game; S2 where the top begins and ends so the near edge costs no turn; S3 why the logic turns the
 red section by itself on a pure dy, 23 – 55°; S4 the wait's pace), then one packet on a new branch behind one switch (0 = `de4a10e`), measured, then
 his look. D-G1 (the look point on the heptagon's centre) still waits for his word.
+
+⭐ **His answer to D-H4 (2026-11-20, night, verbatim)**: *"open question: do the same as what the gizmo does when the case happens in tilted-pole orbit
+(in scene 1 in tilted-pole orbit there are cases when after the gizmo has changed face finger's up points back where the gizmo came from : it is
+handled gracefully and I like the behavior in scene 1 tilted-pole orbit)."* → **D-H4 = close in's rule, by the SAME code, not a copy**: the gizmo
+waits while the turn runs (T5); after a turn over 90° pushed out by his dy (D-T4's condition), the dy hold from the logic's crossing
+(`holdAtCrossing` → `edgeHoldFinger` / `edgeHoldGlass`, `DY_HOLD_REVERSAL.md`): the push that crossed no longer moves the gizmo, the other way is
+whole, released 8 mm back (`edgeHoldMm`) or when that gesture ends. **R4 amended**: far out a hold exists ONLY after such a half turn, exactly as close
+in; never at a crossing where the camera does not turn. D-H1, D-H2, D-H3, D-H5: his word pending.
