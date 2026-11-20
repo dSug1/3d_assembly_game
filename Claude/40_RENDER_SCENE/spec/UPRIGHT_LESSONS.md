@@ -31,7 +31,8 @@ which no camera removes — a polar camera turns it into ONE yaw a pass (§5.5 o
 3 frames over 45° in 9 274): what jumped was the roll, and the yaw at a pole.
 
 ## 3. SOLVED — must never regress (his eye)
-The gizmo's travel (polar orbit and the tilted-pole orbit — what drives the piece and the gizmo is never reopened); the dy hold from the
+⭐⭐⭐ **The camera follower far out (`de4a10e`, 2026-11-20): *"This is very good"* — THE BEST IMPLEMENTATION OF THE ORBIT SO FAR**
+([`CAMERA_FOLLOWS_GIZMO.md`](CAMERA_FOLLOWS_GIZMO.md) §14; what is open there: the top and bottom, §14.2). The gizmo's travel (polar orbit and the tilted-pole orbit — what drives the piece and the gizmo is never reopened); the dy hold from the
 logic's crossing (OP8: `z_far` / `b_far` as `1.0.147-`, zero re-crossings under a steady push); a slanted face's entry / exit to a level face;
 close in (the square camera, the tilted pole); the piece's slide at a change (packet J); his settings: band 15 / 50, pace 520°/s.
 

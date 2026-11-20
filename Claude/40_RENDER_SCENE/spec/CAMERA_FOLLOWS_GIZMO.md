@@ -368,3 +368,80 @@ feel quick. The piece stays on the glass. Close in nothing changed. At the botto
 | D-G2 | the dy hold far out under the follower: read the finger in the spit off the LOGIC's frame again (not the picture), or keep a gizmo hold at a crossing | a study first (row 2: a join of two readers) |
 | D-G3 | the ease 120 ms (the calm's) against 50 ms (packet F's D): 50 ms trails less (7° median offline) but turned 56 frames over 45° | 120, his eye |
 | D-G4 | the pole: the yaw at his pace (row 6, as built) or a flat ceiling with a second ease (D: smoother, caps his dx) | his eye on the device |
+
+## 14. HIS LOOK (2026-11-20, night, live `de4a10e`) — ⭐⭐⭐ THE BEST IMPLEMENTATION OF THE ORBIT SO FAR — and the top and bottom to work on
+
+> *"This is very good. Update the md files and write this is the best implementation of the orbit so far. However, we need to work on the logic of
+> the top and bottom of the orbit:
+> 1- in polar orbit, with a dy even with no dx, why does the camera view yaws when the dy travels through the last slanted face to get close to the
+> zenith edge (scene 0bis) or through the top or bottom level face when the dy travels through the level face to get clost to the pole (scene 1) ? I
+> would rather have the camera view keep the yaw of the gizmo and only yaws if there is a dx there: would that conflict with another rule ?
+> 2-  in scene 0bis: do we really need a dy or dx hold now with this smoothing of the camera ? removing the hold would solve the issue.
+> 3- in polar orbit, when the gizmo reaches the pole and there is only the red section (attachment 1), it is still possible to rotate the red section
+> around the pole with dx (attachment 2 = the red section has rotated from attachment 1). As a result, the red section can rotate towards the opposite
+> direction away from the camera view (attachment 2 is in this situation): this creates two issues: the dx and dx inputs in screen and on red and green
+> section become reversed and when the gizmo reaches the far edge and enters into the face opposite to the camera view, there is a very rapid yaw of
+> the camera to catch up with the gizmo. Would it be better to a) implement the point 1 above to avoid camera yaw on a dy travel in level face/zenith
+> edge and 2) clamp the rotation of the red section around the pole when the gizmo is on a level face (or along a zenith edge) between around -90 + 90
+> degrees yaw (vs. camera view axis) or clamp between the values that guarantee that the inputs and gizmo movements are not reversed.
+> Advise, do not build anything yet."*
+
+⭐⭐⭐ **`de4a10e` (= `656929e`, the follower far out, `cameraFollower` 1) IS THE BEST IMPLEMENTATION OF THE ORBIT SO FAR** — the reference to come back
+to; it supersedes `12dc4b6` (`POLAR_ORBIT_CLEANUP.md` §9.16). D-G3 (the ease 120 ms) stands with it.
+
+### 14.1 Point 1 measured — the yaw on a pure dy (the recorded walks, the finger's dx exactly 0)
+| walk | camera yaw | how |
+|---|---|---|
+| `Scene_0bis`'s zenith edge, a dy push across it (`g2hw_z_far` s0 / s1) | 67° / 82° (live `b03a4dd`: 191° / 151°, its half turn) | the camera at 60 – 65° of elevation: going round the vertical |
+| `Scene_1` over its top (`g2_s1_over`, the leg to the pole) | 110° | 110° of it with the detour on |
+| `Scene_0bis` bottom / ridge (`g2_s0bis_*`) | 130° / 141° | all of it with the detour on |
+**Read**: the yaw is the DETOUR we built on D-F1 / D-F2 (a): within `followFromDeg` (60°) of the vertical the camera goes ROUND the vertical
+`followPoleDeg` (30°) off, by place — so a straight dy toward the top swings the camera's heading ~90° by the time the gizmo is at the top, 180° once it
+is down the other side. Two smaller sources: the asked direction passing BESIDE the vertical (its heading whirls — up to 339° on one leg), and the
+logic's own orbit yaw moving with no dx near the top (23 – 55° over a crossing of the zenith edge or the bottom — rows 6, 7, 11 of the lessons).
+
+### 14.2 The advice (proposed — nothing built; his word decides)
+* **Point 1 — yes**: near the top the camera's HEADING belongs to the camera and only his dx turns it (the same mm, the same angle as the red section);
+  the pitch still follows the gizmo; the asked direction's heading is not read there at all. It replaces D-F2 (a) on the way IN. ⛔ Its one conflict,
+  unavoidable (lessons row 5): a dy carried OVER the top and down the far side reaches faces turned away from a camera that kept its heading (`Scene_1`'s
+  far side), so ONE 180° yaw a pass remains — and a camera turning 180° during a push turns the finger's meaning on the glass round (why the dy hold
+  exists). Its place (D-H2): **(i)** at the first edge past the top onto a face turned away from the camera's heading, the gizmo held there (OP8, the
+  logic's crossing) while his push pays the 180° in mm, ending with the gesture (rows 3, 6, 9 kept: a decided moment, a hold from the logic, paid by
+  his finger) — recommended; or **(ii)** by place on the way out, no hold, the finger's meaning turning during the push. Stopping on the top or coming
+  back: no yaw at all with either. Where the top's zone ends, the camera's heading and the logic's must meet — paid by the finger's mm as he leaves
+  (E-D6), never by time: the join to study first (rows 9 – 10).
+* **Point 2 — yes, far out**: under the follower a steady push did not bounce back across an edge even where no hold was set (`b_far`, §13); the hold
+  exists only for a camera turn at the crossing. With point 1 no crossing near the top turns the camera, so the hold goes there; it stays where a camera
+  turn happens — close in (the tilted pole, unchanged) and (i)'s one half turn — his own E-D4 (*"held only if the crossing … triggers a camera
+  realignment"*) applied to dy. Failure 2 of §13.6 disappears with it.
+* **Point 3 — (a) yes, (b) no**: at the top the gizmo's direction is the vertical — it has no heading — so the follower cannot see a dx there: the red
+  section turns, the camera does not; past 90° the inputs reverse; leaving by dy the heading jumps ~180° and near the vertical the yaw's ceiling (his pace
+  ÷ cos latitude) is nearly open: the rapid catch-up. Point 1 is the root fix: the dx that turns the red section turns the camera by as much (only the
+  120 ms ease between them). The clamp (b) is not needed with (a), and alone it would block his dx at the top (the "input blocked" of
+  `DY_HOLD_REVERSAL.md`), change the gizmo's travel (solved, not reopened) and leave the catch-up. The logic's own turn of the red section with no dx
+  (23 – 55°, under 90°: no reversal) is to be read, not followed.
+
+### 14.2b His fourth point (2026-11-20, night, verbatim) — the threshold on a level face
+> *"also, in polar orbit when the gizmo is on a level face, why there is a threshold: when the gizmo is further away from the pole than the threshold
+> the camera yaws with the gizmo travel on dx but when the gizmo is closer to the pole than the threshold the camera does not yaw any more and does not
+> follow the gizmo : as a result the red section rotates away from the camera view axis (our previous point 3). Why not having the camera yaw to follow
+> the gizmo and red section withouth any threshold ? (I think this relates to how the camera yaws when the gizmo crosses a zenith edge in scene 0bis:
+> modifying one may modify the other too)"*
+
+**Read in the code** (`poleDetour`, `polarStep`): the threshold is the detour itself. In the map about the pole the asked direction sits at its angle θ
+from the vertical, the detour adds a fixed sideways push P = 30°·(1 − (θ/60°)²)² measured from the heading it came in at (`phiIn`, kept until it
+leaves), so a dx that turns the asked heading turns the camera's by only θ² / (θ² + P²) of it: **98 % at 45° from the vertical, 76 % at 30°, 42 % at
+20°, 11 % at 10°, 3 % at 5°** — a soft threshold near 20 – 25°; within 10° `polarStep`'s cap stops the yaw outright. On a level face the calm asks the
+camera SQUARE in the face's middle, so the asked direction sits near the vertical over most of the face: there the camera stops following his dx while
+the red section turns — point 3. ⭐ **He is right that it is one mechanism**: the same detour makes the yaw on a pure dy at `Scene_0bis`'s zenith edge
+(point 1) and blinds the camera to a dx near the pole (points 3, 4); one rule replaces it for all of them (D-H1).
+
+### 14.3 Decisions for his word
+| # | the question | the advice |
+|---|---|---|
+| D-H1 | near the top the camera's heading turned only by his dx, by the same angle as the red section, at every distance from the pole (no threshold: points 1, 3, 4); the detour deleted; the camera kept off the vertical by a CEILING on its elevation (90° − `followPoleDeg`, 60°), not by a sideways push, so a dx over the top reads as a yaw, not a spin | yes |
+| D-H2 | the one half turn a pass over the top: (i) at the edge onto a face turned away, the gizmo held while his push pays it; (ii) by place on the way out | (i) |
+| D-H3 | the hold removed far out wherever the camera does not turn | yes, with D-H1 |
+| D-H4 | the clamp of the red section round the pole | not built |
+Then: a study (his four parts) → one packet on a new branch behind one switch (0 = `de4a10e`) → his look. D-G1 (the look point on the heptagon's
+centre) still waits for his word.

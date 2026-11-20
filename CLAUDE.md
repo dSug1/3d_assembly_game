@@ -44,18 +44,21 @@ npm run dev:lan     # dev server on the LAN (⚠ read 50_BUILD_DEPLOY first)
 npm run build       # production bundle into dist/
 ```
 
-## Where it stands (2026-11-19)
+## Where it stands (2026-11-20)
 
-⭐⭐⭐ **NOW — LIVE main `675ec23` = `1.0.148b-Fast_orbit_upright_gravity` at `d6f200e`** (the upright picture), on his word (*"Do 1 and start 3."*). ⛔ No device look yet.
-Gravity tilted over 20° on the glass: 7.9 % of the frames against 35.4 % on `1.0.147-`; its join with the logic rebuilt from the root, audited PASS, one conflict left (the picture rolling there and back near the vertical). **2173 vectors**.
-Next, on a new branch `1.0.149-Upright_at_the_source`: the logic's own camera upright at the source (a study first). → [`Claude/40_RENDER_SCENE/spec/UPRIGHT_PICTURE.md`](Claude/40_RENDER_SCENE/spec/UPRIGHT_PICTURE.md).
-The earlier status moved → [`Claude/00_CORE/history/2026-11-18_queue_status_moved.md`](Claude/00_CORE/history/2026-11-18_queue_status_moved.md).
+⭐⭐⭐ **THE OWNER (2026-11-20, on the device): LIVE main `de4a10e` = `1.0.150-Camera_follows_gizmo` at `656929e` — THE CAMERA FOLLOWER — IS THE BEST IMPLEMENTATION OF THE ORBIT SO FAR** (*"This is very good"*; it supersedes `12dc4b6`).
+Far out the camera is a simple polar orbit (world up) following the gizmo's direction through one ease on the sphere; close in unchanged (`cameraFollower` 1; 0 = the build before, `b03a4dd`). **2233 vectors**.
+→ [`Claude/40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md`](Claude/40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md) §13 – §14; why the eleven upright builds before it failed → [`Claude/40_RENDER_SCENE/spec/UPRIGHT_LESSONS.md`](Claude/40_RENDER_SCENE/spec/UPRIGHT_LESSONS.md).
+Open: his three points on the top and bottom of the orbit (the camera's yaw on a pure dy, the hold far out, the red section turned round the pole) — advice given, nothing built (§14).
+⭐ When the orbit charts are completed, everything is merged into the `3d_assembly_game` worktree.
+The earlier status moved → [`Claude/00_CORE/history/2026-11-20_claude_md_status_moved.md`](Claude/00_CORE/history/2026-11-20_claude_md_status_moved.md), [`Claude/00_CORE/history/2026-11-18_queue_status_moved.md`](Claude/00_CORE/history/2026-11-18_queue_status_moved.md).
 
 **Read first:** [`Claude/00_CORE/queue_notes/HANDOVER_2026-11-18.md`](Claude/00_CORE/queue_notes/HANDOVER_2026-11-18.md) — what is next, in the
 owner's order, and the working rules (the usage limit, the chains, the deploy).
 
 | the subject | where |
 |---|---|
+| ⭐ the camera follower far out (the best orbit so far); the lessons of the upright builds | [`Claude/40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md`](Claude/40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md), [`Claude/40_RENDER_SCENE/spec/UPRIGHT_LESSONS.md`](Claude/40_RENDER_SCENE/spec/UPRIGHT_LESSONS.md) |
 | the orbit on charts: the rules, the model, the seams | [`Claude/40_RENDER_SCENE/spec/ORBIT_CHARTS.md`](Claude/40_RENDER_SCENE/spec/ORBIT_CHARTS.md) |
 | the tilted pole close in (the rules T1 – T12) | [`Claude/40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md`](Claude/40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) |
 | a level face's entry; the silent entry (§15 – §17) | [`Claude/40_RENDER_SCENE/spec/LEVEL_FACE_ENTRY.md`](Claude/40_RENDER_SCENE/spec/LEVEL_FACE_ENTRY.md) |
