@@ -630,7 +630,7 @@ the follower does not draw there; the piece's slide at a change — the logic's 
 **Not done here**: the levelled reading is not in any recording (S2's figures use the raw asked heading); `Scene_0` not walked; his stretches at 143 not
 re-run; the logic's own changes far out (the spit's side, a free face's exit) not traced under the new turn — H2's first reading.
 
-### 15.9 HIS WORD on D-H6 – D-H8 (2026-11-20, night — his answers to the study's three questions)
+### 15.10 HIS WORD on D-H6 – D-H8 (2026-11-20, night — his answers to the study's three questions)
 * **D-H6 — the wait's pace: (b) HIS PACE + A SLIDER** (*"Your pace + a slider"*): the edge turn runs at least as fast as his own orbit at the crossing,
   never slower than close in's speed (`tiltRollDegS`, 360°/s); a slider takes it down to close in's speed on the device. (The study's figure on his ten
   stretches: the gizmo still ~50.9 s of 155 s at 520°/s, less when he goes faster.)
