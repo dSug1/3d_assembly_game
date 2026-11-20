@@ -20,7 +20,7 @@
  * ⛔ ENGINE-FREE. Prior art, old and free: the world-up look-at camera (gluLookAt, early 1990s), a smoothstep; no patent, no orientation widget.
  */
 import { cross, dot, type Vec3 } from "../core/vec";
-import { holdAtCrossing, rotateAbout, type CamPose, type EdgeHold } from "./orbit_tilt";
+import { holdAtCrossing, poseAboutPiece, poseFramingTwo, rotateAbout, type CamPose, type EdgeHold, type FramingKeep } from "./orbit_tilt";
 import { fingerOnLogic, poseAxes, poseRolled, turnIsFree, twistAbout, type FramedLine } from "./roll_follow";
 
 /** ⭐ within this of the vertical (deg) the picture is the logic's pose (`w` 0) — the slider `uprightFromDeg` */
@@ -406,20 +406,24 @@ export function carriedHold(halfStart: number, crossed: 1 | -1 | 0, dxSign: numb
  * ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` §8 — packet J, the owner on the live build: *"in polar orbit in scene 1 and in scene 0bis, when I leave or enter
  * a level face or a triangle face close to the level face, there are lots of jumps of camera and piece"*) THE FRAMING CARRIED FROM THE POSE SHOWN. Far out
  * a logic change is applied at once (one pose's OP2) and the carry takes back only its roll about the framed line — a turn about the line through the
- * piece and the look point keeps BOTH where the NEW pose frames them: the logic's camera offsets turn with its heading (its eye moves 2.3 m at a change),
- * so the piece leapt on the glass in one frame (median 103 px, up to 400 — the snap the zone's turn cured on 2026-11-14, back since OP2 skipped that
- * turn). Now the drawn pose starts from the pose shown (turned back by the carried φ) and its EYE glides round the look point to the logic's (the
- * direction slerped, the distance lerped; the up blended — it is already carried by φ), over the change's own time at the half turn's pace: the
- * assembly stays at the centre, the piece glides, no roll is added. The pose drawn only: φ, the half turn, the holds as they were.
- * ⛔ (first built, `f33ef5c` / `a9c30c1`) the 2026-11-14 two-target rule (`poseFramingTwo`): it ties the camera's roll to the piece → aim separation on
- * the glass, so the leap became a ROLL of the camera on top of the half turn (17.8° a frame against its 9°; roll jumps near a change +27 %).
+ * piece and the look point keeps BOTH where the NEW pose frames them: the logic's camera offsets turn with its heading, so the piece leapt on the glass
+ * in one frame (median 103 px, up to 400; the snap the zone's turn cured on 2026-11-14, back since OP2 skipped that turn). Now the drawn pose blends
+ * from the pose shown (turned back by the carried φ) to the logic's, by the 2026-11-14 rule (`poseFramingTwo`: the piece and the aim each carried
+ * straight on the glass; degenerate, about the piece alone), over the change's own time at the half turn's pace — display only: φ, the half turn, the
+ * holds as they were.
  */
 export interface FramingTurn {
-  /** the pose the turn starts from (the picture shown, turned back by φ) */
+  /** the pose the blend starts from, with the piece's place then (`piece`) */
   readonly from: CamPose;
   /** the time done and the turn's whole (ms) */
   readonly doneMs: number;
   readonly wholeMs: number;
+  /** the two-target turn's angles carried (`poseFramingTwo`) */
+  readonly keep: FramingKeep | null;
+  /** 0 its first frame; 1 the two framed; 2 about the piece alone — chosen at its first frame and kept (`zoneMixPose`'s rule) */
+  readonly rule: 0 | 1 | 2;
+  /** about the piece alone: the turn's axis kept frame to frame */
+  readonly axis: Vec3 | null;
 }
 
 /**
@@ -433,7 +437,7 @@ export function framingStep(f: FramingTurn | null, change: boolean, shown: CamPo
   if (change && shown !== null) {
     const ang = Math.max(Number.isFinite(turnRad) ? Math.abs(turnRad) : 0, Number.isFinite(halfRad) ? Math.abs(halfRad) : 0);
     const wholeMs = (ang / ((maxDegS * Math.PI) / 180)) * 1000;
-    return wholeMs > dt ? { from: shown, doneMs: dt, wholeMs } : null;
+    return wholeMs > dt ? { from: shown, doneMs: dt, wholeMs, keep: null, rule: 0, axis: null } : null;
   }
   if (f === null) return null;
   const doneMs = f.doneMs + dt;
@@ -446,47 +450,26 @@ export function framingShare(f: FramingTurn): number {
 }
 
 /**
- * ⭐ THE POSE A FRAMING TURN STARTS FROM: the picture drawn last frame turned back by this frame's φ about the framed line — the turn is drawn rolled by φ
- * again, so its first frame is that picture exactly. Pure.
+ * ⭐ THE POSE DRAWN IN A FRAMING TURN, toward `to` (the logic's pose) at its share: the piece (`piece`) and the aim each carried straight on the glass
+ * (`poseFramingTwo`); degenerate — about the piece alone (`poseAboutPiece`); the rule chosen at the turn's first frame and kept. Returns the turn with its
+ * carried angles. Pure.
  */
-export function framingFrom(picture: CamPose, line: FramedLine, phi: number): CamPose {
-  return poseRolled(picture, line, -phi);
+export function framedPose(f: FramingTurn, to: CamPose, piece: Vec3): { readonly pose: CamPose; readonly turn: FramingTurn } {
+  const k = framingShare(f);
+  const t = f.rule === 2 ? null : poseFramingTwo(f.from, to, piece, k, f.keep);
+  if (t !== null) return { pose: t.pose, turn: { ...f, keep: t.keep, rule: 1 } };
+  const r = poseAboutPiece(f.from, to, piece, k, f.axis);
+  return { pose: r.pose, turn: { ...f, rule: f.rule === 0 ? 2 : f.rule, axis: r.axis ?? f.axis } };
 }
 
 /**
- * ⭐ THE POSE DRAWN IN A FRAMING TURN, toward `to` (the logic's pose) at its share: the look point blended (far out both the same), the EYE round it — its
- * direction slerped, its distance lerped — and the up blended then squared to the view (no roll of its own: φ carries the up). Pure.
+ * ⭐ THE POSE A FRAMING TURN STARTS FROM: the picture drawn last frame (`picture`, the piece where it was then, `piecePrev`) turned back by this frame's φ
+ * about the framed line (`line`) — the WHOLE of it, the piece's place then included: the turn is drawn rolled by φ again, so its first frame is that picture
+ * with the piece where it was on the glass. ⛔ (first built, `f33ef5c`) the pose turned and its piece not: at φ ±180° with a moving piece the blend started
+ * the piece from its mirror across the line (589 px in one frame at his pace — the vectors had a still piece). Pure.
  */
-export function framedPose(f: FramingTurn, to: CamPose): CamPose {
-  const k = framingShare(f);
-  if (k <= 0) return f.from;
-  if (k >= 1) return to;
-  const a = f.from;
-  const look: Vec3 = [a.look[0] + (to.look[0] - a.look[0]) * k, a.look[1] + (to.look[1] - a.look[1]) * k, a.look[2] + (to.look[2] - a.look[2]) * k];
-  const da: Vec3 = [a.eye[0] - a.look[0], a.eye[1] - a.look[1], a.eye[2] - a.look[2]];
-  const db: Vec3 = [to.eye[0] - to.look[0], to.eye[1] - to.look[1], to.eye[2] - to.look[2]];
-  const ra = Math.hypot(da[0], da[1], da[2]);
-  const rb = Math.hypot(db[0], db[1], db[2]);
-  if (!(ra > 1e-9) || !(rb > 1e-9)) return to;
-  const ua: Vec3 = [da[0] / ra, da[1] / ra, da[2] / ra];
-  const ub: Vec3 = [db[0] / rb, db[1] / rb, db[2] / rb];
-  const om = Math.acos(Math.max(-1, Math.min(1, dot(ua, ub))));
-  let u: Vec3;
-  if (om < 1e-9 || Math.PI - om < 1e-6) {
-    const v: Vec3 = [ua[0] + (ub[0] - ua[0]) * k, ua[1] + (ub[1] - ua[1]) * k, ua[2] + (ub[2] - ua[2]) * k];
-    const lv = Math.hypot(v[0], v[1], v[2]);
-    u = lv > 1e-9 ? [v[0] / lv, v[1] / lv, v[2] / lv] : ub;
-  } else {
-    const s = Math.sin(om);
-    const wa = Math.sin((1 - k) * om) / s;
-    const wb = Math.sin(k * om) / s;
-    u = [ua[0] * wa + ub[0] * wb, ua[1] * wa + ub[1] * wb, ua[2] * wa + ub[2] * wb];
-  }
-  const r = ra + (rb - ra) * k;
-  const eye: Vec3 = [look[0] + u[0] * r, look[1] + u[1] * r, look[2] + u[2] * r];
-  const ul: Vec3 = [a.up[0] + (to.up[0] - a.up[0]) * k, a.up[1] + (to.up[1] - a.up[1]) * k, a.up[2] + (to.up[2] - a.up[2]) * k];
-  const c = dot(ul, u);
-  const sq: Vec3 = [ul[0] - c * u[0], ul[1] - c * u[1], ul[2] - c * u[2]];
-  const ls = Math.hypot(sq[0], sq[1], sq[2]);
-  return { eye, look, up: ls > 1e-9 ? [sq[0] / ls, sq[1] / ls, sq[2] / ls] : to.up };
+export function framingFrom(picture: CamPose, piecePrev: Vec3, line: FramedLine, phi: number): CamPose {
+  const a = line.at;
+  const v = rotateAbout([piecePrev[0] - a[0], piecePrev[1] - a[1], piecePrev[2] - a[2]], line.dir, -phi);
+  return { ...poseRolled(picture, line, -phi), piece: [a[0] + v[0], a[1] + v[1], a[2] + v[2]] };
 }
