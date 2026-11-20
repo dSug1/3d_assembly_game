@@ -29,7 +29,7 @@ describe("the carried up's wiring — read in the source", () => {
   it("ONE writer of the up: `upCarried` once, the picture rolled from its φ once", () => {
     expect(count(cf, "upCarried(")).toBe(1);
     expect(cf).toContain("const r = upCarried(was?.one?.state ?? CARRIED_REST, G, line, dtMs, knobs, kappa, change, asked, dxMm);");
-    expect(count(cf, "poseRolled(")).toBe(3); // ⭐ (packet J) + the pose shown turned back by φ, the framed pose rolled by φ: the same φ
+    expect(count(cf, "poseRolled(")).toBe(2); // ⭐ (packet J) + the framed pose rolled by φ (the pose shown turned back by the same φ in `framingFrom`)
     expect(cf).toContain("const P = poseRolled(G, line, r.phi);");
   });
   it("no camera turn far out but the half turn: a change resolved by the square camera's authority κ (far out applied at once)", () => {
@@ -78,7 +78,7 @@ describe("the framing carried from the pose shown — read in the source (packet
     expect(raw("src/render/tuning_menu.ts")).toContain('"uprightFraming", 0, 1, 1)');
   });
   it("opened only by a change applied at once, from the picture shown last frame turned back by this frame's φ (the piece's place then)", () => {
-    expect(cf).toContain("const shown = change && was !== null && was.one !== undefined && was.picture ? { ...poseRolled(was.picture, line, -r.phi), piece: was.piece } : null;");
+    expect(cf).toContain("const shown = change && was !== null && was.one !== undefined && was.picture ? framingFrom(was.picture, was.piece, line, r.phi) : null;");
   });
   it("the pose drawn is the one read and returned: the finger's glass, the next frame's pose shown, the camera", () => {
     expect(cf).toContain("const d: Vec3 = [D.eye[0] - D.look[0], D.eye[1] - D.look[1], D.eye[2] - D.look[2]];");

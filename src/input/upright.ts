@@ -21,7 +21,7 @@
  */
 import { cross, dot, type Vec3 } from "../core/vec";
 import { holdAtCrossing, poseAboutPiece, poseFramingTwo, rotateAbout, type CamPose, type EdgeHold, type FramingKeep } from "./orbit_tilt";
-import { fingerOnLogic, poseAxes, turnIsFree, twistAbout, type FramedLine } from "./roll_follow";
+import { fingerOnLogic, poseAxes, poseRolled, turnIsFree, twistAbout, type FramedLine } from "./roll_follow";
 
 /** ⭐ within this of the vertical (deg) the picture is the logic's pose (`w` 0) — the slider `uprightFromDeg` */
 export const UPRIGHT_FROM_DEG = 15; // ⭐ (2026-11-19, the owner's trial: "Changing both together is much better") — 5° before
@@ -460,4 +460,16 @@ export function framedPose(f: FramingTurn, to: CamPose, piece: Vec3): { readonly
   if (t !== null) return { pose: t.pose, turn: { ...f, keep: t.keep, rule: 1 } };
   const r = poseAboutPiece(f.from, to, piece, k, f.axis);
   return { pose: r.pose, turn: { ...f, rule: f.rule === 0 ? 2 : f.rule, axis: r.axis ?? f.axis } };
+}
+
+/**
+ * ⭐ THE POSE A FRAMING TURN STARTS FROM: the picture drawn last frame (`picture`, the piece where it was then, `piecePrev`) turned back by this frame's φ
+ * about the framed line (`line`) — the WHOLE of it, the piece's place then included: the turn is drawn rolled by φ again, so its first frame is that picture
+ * with the piece where it was on the glass. ⛔ (first built, `f33ef5c`) the pose turned and its piece not: at φ ±180° with a moving piece the blend started
+ * the piece from its mirror across the line (589 px in one frame at his pace — the vectors had a still piece). Pure.
+ */
+export function framingFrom(picture: CamPose, piecePrev: Vec3, line: FramedLine, phi: number): CamPose {
+  const a = line.at;
+  const v = rotateAbout([piecePrev[0] - a[0], piecePrev[1] - a[1], piecePrev[2] - a[2]], line.dir, -phi);
+  return { ...poseRolled(picture, line, -phi), piece: [a[0] + v[0], a[1] + v[1], a[2] + v[2]] };
 }

@@ -2,7 +2,8 @@
 // applied at once draws from the pose shown, the piece and the aim carried straight on the glass to where the logic frames them, over the change's own
 // time at the half turn's pace (`framingStep`, `framingShare`, `framedPose`). Each vector shown red on a mutant (the kit's `rebuild_e/j/mut_j.json`).
 import { describe, expect, it } from "vitest";
-import { framedPose, framingShare, framingStep, type FramingTurn } from "../src/input/upright";
+import { framedPose, framingFrom, framingShare, framingStep, type FramingTurn } from "../src/input/upright";
+import { framedLine, poseRolled } from "../src/input/roll_follow";
 import type { CamPose } from "../src/input/orbit_tilt";
 import type { Vec3 } from "../src/core/vec";
 
@@ -93,5 +94,22 @@ describe("the framing carried from the pose shown — the pose drawn (`framingSh
       expect(Math.hypot(g[0] - (a[0] + (b[0] - a[0]) * k), g[1] - (a[1] + (b[1] - a[1]) * k))).toBeLessThan(1e-6);
     }
     expect(f.rule).toBe(1);
+  });
+});
+
+describe("the framing carried from the pose shown — where it starts (`framingFrom`)", () => {
+  it("a half turn (φ = π) and a piece moving fast: the first frame drawn keeps the piece where it was on the glass drawn (its place then turned with the pose)", () => {
+    const P: CamPose = { eye: [0.3, 1.2, 7.3], look: [0, 0, 0], up: [0, 1, 0] }; // the picture drawn last frame
+    const was: Vec3 = [0.35, 0.9, 6.1]; // the piece then, framed off the centre
+    const now: Vec3 = [0.75, 0.95, 6.0]; // the piece this frame: 0.4 m on (his pace far out)
+    const G: CamPose = { eye: [1.1, -0.2, 7.2], look: [0, 0, 0], up: [0, -1, 0] }; // the logic's new pose (its heading turned over)
+    const line = framedLine(G, now);
+    const phi = Math.PI;
+    const from = framingFrom(P, was, line, phi);
+    const f: FramingTurn = { from, doneMs: 0, wholeMs: 300, keep: null, rule: 0, axis: null };
+    const D = poseRolled(framedPose(f, G, now).pose, line, phi);
+    const a = onGlass(P, was);
+    const d = onGlass(D, now);
+    expect(Math.hypot(d[0] - a[0], d[1] - a[1])).toBeLessThan(1e-3); // under one pixel of his glass (the toric solve with the piece moved: 0.3 px)
   });
 });

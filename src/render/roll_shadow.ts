@@ -19,7 +19,7 @@ import { upSquareToView } from "../input/camera_frame";
 import { rotateAbout, squareTurning, type CamPose } from "../input/orbit_tilt";
 import { followStep, FREE_TURN_MAX_DEG, framedLine, GAP_ZERO, onGlass, poseRolled, poseTurnAngle, ROLL_FOLLOW_MS, turnIsFree, twistAbout, type FollowMode } from "../input/roll_follow";
 import { easeRest } from "../input/seam_turn";
-import { askedTwist, CARRIED_REST, carriedHold, changeSeen, framedPose, framingStep, holdSeen, upCarried, UPRIGHT_REST, uprightStep, uprightWeight, viewFromVertical } from "../input/upright";
+import { askedTwist, CARRIED_REST, carriedHold, changeSeen, framedPose, framingFrom, framingStep, holdSeen, upCarried, UPRIGHT_REST, uprightStep, uprightWeight, viewFromVertical } from "../input/upright";
 import { changeApply, orbitPoleAxis, spitZone, zoneMixPose } from "./assembly_wiring";
 import type { SceneState } from "./scene_state";
 
@@ -257,7 +257,7 @@ function carriedFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Ve
   // a change applied at once draws from the picture shown (turned back by φ about the framed line), the piece and the aim carried straight on the glass
   // to where the logic frames them, over the change's own time at the half turn's pace (`framingStep`, `framedPose`) — the pose drawn only: φ, the half
   // turn, the holds as they are. ⛔ (`28a29ca`) the carry took back the change's roll alone: the piece leapt to where the new pose frames it, in one frame
-  const shown = change && was !== null && was.one !== undefined && was.picture ? { ...poseRolled(was.picture, line, -r.phi), piece: was.piece } : null;
+  const shown = change && was !== null && was.one !== undefined && was.picture ? framingFrom(was.picture, was.piece, line, r.phi) : null;
   const ft = st.cfg.uprightFraming === 1 ? framingStep(was?.one?.framing ?? null, change, shown, freed, r.halfStart, dtMs, st.cfg.uprightMaxDegS, kappa) : null;
   const fd = ft === null ? null : framedPose(ft, G, piece);
   const D = fd === null ? P : poseRolled(fd.pose, line, r.phi);
