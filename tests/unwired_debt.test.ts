@@ -90,6 +90,10 @@ const PENDING: Record<string, string> = {
   // ⭐ (2026-11-18, law U — UPRIGHT_PICTURE.md §2 step 2) the measure law U drives to 0, its vectors' witness; the game reads it off recordings (`gravity_read.mjs`)
   gravityTilt: "law U's own measure (gravity's tilt on the glass); read by `upright.test.ts`",
   // ⭐ (2026-11-13, the owner) the launch messages' texts and platform, ready for the sheet that shows them — OWED (`QUEUE.md`, `BROWSER_GUARDS.md` §3)
+  // ⭐ (2026-11-20, packet H2 — CAMERA_FOLLOWS_GIZMO.md §15) the top's pure rules, vectored ahead of their wiring (the next commit)
+  levelledHeading: "H2's wiring — the follower's heading target far out (`followTop`); read by `camera_follow_h2.test.ts`",
+  followTopStep: "H2's wiring — one frame of the follower with the top's rule (`followTop`); read by `camera_follow_h2.test.ts`",
+  followTurnHoldsGizmo: "H2's wiring — the gizmo waiting in `tiltClampStep` (`followTop`); read by `camera_follow_h2.test.ts`",
   LAUNCH_MESSAGES: "the launch messages sheet is owed (`BROWSER_GUARDS.md` §3); read by `browser_guards.test.ts`",
   LAUNCH_TITLE: "the launch messages sheet is owed (`BROWSER_GUARDS.md` §3); read by `browser_guards.test.ts`",
   launchPlatform: "the launch messages sheet is owed (`BROWSER_GUARDS.md` §3); read by `browser_guards.test.ts`",
