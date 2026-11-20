@@ -252,12 +252,16 @@ export const CARRIED_SENSE_DEG = 30;
 /** ⭐ … if it rolled this much or more (deg) over the last `CARRIED_ROLL_MEMORY_MS` */
 export const CARRIED_SENSE_MIN_DEG = 2;
 export const CARRIED_ROLL_MEMORY_MS = 100;
-/** ⭐ (C4) the alignment a dx pays near the vertical: degrees of the picture's turn per mm of the finger's dx — the slider `uprightAlignDegPerMm` */
-export const UPRIGHT_ALIGN_DEG_PER_MM = 3;
+/** ⭐ (C4, E-D2 — fix round 1, F-E4) the alignment a dx pays: at most this share of the drawn orbit's yaw step (rad a rad, `heldOffsetStep`'s kind,
+ *  `HELD_OFFSET_PER_YAW`) — so the picture turns between 0.5 and 1.5 × the turn asked, never against it. The slider `uprightAlignPerYaw`. ⛔ (the first
+ *  build) 3° a mm of the finger's dx: at his fast pace (1 200 px a second) 16° a frame, as large as the turntable's own turn — the picture rolled BACK
+ *  (`Scene_1` over its top: 3 reversals, one frame of 35.8°) */
+export const UPRIGHT_ALIGN_PER_YAW = 0.5;
 
 /** ⭐ The carried up's state: `phi` the picture's turn off the logic's pose about the framed line (rad); `gp` the logic's pose last frame; `g` what is left of
  *  a half turn (rad, signed, closing toward 0); `hs` a half turn under way; `half` while it holds the gizmo (T5's one reader); `rr` the picture's own roll
- *  over the last ~100 ms (rad: the half turn's sense) */
+ *  over the last ~100 ms (rad: the half turn's sense); `wp`, `np` the band's weight and the view's angle from the vertical last frame (E-D6: the dy that
+ *  leaves pays) */
 export interface CarriedState {
   readonly phi: number;
   readonly gp?: CamPose;
@@ -265,16 +269,18 @@ export interface CarriedState {
   readonly hs?: boolean;
   readonly half?: boolean;
   readonly rr?: number;
+  readonly wp?: number;
+  readonly np?: number;
 }
 export const CARRIED_REST: CarriedState = Object.freeze({ phi: 0 });
 
 export interface CarriedKnobs {
   readonly fromDeg: number;
   readonly fullDeg: number;
-  /** the half turn's pace and far out the alignment's, deg a second (0 or less: at once) */
+  /** the half turn's pace, and the most the alignment may turn the picture, deg a second (0 or less: at once / no bound) */
   readonly maxDegS: number;
-  /** the alignment a dx pays (deg per mm of the finger's dx) */
-  readonly alignDegPerMm: number;
+  /** the alignment a dx pays: its most, a share of the drawn orbit's yaw step (rad a rad) */
+  readonly alignPerYaw: number;
   /** the gizmo held for the whole half turn (`uprightHalfHold` 1); false: never held by it */
   readonly halfHold: boolean;
 }
@@ -324,16 +330,19 @@ export function askedTwist(prev: CamPose, pose: CamPose, dir: Vec3, pole: Vec3, 
 }
 
 /**
- * ⭐⭐⭐ ONE FRAME OF THE CARRIED UP (`UPRIGHT_CARRIED_UP.md` §4.2): the logic's pose `pose` about `line`; `kappa` the square camera's complement (1 far out, 0 close
- * in); `change` a logic change applied at once this frame (the moment); `asked` the turn the finger asked (C1); `dxMm` the finger's dx this frame (mm).
+ * ⭐⭐⭐ ONE FRAME OF THE CARRIED UP (`UPRIGHT_CARRIED_UP.md` §4.2, §7): the logic's pose `pose` about `line`; `kappa` the square camera's complement (1 far out, 0
+ * close in); `change` a logic change applied at once this frame (the moment); `asked` the turn the finger asked (C1); `dYaw` the drawn orbit's yaw step this
+ * frame (rad: a dx's — the alignment's budget, `heldOffsetStep`'s kind).
  * * C2 THE CARRY: `φc = φ − (τ − asked)` — the logic's twist the finger did not ask taken back (a change's jump whole: `asked` ignored there).
  * * C3 THE TARGET `w · h · α` (one pose's OP3): the logic's pose inside the band, upright beyond, never a half-turn blend.
- * * C4 THE ALIGNMENT, PAID: toward the target by at most `alignDegPerMm · dxMm`, and beyond the band (`w` 1) by `maxDegS` a second too — never by itself near
- *   the vertical: a dy never rolls the picture there. Close in (`kappa` < 1): the target itself (the square camera owns the roll; `kappa` 0: the logic's pose).
+ * * C4 THE ALIGNMENT, PAID BY THE FINGER ALONE, never by time (E-D2, E-D6 — fix round 1): toward the target by at most `alignPerYaw · |dYaw|` (a dx: the
+ *   picture between 0.5 and 1.5 × the turn asked, never against it), plus — the dy that LEAVES the vertical (E-D6) — the gap's share of the way out of the
+ *   band just made (`(w − wp) / (1 − wp)`, `heldOffsetStep`'s descent; beyond the band, the view still leaving: the rest); the whole at most `maxDegS` a
+ *   second. A dy toward the vertical, or no finger: the picture stays. Close in (`kappa` < 1): the target itself (the square camera owns the roll).
  * * C5 THE HALF TURN: at a change, `|φc − target| ≥ 90°` opens it — within `CARRIED_SENSE_DEG` of 180° the way the picture rolled last (`rr`), else the short
  *   way; it closes in time at `maxDegS`, whatever the view does; `holding` while under way (`halfHold`).
  */
-export function upCarried(s: CarriedState, pose: CamPose, line: FramedLine, dtMs: number, k: CarriedKnobs, kappa = 1, change = false, asked = 0, dxMm = 0): CarriedFrame {
+export function upCarried(s: CarriedState, pose: CamPose, line: FramedLine, dtMs: number, k: CarriedKnobs, kappa = 1, change = false, asked = 0, dYaw = 0): CarriedFrame {
   const nu = viewFromVertical(pose);
   const kap = Math.min(1, Math.max(0, Number.isFinite(kappa) ? kappa : 0));
   const w = uprightWeight(nu, k.fromDeg, k.fullDeg) * kap;
@@ -378,8 +387,13 @@ export function upCarried(s: CarriedState, pose: CamPose, line: FramedLine, dtMs
       g = Math.sign(g) * (Math.abs(g) - step);
       if (g === 0) hs = false;
     } else {
-      const beta = (Math.max(0, k.alignDegPerMm) * Math.max(0, Number.isFinite(dxMm) ? dxMm : 0) * Math.PI) / 180 + (w >= 1 ? cap : 0);
+      // ⭐⭐⭐ (fix round 1, F-E1 = E-D6, F-E4) the dx: a share of the yaw step (⛔ 3° a mm: the picture rolled back at his pace); the dy that leaves: the
+      // share of the way out of the band (⛔ by time, 520° a second beyond the band: a roll with his finger still, 46° on `Scene_1`'s dy across the top)
       const e = wrapPi(target - pc);
+      const byDx = Math.max(0, k.alignPerYaw) * Math.abs(Number.isFinite(dYaw) ? dYaw : 0);
+      const wp = s.wp;
+      const leave = wp === undefined ? 0 : w > wp && wp < 1 ? Math.min(1, (w - wp) / (1 - wp)) : wp >= 1 && w >= 1 && s.np !== undefined && nu > s.np ? 1 : 0;
+      const beta = Math.min(cap, byDx + leave * Math.abs(e));
       pc = Math.abs(e) <= beta ? target : wrapPi(pc + Math.sign(e) * beta);
     }
     phi = pc;
@@ -387,7 +401,7 @@ export function upCarried(s: CarriedState, pose: CamPose, line: FramedLine, dtMs
   const rollNow = wrapPi(tau + wrapPi(phi - s.phi));
   const rr = (s.rr ?? 0) * Math.exp(-Math.max(0, dtMs) / CARRIED_ROLL_MEMORY_MS) + rollNow;
   const holding = hs && k.halfHold;
-  const state: CarriedState = { phi, gp: pose, g, rr, ...(hs ? { hs: true } : {}), ...(holding ? { half: true } : {}) };
+  const state: CarriedState = { phi, gp: pose, g, rr, wp: w, np: nu, ...(hs ? { hs: true } : {}), ...(holding ? { half: true } : {}) };
   return { state, phi, w, nu, alpha, halfStart, holding };
 }
 

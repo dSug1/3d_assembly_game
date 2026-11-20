@@ -348,12 +348,9 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     // ⭐⭐⭐ (2026-11-18, `DY_HOLD_REVERSAL.md` §5.3) the dy that pushes NOW (`dySignPushing`: a sideways step none; the move before the hold, on the logic's
     // glass — the sign a crossing holds) — ⛔ the last dy sign for ever
     if (asmOn && !shiftApproach) st.asmDySign = dySignPushing(st.asmDySign, fdx0, fdy0);
-    // ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` C4, C6) the dx that pushes now (the raw finger, the glass he sees) and this frame's dx that moves (mm: the
-    // carried up's alignment budget near the vertical — a dy never pays it)
-    if (asmOn && !shiftApproach) {
-      st.asmDxSign = dxSignPushing(st.asmDxSign, raw.dx, raw.fdy);
-      st.asmFingerDxMm += Math.abs(held.dx) / mmToPx(1);
-    }
+    // ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` C6) the dx that pushes now (the raw finger, the glass he sees) — ⛔ (fix round 1, F-E4) its mm no longer the
+    // alignment's budget (the drawn orbit's yaw step is, at the camera's stage)
+    if (asmOn && !shiftApproach) st.asmDxSign = dxSignPushing(st.asmDxSign, raw.dx, raw.fdy);
     // ⭐⭐⭐ (2026-11-14) …and released by the finger the other way past `edgeHoldMm` (`edgeHoldFinger` — the owner's hysteresis, a finger's, at any distance),
     // read along the held direction on the raw finger (`edgeHoldAlong`; law U off: the dy itself)
     const along = asmOn && st.asmEdgeHold !== null ? edgeHoldAlong(st.asmEdgeHold, raw.dx, raw.fdy) : 0;

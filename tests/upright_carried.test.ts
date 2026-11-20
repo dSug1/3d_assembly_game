@@ -1,14 +1,15 @@
 // ⭐⭐⭐ (2026-11-20, `Claude/40_RENDER_SCENE/spec/UPRIGHT_CARRIED_UP.md` §4.2 — packet E) ONE CARRIED UP, pure (`upCarried`, `askedTwist`, `carriedHold`,
-// `dxSignPushing`): the picture turns about the framed line only by what the finger asks (C1, C2); its target reached only by a dx near the vertical, by
-// time far out (C4); the ONE half turn at a logic change, its sense by continuity (C5); the push held from the same answer — the dy as OP8, a dx only
+// `dxSignPushing`): the picture turns about the framed line only by what the finger asks (C1, C2); its target reached only by the finger — a dx (half its
+// yaw at most) and the dy that leaves the vertical (E-D6), never by time (C4, fix round 1); the ONE half turn at a logic change, its sense by continuity (C5); the push held from the same answer — the dy as OP8, a dx only
 // when a half turn opened (C6); close in the logic's pose. Each vector red on a named mutant (the kit's `fo3/rebuild_e/mut_carried.json`).
 import { describe, expect, it } from "vitest";
 import type { Vec3 } from "../src/core/vec";
 import { dxSignPushing, rotateAbout, type CamPose } from "../src/input/orbit_tilt";
 import { framedLine, poseRolled, twistAbout } from "../src/input/roll_follow";
-import { askedTwist, CARRIED_REST, carriedHold, upCarried, type CarriedKnobs, type CarriedState } from "../src/input/upright";
+import { askedTwist, CARRIED_REST, carriedHold, upCarried, uprightAngle, uprightWeight, viewFromVertical, type CarriedKnobs, type CarriedState } from "../src/input/upright";
 
 const DEG = Math.PI / 180;
+const wrapPi = (a: number): number => Math.atan2(Math.sin(a), Math.cos(a));
 const DT = 1000 / 60;
 const Y: Vec3 = [0, 1, 0];
 const add = (a: Vec3, b: Vec3): Vec3 => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
@@ -34,11 +35,11 @@ const yawed = (g: CamPose, deg: number): CamPose => ({
   look: add(piece, rotateAbout(sub(g.look, piece), Y, deg * DEG)),
   up: rotateAbout(g.up, Y, deg * DEG),
 });
-const K: CarriedKnobs = { fromDeg: 15, fullDeg: 50, maxDegS: 720, alignDegPerMm: 3, halfHold: true };
+const K: CarriedKnobs = { fromDeg: 15, fullDeg: 50, maxDegS: 720, alignPerYaw: 0.5, halfHold: true };
 /** one frame: the law, and the picture drawn */
-const one = (s: CarriedState, g: CamPose, opt: { kappa?: number; change?: boolean; asked?: number; dxMm?: number; k?: CarriedKnobs } = {}) => {
+const one = (s: CarriedState, g: CamPose, opt: { kappa?: number; change?: boolean; asked?: number; dYaw?: number; k?: CarriedKnobs } = {}) => {
   const line = framedLine(g, piece);
-  const r = upCarried(s, g, line, DT, opt.k ?? K, opt.kappa ?? 1, opt.change ?? false, opt.asked ?? 0, opt.dxMm ?? 0);
+  const r = upCarried(s, g, line, DT, opt.k ?? K, opt.kappa ?? 1, opt.change ?? false, opt.asked ?? 0, opt.dYaw ?? 0);
   return { r, p: poseRolled(g, line, r.phi), line };
 };
 /** the picture's own turn about the framed line from one frame to the next (deg) */
@@ -76,19 +77,55 @@ describe("the carried up — C1, C2: the picture turns only by what the finger a
   });
 });
 
-describe("the carried up — C4: the alignment is PAID", () => {
-  it("in the band, off its target and no dx: the picture stays; 5 mm of dx: it moves 15° toward the target (3° a mm)", () => {
-    const g = poseAt(60, 30, 40);
-    const a = one(CARRIED_REST, g);
-    const still = one(a.r.state, g);
-    expect(still.r.phi).toBeCloseTo(a.r.phi, 9);
-    const paid = one(a.r.state, g, { dxMm: 5 });
-    expect(Math.abs(paid.r.phi - a.r.phi) / DEG).toBeCloseTo(15, 3);
+describe("the carried up — C4: the alignment is PAID by the finger alone (fix round 1: E-D6, F-E4)", () => {
+  it("a dx at a pole, the picture 34° off its target: it turns 10° toward it on a 20° yaw (half the yaw) — never against the turn asked", () => {
+    const g0 = poseAt(87, 30, 0);
+    const a = one({ phi: 0.6 }, g0);
+    expect(a.r.phi).toBe(0.6);
+    const g1 = yawed(g0, 20);
+    const asked = askedTwist(g0, g1, framedLine(g1, piece).dir, Y, 20 * DEG);
+    const b = one(a.r.state, g1, { asked, dYaw: 20 * DEG });
+    expect((a.r.phi - b.r.phi) / DEG).toBeCloseTo(10, 3);
+    const own = twistAbout(g0, g1, framedLine(g1, piece).dir) / DEG;
+    const ratio = pictureRoll(a.p, b.p, g1) / own;
+    expect(ratio).toBeGreaterThan(0.45);
+    expect(ratio).toBeLessThan(1.55);
   });
-  it("beyond the band (w 1) the picture goes upright by time: 12° a frame at 720° a second", () => {
+  it("THE DY THAT LEAVES pays (E-D6): out of the band from w0 to w1 the gap closes by (w1 − w0) / (1 − w0); back toward the vertical, or still: nothing", () => {
+    const k = { ...K, maxDegS: 0 };
+    const g0 = poseAt(60, 30, 40);
+    const g1 = poseAt(50, 30, 40);
+    const a = one(CARRIED_REST, g0, { k });
+    expect(a.r.phi).toBe(0);
+    const l1 = framedLine(g1, piece);
+    const w0 = uprightWeight(viewFromVertical(g0), 15, 50);
+    const w1 = uprightWeight(viewFromVertical(g1), 15, 50);
+    const f = (w1 - w0) / (1 - w0);
+    expect(f).toBeGreaterThan(0.5);
+    const pc = wrapPi(a.r.phi - twistAbout(g0, g1, l1.dir));
+    const t1 = w1 * uprightAngle(g1, l1)!;
+    const b = one(a.r.state, g1, { k });
+    expect(b.r.phi).toBeCloseTo(pc + f * (t1 - pc), 6);
+    const c = one(b.r.state, g0, { k });
+    expect(c.r.phi).toBeCloseTo(wrapPi(b.r.phi - twistAbout(g1, g0, framedLine(g0, piece).dir)), 9);
+    const d = one(c.r.state, g0, { k });
+    expect(d.r.phi).toBeCloseTo(c.r.phi, 12);
+  });
+  it("beyond the band NEVER by time: no finger, the picture stays off upright; the view still leaving pays the rest, at most 12° a frame (720° a second)", () => {
     const g = poseAt(10, 30, 30);
     const a = one(CARRIED_REST, g);
-    expect(Math.abs(a.r.phi) / DEG).toBeCloseTo(12, 3);
+    expect(a.r.phi).toBe(0);
+    const b = one(a.r.state, g);
+    expect(b.r.phi).toBe(0);
+    const g2 = poseAt(5, 30, 30);
+    const l2 = framedLine(g2, piece);
+    const pc = wrapPi(b.r.phi - twistAbout(g, g2, l2.dir));
+    expect(Math.abs(uprightAngle(g2, l2)! - pc) / DEG).toBeGreaterThan(20);
+    const c = one(b.r.state, g2);
+    expect(Math.abs(c.r.phi - pc) / DEG).toBeCloseTo(12, 3);
+    const g3 = poseAt(15, 30, 30);
+    const d = one(c.r.state, g3);
+    expect(d.r.phi).toBeCloseTo(wrapPi(c.r.phi - twistAbout(g2, g3, framedLine(g3, piece).dir)), 9);
   });
   it("close in (κ 0) the picture IS the logic's pose", () => {
     const g0 = poseAt(87, 30, 0);

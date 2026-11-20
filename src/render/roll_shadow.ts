@@ -209,7 +209,7 @@ function uprightPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3,
  * `φ` about the framed line, drawn AND read (one glass: `asmCamLast`, the silent entry, the finger — `fingerAtEntry` reads law U's record only), and ONE owner
  * turns its up (`upCarried`). FIRST the change asked this frame resolved ONCE (`changeSeen`) by who owns the roll — the square camera's complement `κ` (one
  * pose's OP2): far out applied at once, close in a timed turn as today. Then `G` (`zoneMixPose`), the turn the finger ASKED (C1, `askedTwist`: the drawn
- * orbit's yaw step about its pole axis, none across a change of the logic's frame), the dx's budget (C4), `upCarried`, `P`. C6: at a change applied at
+ * orbit's yaw step about its pole axis, none across a change of the logic's frame), the dx's budget (C4: that yaw step), `upCarried`, `P`. C6: at a change applied at
  * once the push held from the same answer (`carriedHold`: the dy as OP8; a dx only when a half turn opened); the gizmo still meanwhile (C7, the spring).
  */
 function carriedFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Vec3, dtMs: number, ghost: CamPose, sqTurning: boolean, tiltHold: boolean): CamPose {
@@ -217,7 +217,7 @@ function carriedFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Ve
   const sq = st.asmSquare;
   const share = sq.n === null || !(sq.q > 0) ? 0 : sq.q;
   const kappa = st.cfg.uprightCloseIn === 1 ? 1 : 1 - share;
-  const knobs = { fromDeg: st.cfg.uprightFromDeg, fullDeg: st.cfg.uprightFullDeg, maxDegS: st.cfg.uprightMaxDegS, alignDegPerMm: st.cfg.uprightAlignDegPerMm, halfHold: st.cfg.uprightHalfHold === 1 };
+  const knobs = { fromDeg: st.cfg.uprightFromDeg, fullDeg: st.cfg.uprightFullDeg, maxDegS: st.cfg.uprightMaxDegS, alignPerYaw: st.cfg.uprightAlignPerYaw, halfHold: st.cfg.uprightHalfHold === 1 };
   let freed = 0;
   let change = false;
   let crossed: 1 | -1 | 0 | undefined;
@@ -248,10 +248,8 @@ function carriedFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Ve
   const dYaw = same ? Math.atan2(Math.sin(q.yaw - cy.yaw), Math.cos(q.yaw - cy.yaw)) : 0;
   const asked = same ? askedTwist(was.ghost, G, line.dir, orbitPoleAxis(st), dYaw) : 0;
   st.asmCarriedYaw = { yaw: q.yaw, zone: st.asmZone, tilt: tiltId };
-  // C4 the dx's budget this frame (mm), read once
-  const dxMm = st.asmFingerDxMm;
-  st.asmFingerDxMm = 0;
-  const r = upCarried(was?.one?.state ?? CARRIED_REST, G, line, dtMs, knobs, kappa, change, asked, dxMm);
+  // C4 the dx's budget this frame: the drawn orbit's yaw step (⛔ fix round 1, F-E4: the finger's mm — the picture rolled back at his pace)
+  const r = upCarried(was?.one?.state ?? CARRIED_REST, G, line, dtMs, knobs, kappa, change, asked, dYaw);
   const P = poseRolled(G, line, r.phi);
   if (change && crossed !== undefined) st.asmEdgeHold = carriedHold(r.halfStart, crossed, st.asmDxSign);
   const d: Vec3 = [P.eye[0] - P.look[0], P.eye[1] - P.look[1], P.eye[2] - P.look[2]];

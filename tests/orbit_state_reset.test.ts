@@ -50,7 +50,6 @@ const RESET: Record<string, unknown> = {
   asmSpitPicWas: null,
   asmZoneAlpha: 0,
   asmDySign: 0,
-  asmFingerDxMm: 0,
   asmDxSign: 0,
   asmCarriedYaw: null,
   asmHeadO: null,
@@ -81,7 +80,7 @@ const KEPT = [
 describe("⭐⭐⭐ the orbit's starting state (`orbitStateStart`, `resetOrbitState`)", () => {
   it("every `asm…` / `pieceHold…` field of the scene's state is decided: reset or kept (61)", () => {
     const decl = [...raw("render/scene_state.ts").matchAll(/^ {2}((?:asm|pieceHold)\w*)\??:/gm)].map((m) => m[1]!);
-    expect(decl.length).toBe(64); // ⭐ (2026-11-20, UPRIGHT_CARRIED_UP.md) + `asmFingerDxMm`, `asmDxSign`, `asmCarriedYaw`; // ⭐ (2026-11-19, UPRIGHT_PICTURE.md §12 RB1) + `asmChange` (a change asked, resolved at the camera's stage); ⭐ (2026-11-19, UD8b) − `asmPicLast` (the finger turned once at the entry); ⭐ (2026-11-18, law U) + `asmPicLast`; ⭐ (2026-11-18, FO3 S0) + `asmRollShadow`; ⭐ (2026-11-18, ES) + `asmSpitPic`, `asmSpitPicWas`; ⭐ (2026-11-16, C2W) + `asmPlaceWas`; ⛔ (step 2.5) − `asmZoneFacetsF` (`zoneFacetOf`'s memo, deleted with the old calm)
+    expect(decl.length).toBe(63); // ⭐ (fix round 1, UPRIGHT_CARRIED_UP.md §7) − `asmFingerDxMm` (the dx's budget is the yaw step now) // ⭐ (2026-11-20, UPRIGHT_CARRIED_UP.md) + `asmFingerDxMm`, `asmDxSign`, `asmCarriedYaw`; // ⭐ (2026-11-19, UPRIGHT_PICTURE.md §12 RB1) + `asmChange` (a change asked, resolved at the camera's stage); ⭐ (2026-11-19, UD8b) − `asmPicLast` (the finger turned once at the entry); ⭐ (2026-11-18, law U) + `asmPicLast`; ⭐ (2026-11-18, FO3 S0) + `asmRollShadow`; ⭐ (2026-11-18, ES) + `asmSpitPic`, `asmSpitPicWas`; ⭐ (2026-11-16, C2W) + `asmPlaceWas`; ⛔ (step 2.5) − `asmZoneFacetsF` (`zoneFacetOf`'s memo, deleted with the old calm)
     expect([...Object.keys(RESET), ...KEPT].sort()).toEqual([...decl].sort());
   });
 
