@@ -568,3 +568,105 @@ root cause analysis, new logic with no patch)"*
   (2) `Scene_0bis` dx round the zenith edge's corner: many correct camera moves for want of a hold — a dx hold, if simple; (3) `Scene_0` leaving
   along the zenith edge in polar orbit: a jitter; (4) `Scene_1` dy across the level face in polar orbit: pitch AND roll toward the square vertical
   alignment at the pole — the roll perhaps deferred to a dx.
+
+## 17. Packet A — his four symptoms on one pose: reproduced, rooted, the verdict (2026-11-20; BRIEF_D §10; no `src` change) — ⭐ for his word
+
+**The result first.** Three of his four symptoms have ONE root, and it is not one pose's alone: near the vertical the picture's up is the logic's
+own heading (one pose's OP3 target is the logic's pose there; law U's carry is 0 there), and the logic computes that heading FROM THE EYE'S
+DIRECTION (three rules: the spit's, the level face's, the world's). Since the fast orbit the eye crosses the pole region 4 times faster than in
+`1.0.147-`, and those rules turn about 0.9° of roll per degree the eye swings there, so the camera rolls by itself: on his own play, outside the
+crossing turns, 172° a second near the vertical (law U, the build he had: 161; `1.0.147-`: 25). The fourth (the dx round the zenith edge's
+corner) is a different root: the hold after a crossing reads only the dy. **Verdict: (b) — a new logic on `1.0.148e-`**: the up near the vertical
+must be a CARRIED state moved only by what the finger asks, never recomputed from the eye's direction. Patching the three heading rules one by one
+(F3 did one) moves the spin, it does not remove it: no up computed from the view is continuous at the pole (the hairy ball).
+
+### 17.1 The reader that counts what he names (`fo3/rebuild_d/a/his.mjs`; every figure in `CHECKPOINT_A.md`)
+* **A back and forth**: one component of the camera's turn (pitch, yaw or roll in its own axes) 3° or more one way and 3° or more back within
+  0.3 s, while the finger's way did not reverse.
+* **A camera move not asked**: away from the vertical (20° or more) the picture rolling against gravity (an upright orbit's own roll is asked);
+  near it, the roll about the view unless the finger's last step was a dx (a turntable yaw there is asked); the view's swing once the finger has
+  been still 0.5 s (the follower's tail is the finger's). Split inside a crossing's turn / outside it, by place, by the view from the vertical.
+* It sees the symptoms where the old gates did not: on his ten stretches (`Scene_0bis` far out) one pose shows more moves not asked than the
+  defaults, and both up to 7 times `1.0.147-`'s near the vertical (17.2).
+
+### 17.2 Reproduced (his ten stretches, 60 frames a second, far out; one pose = fix round 1's recordings, op0 = `74a247e`, the build he had)
+
+| outside a crossing's turn, not asked (° a second) | one pose | op0 (law U) | `1.0.147-` |
+|---|---|---|---|
+| the view < 20° from the vertical · 20 – 50° · 50°+ | **172** · 104 · 19 | 161 · 83 · 13 | 25 · 17 · 9 |
+| the LOGIC's own pose, the same split | 222 · 95 · 13 | 200 · 81 · 14 | 24 · 14 · 5 |
+| by place: the level face · a tip · the zenith region · a side | 98 · 39 · 103 · 48 | 116 · 45 · 90 · 26 | 16 · 8 · 43 · 11 |
+| inside the crossing turns (° in all) · back and forths pitch / yaw / roll | 21 748 · 153 / 44 / 102 | 20 548 · 124 / 52 / 81 | 20 184 · 115 / 54 / 81 |
+
+* **(1) `Scene_0bis`, the tip's triangle ↔ the level face**: on the level face the camera moves by itself 98° a second (op0 116, `1.0.147-` 16).
+* **(4) `Scene_1`, a dy across the top** (`a/s4.jsonl`: a short dx off square, then a dy up to the pole, three times): far out `Scene_1` is the
+  world branch; during the climbs, 20 – 50° from the vertical, the picture rolls 45° not asked in 33 frames (82° a second; op0 48°): his "roll
+  toward the square alignment", the same at op0.
+* **(3) `Scene_0` along the zenith edge**: NOT reproduced by a walk — far out the view stops at the pole's limit (3.2°) where a dx is the turntable's
+  yaw (asked): 0° not asked. His gesture is needed (the play recorder on `Scene_0`); its root is read below.
+* **(2) the dx round the zenith edge's corner**: his stretches hold no such gesture. Of one pose's 154 half turns, 28 come back within 0.5 s: 16
+  with his finger reversed (asked), 12 the same way — 5 under the dy hold, 7 with NO hold (of the 12, 5 at a tip).
+* Two synthetic walk sets were rejected as not his gesture (closed-loop steering hunted; strokes along the gizmo's gradient mixed the axes).
+
+### 17.3 The roots (read in the code; measured where said)
+* **R-A1 — one root for (1), (3), (4): the up near the vertical is computed from the eye's direction.** One pose: `upOne` (`upright.ts` 291) —
+  within `uprightFromDeg` the weight is 0, the target 0, so the picture IS the logic's pose plus a gap. Law U: `uprightPaced` (`upright.ts` 219),
+  carry `min(w, w before)` = 0 there. The logic's heading, per zone:
+  * the spit (`assemblyCameraFrameRaw`, `assembly_wiring.ts` 1616 → `spitCameraHeading`, `polar_zone.ts` 213): the eye's level part + the side × 0.3,
+    faded in from 60° to 75° of pitch — 5 – 35° from the vertical it swings with the eye (packet S, §14.2);
+  * a level face (`freeShownHeading`, `assembly_wiring.ts` 2366): a heading stepped by TIME (`headingStep`, `free_face.ts` 411, `tiltRollDegS`) toward
+    a target that moves with the eye (`entryBlendHeading` 386 of the view's level part, the offset re-read every frame) and with the gizmo's depth:
+    it keeps turning deep inside the face — his "the calm or the pitch";
+  * the world (`cameraHeading`, `orbit_calm.ts` 211): the eye's own heading blended to the level reading (`calmLevelHeading` 168: the face's square
+    layout) between 50° and 60° of pitch — a dy alone rolls the camera toward the square alignment (his (4)); the calm's direction (`calmDir`,
+    `assembly_wiring.ts` 509) adds the pitch.
+  Measured (`a/eye.mjs`, near the vertical, outside the turns): the eye swings 6.9° a frame (op0 7.7°; `1.0.147-` 1.7°), the logic rolls 6.0° (0.8°),
+  0.87° per degree of swing (0.48). The eye's pace is the fast orbit's — out of scope; the rules that turn it into a roll are the up's.
+* **R-A2 — (2): the hold after a crossing reads only the dy.** `spitStep` (`assembly_wiring.ts` 2466 – 2512): a side change whose path is not
+  steep (`crossingPitch` < 60°, `polar_zone.ts` 274) or round a tip (`SPIT_OVER_AXIS_MIN`, 252) changes the side SILENTLY and ends any hold; a
+  crossing holds `crossingHold(…, st.asmDySign)` — the dy's sign. A crossing made by a dx is not held: the glass turns half round under a finger that
+  keeps its way, the gizmo goes back over (the comment there records this case, "a second half turn").
+* **R-A3 (packet S, confirmed)**: the gizmo "held" by a half turn still moves 100 – 250 mm a frame (`tiltClampStep`, 1717, refuses only new steps);
+  a half turn's sense the shortest way, against the roll before (the jitter at a pole).
+* **The hypothesis TESTED: confirmed.** Near the vertical, the picture's unasked roll equals the logic's own (one pose 2 081° against 2 693°; op0
+  1 858° / 2 310°); in `1.0.147-` the same rules moved 7 – 9 times less because the eye moved 4 times slower there.
+
+### 17.4 The dx hold (his question)
+* **What**: the hold of the push that crossed, on WHATEVER finger axis pushed — the finger's step at the crossing frame, its component across the
+  edge on the glass held until the gizmo is `edgeHoldMm` beyond, the other component free, a reversal free at once. For his inputs it is the dy
+  hold's rule unchanged, read on the push instead of on the dy: no new gesture.
+* **Cost**: a dx along the zenith edge that wanders over it is blocked across it for ~30 mm (it slides along the edge); crossings round a tip
+  must count as crossings for it (today silent) — one decision (D-A3).
+* **Root or patch**: the ROOT's rule — the dy hold exists because the glass turns half round under a moving finger (T9); that cause does not care
+  which axis the finger moves. As an extra hold beside the dy's it would be a patch; as THE hold (one owner, OP8, the push that crossed) it is not.
+
+### 17.5 The new logic for `1.0.148e-` — in his four parts (designed, nothing built)
+1. **The rules.** His: no roll he did not ask — near the vertical a roll only from his dx (a turntable yaw) or from the ONE half turn of a pass
+   over the vertical; gravity on the glass's vertical away from it (at least as `1.0.147-`); a yaw or pitch is fine; the roll alignment to a
+   level face's square layout deferred to a dx; the fast orbit's pace not reopened; the tilted-pole close in kept. Kept from one pose: the half turn
+   at the logic's crossing (its moment), the push that crossed held from the same answer (OP8), 520° a second.
+2. **Obstacles and fallbacks.** The three heading rules (17.3) also feed the finger's mapping (`zoneFinger` 2429 through `asmCamLast`;
+   `fingerSwapped` 164 rounds to F's axes) — they must read the carried up, not their own. No up is continuous over every view: the seam is the
+   half turn at the crossing, nowhere else. The follower moves under a hold (R-A3): the half turn must not depend on the gizmo standing still.
+   The calm's pitch is the camera's direction, not its up: in scope only if he says so (D-A4). Fallback for each rule: today's, behind a switch.
+3. **The design (prior art: Blender's turntable, a rotation-minimising frame (Bishop 1975), the trackball's carried orientation; patent-free, no
+   widget).** ONE CARRIED UP: a state turned each frame by the orbit's OWN rotation this frame (its yaw about its pole axis, its pitch about the
+   level axis square to it) — so a dy never rolls the picture, a dx at a pole turns it with the turntable, and far from the vertical an upright
+   picture stays upright by construction (the world branch's turntable: heading = the orbit's yaw, no level-reading blend). Three changes only:
+   (a) the asked rotation; (b) the half turn at the logic's crossing (sense by continuity, §14.3; pace 520); (c) an ALIGNMENT (to a level face's
+   square layout, to the spit's side, to upright where the carry has drifted) paid only out of the asked yaw, at most `k` per radian (his
+   deferral; the code has the mechanism: `heldOffsetStep`, `HELD_OFFSET_PER_YAW` 0.5) — never by time, never by the eye's direction.
+   One owner per thing: the up — the carry; the moment of the half turn — the logic's crossing; the alignment — the asked yaw; the hold — the push
+   that crossed (17.4); the finger — read on the one glass; close in — the square camera (unchanged).
+4. **The audit plan.** Gates on `his.mjs` with `1.0.147-` as the bar: not asked outside the turns at most 25 / 17 / 9° a second (near / band /
+   away), on his ten stretches and on a recorded `Scene_0` / `Scene_1` play of his; `Scene_1`'s dy across the top 0° not asked; same-way
+   re-crossings 0; the hold walks as `1.0.147-`; gravity tilted no more than `1.0.147-`; close in bit for bit; vectors red on mutants (a dy that
+   rolls, an alignment by time, a hold on the dy only).
+
+### 17.6 Decisions for his word
+* **D-A1** the verdict (b): start `1.0.148e-` (worktree `../upright_e`, `1.0.148b-` + his defaults, 520 carried) with ONE CARRIED UP; one pose stays
+  on `1.0.148d-` as the record.
+* **D-A2** the roll alignment to a level face's square layout: only with a dx, at `k` = 0.5 per radian of yaw — or never.
+* **D-A3** the dx hold: THE hold of the push that crossed (any axis), crossings round a tip included — or the dy hold as today.
+* **D-A4** the calm's pitch toward a face's square ("the pitch" of his (1) and (4)): kept as the camera's direction, or deferred like the roll.
+* **D-A5** the gates: `his.mjs` with `1.0.147-` as the bar; a recording of his `Scene_0` zenith-edge gesture to reproduce (3).
