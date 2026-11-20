@@ -533,3 +533,9 @@ node scripts/probes/gravity_read.mjs <rec.json> ...          # JSON=1: one objec
   `audit/t_read.mjs` (`ALL=1`), `rebuild/big_frames.mjs` (the 45° frames by cause), `rebuild/pic_turns.mjs` (holds against the turn SEEN); RB4's
   offline proof `rebuild/rb4.mjs` (`w` off the camera's view against off the piece's direction); the straight dy `upright/dy_glass.mjs`; the identities
   `scripts/probes/replay_cmp.mjs` (replays) and the kit's `same.mjs` (a stretch). The driver `rebuild/drv_rb.sh`, `drv_rb2.sh`.
+* **ONE CARRIED UP** (`1.0.148e-`, `UPRIGHT_CARRIED_UP.md` §7, 2026-11-20): the kit's `fo3/rebuild_e/drv_e.sh` (the first build, `runs/`; law U at 520
+  `u_*`) and `drv_f1.sh` (fix round 1, `runs_f1/`: every phase, `Scene_1`'s dy across the top `s4`, the identity `uprightCarried` 0 + 720 against
+  `fo3/vertical/runs`, the hold walks at `uprightHalfHold` 0); readers `R=<dir> rd_f1.sh hand|hold|rest|id`, the gizmo while held `gz.mjs` (by cause
+  `gz2.mjs`, frames `gz3.mjs` / `gz4.mjs`), a walk's largest camera turns `ov.mjs` / `ov2.mjs`, the tips `tip.mjs`, far out by φ `far.mjs` / `far2.mjs`.
+  ⚠ `hold_walk_analyse.mjs`'s BLOCKED excludes timed-turn frames (`mix`) only: a half turn is none, so the dy hold after a come-back's second crossing
+  counts as blocked (8 frames) where `1.0.147-`'s turn hid them — read the `come` leg frame by frame before calling it a regression.
