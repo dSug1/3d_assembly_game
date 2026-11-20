@@ -10,11 +10,17 @@
  *
  * Far out, a change of frame the logic asks (`asmChange`) is applied AT ONCE (no timed turn: the follower is the picture's one ease) with the dy hold from
  * the LOGIC's crossing (`holdAtCrossing` — OP8, as `1.0.147-`); no half turn exists, so no gizmo hold (D-F4). Nothing here undoes a turn or a hold.
+ *
+ * ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §15 – §16 — H2, `followTop` 1) THE TOP AND BOTTOM FAR OUT: the heading the calm's levelled reading
+ * (`st.asmAskLevel`; carried where none), the height capped, at a facet change of the gizmo (`gizmoFacetW`, the MODEL's) the follower's OWN turn — the gizmo
+ * waiting meanwhile (`tiltClampStep` reads `asmFollow.top.turn`) — and the dy hold decided there (D-H8: a turn over 90° the dy made), written ONLY here,
+ * through `holdAtCrossing`; the logic's own `ask.hold` is not written far out (R4 amended). 0: the follower as `de4a10e` (the detour), frame for frame.
  */
 import type { Vec3 } from "../core/vec";
-import { followPose, followStart, followStep, type FollowState } from "../input/camera_follow";
-import { holdAtCrossing } from "../input/orbit_tilt";
-import { changeApply, spitZone } from "./assembly_wiring";
+import { followPose, followStart, followStep, followTopStep, type FollowState, type FollowTop } from "../input/camera_follow";
+import { holdAtCrossing, tiltDir } from "../input/orbit_tilt";
+import { orbitDir } from "../input/assembly_orbit";
+import { changeApply, dirFrame, gizmoFacetW, spitZone } from "./assembly_wiring";
 import { upSquareToView } from "../input/camera_frame";
 import type { SceneState } from "./scene_state";
 
@@ -45,15 +51,33 @@ export function followFrame(
     st.asmFollow = was === null ? null : { state: null, piece: null, rec: { on: 0 } };
     return null;
   }
-  // a change of frame asked: applied at once, the dy hold the logic's crossing's (OP8)
+  // a change of frame asked: applied at once, the dy hold the logic's crossing's (OP8) — ⭐ (H2) under the top's rule none: a hold far out only after the
+  // follower's own half turn (R4 amended, D-H8)
   const ask = st.asmChange;
-  if (ask !== null) changeApply(st, ask, false, ask.hold !== undefined ? holdAtCrossing(ask.hold) : undefined);
+  const top = st.cfg.followTop === 1;
+  if (ask !== null) changeApply(st, ask, false, top ? undefined : ask.hold !== undefined ? holdAtCrossing(ask.hold) : undefined);
   st.asmFingerDxMm = 0; // the carried up's dx budget: none far out (read again from 0 when it draws)
   st.asmCarriedYaw = null;
   const hang = Math.hypot(pp[0] - foot[0], pp[1] - foot[1], pp[2] - foot[2]);
   const s0: FollowState = was?.state ?? followStart(hang > 1e-9 ? [(pp[0] - foot[0]) / hang, (pp[1] - foot[1]) / hang, (pp[2] - foot[2]) / hang] : st.asmAsk!);
-  const k = { tauMs: st.cfg.followMs, poleDeg: st.cfg.followPoleDeg, fromDeg: st.cfg.followFromDeg, maxDegS: st.cfg.followMaxDegS };
-  const s = followStep(s0, st.asmAsk!, dtMs, k);
+  let s: FollowState;
+  let topS: FollowTop | null = null;
+  let topRec: Record<string, unknown> | null = null;
+  if (top) {
+    // ⭐⭐⭐ (H2) the top's rule: his pace read on the orbit's own direction in the world (the finger's place), the gizmo's facet, the glass's up drawn last
+    const kt = { tauMs: st.cfg.followMs, poleDeg: st.cfg.followPoleDeg, minDeg: st.cfg.followTurnMinDeg, rollDegS: st.cfg.tiltRollDegS, paceShare: st.cfg.followTurnPace };
+    const orbitW = tiltDir(dirFrame(st), orbitDir(st.orbit.yaw, st.orbit.elevation));
+    const r = followTopStep(s0, was?.top ?? null, { ask: st.asmAsk!, orbit: orbitW, psiL: st.asmAskLevel, nW: gizmoFacetW(st), upShown: st.asmCamLast?.up ?? null, dySign: st.asmDySign }, dtMs, kt);
+    s = r.s;
+    topS = r.top;
+    // ⭐⭐⭐ (D-H8 = D-T4) the dy hold decided at the follower's own crossing: it REPLACES any hold still on (a 0 writes none — `holdAtCrossing`)
+    if (r.hold !== undefined) st.asmEdgeHold = holdAtCrossing(r.hold);
+    const t = topS.turn;
+    topRec = { L: st.asmAskLevel, T: topS.psiT, k: t === null ? -1 : t.k, dl: t === null ? null : t.delta, dur: t === null ? 0 : t.durMs, x: r.delta, h: r.hold ?? null, p: topS.pace };
+  } else {
+    const k = { tauMs: st.cfg.followMs, poleDeg: st.cfg.followPoleDeg, fromDeg: st.cfg.followFromDeg, maxDegS: st.cfg.followMaxDegS };
+    s = followStep(s0, st.asmAsk!, dtMs, k);
+  }
   const P = followPose(s.dir, look, foot, hang, gapM, off.yawRad, off.pitchRad);
   const prev = was?.piece ?? null;
   st.pieceFrameStepM = prev === null ? 0 : Math.hypot(P.piece[0] - prev[0], P.piece[1] - prev[1], P.piece[2] - prev[2]);
@@ -66,6 +90,6 @@ export function followFrame(
   const g = { gap: 0, speed: 0 };
   const ghost = { eye, look, up: upSquareToView(up, [look[0] - eye[0], look[1] - eye[1], look[2] - eye[2]]) };
   st.asmRollShadow = { ghost, dir: s.dir, piece: P.piece, held: g, free: g, turn: null, turnTw: 0, stays: false, tw: 0, gizmoFree: true, spit: spitZone(st) !== null, freshTurn: false, picture: { eye: P.eye, look: P.look, up: upD }, a2: 0, drawn: true, freed: 0 };
-  st.asmFollow = { state: s, piece: P.piece, rec: { on: 1, d: s.dir, sd: s.d, psi: s.psi, side: s.det.side, det: s.det.on ? 1 : 0, pace: s.pace, hang } };
+  st.asmFollow = { state: s, piece: P.piece, rec: { on: 1, d: s.dir, sd: s.d, psi: s.psi, side: s.det.side, det: s.det.on ? 1 : 0, pace: s.pace, hang, ...(topRec !== null ? { top: topRec } : {}) }, ...(topS !== null ? { top: topS } : {}) };
   return { eye: P.eye, look: P.look, up: P.up };
 }

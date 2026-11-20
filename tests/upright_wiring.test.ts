@@ -224,7 +224,7 @@ describe("RB1 — ONE OWNER PER CHANGE (UPRIGHT_PICTURE.md §12, the rebuild): e
     expect(up).toContain("if (r.halfStart > 0 && st.asmEdgeHold === null && st.asmG !== null && was !== null) {");
     expect(up).toContain("st.asmEdgeHold = holdSeen({ timed: true, seenRad: r.halfStart }, sign === 1 ? 1 : sign === -1 ? -1 : 0, was.picture, was.ghost);");
     // ⭐ (RB3) T5's one reader holds the gizmo while the law's half turn closes — no second mechanism
-    expect(aw).toContain("const zoneTurning = (zm !== null && turnHoldsGizmo(zm.out !== undefined, zm.byMm === true, st.asmTiltPending, st.asmBlend !== null, zm.k)) || lawHalfTurn(st.asmRollShadow?.upright?.state ?? st.asmRollShadow?.one?.state);");
+    expect(aw).toContain("const zoneTurning = (zm !== null && turnHoldsGizmo(zm.out !== undefined, zm.byMm === true, st.asmTiltPending, st.asmBlend !== null, zm.k)) || lawHalfTurn(st.asmRollShadow?.upright?.state ?? st.asmRollShadow?.one?.state) || followTurnHoldsGizmo(st.asmFollow?.top?.turn ?? null);");
     expect(aw.match(/lawHalfTurn\(/g)?.length).toBe(1);
     expect((up.match(/changeSeen\(/g) ?? []).length).toBe(1);
     expect((up.match(/changeApply\(/g) ?? []).length).toBe(1);
