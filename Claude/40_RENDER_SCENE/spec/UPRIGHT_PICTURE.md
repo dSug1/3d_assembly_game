@@ -753,3 +753,5 @@ not see (`b_far`); RB4 not built; 1 800 kept.
 3. **The deep one**: the logic's own camera upright at the source far out, so that no pose is carried upside down and the half turn exists
    once (UD12 reversed: his T4, T7, T9 and the charts' rule move together) — a rebuild of the orbit's passage over a pole; a study in his four
    parts before anything is built.
+
+⭐⭐⭐ **(2026-11-20) The next rebuild, ONE CARRIED UP (branch `1.0.148e-`)** — the up near the vertical turned only by what the finger asks → [`UPRIGHT_CARRIED_UP.md`](UPRIGHT_CARRIED_UP.md).
