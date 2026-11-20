@@ -496,4 +496,5 @@ handled gracefully and I like the behavior in scene 1 tilted-pole orbit)."* → 
 waits while the turn runs (T5); after a turn over 90° pushed out by his dy (D-T4's condition), the dy hold from the logic's crossing
 (`holdAtCrossing` → `edgeHoldFinger` / `edgeHoldGlass`, `DY_HOLD_REVERSAL.md`): the push that crossed no longer moves the gizmo, the other way is
 whole, released 8 mm back (`edgeHoldMm`) or when that gesture ends. **R4 amended**: far out a hold exists ONLY after such a half turn, exactly as close
-in; never at a crossing where the camera does not turn. D-H1, D-H2, D-H3, D-H5: his word pending.
+in; never at a crossing where the camera does not turn. D-H1, D-H2, D-H3, D-H5: ✅ **his word (2026-11-20, night): *"yes, start the study with your recommendations"*** — D-H1 yes, D-H2 yes, D-H3 yes,
+D-H5 not built; the study S1 – S4 launched (packet H, §15 to come). Nothing built before its result and his word.
