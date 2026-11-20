@@ -26,7 +26,8 @@ import { syncCentre } from "./camera_rig";
 import { orbitDvPerMm, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from "./green_box_wiring";
 import type { LineSample, SceneState } from "./scene_state";
 import { faceTrianglesWorld } from "./contact_wiring";
-import { calmHeading, calmLevelHeading, calmShown, calmStep, calmTarget, cameraHeading, capEdgePitch, heldOffsetStep, poleWeight, type CalmKnobs } from "../input/orbit_calm";
+import { calmHeading, calmLevelHeading, calmShown, calmStep as calmStepEase, calmTarget, cameraHeading, capEdgePitch, heldOffsetStep, poleWeight, type CalmKnobs, type CalmState } from "../input/orbit_calm";
+import { askedCalm, type CalmAskTarget } from "../input/camera_follow";
 import { facetFrame } from "../input/face_map";
 import { qRotate, type Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
@@ -112,7 +113,7 @@ type OrbitStateStart = Pick<
   | "asmGizmo" | "asmSupport" | "asmSupportLevel" | "pieceHold" | "pieceHoldPrev" | "asmLook" | "asmFacePoint" | "asmG" | "asmPrevQ" | "asmShown" | "asmFaceBand" | "asmFree" | "asmPlaceWas" | "asmMapQ"
   | "asmEdgeHold" | "asmZone" | "asmZoneMix" | "asmChange" | "asmPieceDrawn" | "asmDirEase" | "asmCamLast" | "asmRollShadow" | "asmSpitSide" | "asmSpitU" | "asmSpitPic" | "asmSpitPicWas" | "asmZoneAlpha" | "asmDySign" | "asmFingerDxMm" | "asmDxSign" | "asmCarriedYaw" | "asmHeadO"
   | "asmHeadW" | "asmHeadYaw" | "asmTilt" | "asmGOff" | "asmTiltAuto" | "asmTiltPending" | "asmOrbitMm" | "asmBlend" | "asmCalmWhole" | "asmCalmWholeV"
-  | "asmSquare" | "asmCalm" | "asmMouth" | "asmRawPrev" | "asmGizmoAt" | "asmGizmoLag"
+  | "asmSquare" | "asmCalm" | "asmMouth" | "asmRawPrev" | "asmGizmoAt" | "asmGizmoLag" | "asmAskCalm" | "asmAsk"
 >;
 
 /**
@@ -172,6 +173,8 @@ export function orbitStateStart(): OrbitStateStart {
     asmRawPrev: null,
     asmGizmoAt: null,
     asmGizmoLag: null,
+    asmAskCalm: null,
+    asmAsk: null,
   };
 }
 
@@ -285,6 +288,15 @@ function dirAt(st: SceneState, yaw: number, v: number): Vec3 {
   // ⭐⭐⭐ (2026-11-18, `FAST_ORBIT.md` §14 — FO3 S1, O3) no turn carries it (a change made free): its rest on its own clock (`own`)
   // ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §12 RB1) a change ASKED and not yet resolved (`asmChange`, law U): its share 0 — the direction drawn before it
   return easedDir(s, e, e.own !== undefined ? restShare(e.own, e.angle) : e.mix === st.asmZoneMix && st.asmZoneMix !== null ? st.asmZoneMix.k : st.asmChange !== null && e.mix === st.asmChange.tok ? 0 : 1);
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §13 — F1) THE DIRECTION ASKED at the orbit's angles `yaw`, `v`: `dirAt`'s without its eases — the calm asked
+ * (`asmAskCalm`: the target, not the eased state), no shown direction's ease after a change (`asmDirEase`), no square camera (far out its share is 0).
+ * The follower's target (D-F6: one ease); recorded each frame (`asmAsk`).
+ */
+export function askedDir(st: SceneState, yaw: number, v: number): Vec3 {
+  return tiltDir(dirFrame(st), calmShown(orbitDir(yaw, v), st.asmAskCalm));
 }
 
 /** ⭐⭐⭐ (2026-11-15, §12 2.4c) the direction the piece is DRAWN along now (the spring's angles — `greenBoxFrame`'s `shownOffset`): a change of frame's start. */
@@ -573,12 +585,25 @@ function acrossNormals(st: SceneState, map: FaceMap | null, sh: { readonly t: Ma
   return { lo: mapTarget(map, col.mid - col.hw - EPS, sh.pitch, o).normal, hi: mapTarget(map, col.mid + col.hw + EPS, sh.pitch, o).normal };
 }
 
+/** ⭐⭐⭐ (F1) the calm's TARGET this frame as `calmTargets` hands it to the ease (`calmStep` below) — `calmFrame` clears it, then reads it once */
+let calmAsked: CalmAskTarget | null = null;
+
+/** ⭐⭐⭐ (F1) the calm's ease (`input/orbit_calm.ts`), its target kept for `calmFrame` (`calmAsked`) — the result unchanged */
+function calmStep(prev: CalmState | null, tg: CalmAskTarget, dtMs: number): CalmState | null {
+  calmAsked = tg;
+  return calmStepEase(prev, tg, dtMs);
+}
+
 function calmFrame(st: SceneState, dtMs: number): void {
   // ⭐⭐⭐ (2026-11-10, the owner's shake at a crossing — the root: two time laws in one rig) the whole share's TARGET by position (`calmTargets`), the
   // share itself on the rig's own lag (`wholeShareStep`, `gizmoEaseMs` — the gizmo's, which the piece and the camera's look follow)
   const prev = st.asmCalmWhole;
   const prevV = st.asmCalmWholeV;
+  calmAsked = null;
   calmTargets(st, dtMs);
+  // ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §13 — F1) THE CALM ASKED: this frame's target before its ease, the whole shares by position (before
+  // `wholeShareStep`) folded in (`askedCalm`) — read by `askedDir` only; nothing drawn reads it
+  st.asmAskCalm = calmAsked === null ? null : askedCalm(calmAsked, st.asmCalmWhole, st.asmCalmWholeV);
   squareFrame(st, dtMs);
   st.asmCalmWhole = wholeShareStep(prev, st.asmCalmWhole, dtMs, st.cfg.gizmoEaseMs);
   st.asmCalmWholeV = wholeShareStep(prevV, st.asmCalmWholeV, dtMs, st.cfg.gizmoEaseMs);

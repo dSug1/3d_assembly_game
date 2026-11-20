@@ -35,7 +35,7 @@ import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, dot, length, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
 import { cameraFrameNow, retargetGizmo, rigNow, ringPlaceNow, syncCentre } from "./camera_rig";
-import { assemblyFrame, assemblyOn, resetOrbitState, restDrawn, shownOffset, spitStep, tiltClampStep } from "./assembly_wiring";
+import { askedDir, assemblyFrame, assemblyOn, resetOrbitState, restDrawn, shownOffset, spitStep, tiltClampStep } from "./assembly_wiring";
 import { lawHalfTurn } from "../input/upright";
 import { gizmoShownAt } from "../input/assembly_orbit";
 import { cameraOffsetAt, easeShare, gizmoBlendTravel, horizontalShare, rigSwingNeed } from "../input/orbit_rig";
@@ -1077,6 +1077,8 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     // ⭐⭐⭐ (2026-11-18, `FAST_ORBIT.md` §12.6 S0, §14 S1) THE PICTURE A FOLLOWER OF THE LOGIC (`roll_shadow.ts`): the changes of frame under
     // `freeTurnMaxDeg` free, the roll about the line through the piece and its look point eased (`rollFollowMs`) — `freeTurnMaxDeg` 0: the shadow only and
     // today's `zoneMixPose`
+    // ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §13 — F1) the direction ASKED this frame (the calm before its ease, at the rig's solved angles): recorded
+    st.asmAsk = askedDir(st, rig.yaw, rig.v);
     const zp = rollPictureFrame(st, pp, camAt, lookAt, camFrame.up, dtSec * 1000);
     camAt = [zp.eye[0], zp.eye[1], zp.eye[2]];
     lookAt = [zp.look[0], zp.look[1], zp.look[2]];
