@@ -248,3 +248,24 @@ Four web searches were run. A source not marked verified is cited from memory.
 | D-F6 | The calm's 120 ms ease and the rig's spring become the follower's ONE ease (it touches the shown direction's ease, not the gizmo). | yes |
 | D-F7 | No ellipse in the distance. | none |
 | D-F8 | Going round the vertical the camera pitches up, then down. Inherent to a polar camera. | accept, or keep `1.0.147-`'s tilted orbit there — his eye |
+
+## 12. HIS WORD — build it (2026-11-20, evening, verbatim) — branch `1.0.150-Camera_follows_gizmo`
+
+*"capture all the lessons learned in the md files, capture this specification as well. Then create a new branch and build the follower in this
+new branch. Remember that at the end, when orbit charts is completed, we will have to merge everything into 3d_assembly_game worktree."*
+
+* **The lessons**: [`UPRIGHT_LESSONS.md`](UPRIGHT_LESSONS.md) — the checklist every camera design is read against (this file's §2 is its
+  detailed ledger).
+* **The decisions §11, as the lead advised and he took them by his order to build**: D-F1 the camera no nearer than **30°** to straight above far
+  out (a slider); D-F2 **(a)**: the yaw at a pole paced by PLACE — his finger's — a ceiling only as the last resort, and it must not cap his own fast
+  dx (the ledger's row 6); D-F3 the piece rides the followed direction from the first drawn packet; D-F4 the half turn's gizmo hold goes far out,
+  the dy hold (OP8) stays exactly; D-F5 the look point stays the orbit's centre — the 66 % origin record (O8) explained FIRST, in the game;
+  D-F6 ONE ease (the calm's 120 ms and the rig's spring become the follower's); D-F7 no ellipse in the distance; D-F8 the pitch up then down
+  round the vertical accepted — his eye judges it.
+* **The branch**: `1.0.150-Camera_follows_gizmo` (worktree `../camera_follow`), from `461eeb2` = the LIVE build's code (main `b03a4dd`), so the
+  follower's switch at 0 is the live build frame for frame. Packet K's payers (`1.0.148e-`, `3c39c47` + `4e47890`, built, NOT measured) are not
+  carried: far out the follower replaces every payer.
+* **The packets** (§10, each with its gate, one agent each, vectors red on mutants): F1 the SHADOW (nothing drawn changes; the raw calm target, the
+  orbit's angles, the true normal recorded; O8 explained); F2 the follower DRAWN far out behind one switch, the piece riding it; F3 the blend far ↔
+  close; F4 `Scene_1` and `Scene_0`; then his look; F5 the removal of what it replaces — only after his look.
+* ⭐ **At the end — when the orbit charts are completed — everything is merged into the `3d_assembly_game` worktree** (his word).
