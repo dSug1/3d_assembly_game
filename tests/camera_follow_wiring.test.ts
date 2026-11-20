@@ -3,6 +3,7 @@
 // none of `dirAt`'s eases; the camera's stage writes `st.asmAsk` at the rig's solved angles.
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
+import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8").replace(/\s+/g, " ");
 const between = (s: string, from: string, to: string): string => {
@@ -45,5 +46,55 @@ describe("F1 — the direction asked, recorded", () => {
     const i = g.indexOf("st.asmAsk = askedDir(st, rig.yaw, rig.v);");
     expect(i).toBeGreaterThan(0);
     expect(g.indexOf("rollPictureFrame(st, pp,", i)).toBeGreaterThan(i);
+  });
+});
+
+// F2: the follower drawn far out, behind `cameraFollower` (1 here; 0 = the live build) — one writer of the camera, nothing undoes a turn or a hold.
+describe("F2 — the follower at the camera's stage", () => {
+  it("the switch 1 by default; the sliders' defaults (the prototype's D, his D-F1)", () => {
+    expect(DEFAULT_CONFIG.cameraFollower).toBe(1);
+    expect([DEFAULT_CONFIG.followMs, DEFAULT_CONFIG.followPoleDeg, DEFAULT_CONFIG.followFromDeg, DEFAULT_CONFIG.followMaxDegS]).toEqual([50, 30, 60, 900]);
+  });
+
+  it("where far ends: the switch, no tilt nor its latch, the square camera's share 0, no timed turn, a direction asked", () => {
+    const w = code("render/camera_follow_wiring.ts");
+    expect(w).toContain("return st.cfg.cameraFollower === 1 && st.asmAsk !== null && st.asmTilt === null && !st.asmTiltAuto && !(sq.n !== null && sq.q > 0) && st.asmZoneMix === null;");
+  });
+
+  it("the stage: the follower first; the live picture (`rollPictureFrame`) ONLY where it does not draw; one writer of the camera", () => {
+    const g = code("render/green_box_wiring.ts");
+    expect(g).toContain("const fp = followFrame(st, pp, [c0.x, c0.y, c0.z], camAt, lookAt, camFrame.up, gapFull, off, dtSec * 1000);");
+    expect(g).toContain("const zp = fp ?? rollPictureFrame(st, pp, camAt, lookAt, camFrame.up, dtSec * 1000);");
+    expect(g.match(/rollPictureFrame\(/g)?.length).toBe(1);
+    expect(g.match(/st\.camera\.setPosition\(/g)?.length).toBe(1);
+    const w = code("render/camera_follow_wiring.ts");
+    expect(w).not.toMatch(/st\.camera\.(setPosition|setTarget|upVector|position)/);
+  });
+
+  it("not drawing: nothing written but its own state (dropped: it restarts at rest) — close in stays the live build's", () => {
+    const f = between(code("render/camera_follow_wiring.ts"), "export function followFrame(", "// a change of frame asked");
+    expect(f).toContain("if (!followActive(st) || st.orbitPiecePlaced) { st.asmFollow = was === null ? null : { state: null, piece: null, rec: { on: 0 } }; return null; }");
+  });
+
+  it("a change asked: applied at once, the dy hold the LOGIC's crossing's (OP8); nothing here undoes a turn, a hold or an ease", () => {
+    const w = code("render/camera_follow_wiring.ts");
+    expect(w).toContain("if (ask !== null) changeApply(st, ask, false, ask.hold !== undefined ? holdAtCrossing(ask.hold) : undefined);");
+    expect(w).not.toMatch(/asmZoneMix\s*=[^=]/);
+    expect(w).not.toMatch(/asmEdgeHold\s*=[^=]/);
+    expect(w).not.toMatch(/asmDirEase\s*=[^=]/);
+    expect(w).not.toMatch(/asmChange\s*=[^=]/);
+  });
+
+  it("the piece rides the followed direction; the finger reads the camera drawn; the record a shadow without a carried up (no half turn: no gizmo hold)", () => {
+    const w = code("render/camera_follow_wiring.ts");
+    expect(w).toContain("const s = followStep(s0, st.asmAsk!, dtMs, k);");
+    expect(w).toContain("const P = followPose(s.dir, look, foot, hang, gapM, off.yawRad, off.pitchRad);");
+    expect(w).toContain("st.pieceAnchor = P.piece;");
+    expect(w).toContain("st.asmPieceDrawn = [P.piece[0], P.piece[1], P.piece[2]];");
+    expect(w).toContain("if (lv > 1e-12) st.asmCamLast = { dir: [-view[0] / lv, -view[1] / lv, -view[2] / lv], up: upD };");
+    const r = between(w, "st.asmRollShadow = {", "};");
+    expect(r).not.toContain("one:");
+    expect(r).not.toContain("upright:");
+    expect(r).toContain("turn: null");
   });
 });

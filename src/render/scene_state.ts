@@ -507,6 +507,13 @@ export interface SceneState {
   asmAskCalm: import("../input/orbit_calm").CalmState | null;
   /** ⭐⭐⭐ (F1) THE DIRECTION ASKED this frame (`askedDir` at the rig's solved angles) — the follower's target; recorded; `null`: none yet */
   asmAsk: import("../core/vec").Vec3 | null;
+  /** ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §13 — F2) THE CAMERA FOLLOWER (`render/camera_follow_wiring.ts`): its state while it draws far out (`null`
+   *  where it does not: it restarts at rest), the piece drawn last frame, and the frame's record for the probes (`rec`); `null`: never drawn yet */
+  asmFollow: {
+    readonly state: import("../input/camera_follow").FollowState | null;
+    readonly piece: import("../core/vec").Vec3 | null;
+    readonly rec: Readonly<Record<string, unknown>>;
+  } | null;
     /** ⭐⭐⭐ (2026-11-10, `1.0.120b-`) THE SQUARE CAMERA close in: its direction `n` (the directions' frame) turned at one speed to the gizmo's face's normal `target`; `q` its share over the calm (1 with the automatic tilt on, eased) */
   asmSquare: { n: Vec3 | null; target: Vec3 | null; q: number };
   /** ⭐⭐⭐ (2026-11-10, the owner: *"build b"*) the gizmo HELD before a void's mouth while a dy carries it toward the open end (`mouthHold`) — its place, and toward which end (`hi`: up the facet); `null`: free */

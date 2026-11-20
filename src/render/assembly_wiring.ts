@@ -113,7 +113,7 @@ type OrbitStateStart = Pick<
   | "asmGizmo" | "asmSupport" | "asmSupportLevel" | "pieceHold" | "pieceHoldPrev" | "asmLook" | "asmFacePoint" | "asmG" | "asmPrevQ" | "asmShown" | "asmFaceBand" | "asmFree" | "asmPlaceWas" | "asmMapQ"
   | "asmEdgeHold" | "asmZone" | "asmZoneMix" | "asmChange" | "asmPieceDrawn" | "asmDirEase" | "asmCamLast" | "asmRollShadow" | "asmSpitSide" | "asmSpitU" | "asmSpitPic" | "asmSpitPicWas" | "asmZoneAlpha" | "asmDySign" | "asmFingerDxMm" | "asmDxSign" | "asmCarriedYaw" | "asmHeadO"
   | "asmHeadW" | "asmHeadYaw" | "asmTilt" | "asmGOff" | "asmTiltAuto" | "asmTiltPending" | "asmOrbitMm" | "asmBlend" | "asmCalmWhole" | "asmCalmWholeV"
-  | "asmSquare" | "asmCalm" | "asmMouth" | "asmRawPrev" | "asmGizmoAt" | "asmGizmoLag" | "asmAskCalm" | "asmAsk"
+  | "asmSquare" | "asmCalm" | "asmMouth" | "asmRawPrev" | "asmGizmoAt" | "asmGizmoLag" | "asmAskCalm" | "asmAsk" | "asmFollow"
 >;
 
 /**
@@ -175,6 +175,7 @@ export function orbitStateStart(): OrbitStateStart {
     asmGizmoLag: null,
     asmAskCalm: null,
     asmAsk: null,
+    asmFollow: null,
   };
 }
 

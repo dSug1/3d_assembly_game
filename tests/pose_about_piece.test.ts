@@ -127,7 +127,8 @@ describe("the camera turned about the piece (a polar zone's turn)", () => {
     expect(aw).toContain("const t = zm.rule === 2 ? null : poseFramingTwo(zm.from, to, piece, zm.k, zm.keep);");
     expect(aw).toContain("const r = poseAboutPiece(zm.from, to, piece, zm.k, zm.axis);");
     // ⭐⭐⭐ (2026-11-18, FO3 S1) through the picture a follower of the logic (`rollPictureFrame`), which hands the ghost to `zoneMixPose` on both paths
-    expect(gb).toContain("const zp = rollPictureFrame(st, pp, camAt, lookAt, camFrame.up, dtSec * 1000);");
+    // ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §13 F2) …wherever the camera follower does not draw (close in, or `cameraFollower` 0)
+    expect(gb).toContain("const zp = fp ?? rollPictureFrame(st, pp, camAt, lookAt, camFrame.up, dtSec * 1000);");
     const rs = readFileSync("src/render/roll_shadow.ts", "utf8");
     expect(rs).toContain("return zoneMixPose(st, piece, eye, look, up);");
     expect(rs).toContain("const zp = zoneMixPose(st, piece, eye, look, up);");
