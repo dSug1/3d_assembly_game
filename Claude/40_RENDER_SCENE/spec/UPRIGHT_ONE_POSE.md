@@ -402,3 +402,131 @@ yaw at a pole 1:1; still the jitter at a pole, and more camera jumps over 45° a
 `Scene_0bis` far out over a top and across a level face is where the two differ most. Close in they look the same. Nothing else changed.
 Next (his *"2"*): the study of §12's open roots, offline — the up's target by the faces and edges the orbit crosses rather than by the view's
 angle, and the half turn at a pole made smooth rather than stop-and-go.
+
+## 14. Packet S — the study of the open roots (2026-11-20; the owner: *"proceed with both 1 and 2"*) — offline, NOTHING BUILT, for his word
+
+**The result first.** The band weight is not what turns the camera over 45° in a frame: of the 49 such frames, 11 are the orbit's own swing of the
+view (out of scope: any up turns that much) and 38 are the LOGIC's own roll about the view — its heading rules near the vertical answering a view
+that moves 10 – 46° a frame at his fastest; the up law's own share is 0 (it adds 12 – 16° in the same sense on about 25 of them). The jitter at a
+pole is real and reproduced frame by frame: a small roll one way as the eye nears the axis, then the half turn the OTHER way (the shortest way), and
+the gizmo stalling a quarter of a second under a moving finger. Choosing the half turn's sense with the roll just before halves it offline (13 → 7 of
+27). The two "half turns at a level face's entry" are one half turn re-decided while the eye races on; what is wrong there is that the picture stays
+upside down while the camera is already low on the far side. R7's rise is a gap closing under the finger (the glass rolling 12° a frame) and the
+spit's swap rounding the picture's roll away. Close in, one pose is exact: the difference with the live build is inherited from the approach's
+far-out frames.
+
+### 14.1 How it was read (the kit's `fo3/rebuild_d/s/`; every figure in `CHECKPOINT_S.md`)
+The recordings of fix round 1 (`runs_f1`, his ten stretches, far out, 60 frames a second) and the defaults (`74a247e`, `fo3/vertical/runs`), read
+frame by frame: `q1.mjs` (who turns the camera), `groll.mjs` (the logic's own jumps), `look.mjs` (one window, the picture against the logic),
+`q3.mjs` / `q3b.mjs` (R7 by class), `upside.mjs` (gravity upside down), `q5.mjs` (close in). `sim.mjs` re-applies fix round 1's up rule offline on
+the recorded route (the logic's pose each frame, its changes, the square camera's share), rolled about the view — validated: the picture within
+0.01° on median, 211 of 9 284 frames more than 5° off (a 6° offset in a half turn's start), every reader within its noise (over 45°: 49 = 49; the
+jitter 13 of 27 against 16 of 30 recorded; tilt 18.9 % against 19.2 %). Offline cannot tell: R7, the route itself (the finger is read on the
+picture), the gizmo's stall, the dy hold — the game only.
+
+### 14.2 The roots (measured unless said)
+1. **The frames over 45° (Q1).** By who turns (`q1.mjs`): the view's own swing of 45° or more 11 · the logic's own roll, no change 36 · at a change
+   2 · the law's own 0. `big_read.mjs`'s "weight jump" (28) was a mislabel: it sorted by the weight's step before asking who rolled. Where the law
+   adds, P is `(1 − w) G + w` upright, and near the vertical the upright up spins faster than the logic's heading (the hairy ball). The logic's own
+   rolls come from two heading rules (read in the code): **the spit's heading** (`spitCameraHeading`, `polar_zone.ts` 213: the eye's level part plus
+   the side × 0.3 — 5 – 35° from the vertical the eye's part along the axis swings it 30 – 60° a frame at his pace; F3 fixed only the last 4 – 12°),
+   and **the level face's seam** in `offsetFrame` (`assembly_orbit.ts` 233: the up is `cos e·Y − sin e·heading` made square to the view; with the
+   layout's heading opposite the eye's own, that vector lies ALONG the view at 45° of elevation, so the up flips through 180° there — 148°, 177°,
+   174° in one frame at `ilmj_39s` f441, `vyah_42s` f13 and f392; the picture rolled 71°, 149°, 102°). Both are the up's rules, not the orbit's: the
+   eye and the look are untouched. The eye's swing itself is the orbit's: out of scope. ⚠ It is faster than before: frames with the view swinging
+   30 – 45° in one frame 80 (F1), 60 (defaults), 19 (`1.0.147-`) — opinion: the follower catching up after a hold, now that no timed turn holds it far
+   out; the game only.
+2. **The jitter (Q2), one case reproduced** (`ilmj_83s` f260 – f288, vb's 55°): the view arrives at the top coasting; the picture rolls +22° in four
+   frames — the logic's own (the spit heading as the eye nears the axis, `w` 0, shown 1:1); the eye passes 6° beyond the axis, the side flips, the
+   logic jumps −179°, the half turn opens the shortest way (A1) = −179°, −12° a frame for 15 frames, AGAINST the +22°; his next drag (5 – 36 px a
+   frame from f278) moves nothing: the gizmo is held the whole turn (F2). He sees a there-and-back and a stall — not noise. `jit_read`: the
+   picture's back equals the logic's own on 14 of 16 arrivals. The lever is the half turn's SENSE (offline both ways: against the roll before 24 of
+   27, with it 7 of 27, the shortest way 13).
+3. **R7 where the picture is off the logic (Q3)** (`q3.mjs`, `q3b.mjs`): of the 297 frames, 286 have the picture rolling 6° or more a frame (a gap
+   closing at 720° a second); 124 lie under the dy hold (T9's price, §11.3). Without the hold (173): 172 lie within 6 frames after a logic change —
+   small gaps (under 90°) closing during his fastest swipes (the camera turning 15 – 30° a frame on 104 of them). Read on the glass the finger was
+   read on (last frame's picture), R7 falls from 36.8° to 24.7° (the picture rolls 12.9° a frame there): about 12° is the glass rolling between the
+   read and the draw. The follower's lag is NOT it (corrected by the roll of the last k frames, it gets worse). In the spit looking down (the view
+   under 30° from the vertical), `fingerSwapped` (`polar_zone.ts` 164) rounds the glass's angle to ±90° — exact on the logic's glass, but on a
+   picture rolled off it the roll is thrown away: 61.4° on 23 frames (the defaults 33.1°).
+4. **The two half turns at a level face's entry (Q4)** (`vyah_11s` f318 – f333, `vyah_42s` f2 – f11): the side flips at the top (176°, 178°), his
+   flick carries the eye on — 4.5° → 19.5° → 47.7° → 82.5° from the vertical in three frames — the gizmo enters a level face, A1 re-decides the gap
+   (150°, 153°: what was left) and the reader counts a new half turn. The picture rolls +10 – +15° every frame, one sense: ONE turn. What is wrong
+   under it: the gizmo "held" (`tiltClampStep` refuses new orbit steps) still moves 100 – 250 mm a frame — the follower catching its target — so
+   the half turn runs while the camera sweeps the far side: gravity upside down on 641 frames, 633 of them inside a half turn, 269 with the view 50°
+   or more from the vertical (`upside.mjs`; the defaults 701, `1.0.147-` 1 233).
+5. **Close in (Q5)** (`q5.mjs` against the live build's `runs3`): on every frame where the square camera owns the roll (`κ` 0) the picture IS the
+   logic's pose (φ = 0 exactly, 2 843 frames). The logic first differs at f179 in all three stretches, BEFORE `κ` reaches 0 (`κ` 1.00 / 0.92 /
+   0.61, the picture 1.38° off the logic the frame before): the approach's far-out frames read the finger on a glass 1.4° rolled. Inherited, by OP1.
+
+### 14.3 The design proposed — one owner per thing (`uprightOnePose` 1; every new knob at 0 = fix round 1 frame for frame)
+
+| the thing | its one owner | what changes |
+|---|---|---|
+| the half turn's moment | the logic's change (OP5, F1) | nothing: a half turn opens only at a logic change |
+| the half turn's SENSE | `upOne`, decided once at the change | a gap within 30° of 180°: the sense the picture rolled over the last 100 ms (2° or more), else the shortest way; a re-decision keeps the sense under way — `uprightHalfSense` 1 |
+| the half turn's PACE | `upOne` | a time floor `uprightMaxDegS` (720: never slower, no deadlock with the view held), raised so that the gap is closed by the time the view leaves the band (`uprightFullDeg`), at most `uprightLeaveDegS` (0 off; 1 080 proposed); optionally eased start and stop (`uprightEaseDegS2`, 0 off) |
+| a logic jump with no change (the level face's seam) | `onePoseFrame`: a change handed to `upOne` when the logic's pose rolls `uprightJumpDeg` (90) or more in one frame | the gap absorbs it; its root fixed at the source later (S5) |
+| the gizmo's wait | T5's one reader (`tiltClampStep` via `lawHalfTurn`) | his word: the whole half turn (F2) or while 90° or more is left (P2) |
+| the finger in the spit looking down | `zoneFinger` / `fingerSwapped` | the rounding to F's axes only within ±10° of ±90° (`swapBandDeg`); beyond, `fingerInFrame`'s exact turn: the picture's roll kept (R7) |
+| the heading rules near the vertical | `spitCameraHeading`, `freeShownHeading` with `offsetFrame` (the up's rules) | a study first (S5): the spit's side heading over the whole looking-down band; a level face's layout never shown with its heading behind the eye at mid elevation |
+| close in | the square camera (`κ` 0: P = G) | nothing; the gate restated (14.6) |
+
+Prior art, patent-free, no widget: a slew-rate limit with a time floor (control engineering), an acceleration-limited (trapezoidal) profile (motion
+control), the sense of a 180° turn chosen by continuity (phase unwrapping), the hairy-ball seam placed once, a dead band on a rounding.
+
+### 14.4 Offline figures (`sim.mjs` on `runs_f1`'s route; his ten stretches; the recorded F1 and the defaults beside, the same readers)
+
+| | over 45° a frame | the picture's roll a frame: 30 / 45 / 90° or more | jitter A | gravity over 20° | upside down, view 50°+ |
+|---|---|---|---|---|---|
+| defaults `74a247e` (recorded) | 27 | 49 / 9 / 1 | 16 of 26 | 21.7 % | 280 |
+| F1 (recorded · offline) | 49 · 49 | 85 / 25 / 2 · 85 / 26 / 2 | 16 of 30 · 13 of 27 | 19.2 % · 18.9 % | 269 · 254 |
+| + the sense | 49 | 85 / 26 / 2 | **7 of 27** | 19.4 % | 280 |
+| + the sense + the jump 90 | 46 | 83 / 23 / **0** | 7 of 27 | 19.4 % | 280 |
+| the target = the logic's own up (no band weight) + the jump | 45 | 87 / 20 / 0 | 14 of 27 | 20.1 % | — |
+| + the sense + the jump + eased (9 000°/s²) | **36** | 65 / 12 / 0 | 7 of 27 | 23.8 % | — |
+| + the sense + the jump + the pace ceiling 1 080°/s | 53 | 91 / 26 / 0 | 7 of 27 | **14.9 %** | 140 |
+| + the sense + the jump + the ceiling 1 440°/s | 60 | 113 / 30 / 0 | 7 of 27 | 12.3 % | 73 |
+| + the sense + the jump + no ceiling | 218 | 292 / 190 / 81 | 7 of 27 | 6.1 % | — (rejected: a half turn in one frame) |
+
+Readings: the sense is the jitter's lever and costs nothing measurable; the jump removes the frames rolling 90° or more; the band weight neither
+causes nor cures the frames over 45° (Q1's target by crossings is equal within a point, so it is NOT proposed); easing trades gravity (+4.4
+points) for fewer big frames; the pace ceiling trades big frames for gravity. 36 – 46 frames over 45° remain whatever the up: 10 are the eye's
+swing, the rest the logic's heading rules — only their source (S5) or the orbit's pace can remove them.
+
+### 14.5 The build as packets (each behind `uprightOnePose` 1, every knob 0 = `453b19e` frame for frame; nothing before his word)
+* **S1 (C)** `upOne`: the sense (`uprightHalfSense`), the jump (`uprightJumpDeg`), the pace ceiling (`uprightLeaveDegS`), the ease
+  (`uprightEaseDegS2`); vectors, each red on a mutant (the sense against the roll, the jump ignored, the ceiling unbounded, the floor lost: a held
+  view must still close the turn). Sliders in ORBIT › UPRIGHT PICTURE.
+* **S2 (C)** `zoneFinger`: the swap's band (`swapBandDeg` 10); vectors (a picture rolled 30°: the finger's way kept; 5°: the swap as today).
+* **S3 (P)** the readers: `ht_read` counts a re-decision under way as the same turn; the frame roll (`q1.mjs`) and `upside.mjs` as gates; a replay
+  that starts close in (14.6).
+* **S4 (game)** ONE batch (hand, hold, le, over, close, fps143, the identities) at the default chosen, then `hand` with the ease on / off and the
+  ceiling 1 080 / 1 440; one table against `74a247e`, `6f47219`, fix round 1.
+* **S5 (study, then C)** the heading rules near the vertical at their source: the spit's side heading over the looking-down band (5 – 35°), the
+  level face's seam (its layout never behind the eye at mid elevation). The game's prototype only: offline cannot recompute the logic's up (the
+  spit's axis and side are not recorded).
+
+### 14.6 The gates restated
+* **G6** — the whole camera's turn mixes the orbit's swing (out of scope) with the up's roll: count **the picture's roll about the view in one
+  frame** (30 / 45 / 90° or more: F1 85 / 25 / 2, the defaults 49 / 9 / 1, `1.0.147-` 5 / 1 / 0), split by who rolls; the whole turn a second line.
+* **G8 close in** — (a) every frame with `κ` 0: the picture = the logic's pose (φ = 0) — met (2 843 frames); (b) the first frame where the logic
+  differs from the live build has `κ` above 0 and φ not 0 the frame before — met (f179, three of three); (c) a replay STARTING close in (the
+  approach latched before his first event) identical to the live build bit for bit — a (P) probe mode, the game; (d) the rule given the same state:
+  `onePoseFrame` with `κ` 0 returns the live build's pose, holds and timed turn — a source vector.
+* **New**: gravity upside down with the view 50° or more from the vertical (F1 269, the defaults 280); the jitter A at most 9 of ~27 (offline 7).
+
+### 14.7 What it bends of his rules — the decisions for his word
+* **D-S1 the half turn's sense** — with the roll just before, so a half turn may run up to 210° (bends A1's "never the long way" within 30° of
+  180°); or the shortest way, as today. Offline: the jitter 13 → 7 of 27.
+* **D-S2 the pace when his flick carries the camera on** — 720° a second as today (the picture upside down at a low view, 280 frames), or raised to
+  close by the time the view leaves the band, capped at 1 080° a second (140 frames; gravity tilted 19.4 → 14.9 %; frames rolling 30° or more 83 →
+  91) or 1 440 (73; 12.3 %; 113). It bends "never paced by the view" (L2): the moment stays the logic's and the time floor keeps it closing with the
+  view held; but the turn gets quicker exactly where he complained of a quick 180°.
+* **D-S3 eased start and stop** — smoother (frames over 45° 46 → 36) but a longer turn (about 0.33 s against 0.25 s), gravity +4.4 points.
+* **D-S4 the gizmo's wait** — the whole half turn (F2: his drag after a pole answered 0.23 s late) or while 90° or more is left (P2: 0.13 s).
+* **D-S5 the logic's own seam** — absorbed as a change now (bends OD10's "a half turn opens only at a logic change": the seam counts as one), its
+  source fixed in S5.
+* **D-S6 the finger's swap band** (R7 in the spit looking down) — a change of how the finger is read, not of the orbit's logic.
+* **D-S7 the gates** — G6 on the picture's roll, G8 as 14.6.
+* Not proposed: the up's target by crossings instead of the band weight (measured equal, 14.4); a pace with no ceiling (a half turn in one frame).
