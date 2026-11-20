@@ -51,9 +51,9 @@ describe("F1 — the direction asked, recorded", () => {
 
 // F2: the follower drawn far out, behind `cameraFollower` (1 here; 0 = the live build) — one writer of the camera, nothing undoes a turn or a hold.
 describe("F2 — the follower at the camera's stage", () => {
-  it("the switch 1 by default; the sliders' defaults (the prototype's D, his D-F1)", () => {
+  it("the switch 1 by default; the sliders' defaults (the calm's 120 ms, his D-F1, the prototype's D)", () => {
     expect(DEFAULT_CONFIG.cameraFollower).toBe(1);
-    expect([DEFAULT_CONFIG.followMs, DEFAULT_CONFIG.followPoleDeg, DEFAULT_CONFIG.followFromDeg, DEFAULT_CONFIG.followMaxDegS]).toEqual([50, 30, 60, 900]);
+    expect([DEFAULT_CONFIG.followMs, DEFAULT_CONFIG.followPoleDeg, DEFAULT_CONFIG.followFromDeg, DEFAULT_CONFIG.followMaxDegS]).toEqual([120, 30, 60, 900]); // ⭐ 120: the calm's ease it replaces (D-F6)
   });
 
   it("where far ends: the switch, no tilt nor its latch, the square camera's share 0, no timed turn, a direction asked", () => {

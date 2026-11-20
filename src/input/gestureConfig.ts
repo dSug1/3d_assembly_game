@@ -911,7 +911,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   uprightHalfHold: 1, // ⭐ (C7) the gizmo still for the whole half turn
   uprightFraming: 1, // ⭐⭐⭐ (packet J) a change's framing carried from the pose shown
   cameraFollower: 1, // ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §13 — F2) the follower draws far out on this branch; 0 = the live build (`461eeb2`)
-  followMs: 50, // ⭐ (F2) the prototype's D (`CAMERA_FOLLOWS_GIZMO.md` §6)
+  followMs: 120, // ⭐ (F2, D-F6) the calm's own 120 ms it replaces — on the RAW target 50 ms (the prototype's D, tuned on the eased one) left 56 frames over 45° offline (`CAMERA_FOLLOWS_GIZMO.md` §13)
   followPoleDeg: 30, // ⭐ (F2) his D-F1: no nearer than 30° to straight above far out
   followFromDeg: 60, // ⭐ (F2) the detour's reach (the prototype's D)
   followMaxDegS: 900, // ⭐ (F2) the last resort (the prototype's D) — opened by his own pace (`followCeiling`)
