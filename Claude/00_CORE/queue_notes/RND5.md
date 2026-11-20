@@ -747,22 +747,3 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   gravity's roll a metre of gizmo travel 56.4° / 101.5° / 127.3°; frames turning the whole camera by more than 90° at once 0 / 0 / 0, by 45 – 90° 51 / 5 / 8; the finger's angle against the gizmo's way, median 14.7° / 12.1° / 14.3°;
   the picture rolling a third of a turn and back near the vertical 7 / 0 / 0 (the one conflict left); the dy hold as `1.0.147-`'s. `npm run verify`: 170 files, 2173 vectors. The record: `UPRIGHT_PICTURE.md` §12 – §14.
   **Next** (option 3): the logic's own camera upright at the source far out, no pose carried upside down, the half turn once; his T4, T7, T9 and the charts' rule move together. On a NEW branch `1.0.149-Upright_at_the_source`; first an offline study in his four parts, nothing built before his word on its decisions.
-
-### 2026-11-19 (evening) — packet D on `1.0.148d-`: ONE POSE built behind `uprightOnePose` and measured in the game; four gates fail
-  One pose (`Claude/40_RENDER_SCENE/spec/UPRIGHT_ONE_POSE.md`): the picture IS the logic's pose, one owner of its up (`upOne`), far out no timed camera
-  turn, the pass's one half turn opened at the logic's crossing, its holds from the same decision. Commits `fe3e42f`, `7f68eac` (C), `21c72c4` (P),
-  `bc6af1b` (C); `npm run verify` 171 files, 2 189 vectors. Not pushed, not deployed.
-  Measured on his ten stretches far out (one pose / the defaults `74a247e` / `1.0.147-`): the circle (`vb` B2) 1 / 74 / 81; frames turning the camera
-  45 – 90° 13 / 27 / 5, over 90° 0 / 1 / 0; the dy hold over a ridge set on the same frame as `1.0.147-`, blocked 112 frames; gravity over 20° 22.4 % /
-  21.7 % / 35.4 %. ⛔ R7 18.8° / 14.3° / 12.1° (the frames right after a half turn, the push held); ⛔ the jitter at a pole 17 of 35 / 16 of 26 / 18 of 45;
-  ⛔ a fast yaw at a pole capped at 720° a second (the picture 70 – 80° behind); ⛔ close in 7·10⁻⁶ apart from the live build. Every switch at 0 gives
-  its earlier game frame for frame. Next: his and the lead's word on OD9 – OD12 (`UPRIGHT_ONE_POSE.md` §11.5).
-
-### 2026-11-19 (night) — packet D, fix round 1 on `1.0.148d-` (`453b19e`): the half turn as decided, the target's inputs fail
-  The picture = its target + a gap (F1): the yaw at a pole 1:1 (769° a second, 0° behind; P2 capped at 719°), no half turn without a logic change, the
-  gizmo held the whole half turn (F2), the dead band deleted (127 sliders), the spit's heading at the pole the side's own (F3). Gravity over 20° 19.2 %
-  (the defaults 21.7 %). ⛔ Still failing: 49 frames turning the camera over 45° (P2 13; the logic's own view jumping 35 – 52° in a frame, the band weight
-  with it, now followed exactly), the jitter 16 of 30, R7 15.8°, close in apart from frame 179 (one glass against the framed line's roll), 2 half turns
-  at a level face's entry. `npm run verify` 2 191 vectors; every switch at 0 identical. The record: `UPRIGHT_ONE_POSE.md` §12. Next: the lead's study.
-* **2026-11-20 — `1.0.148d-` deployed with one pose OFF (`uprightOnePose` 0 = the live build with his defaults, frame for frame), for his A/B look
-  on the device** (his *"do 1"*); then the study of the remaining roots (his *"2"*) → `UPRIGHT_ONE_POSE.md` §13.

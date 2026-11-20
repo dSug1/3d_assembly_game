@@ -222,25 +222,6 @@ export function spitCameraHeading(u: Vec3, a: Vec3, side: number): number {
   return Math.hypot(hx, hz) > 1e-9 ? Math.atan2(hz, hx) : spitHeading(a, side);
 }
 
-/** ⭐⭐⭐ (2026-11-19, `UPRIGHT_ONE_POSE.md` §12 — fix round 1, F3) within this of the vertical (deg) the spit camera's heading is the SIDE's own
- *  (`spitHeading`) under one pose … */
-export const SPIT_POLE_FROM_DEG = 4;
-/** … blended into `spitCameraHeading` (the shortest way, a smoothstep of the view's angle from the vertical) by this (deg) */
-export const SPIT_POLE_FULL_DEG = 12;
-/**
- * ⭐⭐⭐ (fix round 1, F3) THE SPIT CAMERA'S HEADING AT THE POLE, at its source: within `SPIT_POLE_FROM_DEG` of the vertical the side's own heading, then
- * `spitCameraHeading` by `SPIT_POLE_FULL_DEG`. ⛔ `spitCameraHeading` alone near the top: `atan2(u_level + side · 0.3 · r)` with a level part of 0.03 –
- * 0.09 swings ±17° as the camera moves round the pole — the jitter's main source (P2, §11.3: 9 of 16 arrivals at the side's flip, its target wobbling).
- */
-export function spitCameraHeadingOne(u: Vec3, a: Vec3, side: number): number {
-  const h = spitCameraHeading(u, a, side);
-  const nu = (Math.acos(Math.min(1, Math.abs(u[1]) / Math.max(1e-12, len(u)))) * 180) / Math.PI;
-  const x = Math.min(1, Math.max(0, (nu - SPIT_POLE_FROM_DEG) / (SPIT_POLE_FULL_DEG - SPIT_POLE_FROM_DEG)));
-  const s = x * x * (3 - 2 * x);
-  if (s >= 1) return h;
-  const h0 = spitHeading(a, side);
-  return h0 + s * Math.atan2(Math.sin(h - h0), Math.cos(h - h0));
-}
 /** ⭐ The side's bias faded in from this pitch of the view … */
 export const SPIT_BIAS_FROM_RAD = (60 * Math.PI) / 180;
 /** ⭐ … whole from this one. */

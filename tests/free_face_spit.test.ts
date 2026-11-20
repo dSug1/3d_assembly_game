@@ -338,7 +338,7 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): the carried headin
     const c = fnCode(W, "function assemblyCameraFrameRaw(");
     // ⭐ (2026-11-17, LF1 (iv′); 2026-11-18, ES) the heading SHOWN (`freeShownHeading`: the carried one, or the picture kept at the entry, stepped toward the layout)
     // ⭐ (2026-11-18, ES) one heading for both: the free face's shown one, else the side's; the picture before the offsets kept for the next entry
-    const g = "const hS = st.asmFree !== null ? freeHeadingAngle(freeShownHeading(st, uW, side, dtMs), uW) : spitHeadingFor(st, uW, st.asmZone!.zone.axis, side);"; // ⭐ (v5) the side passed down: the entry keeps it
+    const g = "const hS = st.asmFree !== null ? freeHeadingAngle(freeShownHeading(st, uW, side, dtMs), uW) : spitCameraHeading(uW, st.asmZone!.zone.axis, side);"; // ⭐ (v5) the side passed down: the entry keeps it
     expect(c).toContain(g);
     before(c, "const uW = mulM(B, sF);", g);
     before(c, g, "return offsetFrame(uW, hS, o.yawRad, o.pitchRad);");

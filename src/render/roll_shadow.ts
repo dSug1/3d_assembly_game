@@ -16,11 +16,11 @@
  */
 import type { Vec3 } from "../core/vec";
 import { upSquareToView } from "../input/camera_frame";
-import { holdAtCrossing, rotateAbout, squareTurning, type CamPose } from "../input/orbit_tilt";
+import { rotateAbout, squareTurning, type CamPose } from "../input/orbit_tilt";
 import { followStep, FREE_TURN_MAX_DEG, framedLine, GAP_ZERO, onGlass, poseRolled, poseTurnAngle, ROLL_FOLLOW_MS, turnIsFree, twistAbout, type FollowMode } from "../input/roll_follow";
 import { easeRest } from "../input/seam_turn";
-import { changeSeen, holdSeen, ONE_REST, upOne, UPRIGHT_REST, uprightStep, uprightWeight, viewFromVertical } from "../input/upright";
-import { changeApply, spitZone, zoneMixPose } from "./assembly_wiring";
+import { askedTwist, CARRIED_REST, carriedHold, changeSeen, holdSeen, upCarried, UPRIGHT_REST, uprightStep, uprightWeight, viewFromVertical } from "../input/upright";
+import { changeApply, orbitPoleAxis, spitZone, zoneMixPose } from "./assembly_wiring";
 import type { SceneState } from "./scene_state";
 
 const DEG = Math.PI / 180;
@@ -112,8 +112,8 @@ export function rollPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: V
   const tl = st.asmTilt;
   const tiltHold = tl !== null && (tl.exit || tl.off);
   // ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §12 RB1) law U decides each change ONCE (`changeSeen`, in `uprightPictureFrame`): nothing below runs for it
-  // ⭐⭐⭐ (2026-11-19, `UPRIGHT_ONE_POSE.md` — packet D) ONE POSE: the picture IS the logic's pose, one owner of its up (`onePoseFrame`); 0: law U (`c3a8ba6`)
-  if (st.cfg.uprightPicture === 1 && st.cfg.uprightOnePose === 1) return onePoseFrame(st, piece, eye, look, up, dtMs, ghost, sq, tiltHold);
+  // ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` — packet E) ONE CARRIED UP (`carriedFrame`); 0: law U (`1f62928`)
+  if (st.cfg.uprightPicture === 1 && st.cfg.uprightCarried === 1) return carriedFrame(st, piece, eye, look, up, dtMs, ghost, sq, tiltHold);
   if (st.cfg.uprightPicture === 1) return uprightPictureFrame(st, piece, eye, look, up, dtMs, ghost, sq, tiltHold);
   let zm = st.asmZoneMix;
   const fresh = zm !== null && zm !== was?.turn;
@@ -205,20 +205,19 @@ function uprightPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3,
 }
 
 /**
- * ⭐⭐⭐ (2026-11-19, `UPRIGHT_ONE_POSE.md` §5 — packet D, `uprightOnePose` 1) ONE POSE, at the camera's stage: the picture IS the logic's pose and ONE owner turns
- * its up (`upOne`). FIRST the change asked this frame resolved ONCE (`changeSeen`) by WHO OWNS THE ROLL — the square camera's complement `κ` before and after
- * (OP2), never the view's angle: far out applied at once (no timed camera turn of the logic), close in as the live build; a timed change's hold as today, on
- * the one glass (`holdSeen`, no conversion). Then `G` (`zoneMixPose`), `upOne` (the change's frame is its moment), `P = poseRolled(G, L, φ)`. OP8: at a change
- * applied at once the push that crossed is held ONLY if its half turn opened (`holdAtCrossing`: the logic's sign, the dy of the one glass), else a hold still
- * on is ended (every crossing ends the last edge's). OP1: `P` is read — `asmCamLast` (the finger in a spit, a level face's layout at its entry) and the
- * silent entry's picture (`asmSpitPic`) are `P`'s; the finger is never converted (`fingerAtEntry` reads law U's record only).
+ * ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` §4 — packet E, `uprightCarried` 1) ONE CARRIED UP, at the camera's stage: the picture is the logic's pose `G` turned by
+ * `φ` about the framed line, drawn AND read (one glass: `asmCamLast`, the silent entry, the finger — `fingerAtEntry` reads law U's record only), and ONE owner
+ * turns its up (`upCarried`). FIRST the change asked this frame resolved ONCE (`changeSeen`) by who owns the roll — the square camera's complement `κ` (one
+ * pose's OP2): far out applied at once, close in a timed turn as today. Then `G` (`zoneMixPose`), the turn the finger ASKED (C1, `askedTwist`: the drawn
+ * orbit's yaw step about its pole axis, none across a change of the logic's frame), the dx's budget (C4), `upCarried`, `P`. C6: at a change applied at
+ * once the push held from the same answer (`carriedHold`: the dy as OP8; a dx only when a half turn opened); the gizmo still meanwhile (C7, the spring).
  */
-function onePoseFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Vec3, dtMs: number, ghost: CamPose, sqTurning: boolean, tiltHold: boolean): CamPose {
+function carriedFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Vec3, dtMs: number, ghost: CamPose, sqTurning: boolean, tiltHold: boolean): CamPose {
   const was = st.asmRollShadow;
   const sq = st.asmSquare;
   const share = sq.n === null || !(sq.q > 0) ? 0 : sq.q;
   const kappa = st.cfg.uprightCloseIn === 1 ? 1 : 1 - share;
-  const knobs = { fromDeg: st.cfg.uprightFromDeg, fullDeg: st.cfg.uprightFullDeg, maxDegS: st.cfg.uprightMaxDegS, halfHold: st.cfg.uprightHalfHold === 1 };
+  const knobs = { fromDeg: st.cfg.uprightFromDeg, fullDeg: st.cfg.uprightFullDeg, maxDegS: st.cfg.uprightMaxDegS, alignDegPerMm: st.cfg.uprightAlignDegPerMm, halfHold: st.cfg.uprightHalfHold === 1 };
   let freed = 0;
   let change = false;
   let crossed: 1 | -1 | 0 | undefined;
@@ -241,9 +240,20 @@ function onePoseFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Ve
   const G = zoneMixPose(st, piece, eye, look, up);
   const line = framedLine(G, piece);
   const tw = was === null ? 0 : twistAbout(was.ghost, G, line.dir);
-  const r = upOne(was?.one?.state ?? ONE_REST, G, line, dtMs, knobs, kappa, change);
+  // C1 THE TURN ASKED: the drawn orbit's yaw step about its pole axis, the upright camera's away from the vertical — none across a change of the logic's frame
+  const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
+  const cy = st.asmCarriedYaw;
+  const tiltId = st.asmTilt !== null ? st.asmTilt.id : 0;
+  const same = cy !== null && cy.zone === st.asmZone && cy.tilt === tiltId && !change && was !== null;
+  const dYaw = same ? Math.atan2(Math.sin(q.yaw - cy.yaw), Math.cos(q.yaw - cy.yaw)) : 0;
+  const asked = same ? askedTwist(was.ghost, G, line.dir, orbitPoleAxis(st), dYaw) : 0;
+  st.asmCarriedYaw = { yaw: q.yaw, zone: st.asmZone, tilt: tiltId };
+  // C4 the dx's budget this frame (mm), read once
+  const dxMm = st.asmFingerDxMm;
+  st.asmFingerDxMm = 0;
+  const r = upCarried(was?.one?.state ?? CARRIED_REST, G, line, dtMs, knobs, kappa, change, asked, dxMm);
   const P = poseRolled(G, line, r.phi);
-  if (change && crossed !== undefined) st.asmEdgeHold = r.halfStart > 0 ? holdAtCrossing(crossed) : null;
+  if (change && crossed !== undefined) st.asmEdgeHold = carriedHold(r.halfStart, crossed, st.asmDxSign);
   const d: Vec3 = [P.eye[0] - P.look[0], P.eye[1] - P.look[1], P.eye[2] - P.look[2]];
   const l = Math.hypot(d[0], d[1], d[2]);
   if (l > 1e-12) st.asmCamLast = { dir: [d[0] / l, d[1] / l, d[2] / l], up: P.up };

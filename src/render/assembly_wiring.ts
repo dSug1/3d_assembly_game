@@ -36,7 +36,7 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { crossingHold, crossingPitch, distanceToFacets, fingerInFrame, fingerSwapped, SPIT_CROSSING_PITCH_RAD, spitCameraHeading, spitCameraHeadingOne, spitSide, zoneAt, type PolarZone } from "../input/polar_zone";
+import { crossingHold, crossingPitch, distanceToFacets, fingerInFrame, fingerSwapped, SPIT_CROSSING_PITCH_RAD, spitCameraHeading, spitSide, zoneAt, type PolarZone } from "../input/polar_zone";
 import { assignCharts, capTiltHeading, chartContour, chartZones, DEFAULT_CHART_OPTS, type ChartAssignment, type ChartFace } from "../input/orbit_charts";
 import { holdAtCrossing, poseAboutPiece, poseFramingTwo, type CamPose, type EdgeHold } from "../input/orbit_tilt";
 import { poleCrossingDue, poleSeam } from "../input/pole_crossing";
@@ -110,7 +110,7 @@ export function ensureAssembly(st: SceneState): void {
 type OrbitStateStart = Pick<
   SceneState,
   | "asmGizmo" | "asmSupport" | "asmSupportLevel" | "pieceHold" | "pieceHoldPrev" | "asmLook" | "asmFacePoint" | "asmG" | "asmPrevQ" | "asmShown" | "asmFaceBand" | "asmFree" | "asmPlaceWas" | "asmMapQ"
-  | "asmEdgeHold" | "asmZone" | "asmZoneMix" | "asmChange" | "asmPieceDrawn" | "asmDirEase" | "asmCamLast" | "asmRollShadow" | "asmSpitSide" | "asmSpitU" | "asmSpitPic" | "asmSpitPicWas" | "asmZoneAlpha" | "asmDySign" | "asmHeadO"
+  | "asmEdgeHold" | "asmZone" | "asmZoneMix" | "asmChange" | "asmPieceDrawn" | "asmDirEase" | "asmCamLast" | "asmRollShadow" | "asmSpitSide" | "asmSpitU" | "asmSpitPic" | "asmSpitPicWas" | "asmZoneAlpha" | "asmDySign" | "asmFingerDxMm" | "asmDxSign" | "asmCarriedYaw" | "asmHeadO"
   | "asmHeadW" | "asmHeadYaw" | "asmTilt" | "asmGOff" | "asmTiltAuto" | "asmTiltPending" | "asmOrbitMm" | "asmBlend" | "asmCalmWhole" | "asmCalmWholeV"
   | "asmSquare" | "asmCalm" | "asmMouth" | "asmRawPrev" | "asmGizmoAt" | "asmGizmoLag"
 >;
@@ -152,6 +152,9 @@ export function orbitStateStart(): OrbitStateStart {
     asmSpitPicWas: null,
     asmZoneAlpha: 0,
     asmDySign: 0,
+    asmFingerDxMm: 0,
+    asmDxSign: 0,
+    asmCarriedYaw: null,
     asmHeadO: null,
     asmHeadW: 1,
     asmHeadYaw: null,
@@ -359,12 +362,6 @@ function seamOutStart(st: SceneState): void {
 }
 
 /** ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §12 RB1) LAW U DECIDES THE CHANGES OF FRAME (`uprightPicture` 1, `freeTurnMaxDeg` over 0): each asked, resolved once. */
-/** ⭐⭐⭐ (2026-11-19, `UPRIGHT_ONE_POSE.md` §12 — fix round 1, F3) the spit camera's heading: at the pole the side's own under one pose
- *  (`spitCameraHeadingOne`); else as it was (`uprightOnePose` 0: `c3a8ba6` untouched) */
-function spitHeadingFor(st: SceneState, u: Vec3, a: Vec3, side: number): number {
-  return uprightDecides(st) && st.cfg.uprightOnePose === 1 ? spitCameraHeadingOne(u, a, side) : spitCameraHeading(u, a, side);
-}
-
 export function uprightDecides(st: SceneState): boolean {
   return st.cfg.freeTurnMaxDeg > 0 && st.cfg.uprightPicture === 1;
 }
@@ -1600,9 +1597,9 @@ function poseShown(st: SceneState): CamPose {
   // ⭐⭐⭐ (2026-11-18, `UPRIGHT_PICTURE.md` §2 step 3 — law U) the picture is a function of the logic's pose: a turn starts from the LOGIC's last pose (`G`),
   // so its first frame draws exactly last frame's picture (from the picture drawn, law U would turn it once more inside the band)
   const sh = st.asmRollShadow;
-  // ⭐⭐⭐ (2026-11-19, `UPRIGHT_ONE_POSE.md` OP1) one pose: a turn (close in) starts from the logic's last pose too — the picture is that pose turned by φ
-  if (sh !== null && sh.one !== undefined) return { eye: sh.ghost.eye, look: sh.ghost.look, up: sh.ghost.up, piece: st.asmPieceDrawn };
   if (sh !== null && sh.upright !== undefined) return { eye: sh.ghost.eye, look: sh.ghost.look, up: sh.ghost.up, piece: st.asmPieceDrawn };
+  // ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md`) the carried up: a turn (close in) starts from the logic's last pose too — the picture is that pose turned by φ
+  if (sh !== null && sh.one !== undefined) return { eye: sh.ghost.eye, look: sh.ghost.look, up: sh.ghost.up, piece: st.asmPieceDrawn };
   const c = st.camera;
   const t = c.getTarget();
   return { eye: [c.position.x, c.position.y, c.position.z], look: [t.x, t.y, t.z], up: [c.upVector.x, c.upVector.y, c.upVector.z], piece: st.asmPieceDrawn };
@@ -1632,7 +1629,7 @@ function assemblyCameraFrameRaw(st: SceneState, cam: OrbitAt, off?: CameraAngleO
     const side = st.asmSpitSide !== 0 ? st.asmSpitSide : spitSide(uW, st.asmZone!.zone.axis, 0);
     // ⭐⭐⭐ (2026-11-18, ES — the silent entry) the heading SHOWN: entered over an edge, the picture the bound face's camera would show kept, turned to the
     // layout by the face's middle at most the tilts' one speed a frame (`freeShownHeading`)
-    const hS = st.asmFree !== null ? freeHeadingAngle(freeShownHeading(st, uW, side, dtMs), uW) : spitHeadingFor(st, uW, st.asmZone!.zone.axis, side);
+    const hS = st.asmFree !== null ? freeHeadingAngle(freeShownHeading(st, uW, side, dtMs), uW) : spitCameraHeading(uW, st.asmZone!.zone.axis, side);
     st.asmSpitPic = { u: uW, up: offsetFrame(uW, hS, 0, 0).up }; // ⭐ (ES) this frame's picture before the offsets (the next entry continues it)
     return offsetFrame(uW, hS, o.yawRad, o.pitchRad);
   }
@@ -1714,6 +1711,13 @@ function tiltFrame(st: SceneState, stack: number, surface: Vec3): void {
  * ⭐⭐⭐ (2026-11-10, the rebuild — the owner: *"1-b"*) AN ORBIT STEP WHILE A TILT IS UNDER WAY (its exit asked, not yet made; a camera turn) — REFUSED:
  * the gizmo held where the crossing left it until the tilt completes; then the finger has the orbit again. Returns whether it refused the step.
  */
+/** ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` C1) THE ORBIT'S POLE AXIS in the world: the tilt's, a polar zone's (its F's pole), else the vertical — the axis its yaw turns about */
+export function orbitPoleAxis(st: SceneState): Vec3 {
+  if (st.asmTilt !== null) return mulM(st.asmTilt.map, [0, 1, 0]);
+  const B = baseFrame(st);
+  return B !== null ? mulM(B, [0, 1, 0]) : [0, 1, 0];
+}
+
 export function tiltClampStep(st: SceneState, yaw0: number, v0: number): boolean {
   const tl = st.asmTilt;
   // ⭐⭐⭐ (`1.0.120b-`) …and while the square camera turns through an edge (`squareTurning`): every edge a frame change
@@ -2372,7 +2376,7 @@ function freeShownHeading(st: SceneState, uW: Vec3, side: number, dtMs: number |
   const side0 = fr.offset === null ? side : fr.side;
   // the TARGET: the picture the ENTRY side's bound camera shows HERE (its offset read THIS frame — an exit back over the entry edge, anywhere along it,
   // meets it), the layout by the face's middle
-  const offB = pictureOffset(uW, offsetFrame(uW, spitHeadingFor(st, uW, st.asmZone!.zone.axis, side0), 0, 0).up);
+  const offB = pictureOffset(uW, offsetFrame(uW, spitCameraHeading(uW, st.asmZone!.zone.axis, side0), 0, 0).up);
   const target = entryBlendHeading(viewLevelTurned(uW, offB), fr.layout, fr.depth, fr.entry.centreDepth, share, st.cfg.freeEntryUpright);
   let h: Vec3;
   if (fr.offset === null) {

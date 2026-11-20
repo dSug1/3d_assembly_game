@@ -35,7 +35,7 @@ import { type SceneState } from "./scene_state";
 import { applyCamera, retargetGizmo, syncCentre } from "./camera_rig";
 import { sampleOf } from "./hud_paint";
 import { nudgeOthersWorld, swingBlock } from "./sway_pass";
-import { dySignPushing, edgeHoldAlong, edgeHoldFinger, edgeHoldGlass } from "../input/orbit_tilt"; // ⭐ (2026-11-12, ORBIT_ANY_SHAPE.md §8) the dy hold
+import { dxSignPushing, dySignPushing, edgeHoldAlong, edgeHoldFinger, edgeHoldGlass } from "../input/orbit_tilt"; // ⭐ (2026-11-12, ORBIT_ANY_SHAPE.md §8) the dy hold
 
 export function installPointerHandler(st: SceneState): void {
   // ⭐⭐ (2026-10-29, *"A should replace shift"*) THE APPROACH KEY held (`isApproachKey`): its release ends the approach (its coast); a lost window forgets it
@@ -269,6 +269,7 @@ export function installPointerHandler(st: SceneState): void {
 function gestureOver(st: SceneState): void {
   st.asmEdgeHold = null;
   st.asmDySign = 0; // ⭐⭐⭐ (2026-11-18, `DY_HOLD_REVERSAL.md` §5.2) no finger, no dy pushing: a crossing after the lift (the camera's lag, the coast) holds nothing
+  st.asmDxSign = 0; // ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` C6) no finger, no dx pushing
   st.episodes.gestureEnded(endGesture(st));
 }
 
@@ -347,6 +348,12 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     // ⭐⭐⭐ (2026-11-18, `DY_HOLD_REVERSAL.md` §5.3) the dy that pushes NOW (`dySignPushing`: a sideways step none; the move before the hold, on the logic's
     // glass — the sign a crossing holds) — ⛔ the last dy sign for ever
     if (asmOn && !shiftApproach) st.asmDySign = dySignPushing(st.asmDySign, fdx0, fdy0);
+    // ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` C4, C6) the dx that pushes now (the raw finger, the glass he sees) and this frame's dx that moves (mm: the
+    // carried up's alignment budget near the vertical — a dy never pays it)
+    if (asmOn && !shiftApproach) {
+      st.asmDxSign = dxSignPushing(st.asmDxSign, raw.dx, raw.fdy);
+      st.asmFingerDxMm += Math.abs(held.dx) / mmToPx(1);
+    }
     // ⭐⭐⭐ (2026-11-14) …and released by the finger the other way past `edgeHoldMm` (`edgeHoldFinger` — the owner's hysteresis, a finger's, at any distance),
     // read along the held direction on the raw finger (`edgeHoldAlong`; law U off: the dy itself)
     const along = asmOn && st.asmEdgeHold !== null ? edgeHoldAlong(st.asmEdgeHold, raw.dx, raw.fdy) : 0;

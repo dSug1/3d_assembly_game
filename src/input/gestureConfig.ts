@@ -24,7 +24,7 @@
  */
 import { distanceTurningPoints } from "./orbit";
 import { FREE_TURN_MAX_DEG, ROLL_FOLLOW_MS } from "./roll_follow";
-import { UPRIGHT_FROM_DEG, UPRIGHT_FULL_DEG, UPRIGHT_MAX_DEG_S } from "./upright";
+import { UPRIGHT_ALIGN_DEG_PER_MM, UPRIGHT_FROM_DEG, UPRIGHT_FULL_DEG, UPRIGHT_MAX_DEG_S } from "./upright";
 
 export const CAMERA_NEAR_PLANE_M = 0.01;
 
@@ -422,10 +422,12 @@ export interface GestureConfig {
   /** ⭐ (UD6b, fix round 1) the pace of the picture's REST toward upright, everywhere (deg a second; 0 = at once: law U as first built); the carry of the
    * logic's own roll is at once whatever this is (0 – 2 880) */
   uprightMaxDegS: number;
-  /** ⭐⭐⭐ (2026-11-19, `UPRIGHT_ONE_POSE.md` — packet D) ONE POSE (1): the picture IS the logic's pose, one owner of its up, the pass's one half turn at the
-   * logic's crossing; 0: law U as at `c3a8ba6`. Acts only with `freeTurnMaxDeg` > 0 and `uprightPicture` 1 */
-  uprightOnePose: number;
-  /** ⭐ (OP7; fix round 1, F2) one pose: the gizmo held for the WHOLE half turn (1, T5 as written); 0: never held by it. ⛔ (fix round 1, F1) `uprightDeadDeg` (OP6's dead band) DELETED: measured useless */
+  /** ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` — packet E) ONE CARRIED UP (1): the picture turns only by what the finger asks; 0: law U as at `1f62928`.
+   *  Acts only with `freeTurnMaxDeg` > 0 and `uprightPicture` 1 */
+  uprightCarried: number;
+  /** ⭐ (C4) the carried up's alignment a dx pays near the vertical (deg of the picture's turn per mm of finger dx) (0 – 20) */
+  uprightAlignDegPerMm: number;
+  /** ⭐ (C7) the carried up: the gizmo still for the whole half turn (1); 0: never held by it */
   uprightHalfHold: number;
   /** ⭐⭐⭐ (2026-11-10, POLAR_ORBIT_CLEANUP.md §9.4 — the owner's TILTED POLE) a press on a cap tilts the orbit so the cap is a side (1); off (0): the polar cap as before. ⛔ (2026-11-15, the owner: *"cancel my rule and remove the press action on the orbit"*) no press tilts: 1 the automatic tilt close in (`tiltAutoM`), 0 none. */
   tiltedPole: number;
@@ -891,9 +893,10 @@ export const DEFAULT_CONFIG: GestureConfig = {
   uprightCloseIn: 0, // ⭐ (UD3) the square camera's T1 wins close in
   uprightFromDeg: UPRIGHT_FROM_DEG, // ⭐ (UD1; the owner 2026-11-19) 15°
   uprightFullDeg: UPRIGHT_FULL_DEG, // ⭐ (UD1; the owner 2026-11-19) 50°
-  uprightMaxDegS: UPRIGHT_MAX_DEG_S, // ⭐ (UD6b; the owner 2026-11-19) 720° a second, everywhere
-  uprightOnePose: 0, // ⭐⭐⭐ (2026-11-20, the owner: "do 1" — deployed OFF for his A/B look: 0 = law U = `c3a8ba6` frame for frame, 1 = one pose, `UPRIGHT_ONE_POSE.md`)
-  uprightHalfHold: 1, // ⭐ (OP7; fix round 1, F2) the gizmo held for the whole half turn
+  uprightMaxDegS: UPRIGHT_MAX_DEG_S, // ⭐ (UD6b; the owner 2026-11-20) 520° a second, everywhere (720 on 2026-11-19)
+  uprightCarried: 1, // ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md`, packet E) the carried up on this branch; 0 = law U (`1f62928`)
+  uprightAlignDegPerMm: UPRIGHT_ALIGN_DEG_PER_MM, // ⭐ (C4) 3° a mm of dx
+  uprightHalfHold: 1, // ⭐ (C7) the gizmo still for the whole half turn
   gizmoEaseMs: 45, // ⭐⭐ (2026-11-04, the owner: *"update the lag the gizmo's position the piece follows to 45ms"*; 62, 55 before, the former GIZMO_TAU_MS 90)
   orbitSpringMs: 30, // ⭐⭐ (2026-11-04) the former boxSmoothMs / 2 for the orbit's spring
   tiltedPole: 1, // ⭐⭐⭐ (2026-11-10, §9.4) the tilted pole on
@@ -1078,7 +1081,8 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.uprightFromDeg >= 0 && cfg.uprightFromDeg <= 45)) throw new Error(`uprightFromDeg (${cfg.uprightFromDeg}) must be in [0, 45] deg.`);
   if (!(cfg.uprightFullDeg >= 0 && cfg.uprightFullDeg <= 60)) throw new Error(`uprightFullDeg (${cfg.uprightFullDeg}) must be in [0, 60] deg (at or under \`uprightFromDeg\`: a step there).`);
   if (!(cfg.uprightMaxDegS >= 0 && cfg.uprightMaxDegS <= 2880)) throw new Error(`uprightMaxDegS (${cfg.uprightMaxDegS}) must be in [0, 2880] deg a second.`);
-  if (cfg.uprightOnePose !== 0 && cfg.uprightOnePose !== 1) throw new Error(`uprightOnePose (${cfg.uprightOnePose}) must be 0 or 1.`);
+  if (cfg.uprightCarried !== 0 && cfg.uprightCarried !== 1) throw new Error(`uprightCarried (${cfg.uprightCarried}) must be 0 or 1.`);
+  if (!(cfg.uprightAlignDegPerMm >= 0 && cfg.uprightAlignDegPerMm <= 20)) throw new Error(`uprightAlignDegPerMm (${cfg.uprightAlignDegPerMm}) must be in [0, 20] deg a mm.`);
   if (cfg.uprightHalfHold !== 0 && cfg.uprightHalfHold !== 1) throw new Error(`uprightHalfHold (${cfg.uprightHalfHold}) must be 0 or 1.`);
   if (cfg.freeEntryUpright !== 0 && cfg.freeEntryUpright !== 1) throw new Error(`freeEntryUpright (${cfg.freeEntryUpright}) must be 0 or 1.`);
   if (!(cfg.edgeHoldMm >= 0 && cfg.edgeHoldMm <= 200)) throw new Error(`edgeHoldMm (${cfg.edgeHoldMm}) must be in [0, 200] mm.`);

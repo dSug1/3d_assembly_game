@@ -207,10 +207,11 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "upright close in under the square camera too (1 on, 0 = its layout wins)", "uprightCloseIn", 0, 1, 1),
             tunable(st, "upright: none within this of the vertical (deg)", "uprightFromDeg", 0, 45, 1),
             tunable(st, "upright: in full from this off the vertical (deg)", "uprightFullDeg", 0, 60, 1),
-            tunable(st, "upright: the rest to upright, its pace (deg a second; 0 = at once)", "uprightMaxDegS", 0, 2880, 60),
-            // ⭐⭐⭐ (2026-11-19, `UPRIGHT_ONE_POSE.md` — packet D) one pose
-            tunable(st, "one pose: the picture IS the logic's pose, one half turn a pass (1 on, 0 = law U)", "uprightOnePose", 0, 1, 1),
-            tunable(st, "one pose: the gizmo waits for the whole half turn (1; 0 = never)", "uprightHalfHold", 0, 1, 1),
+            tunable(st, "upright: the rest to upright, its pace (deg a second; 0 = at once)", "uprightMaxDegS", 0, 2880, 40), // ⭐ (2026-11-20) step 40 so his 520 is on the grid
+            // ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` — packet E) the carried up
+            tunable(st, "carried up: the picture turns only by what the finger asks (1 on, 0 = law U)", "uprightCarried", 0, 1, 1),
+            tunable(st, "carried up: the alignment a dx pays near the vertical (deg a mm)", "uprightAlignDegPerMm", 0, 20, 0.5),
+            tunable(st, "carried up: the gizmo still for the whole half turn (1; 0 = never)", "uprightHalfHold", 0, 1, 1),
           ],
         },
         {

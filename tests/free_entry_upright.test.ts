@@ -382,7 +382,7 @@ describe("the switch `freeEntryUpright` (0 or 1, the default 1) — validated as
     expect(src).toMatch(/st\.asmSpitPicWas = st\.asmSpitPic;\s*st\.asmSpitPic = null;/);
     // ⭐ (v7) one heading for both branches: the free face's SHOWN one (its side passed down — the entry's side is kept from it), else the side's own
     const cf = fnCode("render/assembly_wiring.ts", "function assemblyCameraFrameRaw(");
-    const hS = "const hS = st.asmFree !== null ? freeHeadingAngle(freeShownHeading(st, uW, side, dtMs), uW) : spitHeadingFor(st, uW, st.asmZone!.zone.axis, side);";
+    const hS = "const hS = st.asmFree !== null ? freeHeadingAngle(freeShownHeading(st, uW, side, dtMs), uW) : spitCameraHeading(uW, st.asmZone!.zone.axis, side);";
     expect(cf).toContain(hS);
     before(cf, "const side = st.asmSpitSide !== 0 ? st.asmSpitSide : spitSide(uW, st.asmZone!.zone.axis, 0);", hS);
     before(cf, hS, "st.asmSpitPic = { u: uW, up: offsetFrame(uW, hS, 0, 0).up };");
@@ -403,7 +403,7 @@ describe("the switch `freeEntryUpright` (0 or 1, the default 1) — validated as
       none: "if (fr.entry === null) return fr.heading;",
       share: "const share = squareShareShown(st);",
       side0: "const side0 = fr.offset === null ? side : fr.side;", // (v5) the entry's side, kept for the face
-      offB: "const offB = pictureOffset(uW, offsetFrame(uW, spitHeadingFor(st, uW, st.asmZone!.zone.axis, side0), 0, 0).up);", // (v5) every frame, on side0
+      offB: "const offB = pictureOffset(uW, offsetFrame(uW, spitCameraHeading(uW, st.asmZone!.zone.axis, side0), 0, 0).up);", // (v5) every frame, on side0
       target: "const target = entryBlendHeading(viewLevelTurned(uW, offB), fr.layout, fr.depth, fr.entry.centreDepth, share, st.cfg.freeEntryUpright);",
       first: "if (fr.offset === null) {",
       offP: "const offP = was !== null ? pictureOffset(uW, transportUp(was.u, was.up, uW)) : offB;", // (v3) the picture shown, carried
