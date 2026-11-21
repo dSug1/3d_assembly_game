@@ -225,6 +225,10 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "follower: round the vertical, never nearer than (deg; 0 = over it)", "followPoleDeg", 0, 60, 1),
             tunable(st, "follower: the detour round the vertical starts at (deg off it)", "followFromDeg", 10, 90, 1),
             tunable(st, "follower: the yaw's last-resort ceiling, never under his pace (deg a second; 0 = none)", "followMaxDegS", 0, 2880, 40),
+            // ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §15 – §16 — H2) the top and bottom far out
+            tunable(st, "follower: the top's rule — the calm's level heading, a turn at an edge with the gizmo waiting (1; 0 = the detour)", "followTop", 0, 1, 1),
+            tunable(st, "follower: an edge's gap paid by a turn from (deg; under it the spring)", "followTurnMinDeg", 0, 45, 1),
+            tunable(st, "follower: the edge's turn at his pace (1) … close in's speed (0)", "followTurnPace", 0, 1, 0.05),
           ],
         },
         {

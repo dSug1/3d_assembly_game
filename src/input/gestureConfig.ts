@@ -441,6 +441,12 @@ export interface GestureConfig {
   followFromDeg: number;
   /** ⭐ (F2, D-F2 (a)) the yaw's last-resort ceiling (deg a second; never under his own pace; 0 = none) */
   followMaxDegS: number;
+  /** ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §15 – §16 — H2) THE TOP AND BOTTOM FAR OUT: the heading the calm's levelled reading, the height capped, the edge's turn with the gizmo waiting, the dy hold after a half turn (1); 0: the follower as `de4a10e`, frame for frame (the detour) */
+  followTop: number;
+  /** ⭐ (H2) a gap at an edge under this is paid by the follower's spring, from it the follower's own turn (deg) */
+  followTurnMinDeg: number;
+  /** ⭐ (H2, D-H6) the turn's pace: 1 his own orbit pace at the crossing whenever faster than close in's speed (`tiltRollDegS`), 0 close in's speed */
+  followTurnPace: number;
   /** ⭐⭐⭐ (2026-11-10, POLAR_ORBIT_CLEANUP.md §9.4 — the owner's TILTED POLE) a press on a cap tilts the orbit so the cap is a side (1); off (0): the polar cap as before. ⛔ (2026-11-15, the owner: *"cancel my rule and remove the press action on the orbit"*) no press tilts: 1 the automatic tilt close in (`tiltAutoM`), 0 none. */
   tiltedPole: number;
   /** ⭐⭐⭐ (2026-11-10, the owner: *"limit the speed of the scene tilt at crossing"* → *"one speed for every tilt"*) EVERY tilt — the roll back to upright, the swing of a tilt just made — at this speed (°/s; 0: at once) — ⛔ `tiltRollMinMs` (a whole roll in 250 ms whatever its size) replaced. */
@@ -915,6 +921,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   followPoleDeg: 30, // ⭐ (F2) his D-F1: no nearer than 30° to straight above far out
   followFromDeg: 60, // ⭐ (F2) the detour's reach (the prototype's D)
   followMaxDegS: 900, // ⭐ (F2) the last resort (the prototype's D) — opened by his own pace (`followCeiling`)
+  followTop: 1, // ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §15 — H2) the top's rule on this branch; 0 = `de4a10e` frame for frame (the detour kept for it)
+  followTurnMinDeg: 10, // ⭐ (H2) T11's band: under it the spring pays
+  followTurnPace: 1, // ⭐ (H2, D-H6 — the owner: *"Your pace + a slider"*) his pace by default; 0 = close in's speed
   gizmoEaseMs: 45, // ⭐⭐ (2026-11-04, the owner: *"update the lag the gizmo's position the piece follows to 45ms"*; 62, 55 before, the former GIZMO_TAU_MS 90)
   orbitSpringMs: 30, // ⭐⭐ (2026-11-04) the former boxSmoothMs / 2 for the orbit's spring
   tiltedPole: 1, // ⭐⭐⭐ (2026-11-10, §9.4) the tilted pole on
@@ -1108,6 +1117,9 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.followPoleDeg >= 0 && cfg.followPoleDeg <= 60)) throw new Error(`followPoleDeg (${cfg.followPoleDeg}) must be in [0, 60] deg.`);
   if (!(cfg.followFromDeg >= 10 && cfg.followFromDeg <= 90 && cfg.followFromDeg > cfg.followPoleDeg)) throw new Error(`followFromDeg (${cfg.followFromDeg}) must be in [10, 90] deg and over followPoleDeg.`);
   if (!(cfg.followMaxDegS >= 0 && cfg.followMaxDegS <= 5000)) throw new Error(`followMaxDegS (${cfg.followMaxDegS}) must be in [0, 5000] deg a second.`);
+  if (cfg.followTop !== 0 && cfg.followTop !== 1) throw new Error(`followTop (${cfg.followTop}) must be 0 or 1.`);
+  if (!(cfg.followTurnMinDeg >= 0 && cfg.followTurnMinDeg <= 90)) throw new Error(`followTurnMinDeg (${cfg.followTurnMinDeg}) must be in [0, 90] deg.`);
+  if (!(cfg.followTurnPace >= 0 && cfg.followTurnPace <= 1)) throw new Error(`followTurnPace (${cfg.followTurnPace}) must be in [0, 1].`);
   if (cfg.freeEntryUpright !== 0 && cfg.freeEntryUpright !== 1) throw new Error(`freeEntryUpright (${cfg.freeEntryUpright}) must be 0 or 1.`);
   if (!(cfg.edgeHoldMm >= 0 && cfg.edgeHoldMm <= 200)) throw new Error(`edgeHoldMm (${cfg.edgeHoldMm}) must be in [0, 200] mm.`);
   if (!(cfg.approachPinchGain > 0 && cfg.approachPinchGain <= 10)) throw new Error(`approachPinchGain (${cfg.approachPinchGain}) must be in (0, 10].`);

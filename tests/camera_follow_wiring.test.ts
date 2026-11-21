@@ -78,16 +78,19 @@ describe("F2 — the follower at the camera's stage", () => {
 
   it("a change asked: applied at once, the dy hold the LOGIC's crossing's (OP8); nothing here undoes a turn, a hold or an ease", () => {
     const w = code("render/camera_follow_wiring.ts");
-    expect(w).toContain("if (ask !== null) changeApply(st, ask, false, ask.hold !== undefined ? holdAtCrossing(ask.hold) : undefined);");
+    // ⭐ (H2) under the top's rule (`followTop` 1) the logic's hold is not written far out (R4 amended); 0: as `de4a10e`
+    expect(w).toContain("if (ask !== null) changeApply(st, ask, false, top ? undefined : ask.hold !== undefined ? holdAtCrossing(ask.hold) : undefined);");
     expect(w).not.toMatch(/asmZoneMix\s*=[^=]/);
-    expect(w).not.toMatch(/asmEdgeHold\s*=[^=]/);
+    // ⭐ (H2, D-H8) the ONE hold written here: the follower's own crossing's, through `holdAtCrossing` (it replaces any older one)
+    expect(w.match(/asmEdgeHold\s*=[^=]/g)?.length).toBe(1);
+    expect(w).toContain("if (r.hold !== undefined) st.asmEdgeHold = holdAtCrossing(r.hold);");
     expect(w).not.toMatch(/asmDirEase\s*=[^=]/);
     expect(w).not.toMatch(/asmChange\s*=[^=]/);
   });
 
   it("the piece rides the followed direction; the finger reads the camera drawn; the record a shadow without a carried up (no half turn: no gizmo hold)", () => {
     const w = code("render/camera_follow_wiring.ts");
-    expect(w).toContain("const s = followStep(s0, st.asmAsk!, dtMs, k);");
+    expect(w).toContain("s = followStep(s0, st.asmAsk!, dtMs, k);");
     expect(w).toContain("const P = followPose(s.dir, look, foot, hang, gapM, off.yawRad, off.pitchRad);");
     expect(w).toContain("st.pieceAnchor = P.piece;");
     expect(w).toContain("st.asmPieceDrawn = [P.piece[0], P.piece[1], P.piece[2]];");
@@ -96,5 +99,49 @@ describe("F2 — the follower at the camera's stage", () => {
     expect(r).not.toContain("one:");
     expect(r).not.toContain("upright:");
     expect(r).toContain("turn: null");
+  });
+});
+
+// ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §15 – §16 — H2) THE TOP AND BOTTOM FAR OUT, wired behind `followTop` (1 here; 0 = `de4a10e` frame for frame).
+describe("H2 — the top's rule at the camera's stage", () => {
+  it("the switch 1 by default on this branch; the band 10°; the turn at his pace (D-H6)", () => {
+    expect([DEFAULT_CONFIG.followTop, DEFAULT_CONFIG.followTurnMinDeg, DEFAULT_CONFIG.followTurnPace]).toEqual([1, 10, 1]);
+  });
+
+  it("the switch 0: the follower as `de4a10e` (`followStep`, the detour); 1: `followTopStep` — the levelled reading, the orbit's own direction, the gizmo's facet, the glass's up drawn, the dy pushing", () => {
+    const f = between(code("render/camera_follow_wiring.ts"), "const top = st.cfg.followTop === 1;", "const P = followPose(");
+    const i1 = f.indexOf("if (top) {");
+    const i0 = f.indexOf("} else {", i1);
+    expect(i1).toBeGreaterThan(0);
+    expect(f.slice(i1, i0)).toContain("const r = followTopStep(s0, was?.top ?? null, { ask: st.asmAsk!, orbit: orbitW, psiL: st.asmAskLevel, nW: gizmoFacetW(st), upShown: st.asmCamLast?.up ?? null, dySign: st.asmDySign }, dtMs, kt);");
+    expect(f.slice(i1, i0)).toContain("const orbitW = tiltDir(dirFrame(st), orbitDir(st.orbit.yaw, st.orbit.elevation));");
+    expect(f.slice(i1, i0)).not.toContain("followStep(");
+    expect(f.slice(i0)).toContain("s = followStep(s0, st.asmAsk!, dtMs, k);");
+    expect(f.slice(i0)).not.toContain("followTopStep(");
+  });
+
+  it("the gizmo WAITS while the follower's turn runs: `tiltClampStep`'s one more term (close in's T5)", () => {
+    const t = between(code("render/assembly_wiring.ts"), "export function tiltClampStep(st: SceneState, yaw0: number, v0: number): boolean {", "function turnAngles(");
+    expect(t).toContain("|| followTurnHoldsGizmo(st.asmFollow?.top?.turn ?? null);");
+  });
+
+  it("the levelled reading at the rig's angles, beside the direction asked, only under the switch; the calm asked in its frame; the gizmo's facet off the face map (the MODEL's)", () => {
+    const g = code("render/green_box_wiring.ts");
+    const i = g.indexOf("st.asmAsk = askedDir(st, rig.yaw, rig.v);");
+    const j = g.indexOf("st.asmAskLevel = st.cfg.followTop === 1 ? levelledAsked(st, rig.yaw, rig.v) : null;");
+    expect(j).toBeGreaterThan(i);
+    expect(g.indexOf("const fp = followFrame(", j)).toBeGreaterThan(j);
+    const a = code("render/assembly_wiring.ts");
+    expect(between(a, "export function levelledAsked(", "export function gizmoFacetW(")).toContain("return levelledHeading(yaw, v, st.asmAskCalm, dirFrame(st), st.cfg.followPoleDeg); }");
+    const gz = between(a, "export function gizmoFacetW(st: SceneState): Vec3 | null {", "function drawnDir(");
+    expect(gz).toContain("const fm = sh === null ? null : faceMapOf(st);");
+    expect(gz).toContain("return f === undefined ? null : tiltDir(mapFrame(st), f.n); }");
+    expect(gz).not.toMatch(/mesh|absolutePosition|getBoundingInfo/);
+  });
+
+  it("the record: the top's state only under the switch (0: the record as before)", () => {
+    const w = code("render/camera_follow_wiring.ts");
+    expect(w).toContain("...(topRec !== null ? { top: topRec } : {})");
+    expect(w).toContain("...(topS !== null ? { top: topS } : {})");
   });
 });

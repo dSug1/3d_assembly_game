@@ -6,10 +6,16 @@
  *
  * F1 (this file's first part): THE DIRECTION ASKED — the calm's target as `calmTargets` hands it to its ease, with the whole shares by position folded in
  * (`askedCalm`): the calm WITHOUT its 120 ms ease (D-F6: the follower's one ease replaces it). Read at the rig's solved angles by `askedDir` (the wiring).
+ *
+ * H2 (the file's end, `CAMERA_FOLLOWS_GIZMO.md` §15 – §16, switch `followTop`): THE TOP AND BOTTOM FAR OUT — the heading the calm's LEVELLED reading (carried
+ * where it has none), the height capped; at a facet change the follower's own turn by close in's functions, the gizmo waiting, the dy hold after a half turn.
  */
 import type { Vec3 } from "../core/vec";
-import type { CalmState } from "./orbit_calm";
-import { offsetFrame } from "./assembly_orbit";
+import { calmLevelHeading, type CalmState } from "./orbit_calm";
+import { offsetFrame, orbitDir } from "./assembly_orbit";
+import { rollDurationMs, tiltDir, type Mat3 } from "./orbit_tilt";
+import { crossingEvent, FREE_EXIT_HOLD_FROM_RAD, isFreeFace, turnHolds } from "./free_face";
+import { turnHoldsGizmo } from "./seam_turn";
 
 /** ⭐ The calm's target as `calmStep` takes it (`calmTarget`'s answer, or a cap's `n: null`). */
 export interface CalmAskTarget {
@@ -252,4 +258,206 @@ export function followPose(dir: Vec3, look: Vec3, foot: Vec3, hangM: number, gap
   const f = offsetFrame(dir, Math.atan2(dir[2], dir[0]), offYawRad, offPitchRad);
   const r = len3(add3(piece, scale3(look, -1))) + Math.max(0, gapM);
   return { eye: add3(look, scale3(f.dir, r)), look, up: [0, 1, 0], piece };
+}
+
+/* ⭐⭐⭐ H2 (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §15 – §16, the owner's D-H1 – D-H8) THE TOP AND BOTTOM FAR OUT, behind `followTop` ------------------------
+ * The camera's HEADING target is the calm's LEVELLED reading (its horizontal reading only — a dy cannot move it, a dx moves it with the red section by the
+ * calm's share, D-H7); where it has none (a level face, or no calm near the vertical) the heading is CARRIED. Its HEIGHT is the asked direction's, capped
+ * 90° − `followPoleDeg` off the horizon (the detour replaced: D-H1). No region, no threshold, no time. The only joins are the EDGES: at a facet change of the
+ * gizmo (the logic's own crossing, model space) a gap over `followTurnMinDeg` is the follower's own TURN — its duration by its angle (`rollDurationMs`), at
+ * least his own pace (D-H6), the gizmo WAITING meanwhile (`turnHoldsGizmo`, read by `tiltClampStep`), the turn owning the heading and the spring the height;
+ * a turn over 90° made by the dy that crossed holds that dy after it (`crossingEvent`, `turnHolds` — D-T4's two conditions, D-H8). One owner per thing. */
+
+/** ⭐ A facet change: the gizmo's facet normal (world, the MODEL's) turned more than this since the frame before. */
+export const FOLLOW_FACET_CHANGE_RAD = (0.5 * Math.PI) / 180;
+/** ⭐ A level part shorter than this has no heading. */
+const LEVEL_EPS = 1e-6;
+const UP: Vec3 = [0, 1, 0];
+
+/** ⭐ The follower's heading of a direction (its convention: `atan2(x, z)`) — `null`: no level part. */
+export function headingOf(d: Vec3): number | null {
+  return Math.hypot(d[0], d[2]) > LEVEL_EPS ? Math.atan2(d[0], d[2]) : null;
+}
+
+/** ⭐ The direction at the heading `psi` and the elevation `el` (rad). */
+export function dirAtHeading(psi: number, el: number): Vec3 {
+  return [Math.cos(el) * Math.sin(psi), Math.sin(el), Math.cos(el) * Math.cos(psi)];
+}
+
+/**
+ * ⭐⭐⭐ (H2, §15.4) THE CALM'S LEVELLED READING — the heading TARGET far out (rad, the follower's convention), or `null`: carried. The calm asked `c` (its
+ * normal in the orbit's frame F; `R`: F → world, `null` the world's) read LEVEL at the orbit's `yaw` (`calmLevelHeading`: its horizontal share of the yaw's
+ * angle off the face's own heading, whatever the pitch — the reading the world camera's level heading already takes), that level direction of F turned into
+ * the world: its heading. ⭐ Made exact in the build (§16): ⛔ `calmShown` with its vertical share 0 (§15.4 as written) — on a cap the calm reads ACROSS
+ * (`wA` ≈ 1 at a side's top edge: the latitude toward the face's axis), which shrinks to nothing at the pole: a pure dy turned the heading back to the face's
+ * normal; the level reading is the angle ROUND the vertical, unchanged by a dy. And the reading KEPT ON ITS FACE'S SIDE of the vertical (its level part against
+ * the facet normal's): the calm is whole at an edge, so over a ridge it passed the vertical where the orbit did, not where the facet changes — kept, the half
+ * turn sits exactly on the edge. `null` (carried): the calm's facet LEVEL (`isFreeFace` in the world — a spit's bottom), no level part at all; no calm: the
+ * orbit's own heading, carried within `poleDeg` of the vertical.
+ */
+export function levelledHeading(yaw: number, v: number, c: CalmState | null, R: Mat3 | null, poleDeg: number): number | null {
+  if (c === null) {
+    const w = tiltDir(R, orbitDir(yaw, v));
+    if (Math.abs(w[1]) >= Math.cos(Math.max(0, poleDeg) * DEG)) return null;
+    return headingOf(w);
+  }
+  const n = tiltDir(R, c.n);
+  if (isFreeFace(n, UP)) return null;
+  const y = calmLevelHeading(yaw, c);
+  const r = tiltDir(R, [Math.cos(y), 0, Math.sin(y)]);
+  const nh = Math.hypot(n[0], n[2]);
+  if (Math.hypot(r[0], r[2]) > LEVEL_EPS && (nh <= LEVEL_EPS || r[0] * n[0] + r[2] * n[2] > 0)) return Math.atan2(r[0], r[2]);
+  return headingOf(n);
+}
+
+/** ⭐⭐⭐ (H2, D-H1) THE SPRING'S TARGET: the heading `psi`, the asked direction's elevation capped at 90° − `poleDeg` (60°) either way. */
+export function followTopTarget(psi: number, ask: Vec3, poleDeg: number): Vec3 {
+  const cap = Math.PI / 2 - Math.max(0, poleDeg) * DEG;
+  return dirAtHeading(psi, clampN(Math.asin(clampN(ask[1], -1, 1)), -cap, cap));
+}
+
+/**
+ * ⭐⭐⭐ (H2, D-H6 — the owner: *"Your pace + a slider"*) THE TURN'S SPEED (deg a second): close in's (`rollDegS`, `tiltRollDegS`) raised toward his own orbit
+ * pace at the crossing (`paceRadS`) by `share` — 1 (the default) his pace whenever it is faster, never slower than close in's; 0 close in's speed.
+ */
+export function followTurnDegS(paceRadS: number, rollDegS: number, share: number): number {
+  const base = Math.max(0, rollDegS);
+  return base + clampN(share, 0, 1) * Math.max(0, Math.max(0, paceRadS) / DEG - base);
+}
+
+/** ⭐⭐⭐ (H2) The follower's own turn: from the heading `psi0` by `delta` (rad, signed) over `durMs`, `tMs` run, its share `k` (1: whole). */
+export interface FollowTurn {
+  readonly psi0: number;
+  readonly delta: number;
+  readonly durMs: number;
+  readonly tMs: number;
+  readonly k: number;
+}
+
+/**
+ * ⭐⭐⭐ (H2, §15.5) THE TURN'S ANGLE: the heading drawn `psiDrawn` to the levelled reading beyond the edge `psiTo` (O2, computed — none, a quarter, a half by
+ * the edge left), the half turn's tie broken the way the heading was going (`step`, `polarStep`'s rule).
+ */
+export function followTurnDelta(psiDrawn: number, psiTo: number, step: number): number {
+  let d = wrapPi(psiTo - psiDrawn);
+  if (Math.abs(d) > 170 * DEG && step !== 0 && Math.sign(d) !== Math.sign(step)) d -= Math.sign(d) * 2 * Math.PI;
+  return d;
+}
+
+/** ⭐⭐⭐ (H2, §15.5) A TURN STARTED at an edge: none under `minDeg` (the spring pays it); its duration by its angle at `degS` (close in's `rollDurationMs`). */
+export function followTurnStart(psi0: number, delta: number, minDeg: number, degS: number): FollowTurn | null {
+  if (!(Math.abs(delta) >= Math.max(0, minDeg) * DEG) || !(Math.abs(delta) > 0)) return null;
+  const durMs = rollDurationMs(delta, degS);
+  return { psi0, delta, durMs, tMs: 0, k: durMs > 0 ? 0 : 1 };
+}
+
+/** ⭐⭐⭐ (H2) ONE FRAME OF THE TURN: its clock by time (close in's), its share `k` the time run over its duration. */
+export function followTurnStep(t: FollowTurn, dtMs: number): FollowTurn {
+  const tMs = t.tMs + Math.max(0, dtMs);
+  return { ...t, tMs, k: t.durMs > 0 ? Math.min(1, tMs / t.durMs) : 1 };
+}
+
+/** ⭐⭐⭐ (H2, R3 — close in's T5) THE GIZMO WAITS while the follower's turn runs: `turnHoldsGizmo`'s timed case (held while short of whole). */
+export function followTurnHoldsGizmo(t: FollowTurn | null): boolean {
+  return t !== null && turnHoldsGizmo(false, false, false, false, t.k);
+}
+
+/** ⭐⭐⭐ (H2, D-H8 = D-T4) THE DY HELD AFTER THE TURN: only a turn over 90° (`turnHolds`, `FREE_EXIT_HOLD_FROM_RAD`) with the crossing's own hold (`crossingEvent`). */
+export function followTurnHold(delta: number, crossingHold: 1 | -1 | 0): 1 | -1 | 0 {
+  return turnHolds(Math.abs(delta), FREE_EXIT_HOLD_FROM_RAD) ? crossingHold : 0;
+}
+
+/** ⭐⭐⭐ (H2) The follower's top state: the heading target (`psiT`, carried), the gizmo's facet normal last frame (`nW`), the turn, the heading's last step, the orbit's direction last frame and his pace (its speed, a peak decaying on the follower's ease). */
+export interface FollowTop {
+  readonly psiT: number;
+  readonly nW: Vec3 | null;
+  readonly turn: FollowTurn | null;
+  readonly step: number;
+  readonly orbitWas: Vec3;
+  readonly pace: number;
+}
+
+/** ⭐ The top's knobs: the spring's time, the height's cap, the band under which the spring pays, close in's speed, the pace share (D-H6). */
+export interface FollowTopKnobs {
+  readonly tauMs: number;
+  readonly poleDeg: number;
+  readonly minDeg: number;
+  readonly rollDegS: number;
+  readonly paceShare: number;
+}
+
+/**
+ * ⭐ One frame's readings: the direction asked, the orbit's own direction in the world (the finger's place — his pace: ⛔ the asked direction's speed, a
+ * step of it at a change read as his pace), the levelled reading (`null`: carried), the gizmo's facet normal, the glass's up drawn, the dy pushing.
+ */
+export interface FollowTopIn {
+  readonly ask: Vec3;
+  readonly orbit: Vec3;
+  readonly psiL: number | null;
+  readonly nW: Vec3 | null;
+  readonly upShown: Vec3 | null;
+  readonly dySign: number;
+}
+
+/** `v` kept along the meridian at the heading `psi`, elevation `el` (the turn owns the heading: the spring keeps the height). */
+function meridional(v: Vec3, psi: number, el: number): Vec3 {
+  const e: Vec3 = [-Math.sin(el) * Math.sin(psi), Math.cos(el), -Math.sin(el) * Math.cos(psi)];
+  return scale3(e, dot3(v, e));
+}
+
+/**
+ * ⭐⭐⭐ (H2) ONE FRAME OF THE FOLLOWER WITH THE TOP'S RULE: at a facet change (the gizmo's facet normal turned) the turn's angle from the heading drawn to the
+ * levelled reading (`followTurnDelta`), a turn over the band started at his pace (`followTurnStart`, `followTurnDegS`), the dy hold decided (`hold`, written by
+ * the wiring through `holdAtCrossing`: it replaces any older one, a 0 writes none); while a turn runs it owns the heading (the spring's direction laid on its
+ * meridian), the spring keeps the height; else the spring toward the heading target and the capped height. `s` / `top` `null`: started on the direction asked.
+ */
+export function followTopStep(
+  s: FollowState | null,
+  top: FollowTop | null,
+  inp: FollowTopIn,
+  dtMs: number,
+  k: FollowTopKnobs,
+): { readonly s: FollowState; readonly top: FollowTop; readonly hold?: 1 | -1 | 0; readonly delta: number | null } {
+  const s0 = s ?? followStart(inp.ask);
+  const dtS = Math.max(0, dtMs) / 1000;
+  const psiD = headingOf(s0.d) ?? s0.psi;
+  const t0: FollowTop = top ?? { psiT: psiD, nW: inp.nW, turn: null, step: 0, orbitWas: inp.orbit, pace: 0 };
+  // his pace: the orbit's own direction's speed (the finger's place, continuous through a change of frame), a peak decaying on the follower's ease
+  const paceNow = dtS > 0 ? angleOf(t0.orbitWas, inp.orbit) / dtS : 0;
+  const pace = Math.max(paceNow, k.tauMs > 0 ? t0.pace * Math.exp(-Math.max(0, dtMs) / k.tauMs) : 0);
+  const psiL = inp.psiL ?? t0.psiT;
+  let turn = t0.turn;
+  let hold: 1 | -1 | 0 | undefined;
+  let delta: number | null = null;
+  if (t0.nW !== null && inp.nW !== null && angleOf(t0.nW, inp.nW) > FOLLOW_FACET_CHANGE_RAD) {
+    const from = turn !== null ? turn.psi0 + turn.k * turn.delta : psiD;
+    delta = followTurnDelta(from, psiL, t0.step);
+    turn = followTurnStart(from, delta, k.minDeg, followTurnDegS(pace, k.rollDegS, k.paceShare));
+    hold = followTurnHold(delta, inp.upShown === null ? 0 : crossingEvent(inp.upShown, t0.nW, inp.nW, UP, inp.dySign).hold);
+  }
+  let sp: { readonly d: Vec3; readonly v: Vec3 };
+  let tg: Vec3;
+  if (turn !== null) {
+    turn = followTurnStep(turn, dtMs);
+    const psi = turn.psi0 + turn.k * turn.delta;
+    const el0 = Math.asin(clampN(s0.d[1], -1, 1));
+    tg = followTopTarget(psi, inp.ask, k.poleDeg);
+    const r = sphereSpring(dirAtHeading(psi, el0), meridional(s0.v, psi, el0), tg, dtS, k.tauMs / 1000);
+    const el1 = Math.asin(clampN(r.d[1], -1, 1));
+    sp = { d: dirAtHeading(psi, el1), v: meridional(r.v, psi, el1) };
+    if (turn.k >= 1) turn = null;
+  } else {
+    tg = followTopTarget(psiL, inp.ask, k.poleDeg);
+    sp = sphereSpring(s0.d, s0.v, tg, dtS, k.tauMs / 1000);
+  }
+  const psiN = headingOf(sp.d) ?? psiD;
+  const stp = wrapPi(psiN - psiD);
+  const step = Math.abs(stp) > 1e-9 ? stp : t0.step;
+  const paceS = Math.max(len3(sp.v), dtS > 0 ? angleOf(s0.d, sp.d) / dtS : 0);
+  return {
+    s: { d: sp.d, v: sp.v, tWas: tg, pace: paceS, det: s0.det, psi: psiN, psiT: psiL, azWas: s0.azWas, psiStep: step, dir: sp.d },
+    top: { psiT: psiL, nW: inp.nW ?? t0.nW, turn, step, orbitWas: inp.orbit, pace },
+    ...(hold !== undefined ? { hold } : {}),
+    delta,
+  };
 }

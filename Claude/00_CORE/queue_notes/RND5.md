@@ -769,3 +769,12 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   1 804° not asked (30 741°), the piece's jumps 26.8 a minute (38.8); worse: sudden turns near the vertical 162.5 a minute (81.8) and the dy hold at
   `Scene_0bis`'s bottom far out lost (the finger read off the new glass in the spit); O8 explained (the centre frozen before the parts were placed:
   the origin, 0.31 m off the heptagon's centre); close in unchanged. No device look → `CAMERA_FOLLOWS_GIZMO.md` §13.
+* **2026-11-20, night — HIS LOOK on live `de4a10e` (the follower, `cameraFollower` 1): *"This is very good"* — THE BEST IMPLEMENTATION OF THE
+  ORBIT SO FAR** (supersedes `12dc4b6`). His three points on the top and bottom (the camera's yaw on a pure dy = the detour by place, measured; the
+  hold far out; the red section turned round the pole by dx, the camera blind to it) and the advice (D-H1 – D-H4, nothing built) →
+  `CAMERA_FOLLOWS_GIZMO.md` §14.
+* **2026-11-20, night — packet H2: the top and bottom far out BUILT behind `followTop`** (branch `1.0.151-`, local `84f0c21`, `178459a`; 1 on the
+  branch, 0 = `de4a10e` frame for frame): the heading the calm's level reading, the height capped 60°, a turn at an edge with the gizmo waiting, the dy
+  hold after a dy-made half turn. Measured: no yaw on a pure dy (73° → 1.8°), `b_far`'s hold set 6 of 6, close in identical; ⛔ on his own play 77
+  frames over 45° (0) and 94 piece jumps a minute (26.8) — three roots read (the turn read against the camera's lag, his pace read on the orbit's
+  direction, the wait not holding the map's place), D-H9 – D-H12 for his word; no fix round, no device look → `CAMERA_FOLLOWS_GIZMO.md` §16.

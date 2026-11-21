@@ -9,7 +9,7 @@
 
 * ⭐⭐⭐ **THE OWNER (2026-11-12): `12dc4b6` (the tip of `1.0.121-two-types-of-orbits-finalized`, = `main`) IS THE BEST IMPLEMENTATION OF THE ORBIT SO
   FAR** — the reference to come back to; work goes on from it on `1.0.124from1.0.121-` (`1.0.122-`, the slide's removal, not used). The open points closed with nothing built (the far edge's roll back, the
-  camera's lean, the slide under the tilted pole: ok; I17 and §8.5: not applicable any longer) → **§9.16**.
+  camera's lean, the slide under the tilted pole: ok; I17 and §8.5: not applicable any longer) → **§9.16**. ⭐ Superseded 2026-11-20 by the camera follower (`de4a10e`, [`CAMERA_FOLLOWS_GIZMO.md`](CAMERA_FOLLOWS_GIZMO.md) §14).
 * ⭐⭐⭐ **THE OWNER (2026-11-10): `1.0.117-Tilted-polar-orbit` IS THE BEST PIECE ORBIT BUILT SO FAR IN THE PIPELINE** (the tilted pole, live as `6c6da30`; before it `1.0.116from1.0.114-`, `f96ddeb`; `1.0.111-Polar-orbit-fixes`, `eef4be0`) — the reference to come back to; work goes on from it on `1.0.118-`.
 * ⭐⭐⭐ **§9, THE TILTED POLE — BUILT 2026-11-10** (branch `1.0.117-`; the rule §9.4, as built and probed §9.5 — three sliders, the roll back by the finger with a 250 ms minimum; ⛔ no device close).
 * ⭐⭐⭐ **2026-11-09 — §8** (branch `1.0.114from1.0.112-`, now `1.0.114from1.0.112-Polar-orbit-cleaned-with-slide`, live as `98ef251`; `1.0.113-` renamed `1.0.113-not-used`: its step walk F8 made the notches'
