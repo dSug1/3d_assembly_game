@@ -209,7 +209,7 @@ converge in depth.
 ### 4.7 The step plan — one switch `pictureOne` (0 = `620f227` frame for frame), each packet one builder, vectors red on mutants, one batch, his look
 | packet | builds | its gates (his symptoms; at 60 frames a second 5 and 9.5 px a frame = 571 px/s, at 143 8.4 px a frame = 1 200 px/s) |
 |---|---|---|
-| R2 (C) | close in's turns about the piece (`turnFraming(closeIn)` pure; `framing_sim.ts` as the vector's fixture — red on the two-target rule) | the approach cycle on `Scene_1`'s top: no view step over 3° at the approach's end or leaving (today 32 – 48°, 35°); `Scene_0bis` close in (`h3c_*`): frames outside a turn within 0.1° of `620f227`, the aim on the glass within 0.02 half-glass in its turns; far out bit for bit |
+| R2 (C) | ⭐ **BUILT `83c5d9c` — gates owed** (§8). close in's turns about the piece (`turnFraming(closeIn)` pure; `framing_sim.ts` as the vector's fixture — red on the two-target rule) | the approach cycle on `Scene_1`'s top: no view step over 3° at the approach's end or leaving (today 32 – 48°, 35°); `Scene_0bis` close in (`h3c_*`): frames outside a turn within 0.1° of `620f227`, the aim on the glass within 0.02 half-glass in its turns; far out bit for bit |
 | R3 (C) | `pictureStep` + wiring: the band, τ(w), the up's hand-overs, ψ from the drawn up, the published facts, one resolver, the record split | the approach cycle: no view or up step over 3° in any frame (today 23°, 94° up, the 22° drift), no leg ≥ 5° not asked in the 1 s after the unlatch; his ten and the S1 walks far out bit for bit outside the band; the gizmo's place, `asmMapQ`, `asmEdgeHold` per frame identical on every walk |
 | R4 (C) | D-P4: the drawn foot along the picture's direction far out | the approach far out on `Scene_1`'s top: the piece's step across the view ≤ 0.5° a frame (today sin(gap) × the dolly); sides bit for bit |
 | R5 (C) | the far target's top rule as he decides D-H13 – D-H19 | `TOP_BOTTOM_STUDY.md` §4's G-tip, G-BT, G-apex, G2; moves not asked (`rd_g1`) ≤ `de4a10e`'s (2 of 16 exits, 8 % of crossings); the far view's roughness p90 ≤ 1.1° (`rd_p3c`) |
@@ -271,3 +271,25 @@ D-H13 – D-H19 (`TOP_BOTTOM_STUDY.md` §6) enter at R5 as he decides them; D-H2
    (Z = "" and "&pictureOne=0"), then the ten (`drv_h3.sh`'s `ALL`); read by `r1/rd_roll.mjs`, `r1/rd_drawer.mjs`, `h5/rd_g1.mjs`, `h5/rd_a2.mjs`, `h5/rd_p3c.mjs`.
 3. **The S1 walks and the holds** (R3, R5): `drv_h3.sh`'s G2 – G6 lines (`drv_h.sh` walks, `hold_walk_batch.sh r2hw base`) with the same EXTRA.
 4. **`Scene_0bis`'s A, B, 2 walks** (R5): the kit's `follow/h5/drv_h5.sh`.
+
+## 8. As built
+### 8.1 R2 — close in's turns about the piece (`83c5d9c`, 2026-11-21; ⛔ gates owed: §7 items 1 and 2, no headless run made)
+* **The switch** `pictureOne` (1 on this branch; 0 = `620f227` frame for frame), the rebuild's one switch (R3 – R5 extend what 1 does); its slider in ORBIT ›
+  CAMERA FOLLOWER, next to `cameraFollower` (`TUNING_MENU.md`).
+* **The predicate: the automatic tilt's latch** (`st.asmTiltAuto`: the approach within `tiltAutoM`, 0.6 m, of the gizmo; off past 0.65 m), read at the
+  turn's FIRST frame and kept. Why: it is close in's one distance switch, whatever `cameraFollower` is. ⛔ "The follower not drawing" would take every far
+  turn with `cameraFollower` 0 (none draws far out then), and every timed turn with it at 1 (the follower stops while one runs). ⛔ "`asmTilt` set" misses the
+  close-in turns with no tilt (a zone's switch, the spit's crossing) and a tilt's exit (its turn starts after `asmTilt` is cleared).
+* **The rule's home**: `src/input/orbit_tilt.ts` — `turnFraming(rule, closeIn, pictureOne)` (born close in with the switch on: 2, about the piece; else 0,
+  the framing tried; a rule made is kept) inside `turnPose`, the ONE pose rule. Both drawers call it: `zoneMixPose` (a zone's turn, the tilt's) and
+  `framedPose` (packet J's framing turn, `upright.ts`; `roll_shadow.ts` passes the latch). No other file calls `poseFramingTwo` or `poseAboutPiece` (a vector).
+  The turn's clock still reads the turn about the piece's angle, as before.
+* **Not changed**: a turn born outside the latch keeps the framing, null → about the piece, as today. That includes far out with `cameraFollower` 0, and the
+  way out of close in (born at the unlatch). The way out belongs to R3's band (§4.4, "the way out at w = 1").
+* **The vectors** (`tests/turn_framing.test.ts`, 9; the fixture is `framing_sim.ts`'s numbers): the old rule reproduces 7.1°, 20.3°, then 40.2° onto
+  (0.09, 1.79, 0.21). With the switch on, close in: no view step over 3°, aim to the gizmo or held; the piece within 0.02 half-glass; a turn born close in
+  stays about the piece when the latch drops; a turn born far stays framed. With the switch at 0, or far out: the old poses exactly. Mutants: the old rule
+  → 3 red; the predicate inverted → 4 red; the choice re-made each frame → 2 red; the switch ignored → 2 red. ⚠ The 0.02 half-glass vector went red on
+  none: at k 0 the framing holds the piece's place too. It is a guard, not a test of the change.
+* ⚠ Inferred, not run: the logic reads `asmCamLast`, which is written from the pose drawn. During a close-in turn it now carries the turn about the piece.
+  R3's published frame (§4.4) owns that split.
