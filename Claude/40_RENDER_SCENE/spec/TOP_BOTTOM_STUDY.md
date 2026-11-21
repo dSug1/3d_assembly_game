@@ -193,6 +193,12 @@ the switches already measure each alone. ⛔ Nothing in the gizmo's travel; the 
 | ⭐ D-H21 (H5) | D-H12 (F-4: in the spit a dx along the axis does not yaw toward a tip) WITHDRAWN — his A (§7) answers it: the yaw toward a tip is wanted | yes |
 | ⭐ D-H22 (H5) | Point 5 (§8), ONE PART of it (he sees movement all along): the handover between the far-out follower and close in's picture as ONE owner, his 2026-11-11 rule applied to the picture DRAWN — at the automatic tilt's latch the camera PENDING keeps the follower's last drawn pose (not the logic's, never shown far out), then blends to close in's by his orbit mm (`blendShare`, `tiltBlendMm`); leaving, the follower restarts on the drawn direction and its target is blended in by the same mm (⛔ not by its spring's time); the latch's 5 cm hysteresis kept | yes, behind a switch (0 = today's); measured first by the owed approach walk (§9) under the default, `followTop` 0, `cameraFollower` 0 |
 
+⭐⭐⭐ **His word (2026-11-21), VERBATIM: *"I have no particular opinion for those decisions. Do what minimize the camera movements while maintaining the
+key rules (calm, etc.). Proceed."*** — the lead's choices by that rule, built in `PICTURE_REBUILD.md`'s R5 behind `pictureOne`: **D-H13 yes** (no rise past
+the cap, no short-way turn after a fast dx); **D-H14 yes, tied** (below 520°/s nothing moves differently; a fixed 62.4° leash would move the camera at
+his pace from 312°/s); **D-H15 yes**, on D-H19's reading (no turn on a reading's drift); **D-H16 yes** (the holds lost / extra are moves not asked);
+**D-H17 yes** (gates only); **D-H18 (a)** — the glide left as he approved it (it drives the gizmo: not reopened); **D-H19 yes** (the calm kept, no turn
+along the apex edges); **D-H21 yes**; D-H22 superseded by D-P3.
 ⭐ D-H14 at `followMs` 200: the leash stays TIED to it (`followTurnMaxDegS` × `followMs`, 104° at 200) — recommended: the leash is the lag the follower has at his clamp (lag = pace × τ for this spring), so below 520°/s of heading nothing differs from the plain follower he just chose; fixed at 62.4° it would go taut from 312°/s and move the camera at his finger's pace at ordinary paces — the smoothing undone. Cost: after a spin over 520°/s the camera may trail up to 104° (62.4°), still settling at most at 520°/s. ⭐ D-H15 amended by H5: its geometric jump is read on D-H19's reading (on the F-level one it inherits B and point 2). D-H13, D-H14, D-H16 – D-H18 unchanged.
 
 ## 7. His look on `f5e35c3` (2026-11-21) — packet H5, docs only

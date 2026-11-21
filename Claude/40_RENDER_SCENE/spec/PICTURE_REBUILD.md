@@ -259,7 +259,8 @@ make close in gravity-upright near the vertical (P17); shorten the waits (45 % o
 | D-P6 | The picture writes nothing; the logic reads the drawn frame, the turn bit, the turn's start event; `asmCamLogic` / `asmCamDrawn` | yes |
 | D-P7 | Rule (3) amended: one smoothing per regime; no pace layer; the gate "no frame over 3°" on the approach cycle, elsewhere the excess over the 33 ms before (D-H17) ≤ 5° | yes |
 | D-P8 | The order R2 → R3 → R4 → R5 → R6, each behind `pictureOne`, his look after R3 and after R5 | yes |
-D-H13 – D-H19 (`TOP_BOTTOM_STUDY.md` §6) enter at R5 as he decides them; D-H22 is answered by D-P3.
+D-H13 – D-H19 (`TOP_BOTTOM_STUDY.md` §6) enter at R5 — ⭐ DECIDED 2026-11-21 by his rule *"Do what minimize the camera movements while maintaining the
+key rules (calm, etc.)"*: D-H13 – D-H17 yes (D-H14 tied), D-H18 (a) left as is, D-H19 yes, D-H21 yes (`TOP_BOTTOM_STUDY.md` §6); D-H22 is answered by D-P3.
 ⭐ **His word (2026-11-21): *"go ahead"* — D-P1 – D-P8 DECIDED as recommended**, R2 first; the owed runs (§7) one batch at a time when he frees the PC.
 
 ## 7. Owed runs (none run: no headless run while he tests) — from `../camera_follow`, one batch at a time
