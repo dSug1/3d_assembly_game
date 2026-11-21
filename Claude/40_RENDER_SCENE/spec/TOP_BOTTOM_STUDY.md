@@ -1,6 +1,6 @@
 # The top and bottom far out — THE STUDY after the last fix round (packet H4, 2026-11-21, branch `1.0.152-`)
 
-> **Status: PROPOSED — nothing built; for the owner's word.** (⭐ H5, 2026-11-21: his look on `f5e35c3` read — §7 – §9: A, B and point 2 one root, D-H19 the top rule only near the vertical; ✅ D-H20 DECIDED by him: `followMs` 200; point 5, the approach's handover, D-H22.) Written because H3 (`f5e35c3` live = `47e7267`) was the last fix round on this join and
+> **Status: ⭐ BUILT in R5 (2026-11-21, behind `pictureOne` 1: D-H13 – D-H16, D-H19 — [`PICTURE_REBUILD.md`](PICTURE_REBUILD.md) §8.4; gates owed). Written as PROPOSED — nothing built then; decided §6.** (⭐ H5, 2026-11-21: his look on `f5e35c3` read — §7 – §9: A, B and point 2 one root, D-H19 the top rule only near the vertical; ✅ D-H20 DECIDED by him: `followMs` 200; point 5, the approach's handover, D-H22.) Written because H3 (`f5e35c3` live = `47e7267`) was the last fix round on this join and
 > gates still fail ([`CAMERA_FOLLOWS_GIZMO.md`](CAMERA_FOLLOWS_GIZMO.md) §18; [`UPRIGHT_LESSONS.md`](UPRIGHT_LESSONS.md) row 2, §5 rule 2). His four
 > parts: the rules → the obstacles, each reproduced → a design from prior art, one owner per thing → its audit, gates and decisions.
 > ⛔ Offline only (the owner was testing on this PC): the code, the kit's recordings (`runs_h3`, `runs_h2`, `runs_g2`, `runs_h1`) and the pure
