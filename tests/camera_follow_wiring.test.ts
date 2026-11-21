@@ -53,7 +53,7 @@ describe("F1 — the direction asked, recorded", () => {
 describe("F2 — the follower at the camera's stage", () => {
   it("the switch 1 by default; the sliders' defaults (the calm's 120 ms, his D-F1, the prototype's D)", () => {
     expect(DEFAULT_CONFIG.cameraFollower).toBe(1);
-    expect([DEFAULT_CONFIG.followMs, DEFAULT_CONFIG.followPoleDeg, DEFAULT_CONFIG.followFromDeg, DEFAULT_CONFIG.followMaxDegS]).toEqual([120, 30, 60, 900]); // ⭐ 120: the calm's ease it replaces (D-F6)
+    expect([DEFAULT_CONFIG.followMs, DEFAULT_CONFIG.followPoleDeg, DEFAULT_CONFIG.followFromDeg, DEFAULT_CONFIG.followMaxDegS]).toEqual([200, 30, 60, 900]); // ⭐ 200 (2026-11-21, the owner: *"at 200 ms is better at far out distance … set default to 200ms"*; 120 before: the calm's ease it replaced, D-F6)
   });
 
   it("where far ends: the switch, no tilt nor its latch, the square camera's share 0, no timed turn, a direction asked", () => {
