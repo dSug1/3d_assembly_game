@@ -149,7 +149,7 @@ followers), its carried heading ψ, the edge turn, the up hand-over's share, the
 ### 4.2 The direction: one spring, one target, faded by place
 * **T = slerp(T_far, us, w)**, the spring `sphereSpring` (Lowe, *Game Programming Gems 4*, 2004) with τ = `followMs`·(1 − w): far out exactly today's
   follower (w = 0); at w = 1 exactly the logic's direction, no second ease over close in's.
-* **w — the band (D-P3 (a))**: a smoothstep of the approach's place over the last `pictureBandMm` (10 mm, a slider: his `tiltBlendMm` figure) of his
+* **w — the band (D-P3 (a))**: a smoothstep of the approach's place over the last `pictureBandMm` (⭐ **40 mm** since R3's runs, 2026-11-21 — §8.2's resolution; designed 10 mm, a slider: his `tiltBlendMm` figure) of his
   approach finger before 0.65 m (`ap` is linear in his finger: `approachInput`, da = mm × `orbitDvPerMm`). Whole at and inside 0.65 m, so both the
   latch (0.6) and the unlatch (0.65) happen at w = 1: neither draws anything new. A function of place: the same place, the same picture, either way.
 * On a side face T_far and `us` agree at rest (the hand-over's step 0.1° on `Scene_0bis`'s sides, `TOP_BOTTOM_STUDY.md` §8 point 5): the band
@@ -353,5 +353,6 @@ camera's stage runs today's line (`followFrame ?? rollPictureFrame`), moved as w
   The band pays the cap's gap (≈ 27° on `Scene_1`'s top) over 10 mm of finger. At 5 px a frame (1.3 mm) that is a mean 3.5° a frame and a smoothstep
   peak of 6.0°; at 9.5 px (2.5 mm), 10.5° a frame (the fixture). The fixture passes at 0.5 mm a frame (view 2.3°, up 2.7°). A 3° peak at 2.5 mm a
   frame needs a band of about 34 mm. The gate is not bent: the slider is his.
+* ⭐ **Resolved by the lead, 2026-11-21, by his rule** (*"Do what minimize the camera movements while maintaining the key rules (calm, etc.)"*): the approach cycle in the game (kit `follow/r3/runs_a`, `rd_sum.mjs`; 4 cycles) — the view's whole turn the same at 10 and 34 mm (290 / 276 / 273° against 258 / 259 / 248° at 5, 9.5 px a frame at 60 and 8.4 at 143; today's 1 104 / 767 / 896°), its largest frame step 5.9 / 11.1 / 9.7° at 10 mm against 1.9 / 3.3 / 3.1° at 34 mm (today's 48.5 / 44.5 / 34.5°), the up's 7.2 / 13.1 / 9.7° against 2.1 / 4.2 / 3.3° (today's 105 – 123°); the gizmo's path identical in all. ⇒ `pictureBandMm` **40 mm** by default (the peak ∝ 1 / width: ≈ 2.8° at his fast pace), the slider 0 – 100; the gate kept as written. Cost: the pitch starts 40 mm of approach finger before 0.65 m (≈ a third of `Scene_1`'s far approach).
 * ⚠ **Inferred, not run:** the identity of R3b on his walks; the band's feel; the gizmo's place, `asmMapQ` and `asmEdgeHold` per frame (the moves are
   read in the code, and no reader sits between a write's old and new places).
