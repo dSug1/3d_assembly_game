@@ -5,7 +5,8 @@
  * Red on the old code (`ce5abfe` … `03cd142`): the spit's band (the slerp over the vertical), the way out (G whole at w 1), the spit's latch (G at once),
  * the source vectors (the far path, the latch's start pose). The identity vector (equal headings = R3's poses) is green on the old code by design: its
  * mutant is named. Mutants run (each red): the slerp put back (`bandDir`); the elevation not blended; no hand-over of the direction (dh, de 0); the way
- * out's share ignored; the far path gated by `followActive` again; the up from the view's own heading far out (rule 6).
+ * out's share ignored; the far path gated by `followActive` again; the up from the view's own heading far out (rule 6); the latch's pace by the square
+ * camera's share alone (10 mm for any gap).
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
@@ -143,6 +144,36 @@ describe("R3-FIX rule 3 + 5 — the latch where no turn starts (a polar zone: th
     const end = step(1);
     for (let i = 0; i < 3; i++) expect(end.eye[i]!).toBeCloseTo(G_SPIT.eye[i]!, 9);
     expect(ang(upDrawn(end), upDrawn(G_SPIT))).toBeLessThan(1e-6);
+  });
+});
+
+describe("R3-FIX — the latch's hand-over at his pace (decided by the lead, C4): never faster than 3°/mm nor than 10 mm", () => {
+  const blend = (mm: number): number => {
+    const x = Math.min(1, Math.max(0, mm / 10));
+    return x * x * (3 - 2 * x);
+  };
+  const run = (gHead: number) => {
+    const G = poseG(dirAtHeading(gHead * DEG, 80 * DEG), gHead * DEG);
+    let s: PictureState = PICTURE_REST;
+    for (let i = 0; i < 3; i++) s = pictureStep(s, inp(1, FAR, US_SPIT, G, false, null, 0.25)).state;
+    const heads: number[] = [];
+    for (let mm = 0; mm <= 70.0001; mm += 0.5) {
+      const r = pictureStep(s, { ...inp(1, FAR, US_SPIT, G, true, blend(mm), 0), pace: { mm, minMm: 10, degPerMm: 3 } });
+      s = r.state;
+      heads.push(headOf(cdir(r.pose)));
+    }
+    return heads;
+  };
+  it("a 180° gap (a spit's latch, no turn): 60 mm of his orbit finger, not 10 — at most 3° a mm", () => {
+    const h = run(180).map((x) => Math.abs(x));
+    expect(h[20]!).toBeCloseTo(30, 0); // 10 mm: a sixth
+    expect(h[60]!).toBeCloseTo(90, 0); // 30 mm: half
+    expect(h[120]!).toBeCloseTo(180, 3); // 60 mm: whole
+    for (let i = 1; i < h.length; i++) expect(Math.abs(h[i]! - h[i - 1]!)).toBeLessThanOrEqual(1.5 + 1e-6); // 0.5 mm a step
+  });
+  it("a small gap (≤ 20°: the square camera's own share keeps the pace — Scene_1, a turn from the pose drawn): as before", () => {
+    const h = run(15);
+    for (let i = 0; i < h.length; i++) expect(h[i]!).toBeCloseTo(15 * blend(i * 0.5), 6);
   });
 });
 

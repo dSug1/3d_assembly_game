@@ -156,6 +156,8 @@ export interface UpHand {
   readonly r: number;
   readonly dh?: number;
   readonly de?: number;
+  /** (C4, the lead) latched: the span of his orbit mm that pays the gap held, read once at its start — `undefined`: the square camera's share as given */
+  readonly span?: number;
 }
 
 /** ⭐ The picture's state — never dropped: the turntable, the hand-over, the up drawn last frame (squared to its view), the view drawn's heading and elevation (R3-FIX). */
@@ -227,6 +229,8 @@ export interface PictureIn {
   readonly mm: number;
   readonly spanMm: number;
   readonly coneDeg: number;
+  /** ⭐ (C4, decided by the lead) latched: his orbit mm since the blend began (0 pending), the span's floor (`tiltBlendMm`) and his pace (`uprightAlignDegPerMm`) */
+  readonly pace?: { readonly mm: number; readonly minMm: number; readonly degPerMm: number };
 }
 
 /**
@@ -269,10 +273,17 @@ export function pictureStep(s: PictureState, inp: PictureIn): { readonly pose: P
     const A = squared(target1, vd1);
     const B = s.up === null ? null : squared(s.up, vd1);
     const phi0 = A === null || B === null ? 0 : Math.atan2(dot3(vd1, cross3(A, B)), dot3(A, B));
-    hand = { latched: inp.latched, phi0, r: phi0 !== 0 || dh !== 0 || de !== 0 ? 1 : 0, dh, de };
+    // ⭐⭐⭐ (2026-11-21 night, §4.3a 5. — decided by the lead, his rule C4) THE LATCH'S GAP AT HIS PACE: never faster than `degPerMm` nor than `minMm` — the
+    // span mm = max(`minMm`, gap° / `degPerMm`), the gap (the larger of the heading's and the elevation's) read once here; where the square camera's own
+    // smoothstep keeps that pace (its peak 1.5 × gap / `minMm` ≤ `degPerMm`: a gap ≤ 20° — a turn started from the pose drawn, `Scene_1`) kept as it is
+    const pc = inp.pace;
+    const gapDeg = Math.max(Math.abs(dh), Math.abs(de)) / DEG;
+    const span = inp.latched && pc !== undefined && pc.degPerMm > 0 && (1.5 * gapDeg) / Math.max(1e-9, pc.minMm) > pc.degPerMm ? Math.max(pc.minMm, gapDeg / pc.degPerMm) : undefined;
+    hand = { latched: inp.latched, phi0, r: phi0 !== 0 || dh !== 0 || de !== 0 ? 1 : 0, dh, de, ...(span !== undefined ? { span } : {}) };
   }
   if (hand.r > 0) {
-    const r = inp.share !== null ? Math.min(hand.r, clamp01(1 - inp.share)) : inp.spanMm > 0 ? Math.max(0, hand.r - Math.max(0, inp.mm) / inp.spanMm) : 0;
+    const share = inp.latched && hand.span !== undefined && inp.pace !== undefined ? Math.min(1, Math.max(0, inp.pace.mm) / hand.span) : inp.share;
+    const r = share !== null ? Math.min(hand.r, clamp01(1 - share)) : inp.spanMm > 0 ? Math.max(0, hand.r - Math.max(0, inp.mm) / inp.spanMm) : 0;
     hand = { ...hand, r };
   }
   // 3. the pose drawn: the owner's turned by the offsets left

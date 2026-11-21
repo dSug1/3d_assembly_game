@@ -162,7 +162,9 @@ export function pictureFrame(
   // in the band, the heading fed back on itself frame by frame (a drift by time)
   const psiPark = latched ? (s0.tt?.psi ?? was?.psiPark ?? null) : (was?.psiPark ?? s0.tt?.psi ?? null);
   const dFar = followPark(st, psiPark) ?? us;
-  const r = pictureStep(s0, { ...base, w, dFar, F: null, G: Gp, latched, share });
+  // ⭐⭐⭐ (C4, decided by the lead) latched: his orbit mm since the blend began (0 pending) — the hand-over's gap paid at his own pace (`pictureStep`)
+  const pace = latched && (st.asmTiltPending || st.asmBlend !== null) ? { mm: st.asmTiltPending ? 0 : st.asmBlend!.mm, minMm: st.cfg.tiltBlendMm, degPerMm: st.cfg.uprightAlignDegPerMm } : undefined;
+  const r = pictureStep(s0, { ...base, w, dFar, F: null, G: Gp, latched, share, ...(pace !== undefined ? { pace } : {}) });
   let cam = G.cam;
   if (r.pose.up !== G.up || r.pose.eye !== G.eye) {
     const d: Vec3 = [r.pose.eye[0] - r.pose.look[0], r.pose.eye[1] - r.pose.look[1], r.pose.eye[2] - r.pose.look[2]];
