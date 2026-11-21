@@ -231,6 +231,8 @@ export interface PictureIn {
   readonly coneDeg: number;
   /** ⭐ (C4, decided by the lead) latched: his orbit mm since the blend began (0 pending), the span's floor (`tiltBlendMm`) and his pace (`uprightAlignDegPerMm`) */
   readonly pace?: { readonly mm: number; readonly minMm: number; readonly degPerMm: number };
+  /** ⭐ (§4.3a round 2, decided by the lead) in a polar zone (`asmZone`, the spit included: no pending turn at the latch) the band pays no pitch */
+  readonly polar?: boolean;
 }
 
 /**
@@ -247,7 +249,10 @@ export function pictureStep(s: PictureState, inp: PictureIn): { readonly pose: P
   // 1. the owner's pose
   let P: PicturePose;
   if (inp.latched) P = inp.G;
-  else if (!(inp.w > 0)) P = inp.F ?? followPose(inp.dFar, inp.look, inp.foot, inp.hang, inp.gapM, inp.offYawRad, inp.offPitchRad);
+  // ⭐⭐⭐ (§4.3a round 2, decided by the lead) ONE PAYER OF A SPIT'S GAP: in a polar zone the latch starts no turn, so its hand-over (C4) pays the whole gap —
+  // the band pays no pitch there, the far elevation kept until the latch (⛔ round 1: the view 81 – 88° down in the band, the finger swap past 60° sent his
+  // dy 0.25 m along the axis). Elsewhere (a pending turn at the latch: `Scene_1`) the band pays the pitch by place, as designed (D-P3)
+  else if (!(inp.w > 0) || inp.polar === true) P = inp.F ?? followPose(inp.dFar, inp.look, inp.foot, inp.hang, inp.gapM, inp.offYawRad, inp.offPitchRad);
   else {
     const elF = Math.asin(Math.max(-1, Math.min(1, inp.dFar[1])));
     const elU = Math.asin(Math.max(-1, Math.min(1, inp.us[1])));

@@ -6,7 +6,7 @@
  * the source vectors (the far path, the latch's start pose). The identity vector (equal headings = R3's poses) is green on the old code by design: its
  * mutant is named. Mutants run (each red): the slerp put back (`bandDir`); the elevation not blended; no hand-over of the direction (dh, de 0); the way
  * out's share ignored; the far path gated by `followActive` again; the up from the view's own heading far out (rule 6); the latch's pace by the square
- * camera's share alone (10 mm for any gap).
+ * camera's share alone (10 mm for any gap); round 2: the band's pitch paid in a polar zone (the elevation lerped there).
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
@@ -47,7 +47,7 @@ const FAR = dirAtHeading(0, 60 * DEG);
 const US_SPIT = dirAtHeading(170 * DEG, 80 * DEG);
 const G_SPIT = poseG(US_SPIT, 170 * DEG);
 
-describe("R3-FIX rule 1 – 2 — the band on a spit (the two headings nearly opposite): the elevation only, never over the vertical", () => {
+describe("R3-FIX rule 1 – 2 — the band with the two headings nearly opposite (outside a polar zone — round 2: a spit pays no pitch): the elevation only, never over the vertical", () => {
   it("in past the band to w 1 (not latched): every view on the follower's side, never above the logic's elevation; the up never past the horizontal; no up step over 5°", () => {
     let s: PictureState = PICTURE_REST;
     const rows: PicturePose[] = [];
@@ -68,6 +68,19 @@ describe("R3-FIX rule 1 – 2 — the band on a spit (the two headings nearly op
     const last = cdir(rows[rows.length - 1]!);
     expect(headOf(last)).toBeCloseTo(0, 6);
     expect(elOf(last)).toBeCloseTo(80, 6);
+  });
+});
+
+describe("R3-FIX round 2 — in a polar zone (the spit) the band pays no pitch: the far elevation kept until the latch, the latch's hand-over the one payer", () => {
+  it("a spit's band at w 0.8 (and at w 1, not latched): the follower's own pose — its elevation the far one (60°), not lerped toward the logic's 80°", () => {
+    for (const w of [0.8, 1]) {
+      const F = followPose(FAR, ZERO, ZERO, HANG, GAP, 0, 0);
+      const r = pictureStep(PICTURE_REST, { ...inp(w, FAR, US_SPIT, G_SPIT, false, null, 0.25), polar: true });
+      const c = cdir(r.pose);
+      expect(elOf(c)).toBeCloseTo(60, 9);
+      expect(headOf(c)).toBeCloseTo(0, 9);
+      for (let i = 0; i < 3; i++) expect(r.pose.piece[i]!).toBeCloseTo(F.piece[i]!, 12);
+    }
   });
 });
 
