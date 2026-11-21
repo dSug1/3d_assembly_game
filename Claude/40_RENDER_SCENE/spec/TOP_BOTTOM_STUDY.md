@@ -1,6 +1,6 @@
 # The top and bottom far out — THE STUDY after the last fix round (packet H4, 2026-11-21, branch `1.0.152-`)
 
-> **Status: PROPOSED — nothing built; for the owner's word.** (⭐ H5, 2026-11-21: his look on `f5e35c3` read — §7 – §9: A, B and point 2 one root, D-H19 the top rule only near the vertical; ✅ D-H20 DECIDED by him: `followMs` 200.) Written because H3 (`f5e35c3` live = `47e7267`) was the last fix round on this join and
+> **Status: PROPOSED — nothing built; for the owner's word.** (⭐ H5, 2026-11-21: his look on `f5e35c3` read — §7 – §9: A, B and point 2 one root, D-H19 the top rule only near the vertical; ✅ D-H20 DECIDED by him: `followMs` 200; point 5, the approach's handover, D-H22.) Written because H3 (`f5e35c3` live = `47e7267`) was the last fix round on this join and
 > gates still fail ([`CAMERA_FOLLOWS_GIZMO.md`](CAMERA_FOLLOWS_GIZMO.md) §18; [`UPRIGHT_LESSONS.md`](UPRIGHT_LESSONS.md) row 2, §5 rule 2). His four
 > parts: the rules → the obstacles, each reproduced → a design from prior art, one owner per thing → its audit, gates and decisions.
 > ⛔ Offline only (the owner was testing on this PC): the code, the kit's recordings (`runs_h3`, `runs_h2`, `runs_g2`, `runs_h1`) and the pure
@@ -191,6 +191,7 @@ the switches already measure each alone. ⛔ Nothing in the gizmo's travel; the 
 | ⭐ D-H19 (H5) | The top rule's reading only where the view nears the vertical (A, B, point 2 — one root, §8): `cameraHeading`'s band read in the WORLD — the calm asked's own heading (`de4a10e`'s) below 50° of the orbit's world elevation, H2's level reading from 60°, a smoothstep between; a level face carried at every elevation. One rule for every frame | yes — the calm back on the tips, no turn along the apex edges (6 as built), the bottom triangle stable; its costs in §9; behind a switch (0 = `f5e35c3`); gates G-tip, G-BT, G-apex, G2 on `ov` / `nP` ≤ 2°, `Scene_1` within 0.1° of `f5e35c3` |
 | ⭐ D-H20 (H5) | ✅ DECIDED by him (2026-11-21, on the live slider): the follower's ease `followMs` **200 ms** by default, its slider 0 – 500 ms by 10 (point 3, §8). ⛔ The first reading's (b) and (c) — a pan — were a MISREADING of his point and are withdrawn; (a), (d) superseded | the lead's change (config, menu, vectors); D-H14's leash: the note below |
 | ⭐ D-H21 (H5) | D-H12 (F-4: in the spit a dx along the axis does not yaw toward a tip) WITHDRAWN — his A (§7) answers it: the yaw toward a tip is wanted | yes |
+| ⭐ D-H22 (H5) | Point 5 (§8), ONE PART of it (he sees movement all along): the handover between the far-out follower and close in's picture as ONE owner, his 2026-11-11 rule applied to the picture DRAWN — at the automatic tilt's latch the camera PENDING keeps the follower's last drawn pose (not the logic's, never shown far out), then blends to close in's by his orbit mm (`blendShare`, `tiltBlendMm`); leaving, the follower restarts on the drawn direction and its target is blended in by the same mm (⛔ not by its spring's time); the latch's 5 cm hysteresis kept | yes, behind a switch (0 = today's); measured first by the owed approach walk (§9) under the default, `followTop` 0, `cameraFollower` 0 |
 
 ⭐ D-H14 at `followMs` 200: the leash stays TIED to it (`followTurnMaxDegS` × `followMs`, 104° at 200) — recommended: the leash is the lag the follower has at his clamp (lag = pace × τ for this spring), so below 520°/s of heading nothing differs from the plain follower he just chose; fixed at 62.4° it would go taut from 312°/s and move the camera at his finger's pace at ordinary paces — the smoothing undone. Cost: after a spin over 520°/s the camera may trail up to 104° (62.4°), still settling at most at 520°/s. ⭐ D-H15 amended by H5: its geometric jump is read on D-H19's reading (on the F-level one it inherits B and point 2). D-H13, D-H14, D-H16 – D-H18 unchanged.
 
@@ -213,7 +214,9 @@ the top rule's switch (`followTop`, its label quoted by him):
 
 On point 3: *"I was referring to the tilted-pole 120ms smoothing so that the camera movements are smooth (I was not referring to having a pan on the
 polar orbit)."* Then, on the live slider: *"yes, "follower: its one ease on the sphere (ms)" at 200 ms is better at far out distance. Increase the slider
-up to 500 ms with 10 ms increment and set default to 200ms"*.
+up to 500 ms with 10 ms increment and set default to 200ms"*. And point 5: *"major finding as well: when I A + dy to approach on the level face of
+scene 1, there is an insane amount of camera movements."*, then (on the hand-over read): *"it's not only at the threshold crossing: there is a lot of
+orbit, camera movement, etc. happening everywhere during the A + dy travel"*.
 His screenshots (all `f5e35c3`, desktop, `Scene_0bis`), the kit's `fo3/follow/h5/look_f5e35c3_att1.png` … `att5.png`: **att 3** the camera square to
 the side (elevation 7°), the gizmo on a tip's side triangle seen nearly edge on; **att 1 – 2** the gizmo near the edge from the apex to a corner of the
 level face (the bottom), the camera along the axis (att 2); **att 4 – 5** the gizmo near the apex's edge toward the zenith ridge, the same camera height
@@ -279,6 +282,33 @@ of his point (a pan, a level face only) was wrong and is withdrawn. *Kept as a n
 (the piece at the finger, the camera trailing); far out the piece rides the followed direction with the picture (D-F3), so at 200 it trails his
 finger as the camera does — the gizmo stays where the finger puts it. Owed: `drv_h5.sh`'s `s1top` far and close in at 200 (G-level).
 
+**Point 5 — the A + dy approach on `Scene_1`'s top: the camera jumps at the handover. Reproduced from the code and the recordings (the jump's size); the
+approach in and out is owed. Since the follower draws far out (`de4a10e`, `cameraFollower` 1); not with `cameraFollower` 0 (`b03a4dd`).** The lead's
+lead is PROVEN: `followActive` (`camera_follow_wiring.ts` l.33) hands the picture to close in's (`rollPictureFrame` → `carriedFrame`: the logic's pose,
+its up carried about the framed line — the DIRECTION the logic's) the frame the automatic tilt latches (`tiltAutoLatch`: 0.6 m in, 0.65 m out —
+`TILT_AUTO_HYST_M` 5 cm, the only hysteresis), the square camera's share leaves 0 or a zone mix starts, with no blend (its own header, l.9: *"⛔ No blend at
+that boundary yet (F3)"*); leaving, the follower restarts AT REST on the piece's drawn direction (`followStart`, l.67) and its spring swings to its own
+target by time. Close in's entry was built for a DRAWN logic: the tilt's PENDING (`tiltPendingStep`, `orbit_tilt.ts` l.678 — his 2026-11-11 rule, *"keep
+the camera orientation when the tilted-pole-orbit toggles on as long as the approach continue"*) keeps the LOGIC's orientation, which far out is no
+longer the one on the glass. *How far apart* (`rd_p5.mjs`, far out on `Scene_1`'s top, the S1 walks and `s1_over`): the picture drawn against the logic's
+own pose p50 / p90 / max **27.6 / 31.2 / 84.6°** on `de4a10e`, **24.3 / 33.1 / 42.3°** on `ba369aa`, **16.5 / 30.6 / 42.3°** on `f5e35c3`; the drawn height
+57 – 62° (the cap / the detour), the logic's 71 – 87° (nearly straight down). So each latch on the top is a one-frame jump of that size, and each
+unlatch a timed turn out then the follower's swing back to its 60° cap; an approach dithering across 0.6 / 0.65 m repeats both. On a side at rest the
+two poses agree (`h3c_*`, `Scene_0bis`: the handover's step 0.1°), so it shows on level faces only — *"on the level face"*. The approach far out
+itself (before the latch) is read below. ⭐ **All along the travel (his second word): the hand-over is at most one part.** The candidates, read in the
+code: *the dy feeding the orbit* — refuted: with A held both drag channels are zeroed (`pointer_wiring.ts` l.367 – 378) and the finger mm not counted
+(l.383); *the target changing with the distance* — refuted far out on `Scene_1`'s top: the asked direction is the orbit's own at the solved angles (no
+calm on a cap), which A does not move (far from any contact); *the facet flickering, turns at facet changes* — the facet is the map's at the angles,
+unmoved by A: refuted far out; *the depth glide* — the ring's, after a depth step only (O-d): not the approach's. ⭐ *The piece hung on the follower's
+direction* — a mechanism PROVEN in the code, top-specific: the orbit's centre (the foot, `footOf` → `shellAnchor(gs, u, d, …)`, `assembly_wiring.ts`
+l.776) is laid along the LOGIC's shown direction `u` at the approach distance `d`, and the look point eases toward it (`lookShare`); the follower's
+camera looks along ITS direction (capped at 60°). On a side the two agree, so an approach is a pure dolly — measured on `Scene_0bis`'s side
+(`h3c_*` / `g2c_*`, the probe's approach legs): the view still (0.00°), the orbit's angles and the gizmo still, the eye 270 – 300 mm a frame at 5 px a
+frame (1 : 1 with `d`, no ease), the look point 3 – 15 mm. On the top they part by the gap above (16.5 – 27.6° p50, up to 42 – 85°), so each mm of
+approach slides the foot, the piece and the look point ACROSS the view by sin(gap) — 0.28 – 0.46 of it — besides the dolly. *The 60° cap against a target
+near the vertical* is that gap's source. ⛔ Close in (past the latch), the approach runs the contact rules (the support's raise `restRaise`, the shell's
+anchor, the tilt's pending) — no recording here: the owed walk counts it, frame by frame, with the far part.
+
 ## 9. What H5 amends, and what is owed
 §1 (K3 narrowed, K16 added), §3 (the reading), §4 (the gates G-tip, G-BT, G-apex, G-level) and §6 (D-H19 – D-H21; D-H15 amended, D-H12 withdrawn)
 are amended in place. ⭐ **The boundary** (his `followTop` 0 answer: keep `de4a10e`'s calm where it was; the top rule only where his D-H1 – D-H4 were —
@@ -297,4 +327,7 @@ one owner, the band inside the reading, no layer. The rest of §3 and D-H8 stand
 **Owed** (none run: no headless run while he tests): (1) the kit's `fo3/follow/h5/drv_h5.sh` — `Scene_0bis` along a side to a tip (A), the level face
 onto the bottom triangle (B), zigzags along both apex edges (2), `Scene_1`'s top far and close in (3), at 571 px/s (60) and 1 200 px/s (143), on
 `f5e35c3`, `ba369aa` (H3's switches 0), `de4a10e` (`followTop` 0) by URL — add `&followMs=120` / `200` once the default moves — read by the readers above;
-(2) after D-H19 is built, the same, his ten, G1 on `Scene_1` / `Scene_0`.
+(2) after D-H19 is built, the same, his ten, G1 on `Scene_1` / `Scene_0`; (3) point 5: `drv_h5.sh`'s approach walk on `Scene_1`'s top, A + dy in and out
+across the threshold under the default, `followTop` 0, `cameraFollower` 0 — it needs a (P) probe mode first (`fast_walk_check.mjs` `IN=osc`, spelt out
+in the driver) — read by `rd_p5b.mjs` all along the travel (which camera draws each frame, the latch, the view's step, the orbit's yaw / pitch steps,
+the facet changes, the turns started, the eye's, look point's and gizmo's steps) and `rd_p5.mjs` (the gap that slides the piece across the view).
