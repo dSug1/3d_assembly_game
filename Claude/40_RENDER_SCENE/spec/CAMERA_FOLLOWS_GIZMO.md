@@ -741,3 +741,47 @@ His word: *"deploy what you have built before I decide"*. LIVE main `ba369aa` = 
 | root (c) / D-H11 | ⛔ seen twice: *"a held turn's target is not still"* (`FAST_ORBIT.md` §11.4: the gizmo 12.7 / 12.4 mm in a held turn's first two frames); row 6 (*a hold must really hold*) | the cure is the charts' step 2.4c (11-15: every angle state SET at a change, `seamRebase`), in the game close in; its known cost: 8.5° in one frame at the tilt's entry under a fast dy (W11); softening it (package A, each follower's lag kept) built and REVERTED 11-17 (`6e56dfc`, a circle at a cap's entry). Far out never applied (D-C6). The map's catch-up hold (11-09, 32 mm) does not stop this travel |
 | D-H12 | not as a rule | the same quantity was REJECTED on 11-13 (`ORBIT_ANY_SHAPE.md` §9, *rejected on the way*): the level reading used as is at the pole — a dx spun the view at a quarter of its pace mid-face and caught up at the corners (8.3° in a frame). H2 uses that reading as the heading in the spit: its no-yaw toward a tip is that behaviour on `Scene_0bis`. It also bends his point 1 (*"only yaws if there is a dx there"*) |
 | the WAIT itself (R3, under D-H9 – D-H11) | ⚠ the shape of his fast-orbit question (11-17) | `1.0.147-`'s held turns far out stopped the gizmo in 28 – 67 % of a loop's frames (`FAST_ORBIT.md` §11.1); H2 41 s of 155. The three builds of 11-17/18 failed on patches to the turn EVENT (§11.2 error 1: *the unit was the turn event, not the picture*); D-H9 – D-H11 are three more patches on the event. `de4a10e` has no turn event far out. The study's own alternative stays open: D-H6 (c), the wait at a level face's far edge only |
+
+## 17. HIS LOOK on live `ba369aa` (2026-11-21) — ⭐⭐⭐ THE BEST IMPLEMENTATION OF THE ORBIT CHARTS SO FAR — two exceptions, the fixes reproposed
+
+> *"My feedback on the current build: this is the best implementation of orbits chart so far (mark it in the md files), except for the following:
+> - Polar orbit scene 1: the transition from one vertical face to another (dx towards right in attachment 1) is now more discontinuous than what it was in
+> previous branch. Why did it change and why can't we keep the previous behavior (what would that conflict with) ?
+> - polar orbit scene 0bis: when the camera realigns 180 degrees (zenith/nadir edge crossing, level face exit at far edge), the realignment is very rapid if
+> my delta input is very fast: let's clamp the realignment speed (slider). This should not be an issue for playability since the delta position input is
+> hold at the same time on the other side.
+> Take that into consideration in your four fixes.
+> Repropose the four fixes (or more) after checking the above so I can do a final review before we proceed."*
+
+(Attachment 1: `Scene_1`, polar orbit far out, the gizmo on the front face near its right edge, build `ba369aa` on the HUD.) ⭐ `ba369aa` (`1.0.151-` at
+`c1edcaf`, `followTop` 1) supersedes `de4a10e` as the best orbit so far.
+
+### 17.1 His point 1 — the side-to-side transition on `Scene_1`: why it changed
+* **The cause, read in the code** (`followTopStep`): a turn is decided at EVERY change of the facet under the gizmo — a vertical edge too — and its angle is
+  measured from the heading DRAWN to the levelled reading beyond (root (a), §16.4). At a vertical edge the reading does not jump (the calm is whole at an
+  edge on both sides), so the whole angle is the spring's own lag behind his dx; over the band (10°) it runs as a turn at his pace with the gizmo WAITING,
+  and the turn hands back to the spring with no sideways speed (`meridional`), so the camera then nearly stops and picks up again.
+* **Measured offline** (the pure rule alone, a steady dx at 15° of elevation across a vertical edge, 60 frames a second; the scratchpad's `vv_sim.ts` — an
+  estimate: no calm, no game): at 120°/s of orbit `de4a10e` steps 2.0° every frame through the edge; H2 steps 2°, then 6°, 6°, 3.3° (a 15° turn, the gizmo
+  held 33 ms), then 0.1°, 0.2°, 0.4° … back to 1.9° only 15 frames later. At 240°/s: a 27° turn, the gizmo held 67 ms, the same stall. Under 60°/s
+  (lag under the band) nothing changes. In `de4a10e` no turn exists far out: the spring's lag is carried smoothly through the edge.
+* **Keeping the previous behaviour conflicts with nothing**: his R2 already says the edge gives none / a quarter / a half turn BY THE EDGE LEFT (O2) — a
+  vertical edge between two sides is "none"; the wait (R3) and the dy hold (D-H8) only follow a real turn. It is what D-H9 does (17.3, F-1).
+
+### 17.2 His point 2 — the 180° realignment too fast under a fast input: a clamp
+* It is root (b) (§16.4): the turn's speed is the larger of close in's 360°/s and the orbit's own direction's speed, which sweeps 2 500 – 6 500°/s near
+  `Scene_0bis`'s bottom — a half turn in 32 ms (95° in one frame; the 77 frames over 45° of §16.3). His clamp caps it whatever the pace; the gizmo waits
+  meanwhile, as he says (no cost to play). The wait grows: about 51 s of 155 on his ten stretches at 520°/s (H1's estimate, §15.7) against 41 s now.
+
+### 17.3 The fixes reproposed (for his final review — nothing built)
+| # | the fix | what it answers | conflicts / cost | its switch (0 = `ba369aa` frame for frame) |
+|---|---|---|---|---|
+| **F-1** (D-H9) | a turn ONLY where the levelled reading itself jumps across the edge by the band (10°); the camera's own lag always left to the spring | his point 1 (a vertical edge: no turn, no wait — `de4a10e`'s transition); root (a): the exits' 18 – 20° in 33 ms | none with his rules (R2's "none" at a side edge); met before as a mistake (§16.9): this is its cure | `followTurnOnJump` 1 |
+| **F-2** (his clamp + D-H10) | the half turn's speed: his FINGER's pace on the glass (its mm a second × the orbit's own degrees per mm), never under close in's 360°/s, ⭐ never over a new slider `followTurnMaxDegS` | his point 2; root (b) | the wait longer (17.2); default **520°/s** — his own realignment pace in the upright builds (`UPRIGHT_LESSONS.md` §3) — a half turn 0.35 s | `followTurnMaxDegS` 520 (0 = no clamp) |
+| **F-3** (D-H11) | at the follower's crossing far out, every angle set to the map's place (`seamRebase`, the charts' 2.4c) — the held gizmo really holds | root (c): the piece jumps, turns restarted mid-turn | close in it costs up to 8.5° in one frame under a fast dy (W11); far out the follower's spring is between the angles and the camera — to measure | `followTurnRebase` 1 |
+| **F-4** (D-H12) | keep as built: in the spit a dx along `Scene_0bis`'s axis does not yaw the camera toward a tip | — | the same reading was rejected on 11-13 on `Scene_1`'s cube (§16.9); his eye on that one case | none (nothing built) |
+
+**The gates added** (to §16.3's): a dx round `Scene_1`'s four sides far out at three paces — the camera's step a frame within 0.5° of `de4a10e`'s on the same
+route, no turn, the gizmo never held; the half turns at his fastest — no frame over 520°/s × the frame's time; his ten stretches — frames over 45° in one
+frame 0 (`de4a10e` 0), piece jumps no more than `de4a10e`'s 26.8 a minute, no turn started inside a turn. **The process**: ONE fix round with F-1 – F-3, each
+measured alone and together; if a gate still fails, STOP and study (lessons row 2); deployed only on his word.
