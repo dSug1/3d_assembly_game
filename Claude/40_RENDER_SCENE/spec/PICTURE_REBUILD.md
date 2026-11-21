@@ -203,6 +203,13 @@ drawn is HELD — its heading, its elevation, its up — and his finger closes t
 6. **The up**: not latched the turntable's of the DRAWN heading — outside the 20° cone the world's up (its literal), inside the meridian of the follower's
    heading plus the heading offset held (from the view's own at the cone's edge); latched G's, turned by the offsets. After a latch the follower's heading
    is the one drawn when the way out ends: the up turns there by the share (the f480 vector amended), never at once.
+⭐⭐ **Round 2 (2026-11-21 night, decided by the lead — his rule *"minimize the camera movements while maintaining the key rules"*).** Measured on round 1
+   (`4f34c7a`, kit `follow/r3fix/runs_gate/str_*`): the band's outer part on `Scene_0bis` drifts 0.05 m along the axis, as the old build; deeper in the
+   band (ap ≈ 0.67) the view goes 81 – 88° down (the logic's elevation, by rule 1's lerp) and past 60° looking down the spit's finger swap (`zoneFinger` →
+   `fingerSwapped`) turns his dy into a move along the axis: 0.25 m (old build 0.05). **Root: two payers of one gap on a spit** — the band paid the
+   elevation by place, and the latch's hand-over (C4) paid heading AND elevation by his orbit mm, because a polar zone has no pending turn at the latch.
+   **The rule:** the band's elevation share is w ONLY where the latch starts G's pending turn — not in a polar zone (`asmZone`, the spit included); in a
+   polar zone it is 0: the far elevation kept until the latch, the latch's hand-over (C4) the one payer. `Scene_1` (no zone) unchanged.
 7. **R5 behind its own switch `pictureFarTop`** (0 by default — the lead: its gates unfinished, its far strokes on `Scene_0bis` pin the gizmo at a pole,
    `runs_str5/r5_farmix`; 1 = R5 as built); `farTopDecided` requires it.
 ⭐ Identity: `pictureOne` 0 runs today's line, untouched (`620f227`). Far out outside the band with nothing held: the follower's own objects (R3's).
