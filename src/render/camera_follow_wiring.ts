@@ -15,12 +15,17 @@
  * (`st.asmAskLevel`; carried where none), the height capped, at a facet change of the gizmo (`gizmoFacetW`, the MODEL's) the follower's OWN turn — the gizmo
  * waiting meanwhile (`tiltClampStep` reads `asmFollow.top.turn`) — and the dy hold decided there (D-H8: a turn over 90° the dy made), written ONLY here,
  * through `holdAtCrossing`; the logic's own `ask.hold` is not written far out (R4 amended). 0: the follower as `de4a10e` (the detour), frame for frame.
+ *
+ * ⭐⭐⭐ (2026-11-21, `CAMERA_FOLLOWS_GIZMO.md` §17.3 – §18 — H3) THE FIX ROUND, three switches (all 0 = `ba369aa` frame for frame): `followTurnOnJump` (F-1)
+ * a turn only where the levelled reading itself jumps; `followTurnFinger` (F-2) the turn at his finger's pace (`asmFrameMm`), clamped by
+ * `followTurnMaxDegS`; `followTurnRebase` (F-3) a turn started sets every angle state to the map's place at the gizmo (`seamRebase`).
  */
 import type { Vec3 } from "../core/vec";
 import { followPose, followStart, followStep, followTopStep, type FollowState, type FollowTop } from "../input/camera_follow";
 import { holdAtCrossing, tiltDir } from "../input/orbit_tilt";
-import { orbitDir } from "../input/assembly_orbit";
-import { changeApply, dirFrame, gizmoFacetW, spitZone } from "./assembly_wiring";
+import { approachDistance, closeInGain, orbitDir } from "../input/assembly_orbit";
+import { orbitDegPerMm } from "../input/follow_camera";
+import { changeApply, dirFrame, gizmoFacetW, seamRebase, spitZone } from "./assembly_wiring";
 import { upSquareToView } from "../input/camera_frame";
 import type { SceneState } from "./scene_state";
 
@@ -65,15 +70,26 @@ export function followFrame(
   let topRec: Record<string, unknown> | null = null;
   if (top) {
     // ⭐⭐⭐ (H2) the top's rule: his pace read on the orbit's own direction in the world (the finger's place), the gizmo's facet, the glass's up drawn last
-    const kt = { tauMs: st.cfg.followMs, poleDeg: st.cfg.followPoleDeg, minDeg: st.cfg.followTurnMinDeg, rollDegS: st.cfg.tiltRollDegS, paceShare: st.cfg.followTurnPace };
+    // ⭐⭐⭐ (H3, `CAMERA_FOLLOWS_GIZMO.md` §17.3) F-1 a turn only on the reading's own jump; F-2 his FINGER's pace — this frame's deadbanded travel × the
+    // orbit's own degrees per mm (the drag's `gainOrbitYaw` × `boxGainYaw` × `closeInGain`, whole far out) — and the clamp, only with F-2's switch (0: H2's)
+    const fin = st.cfg.followTurnFinger === 1;
+    const dpm = orbitDegPerMm(st.cfg, st.orbit.elevation).yawDegPerMm;
+    const degPerMm = dpm * closeInGain(approachDistance(st.cfg, st.approach), st.cfg.orbitGainFullM, st.cfg.orbitContactMmPerMm, dpm, st.asm?.radius ?? 0);
+    const kt = { tauMs: st.cfg.followMs, poleDeg: st.cfg.followPoleDeg, minDeg: st.cfg.followTurnMinDeg, rollDegS: st.cfg.tiltRollDegS, paceShare: st.cfg.followTurnPace, onJump: st.cfg.followTurnOnJump === 1, finger: fin, degPerMm, maxDegS: fin ? st.cfg.followTurnMaxDegS : 0 };
     const orbitW = tiltDir(dirFrame(st), orbitDir(st.orbit.yaw, st.orbit.elevation));
-    const r = followTopStep(s0, was?.top ?? null, { ask: st.asmAsk!, orbit: orbitW, psiL: st.asmAskLevel, nW: gizmoFacetW(st), upShown: st.asmCamLast?.up ?? null, dySign: st.asmDySign }, dtMs, kt);
+    const r = followTopStep(s0, was?.top ?? null, { ask: st.asmAsk!, orbit: orbitW, psiL: st.asmAskLevel, nW: gizmoFacetW(st), upShown: st.asmCamLast?.up ?? null, dySign: st.asmDySign, fingerMm: st.asmFrameMm }, dtMs, kt);
     s = r.s;
     topS = r.top;
     // ⭐⭐⭐ (D-H8 = D-T4) the dy hold decided at the follower's own crossing: it REPLACES any hold still on (a 0 writes none — `holdAtCrossing`)
     if (r.hold !== undefined) st.asmEdgeHold = holdAtCrossing(r.hold);
+    // ⭐⭐⭐ (H3, F-3 = D-H11) A TURN STARTED: every angle state SET to the map's place at the gizmo (`seamRebase`, the charts' 2.4c rule — the place
+    // shown, in the map's own frame), so while the gizmo waits nothing catches up and it does not travel (⛔ the orbit's angles held alone: the map's
+    // catch-up carried the gizmo up to three facets on — root (c)); the follower's spring stands between those angles and the camera
+    const sh = st.asmShown;
+    const rb = r.started && st.cfg.followTurnRebase === 1 && sh !== null;
+    if (rb) seamRebase(st, { yaw: sh.yaw, pitch: sh.pitch });
     const t = topS.turn;
-    topRec = { L: st.asmAskLevel, T: topS.psiT, k: t === null ? -1 : t.k, dl: t === null ? null : t.delta, dur: t === null ? 0 : t.durMs, x: r.delta, h: r.hold ?? null, p: topS.pace };
+    topRec = { L: st.asmAskLevel, T: topS.psiT, k: t === null ? -1 : t.k, dl: t === null ? null : t.delta, dur: t === null ? 0 : t.durMs, x: r.delta, h: r.hold ?? null, p: topS.pace, s: r.started ? 1 : 0, rb: rb ? 1 : 0 };
   } else {
     const k = { tauMs: st.cfg.followMs, poleDeg: st.cfg.followPoleDeg, fromDeg: st.cfg.followFromDeg, maxDegS: st.cfg.followMaxDegS };
     s = followStep(s0, st.asmAsk!, dtMs, k);

@@ -112,7 +112,7 @@ type OrbitStateStart = Pick<
   SceneState,
   | "asmGizmo" | "asmSupport" | "asmSupportLevel" | "pieceHold" | "pieceHoldPrev" | "asmLook" | "asmFacePoint" | "asmG" | "asmPrevQ" | "asmShown" | "asmFaceBand" | "asmFree" | "asmPlaceWas" | "asmMapQ"
   | "asmEdgeHold" | "asmZone" | "asmZoneMix" | "asmChange" | "asmPieceDrawn" | "asmDirEase" | "asmCamLast" | "asmRollShadow" | "asmSpitSide" | "asmSpitU" | "asmSpitPic" | "asmSpitPicWas" | "asmZoneAlpha" | "asmDySign" | "asmFingerDxMm" | "asmDxSign" | "asmCarriedYaw" | "asmHeadO"
-  | "asmHeadW" | "asmHeadYaw" | "asmTilt" | "asmGOff" | "asmTiltAuto" | "asmTiltPending" | "asmOrbitMm" | "asmBlend" | "asmCalmWhole" | "asmCalmWholeV"
+  | "asmHeadW" | "asmHeadYaw" | "asmTilt" | "asmGOff" | "asmTiltAuto" | "asmTiltPending" | "asmOrbitMm" | "asmFrameMm" | "asmBlend" | "asmCalmWhole" | "asmCalmWholeV"
   | "asmSquare" | "asmCalm" | "asmMouth" | "asmRawPrev" | "asmGizmoAt" | "asmGizmoLag" | "asmAskCalm" | "asmAsk" | "asmAskLevel" | "asmFollow"
 >;
 
@@ -164,6 +164,7 @@ export function orbitStateStart(): OrbitStateStart {
     asmTiltAuto: false,
     asmTiltPending: false,
     asmOrbitMm: 0,
+    asmFrameMm: 0,
     asmBlend: null,
     asmCalmWhole: 0,
     asmCalmWholeV: 0,
@@ -1239,6 +1240,7 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   // no tilt, the square camera's share held; then the BLEND by the finger's travel (`asmBlend`, `blendShare`) — every face
   const fingerMm = st.asmOrbitMm;
   st.asmOrbitMm = 0;
+  st.asmFrameMm = fingerMm; // ⭐⭐⭐ (H3, F-2) this frame's finger travel: the follower turn's pace far out (`followFrame`)
   const pendWas = st.asmTiltPending;
   st.asmTiltPending = tiltPendingStep(pendWas, autoWas, st.asmTiltAuto, fingerMm);
   if (!st.asmTiltAuto) st.asmBlend = null;
@@ -2043,7 +2045,7 @@ function tiltOff(st: SceneState): void {
  * direction by a rigid rotation with the map's angles left to catch up (`turnAngles`, the root cause: the orbit's place stored twice). The views (the
  * calm, the square camera, the heading held) are the caller's.
  */
-function seamRebase(st: SceneState, mq: { readonly yaw: number; readonly pitch: number }): void {
+export function seamRebase(st: SceneState, mq: { readonly yaw: number; readonly pitch: number }): void {
   const yaw = mq.yaw;
   const v = vOfPitch(mq.pitch);
   st.orbit.reset(yaw, v);

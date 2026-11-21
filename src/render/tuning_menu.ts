@@ -227,8 +227,20 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "follower: the yaw's last-resort ceiling, never under his pace (deg a second; 0 = none)", "followMaxDegS", 0, 2880, 40),
             // ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §15 – §16 — H2) the top and bottom far out
             tunable(st, "follower: the top's rule — the calm's level heading, a turn at an edge with the gizmo waiting (1; 0 = the detour)", "followTop", 0, 1, 1),
-            tunable(st, "follower: an edge's gap paid by a turn from (deg; under it the spring)", "followTurnMinDeg", 0, 45, 1),
-            tunable(st, "follower: the edge's turn at his pace (1) … close in's speed (0)", "followTurnPace", 0, 1, 0.05),
+          ],
+          subsections: [
+            {
+              // ⭐⭐⭐ (2026-11-21, `CAMERA_FOLLOWS_GIZMO.md` §17.3 – §18 — H3) the follower's own turn at an edge far out: H2's band and pace, the fixes F-1 – F-3
+              title: "THE EDGE'S TURN",
+              sliders: [
+                tunable(st, "follower: an edge's gap paid by a turn from (deg; under it the spring)", "followTurnMinDeg", 0, 45, 1),
+                tunable(st, "follower: the edge's turn at his pace (1) … close in's speed (0)", "followTurnPace", 0, 1, 0.05),
+                tunable(st, "the edge's turn only where the level heading itself jumps — none between two sides (1; 0 = as ba369aa)", "followTurnOnJump", 0, 1, 1),
+                tunable(st, "the edge's turn at his finger's pace (1; 0 = the orbit's, as ba369aa — no top speed)", "followTurnFinger", 0, 1, 1),
+                tunable(st, "the 180° realignment's top speed (deg a second; 0 = none)", "followTurnMaxDegS", 0, 2000, 10),
+                tunable(st, "the gizmo really waits: the angles set to its place when a turn starts (1; 0 = as ba369aa)", "followTurnRebase", 0, 1, 1),
+              ],
+            },
           ],
         },
         {

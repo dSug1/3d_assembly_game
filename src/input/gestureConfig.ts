@@ -447,6 +447,14 @@ export interface GestureConfig {
   followTurnMinDeg: number;
   /** ⭐ (H2, D-H6) the turn's pace: 1 his own orbit pace at the crossing whenever faster than close in's speed (`tiltRollDegS`), 0 close in's speed */
   followTurnPace: number;
+  /** ⭐⭐⭐ (2026-11-21, `CAMERA_FOLLOWS_GIZMO.md` §17.3 – §18 — H3, F-1 = D-H9) a turn at an edge only where the levelled reading ITSELF jumps by `followTurnMinDeg` (the camera's lag left to the spring: a vertical edge between two sides none) (1); 0: H2's, from the heading drawn */
+  followTurnOnJump: number;
+  /** ⭐⭐⭐ (H3, F-2 = D-H10) the turn's pace his FINGER's on the glass (its deadbanded mm a second × the orbit's degrees per mm), with the clamp `followTurnMaxDegS` (1); 0: the orbit's direction's pace, no clamp (H2) */
+  followTurnFinger: number;
+  /** ⭐⭐⭐ (H3, F-2 — the owner: *"let's clamp the realignment speed (slider)"*) the 180° realignment's top speed far out (deg a second; 0 = no clamp; with `followTurnFinger` 1) */
+  followTurnMaxDegS: number;
+  /** ⭐⭐⭐ (H3, F-3 = D-H11) when a follower turn starts far out, every angle state SET to the map's place at the gizmo (`seamRebase`): the waiting gizmo really holds (1); 0: H2's */
+  followTurnRebase: number;
   /** ⭐⭐⭐ (2026-11-10, POLAR_ORBIT_CLEANUP.md §9.4 — the owner's TILTED POLE) a press on a cap tilts the orbit so the cap is a side (1); off (0): the polar cap as before. ⛔ (2026-11-15, the owner: *"cancel my rule and remove the press action on the orbit"*) no press tilts: 1 the automatic tilt close in (`tiltAutoM`), 0 none. */
   tiltedPole: number;
   /** ⭐⭐⭐ (2026-11-10, the owner: *"limit the speed of the scene tilt at crossing"* → *"one speed for every tilt"*) EVERY tilt — the roll back to upright, the swing of a tilt just made — at this speed (°/s; 0: at once) — ⛔ `tiltRollMinMs` (a whole roll in 250 ms whatever its size) replaced. */
@@ -924,6 +932,10 @@ export const DEFAULT_CONFIG: GestureConfig = {
   followTop: 1, // ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §15 — H2) the top's rule on this branch; 0 = `de4a10e` frame for frame (the detour kept for it)
   followTurnMinDeg: 10, // ⭐ (H2) T11's band: under it the spring pays
   followTurnPace: 1, // ⭐ (H2, D-H6 — the owner: *"Your pace + a slider"*) his pace by default; 0 = close in's speed
+  followTurnOnJump: 1, // ⭐⭐⭐ (H3, F-1 = D-H9) a turn only on the reading's own jump; 0 = H2's (`ba369aa`)
+  followTurnFinger: 1, // ⭐⭐⭐ (H3, F-2 = D-H10) his finger's pace, clamped; 0 = the orbit's direction's (`ba369aa`)
+  followTurnMaxDegS: 520, // ⭐⭐⭐ (H3, F-2, his clamp) his own realignment pace in the upright builds (`UPRIGHT_LESSONS.md` §3): a half turn 0.35 s
+  followTurnRebase: 1, // ⭐⭐⭐ (H3, F-3 = D-H11) the follower's crossing sets every angle to the map's place; 0 = H2's (`ba369aa`)
   gizmoEaseMs: 45, // ⭐⭐ (2026-11-04, the owner: *"update the lag the gizmo's position the piece follows to 45ms"*; 62, 55 before, the former GIZMO_TAU_MS 90)
   orbitSpringMs: 30, // ⭐⭐ (2026-11-04) the former boxSmoothMs / 2 for the orbit's spring
   tiltedPole: 1, // ⭐⭐⭐ (2026-11-10, §9.4) the tilted pole on
@@ -1120,6 +1132,10 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (cfg.followTop !== 0 && cfg.followTop !== 1) throw new Error(`followTop (${cfg.followTop}) must be 0 or 1.`);
   if (!(cfg.followTurnMinDeg >= 0 && cfg.followTurnMinDeg <= 90)) throw new Error(`followTurnMinDeg (${cfg.followTurnMinDeg}) must be in [0, 90] deg.`);
   if (!(cfg.followTurnPace >= 0 && cfg.followTurnPace <= 1)) throw new Error(`followTurnPace (${cfg.followTurnPace}) must be in [0, 1].`);
+  if (cfg.followTurnOnJump !== 0 && cfg.followTurnOnJump !== 1) throw new Error(`followTurnOnJump (${cfg.followTurnOnJump}) must be 0 or 1.`);
+  if (cfg.followTurnFinger !== 0 && cfg.followTurnFinger !== 1) throw new Error(`followTurnFinger (${cfg.followTurnFinger}) must be 0 or 1.`);
+  if (!(cfg.followTurnMaxDegS >= 0 && cfg.followTurnMaxDegS <= 2000)) throw new Error(`followTurnMaxDegS (${cfg.followTurnMaxDegS}) must be in [0, 2000] deg/s.`);
+  if (cfg.followTurnRebase !== 0 && cfg.followTurnRebase !== 1) throw new Error(`followTurnRebase (${cfg.followTurnRebase}) must be 0 or 1.`);
   if (cfg.freeEntryUpright !== 0 && cfg.freeEntryUpright !== 1) throw new Error(`freeEntryUpright (${cfg.freeEntryUpright}) must be 0 or 1.`);
   if (!(cfg.edgeHoldMm >= 0 && cfg.edgeHoldMm <= 200)) throw new Error(`edgeHoldMm (${cfg.edgeHoldMm}) must be in [0, 200] mm.`);
   if (!(cfg.approachPinchGain > 0 && cfg.approachPinchGain <= 10)) throw new Error(`approachPinchGain (${cfg.approachPinchGain}) must be in (0, 10].`);

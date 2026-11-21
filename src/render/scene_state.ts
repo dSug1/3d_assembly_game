@@ -496,6 +496,8 @@ export interface SceneState {
   asmTiltPending: boolean;
   /** ⭐⭐⭐ (2026-11-11) the orbit's finger travel (mm) since last frame — the pending's end, the blend's pace */
   asmOrbitMm: number;
+  /** ⭐⭐⭐ (2026-11-21, `CAMERA_FOLLOWS_GIZMO.md` §18 — H3, F-2) the orbit's finger travel THIS frame (mm, deadbanded: `asmOrbitMm` as `assemblyFrame` took it) — the follower turn's pace far out */
+  asmFrameMm: number;
   /** ⭐⭐⭐ (2026-11-11) the blend into the close-in alignment under way: the finger's travel since the orbit started (`blendShare`); none: whole */
   asmBlend: { mm: number; /** the tilt and the square camera's target at its start (`blendCrossed`) */ tiltId: number | null; target: Vec3 | null } | null;
   /** ⭐⭐⭐ (2026-11-10) the calm made whole by POSITION on the shown direction (`tiltCalmWholeHV`'s `h`, a cap's release) — 0: the calm as eased */

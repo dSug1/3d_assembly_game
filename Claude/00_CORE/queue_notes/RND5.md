@@ -778,3 +778,15 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   hold after a dy-made half turn. Measured: no yaw on a pure dy (73° → 1.8°), `b_far`'s hold set 6 of 6, close in identical; ⛔ on his own play 77
   frames over 45° (0) and 94 piece jumps a minute (26.8) — three roots read (the turn read against the camera's lag, his pace read on the orbit's
   direction, the wait not holding the map's place), D-H9 – D-H12 for his word; no fix round, no device look → `CAMERA_FOLLOWS_GIZMO.md` §16.
+* **2026-11-21 — H2 DEPLOYED for his look** (his word: *"deploy what you have built before I decide"*): LIVE main `ba369aa` = `1.0.151-` at
+  `c1edcaf` (`followTop` 1; 0 = `de4a10e`), verify 2255 green; the failing gates as measured; D-H9 – D-H12 after his look → `CAMERA_FOLLOWS_GIZMO.md` §16.8.
+* **2026-11-21 — HIS LOOK on live `ba369aa`: *"this is the best implementation of orbits chart so far"*** (supersedes `de4a10e`), two exceptions: the
+  side-to-side transition on `Scene_1` (a turn decided at every facet change against the camera's lag: a surge, the gizmo held, a stall — offline) and
+  the 180° realignment too fast under a fast input (a clamp slider). Fixes F-1 – F-4 reproposed for his final review → `CAMERA_FOLLOWS_GIZMO.md` §17.
+* **2026-11-21 — packet H3: the fix round F-1 – F-3 BUILT** (branch `1.0.152-`, local `6208c10`, `09d48fb`; three switches, all 0 = `ba369aa`
+  frame for frame): a turn only on the level reading's own jump, the turn at his finger's pace clamped at 520°/s, the angles set to the map's place
+  at a turn's start. Measured: `Scene_1`'s sides at 100 – 400 px a second no turn (`ba369aa` 4 – 6), within 0.24° of `de4a10e`; no turn frame over
+  520°/s; his ten: 0 frames over 45° (77), piece jumps 15.9 a minute (94.2; `de4a10e` 26.8), close in identical. ⛔ At his fastest (1 200 px a
+  second) the sides turn and surge (23.7° a frame), the spin over the top rolls 25° in a frame, `b_far` s4 loses its hold and loops, the wait
+  69.6 s of 155 — two roots read (the jump a per-frame difference; the lag left to a spring that pays it the short way), not patched (the last
+  round on this join) → `CAMERA_FOLLOWS_GIZMO.md` §18.
