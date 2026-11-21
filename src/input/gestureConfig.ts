@@ -930,7 +930,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   uprightFraming: 1, // ⭐⭐⭐ (packet J) a change's framing carried from the pose shown
   cameraFollower: 1, // ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §13 — F2) the follower draws far out on this branch; 0 = the live build (`461eeb2`)
   pictureOne: 1, // ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` D-P2 — packet R2) close in's turns about the piece on this branch; 0 = `620f227` frame for frame
-  pictureBandMm: 10, // ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §4.2 — R3a) the band: his `tiltBlendMm` figure, 10 mm of approach finger before 0.65 m
+  pictureBandMm: 40, // ⭐⭐⭐ (2026-11-21, the lead by the owner's rule *"minimize the camera movements"*: at 10 mm the pitch ran 6 – 11° a frame at his pace, at 34 mm ≤ 3.3° — R3's approach runs) (`PICTURE_REBUILD.md` §4.2 — R3a) the band: 10 mm (his `tiltBlendMm` figure) before; of approach finger before 0.65 m
   followMs: 200, // ⭐ (2026-11-21, the owner tried the slider: *"at 200 ms is better at far out distance … set default to 200ms"*; 120 before) (F2, D-F6) the calm's own 120 ms it replaces — on the RAW target 50 ms (the prototype's D, tuned on the eased one) left 56 frames over 45° offline (`CAMERA_FOLLOWS_GIZMO.md` §13)
   followPoleDeg: 30, // ⭐ (F2) his D-F1: no nearer than 30° to straight above far out
   followFromDeg: 60, // ⭐ (F2) the detour's reach (the prototype's D)
