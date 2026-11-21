@@ -572,3 +572,20 @@ node scripts/probes/gravity_read.mjs <rec.json> ...          # JSON=1: one objec
   top, G4 (the camera against the orbit yaw's heading on a level top), G2 (the heading change on legs with no dx, until the facet change / the whole
   leg); `rd_h2b.sh hand|f143|walks|hold|close` (`his.mjs`, `jr.mjs`, `follow_g.mjs`, `hold_tab.mjs`, `same.mjs` against packet G's `runs_g2` and
   `1.0.147-`). The mutants: `mut_h2.mjs` with `mut_h2_pure.json` / `mut_h2_wiring.json` (each applied alone, the named tests run, restored).
+
+## 16. The edge's turn far out, the fix round — packet H3 (`Claude/40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md` §18, 2026-11-21)
+
+* **The recorder**: unchanged; the follower's `top` record carries two more fields under `followTop` 1 — `s` (1: a turn STARTED this frame; count
+  starts by it, never by `dl`, which persists through the turn) and `rb` (1: the angles were set to the map's place, F-3). The identity: the three
+  switches at 0 on the URL (`&followTurnOnJump=0&followTurnFinger=0&followTurnRebase=0`; the clamp acts only with `followTurnFinger` 1).
+* **The batch** (the kit's `fo3/follow/h3/drv_h3.sh`, one phase after another, each its own server): the identity (two stretches, `nP`, `s1_over`
+  against `runs_h2`); ⭐ the SIDE WALKS — a dx round `Scene_1`'s sides far out on one route of 420 px at 0.7, 1.4, 2.8 and 8.4 px a frame at 143
+  frames a second (`sd<pace>t1` the build, `t0` with `followTop=0` = `de4a10e`'s rule, `tb` with the three switches 0 = `ba369aa`); then H2's phases
+  (the eleven stroke walks, the dy hold's base walks, his ten stretches at 60 far and two at 143, the pole walks at 143, two close stretches).
+* **The readers** (the kit): `rd_h3x.mjs side` (turns started, frames a turn runs — the gizmo held —, vertical edges crossed, the camera's heading
+  step a frame against the `t0` run's at the same frame), `rd_h3x.mjs clamp <deg/s>` (the follower's heading step on every turn frame against the
+  clamp × the frame's time + 1 %), `rd_h3x.mjs turns` (starts, starts inside a running turn, the wait, the rebases and the camera's largest step in
+  the six frames from one, the gizmo's travel in a turn after its second frame); `rd_exit.mjs` (G3 read at the exit from a level top: the 33 ms
+  windows containing the exit frame, and the 33 ms before it); `rd_h3b.sh id|side|s1|hand|f143|walks|hold|close|clamp|turns` (with `rd_h3.mjs`,
+  `his.mjs`, `jr.mjs`, `hold_tab.mjs`, `same.mjs`; against `runs_h2` = `ba369aa` and `runs_g2` / `runs_h1` = `de4a10e`). The mutants: `mut_h3.mjs`
+  with `mut_h3_pure.json` (17) and `mut_h3_wiring.json` (10).

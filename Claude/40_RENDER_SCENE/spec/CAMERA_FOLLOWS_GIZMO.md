@@ -785,3 +785,80 @@ His word: *"deploy what you have built before I decide"*. LIVE main `ba369aa` = 
 route, no turn, the gizmo never held; the half turns at his fastest — no frame over 520°/s × the frame's time; his ten stretches — frames over 45° in one
 frame 0 (`de4a10e` 0), piece jumps no more than `de4a10e`'s 26.8 a minute, no turn started inside a turn. **The process**: ONE fix round with F-1 – F-3, each
 measured alone and together; if a gate still fails, STOP and study (lessons row 2); deployed only on his word.
+
+## 18. AS BUILT AND MEASURED — H3, the fix round F-1 – F-3 (2026-11-21, branch `1.0.152-`, three switches; all 0 = `ba369aa` frame for frame)
+
+> Commits (local, not pushed): (C) `6208c10` the pure rules + 9 vectors · (C) `09d48fb` the wiring + source tests + four sliders · (D) this section.
+> The kit `fo3/follow/h3/`: `CHECKPOINT_H3.md` (every figure, the frames read), `drv_h3.sh` (the one batch, 40 min), `rd_h3x.mjs`, `rd_exit.mjs`,
+> `rd_jump.mjs`, `rd_h3b.sh` (the readers), `mut_h3.mjs` + 17 pure + 10 wiring mutants (27 of 27 red), recordings `runs_h3/`. ⛔ No device look.
+> ⛔ The last fix round on this join (lessons row 2): the gates that fail are read, not patched.
+
+### 18.1 The result first
+* **His point 1 is answered at the paces the brief named**: a dx round `Scene_1`'s sides far out at 100, 200 and 400 px a second makes **no turn**, the
+  gizmo is never held, and the camera's heading step a frame is within **0.04 – 0.24°** of `de4a10e`'s rule on the same route (`ba369aa`: 4 – 6
+  turns, the gizmo held 65 – 79 frames, 2.2 – 4.3° off).
+* **His point 2 is answered**: no frame of a follower turn faster than **520°/s** on any run (6 690 turn frames; the fastest 520.0°/s).
+* **On his own play** (ten stretches, 155 s): frames over 45° in one frame **0** (`ba369aa` 77, `de4a10e` 0), over 20° **0** (900, 290); the piece
+  jumps **15.9 a minute** (94.2, 26.8); roll jumps 8.5 a minute (155.9, 162.5); no turn started inside a turn (25); the gizmo's angles held exactly
+  in every turn. At 143 frames a second: piece jumps 11.5 a minute (95.8, 34.5). `followTop` 0 and close in unchanged.
+* ⛔ **What fails**: at HIS fastest dx (1 200 px a second) the side walk turns 3 times and the camera surges 23.7° a frame after the finger stops; the
+  pole spin over `Scene_1`'s top turns the picture 25° in one frame (`ba369aa` 17.7); one dy hold walk (`b_far` s4) loses its hold and loops; the
+  waiting time grows to **69.6 s of 155** (41.5). Roots in §18.4.
+
+### 18.2 As built
+* **F-1** (`followTurnOnJump`): at a facet change the jump = the reading after − the reading the frame before (or the carried heading), the tie the
+  heading's way; from the band (10°) a turn of that jump from the heading drawn — a running turn's rest carried into it (⚠ an amendment: else the
+  spring would pay it); under the band nothing (a running turn goes on). The dy hold reads the jump (D-H8's 90°).
+* **F-2** (`followTurnFinger`, `followTurnMaxDegS`): his pace = this frame's deadbanded finger travel (`asmOrbitMm` as `assemblyFrame` takes it,
+  `asmFrameMm`) a second × the drag's own degrees per mm (`gainOrbitYaw` × `boxGainYaw` × `closeInGain` — 5.1°/mm far out), the same decaying peak as
+  H2; never under 360°/s, never over the clamp (the clamp wins under the floor too). ⚠ The clamp acts only with `followTurnFinger` 1, so that the
+  three switches at 0 are `ba369aa`.
+* **F-3** (`followTurnRebase`): the frame a turn starts, `seamRebase` at the map's place shown (`asmShown`), after the follower's step.
+
+### 18.3 The gates (`runs_h3`; `ba369aa` = `runs_h2`; `de4a10e` = `runs_g2`, `runs_h1`)
+| gate | H3 | `ba369aa` | `de4a10e` | verdict |
+|---|---|---|---|---|
+| G1 the three switches 0 | `ilmj_23s` 886/886, `vyah_11s` 993/993, `nP` 249/249, `s1_over` 737/737 identical | — | — | ✅ |
+| G-side 100 / 200 / 400 px a second | 0 turns, 0 frames held; step vs `de4a10e`'s 0.04 / 0.04 / 0.24° max, 0 frames over 0.5° | 6 / 5 / 4 turns, 65 – 79 frames held, 2.2 – 4.3° | the reference | ✅ |
+| G-side 1 200 px a second (added: his p90) | 3 turns, 19 frames held, 19.0° off, a step of 23.7° | 3 turns, a step of 9.5° | a step of 7.1° | ❌ |
+| G-clamp 520°/s + 1 % | 0 of 6 690 turn frames over | — | — | ✅ |
+| G2 pure dy | climbs 0.0 – 0.4°, `ov` 1.8° | the same | `ov` 73.0° | ✅ |
+| G3 the exit ≤ 10° in 33 ms | 9 of 11; `nP` 9.8; `nM` 10.8, `sP` 15.2 at the exit — no turn there: the spring's tail | 18.8, 19.7, 18.7 | 27.1, 4.8, 25.9 | ❌ 2 of 11 |
+| G4 (reported) | the S1 walks as `ba369aa` (`sP` 53.8°, never past 90°) | 53.8° | 123.9° | — |
+| G5 the gizmo still in the wait | the angles 0.00° in every turn; the drawn ring after its first frame up to 24 mm on 4 of 10 | 215 mm | — | ❌ open |
+| G6 the dy hold | `z_far` 6/6, surface after the crossing 0 mm (11); `b_far` 5 of 6 — s4 lost, a loop | 6/6, 6/6 | 4/6, 0/6 | ❌ s4 |
+| G7 his ten | > 45° 0, piece jumps 15.9 a minute, 0 turns inside a turn, the wait 69.6 s | 77, 94.2, 25, 41.5 s | 0, 26.8, —, — | ✅ (the wait reported) |
+| G8 the pole walks (reported) | `Scene_0bis` piece jumps 0; `s1_over` 78.9 a minute, a 25° frame | 20.0; 23.3, 17.7° | 0; 9.0, 13.8° | ⛔ `s1_over` |
+| G9 close in | 1059/1059, 1166/1166 identical | — | — | ✅ |
+| G10 at 143 | piece jumps 11.5 a minute | 95.8 | 34.5 | ✅ |
+
+### 18.4 What fails, and why (read frame by frame — no patch: the study's)
+* **Root 1 — F-1's jump is a per-FRAME difference** (`sd84t1`, f40): at a vertical edge the calm is whole, so the reading moves with the yaw — 11 – 25°
+  in that frame at 1 620°/s of orbit; F-1 read that as a jump (over 10°) and turned 25.8° with the gizmo held for 7 frames. A band in degrees a
+  FRAME is a pace threshold in disguise (10° a frame = 1 430°/s at 143 frames a second, 600°/s at 60). On his recorded play it does not show (258
+  of 288 starts are real jumps, p50 180°; no side-to-side pair on `Scene_0bis`); on `Scene_1`'s sides at his fastest it does.
+* **Root 2 — the lag after a fast dx is not small** (`sd84t1` f47 – f74, `s1_over` f262 – f288): F-1 leaves it to the spring by design; after a fast
+  spin it is 100 – 160°, and a turn hands back with no sideways speed, so the spring restarts from rest and pays it after the finger stops (23.7° a
+  frame) — or, over the top, along the great circle OVER the pole (el 84°, above the target's 60° cap): the heading swings 100° in 4 frames, the
+  picture 25° in one. `ba369aa` paid that lag as a turn at the edge (root (a)); `de4a10e`'s spring never stopped.
+* **G3** (`sP`, `nM`): no jump at the exit (the reading constant from the dx's end); the camera's spring pays the dx drift's lag at 3 – 3.7° a frame
+  before and through the edge — the tail of his own motion, which a 10°-in-33 ms gate (300°/s) counts.
+* **G6 `b_far` s4** (`h3hw_b_far`): the half turn at the bottom's edge runs with the gizmo held still (F-3 works), but no hold stands from its first
+  frame; the push goes on, the camera now on the other side, the gizmo back across the bottom — 5 half turns in 270 frames. `ba369aa` set the hold
+  at the same edge; there the spit's side flipped one frame AFTER the hold, here in the same frame. ⚠ A reading of the code, not proven (the hold
+  walks record no follower state): `seamRebase` sets the LOGIC camera's place (`cameraOrbit.cam`), which `spitStep` reads for its side and its
+  crossing on the path this frame — a one-frame jump read "round a tip" ends the hold (`st.asmEdgeHold = null`). Two writers of one hold.
+* **G5**: the orbit's, the solved piece's and the spring's angles are held exactly in every turn; the drawn ring still drifts ~1 mm a frame in step
+  with the turn while his dy pushes (`ilmj_83s` f685 – f705). Its source was not found (no catch-up left; the depth glide is 125 ms by time). Open.
+
+### 18.5 What he will feel (plain words)
+Going round `Scene_1`'s sides the camera now moves exactly as on `de4a10e`: no stop at an edge, no surge. The half turns over a top or a bottom are
+never faster than 0.35 s, the gizmo still while they run, and they no longer restart in the middle; on his own play nothing jumps 45° in a frame and
+the piece jumps less often than on `de4a10e`. But he waits longer: the gizmo stands still about 0.29 s at each of his edges, 45 % of his play's time
+on `Scene_0bis`. And when he spins fast — round the sides at 1 200 px a second, or over `Scene_1`'s top — the camera falls far behind and then
+swings to catch up after he stops, over the top with a roll on the glass. On `Scene_0bis`'s bottom one push across bounced back and forth.
+
+### 18.6 The sliders — ORBIT › CAMERA FOLLOWER › THE EDGE'S TURN (`TUNING_MENU.md`, 141)
+`followTurnMinDeg` 10° · `followTurnPace` 1 · `followTurnOnJump` 1 (0 = `ba369aa`) · `followTurnFinger` 1 (0 = `ba369aa`: the orbit's pace, no top
+speed) · **`followTurnMaxDegS` 520°/s — "the 180° realignment's top speed"** (0 – 2 000, step 10; 0 = none) · `followTurnRebase` 1 (0 = `ba369aa`).
+By URL too. All three switches 0 = `ba369aa` frame for frame; `followTop` 0 = `de4a10e`.
