@@ -221,6 +221,8 @@ export function installTuningMenu(st: SceneState): void {
           title: "CAMERA FOLLOWER",
           sliders: [
             tunable(st, "camera follower far out: a simple polar orbit, world up (1; 0 = the carried up)", "cameraFollower", 0, 1, 1),
+            // ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §4.7 — R2) the picture's rebuild, one switch: close in's turns about the piece
+            tunable(st, "the picture's rebuild: close in's turns about the piece (1; 0 = as 620f227)", "pictureOne", 0, 1, 1),
             tunable(st, "follower: its one ease on the sphere (ms)", "followMs", 0, 500, 10), // ⭐ (2026-11-21, the owner: *"up to 500 ms with 10 ms increment"*)
             tunable(st, "follower: round the vertical, never nearer than (deg; 0 = over it)", "followPoleDeg", 0, 60, 1),
             tunable(st, "follower: the detour round the vertical starts at (deg off it)", "followFromDeg", 10, 90, 1),

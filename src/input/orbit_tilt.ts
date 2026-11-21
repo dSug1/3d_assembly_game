@@ -633,6 +633,43 @@ export function poseFramingTwo(a: CamPose, b: CamPose, A: Vec3, k: number, keep:
 export const FRAMING_SEP_MIN = 1e-3;
 
 /**
+ * ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §3 O-1, §4.4, D-P2 — packet R2, the switch `pictureOne`) THE RULE A CAMERA TURN IS DRAWN BY, chosen at its FIRST
+ * frame (`rule` 0) and kept: 1 the two framed (`poseFramingTwo`), 2 about the piece (`poseAboutPiece`). `pictureOne` 1: a turn born CLOSE IN (`closeIn` —
+ * the automatic tilt's latch, the approach within `tiltAutoM` of the gizmo) is turned about the piece for its WHOLE life: close in the aim is the gizmo by
+ * the piece, and the approach brings the piece along the view onto it — the two-target solve swung the camera round the piece (7°, 20° a frame), then had
+ * none and the turn about the piece took over (32 – 48° in one frame; 35° backing out, the solve back). A held orientation with the piece moving along the
+ * view is a dolly: what the turn about the piece draws at k 0. Otherwise (far out: the assembly kept on the glass, 2026-11-14; or `pictureOne` 0 —
+ * `620f227`): 0 until the framing is tried (its first frame null: 2). Pure.
+ */
+export function turnFraming(rule: 0 | 1 | 2, closeIn: boolean, pictureOne: number): 0 | 1 | 2 {
+  if (rule !== 0) return rule;
+  return pictureOne === 1 && closeIn ? 2 : 0;
+}
+
+/**
+ * ⭐⭐⭐ (R2) THE POSE OF A CAMERA TURN — the ONE rule every turn's drawer goes through (`zoneMixPose`, `framedPose`): `k` of the way from `a` (the pose shown
+ * at its start, `a.piece` the piece then) to `b`, the piece at `piece`; the rule by `turnFraming` (`turn.rule` as carried); the two framed where tried and
+ * solvable (`turn.keep` their angles carried), else about the piece (`hint` its axis kept). Returns the pose, the rule and the angles to carry, whether the
+ * framing drew it (`framed`), and the turn about the piece (`about`: its axis and angle — the turn's clock reads them, whichever drew). Pure.
+ */
+export function turnPose(
+  a: CamPose,
+  b: CamPose,
+  piece: Vec3,
+  k: number,
+  turn: { readonly rule: 0 | 1 | 2; readonly keep: FramingKeep | null },
+  hint: Vec3 | null,
+  closeIn: boolean,
+  pictureOne: number,
+): { readonly pose: CamPose; readonly rule: 1 | 2; readonly keep: FramingKeep | null; readonly framed: boolean; readonly about: { readonly pose: CamPose; readonly axis: Vec3 | null; readonly angle: number } } {
+  const rule = turnFraming(turn.rule, closeIn, pictureOne);
+  const about = poseAboutPiece(a, b, piece, k, hint);
+  const t = rule === 2 ? null : poseFramingTwo(a, b, piece, k, turn.keep);
+  if (t !== null) return { pose: t.pose, rule: 1, keep: t.keep, framed: true, about };
+  return { pose: about.pose, rule: rule === 0 ? 2 : rule, keep: turn.keep, framed: false, about };
+}
+
+/**
  * ⭐⭐⭐ (2026-11-10, the owner: *"limit the speed of the scene tilt at crossing"* → *"yes"* to a speed in °/s) THE ROLL'S DURATION (ms) at most `degS` °/s for
  * a roll of `rad` (the whole turn, `frameMix`'s angle) — the same angular speed for every roll: 360°/s, a far edge's half turn 0.5 s, a side's 63° 0.18 s
  * (⛔ a whole roll in 250 ms whatever its size: the half turn 2.9 × faster than the side's). `degS` 0: at once.

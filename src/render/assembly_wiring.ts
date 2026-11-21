@@ -39,7 +39,7 @@ import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { crossingHold, crossingPitch, distanceToFacets, fingerInFrame, fingerSwapped, SPIT_CROSSING_PITCH_RAD, spitCameraHeading, spitSide, zoneAt, type PolarZone } from "../input/polar_zone";
 import { assignCharts, capTiltHeading, chartContour, chartZones, DEFAULT_CHART_OPTS, type ChartAssignment, type ChartFace } from "../input/orbit_charts";
-import { holdAtCrossing, poseAboutPiece, poseFramingTwo, type CamPose, type EdgeHold } from "../input/orbit_tilt";
+import { holdAtCrossing, turnPose, type CamPose, type EdgeHold } from "../input/orbit_tilt";
 import { poleCrossingDue, poleSeam } from "../input/pole_crossing";
 import { fingerOnLogic, gapStep, restShare } from "../input/roll_follow";
 import { lawHalfTurn } from "../input/upright";
@@ -1617,22 +1617,21 @@ export function zoneMixPose(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, 
   const to: CamPose = { eye, look, up };
   st.asmPieceDrawn = [piece[0], piece[1], piece[2]]; // ⭐ where the piece is drawn this frame: a turn starting next frame starts from it
   if (zm === null) return to;
-  const r = poseAboutPiece(zm.from, to, piece, zm.k, zm.axis);
-  zm.axis = r.axis ?? zm.axis ?? [0, 1, 0]; // ⭐ the angle read (a turn of nothing has no axis of its own: done at once — never held for ever)
-  zm.rad = r.angle;
   // ⭐⭐⭐ (2026-11-14, the owner: *"Is there a way for the camera to realign without the piece nor the assembly/scene to sometimes fly off the screen view
   // (especially at far distance)?"*) THE TWO FRAMED — the piece and the camera's aim (the assembly far out), each carried straight on the glass
   // (`poseFramingTwo`, toric space): neither leaves it; degenerate (the two on one ray, close in where the aim is the gizmo by the piece): about the
   // piece alone, as above. ⛔ About the piece alone everywhere: far out the assembly swung round the piece (4.5° at 7.7 m — off a narrow glass)
   // ⭐ the rule chosen at the turn's first frame and kept (`zm.rule` 2: about the piece) — never switched mid-turn (a jump between the two poses); the
   // two's angles carried frame to frame (`zm.keep`, `FramingKeep`)
-  const t = zm.rule === 2 ? null : poseFramingTwo(zm.from, to, piece, zm.k, zm.keep);
-  if (t === null && zm.rule === 0) zm.rule = 2;
-  const pose = t !== null ? t.pose : r.pose;
-  if (t !== null) {
-    zm.rule = 1;
-    zm.keep = t.keep;
-  }
+  // ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` D-P2 — packet R2, `pictureOne` 1) a turn born CLOSE IN (the automatic tilt latched) about the piece for its whole
+  // life (`turnPose` → `turnFraming`, the one rule): the approach brought the piece along the view onto its aim — the solve swung, then had none (32 – 48°)
+  const d = turnPose(zm.from, to, piece, zm.k, zm, zm.axis, st.asmTiltAuto, st.cfg.pictureOne);
+  const r = d.about;
+  zm.axis = r.axis ?? zm.axis ?? [0, 1, 0]; // ⭐ the angle read (a turn of nothing has no axis of its own: done at once — never held for ever)
+  zm.rad = r.angle;
+  zm.rule = d.rule;
+  zm.keep = d.keep;
+  const pose = d.pose;
   st.asmCamLast = { dir: norm3([pose.eye[0] - pose.look[0], pose.eye[1] - pose.look[1], pose.eye[2] - pose.look[2]]), up: pose.up };
   return pose;
 }
