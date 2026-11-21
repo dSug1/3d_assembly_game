@@ -29,6 +29,9 @@ import { changeApply, dirFrame, gizmoFacetW, seamRebase, spitZone } from "./asse
 import { upSquareToView } from "../input/camera_frame";
 import type { SceneState } from "./scene_state";
 
+/** ⭐⭐⭐ (R3a) The one picture's hook far out: the follower's pose at its own direction `dFar` → the pose drawn (`picture_wiring.ts`, `pictureStep`). */
+export type FollowPicture = (P: { readonly eye: Vec3; readonly look: Vec3; readonly up: Vec3; readonly piece: Vec3 }, dFar: Vec3, hang: number, us: Vec3) => { readonly eye: Vec3; readonly look: Vec3; readonly up: Vec3; readonly piece: Vec3 };
+
 /** ⭐ The follower draws here (far out): the switch on, no tilt nor its latch, the square camera's share 0, no timed turn, a direction asked. */
 export function followActive(st: SceneState): boolean {
   const sq = st.asmSquare;
@@ -50,10 +53,12 @@ export function followFrame(
   gapM: number,
   off: { readonly yawRad: number; readonly pitchRad: number },
   dtMs: number,
+  pic?: FollowPicture,
 ): { readonly eye: Vec3; readonly look: Vec3; readonly up: Vec3 } | null {
   const was = st.asmFollow;
   if (!followActive(st) || st.orbitPiecePlaced) {
-    st.asmFollow = was === null ? null : { state: null, piece: null, rec: { on: 0 } };
+    // ⭐⭐⭐ (R3a, `pictureOne` 1) the picture keeps the state (parked at rest on its target: `picture_wiring.ts`) — never dropped
+    if (pic === undefined) st.asmFollow = was === null ? null : { state: null, piece: null, rec: { on: 0 } };
     return null;
   }
   // a change of frame asked: applied at once, the dy hold the logic's crossing's (OP8) — ⭐ (H2) under the top's rule none: a hold far out only after the
@@ -94,7 +99,9 @@ export function followFrame(
     const k = { tauMs: st.cfg.followMs, poleDeg: st.cfg.followPoleDeg, fromDeg: st.cfg.followFromDeg, maxDegS: st.cfg.followMaxDegS };
     s = followStep(s0, st.asmAsk!, dtMs, k);
   }
-  const P = followPose(s.dir, look, foot, hang, gapM, off.yawRad, off.pitchRad);
+  const P0 = followPose(s.dir, look, foot, hang, gapM, off.yawRad, off.pitchRad);
+  // ⭐⭐⭐ (R3a, `pictureOne` 1) THE ONE PICTURE draws (`pictureStep`): w 0 and no up held — `P0` itself, the same objects (far out bit for bit)
+  const P = pic === undefined ? P0 : pic(P0, s.dir, hang, hang > 1e-9 ? [(pp[0] - foot[0]) / hang, (pp[1] - foot[1]) / hang, (pp[2] - foot[2]) / hang] : st.asmAsk!);
   const prev = was?.piece ?? null;
   st.pieceFrameStepM = prev === null ? 0 : Math.hypot(P.piece[0] - prev[0], P.piece[1] - prev[1], P.piece[2] - prev[2]);
   st.pieceAnchor = P.piece;

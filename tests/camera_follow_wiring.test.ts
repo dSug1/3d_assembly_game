@@ -63,8 +63,9 @@ describe("F2 — the follower at the camera's stage", () => {
 
   it("the stage: the follower first; the live picture (`rollPictureFrame`) ONLY where it does not draw; one writer of the camera", () => {
     const g = code("render/green_box_wiring.ts");
-    expect(g).toContain("const fp = followFrame(st, pp, [c0.x, c0.y, c0.z], camAt, lookAt, camFrame.up, gapFull, off, dtSec * 1000);");
-    expect(g).toContain("const zp = fp ?? rollPictureFrame(st, pp, camAt, lookAt, camFrame.up, dtSec * 1000);");
+    // ⭐⭐⭐ (2026-11-21, R3a) the one picture (`pictureOne` 1 with the follower: `pictureFrame` — the follower first, the close drawer where it does not draw); else this line exactly
+    expect(g).toContain(": (followFrame(st, pp, [c0.x, c0.y, c0.z], camAt, lookAt, camFrame.up, gapFull, off, dtSec * 1000) ?? rollPictureFrame(st, pp, camAt, lookAt, camFrame.up, dtSec * 1000));");
+    expect(g).toContain("? pictureFrame(st, pp, [c0.x, c0.y, c0.z], camAt, lookAt, camFrame.up, gapFull, off, dtSec * 1000, orbitDvPerMm(st))");
     expect(g.match(/rollPictureFrame\(/g)?.length).toBe(1);
     expect(g.match(/st\.camera\.setPosition\(/g)?.length).toBe(1);
     const w = code("render/camera_follow_wiring.ts");
@@ -73,7 +74,9 @@ describe("F2 — the follower at the camera's stage", () => {
 
   it("not drawing: nothing written but its own state (dropped: it restarts at rest) — close in stays the live build's", () => {
     const f = between(code("render/camera_follow_wiring.ts"), "export function followFrame(", "// a change of frame asked");
-    expect(f).toContain("if (!followActive(st) || st.orbitPiecePlaced) { st.asmFollow = was === null ? null : { state: null, piece: null, rec: { on: 0 } }; return null; }");
+    // ⭐⭐⭐ (2026-11-21, R3a) dropped only on today's line (no picture hook); the one picture keeps it, parked (`picture_wiring.ts`)
+    expect(f).toContain("if (!followActive(st) || st.orbitPiecePlaced) {");
+    expect(f).toContain("if (pic === undefined) st.asmFollow = was === null ? null : { state: null, piece: null, rec: { on: 0 } }; return null; }");
   });
 
   it("a change asked: applied at once, the dy hold the LOGIC's crossing's (OP8); nothing here undoes a turn, a hold or an ease", () => {
@@ -91,7 +94,7 @@ describe("F2 — the follower at the camera's stage", () => {
   it("the piece rides the followed direction; the finger reads the camera drawn; the record a shadow without a carried up (no half turn: no gizmo hold)", () => {
     const w = code("render/camera_follow_wiring.ts");
     expect(w).toContain("s = followStep(s0, st.asmAsk!, dtMs, k);");
-    expect(w).toContain("const P = followPose(s.dir, look, foot, hang, gapM, off.yawRad, off.pitchRad);");
+    expect(w).toContain("const P0 = followPose(s.dir, look, foot, hang, gapM, off.yawRad, off.pitchRad);");
     expect(w).toContain("st.pieceAnchor = P.piece;");
     expect(w).toContain("st.asmPieceDrawn = [P.piece[0], P.piece[1], P.piece[2]];");
     expect(w).toContain("if (lv > 1e-12) st.asmCamLast = { dir: [-view[0] / lv, -view[1] / lv, -view[2] / lv], up: upD };");
@@ -109,7 +112,7 @@ describe("H2 — the top's rule at the camera's stage", () => {
   });
 
   it("the switch 0: the follower as `de4a10e` (`followStep`, the detour); 1: `followTopStep` — the levelled reading, the orbit's own direction, the gizmo's facet, the glass's up drawn, the dy pushing", () => {
-    const f = between(code("render/camera_follow_wiring.ts"), "const top = st.cfg.followTop === 1;", "const P = followPose(");
+    const f = between(code("render/camera_follow_wiring.ts"), "const top = st.cfg.followTop === 1;", "const P0 = followPose(");
     const i1 = f.indexOf("if (top) {");
     const i0 = f.indexOf("} else {", i1);
     expect(i1).toBeGreaterThan(0);
@@ -130,7 +133,7 @@ describe("H2 — the top's rule at the camera's stage", () => {
     const i = g.indexOf("st.asmAsk = askedDir(st, rig.yaw, rig.v);");
     const j = g.indexOf("st.asmAskLevel = st.cfg.followTop === 1 ? levelledAsked(st, rig.yaw, rig.v) : null;");
     expect(j).toBeGreaterThan(i);
-    expect(g.indexOf("const fp = followFrame(", j)).toBeGreaterThan(j);
+    expect(g.indexOf("followFrame(st, pp, [c0.x", j)).toBeGreaterThan(j);
     const a = code("render/assembly_wiring.ts");
     expect(between(a, "export function levelledAsked(", "export function gizmoFacetW(")).toContain("return levelledHeading(yaw, v, st.asmAskCalm, dirFrame(st), st.cfg.followPoleDeg); }");
     const gz = between(a, "export function gizmoFacetW(st: SceneState): Vec3 | null {", "function drawnDir(");

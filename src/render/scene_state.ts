@@ -513,6 +513,10 @@ export interface SceneState {
   asmAskLevel: number | null;
   /** ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §13 — F2) THE CAMERA FOLLOWER (`render/camera_follow_wiring.ts`): its state while it draws far out (`null`
    *  where it does not: it restarts at rest), the piece drawn last frame, and the frame's record for the probes (`rec`); `null`: never drawn yet */
+  /** ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §4.1 — R3a, `pictureOne` 1) THE ONE PICTURE's state (`render/picture_wiring.ts`, `input/picture.ts`): the turntable, the
+   *  up's hand-over, the up drawn; the approach's place last frame (his outward mm); the band's share and the regime drawn this frame (the record); the heading
+   *  the follower is parked on (latched: from the drawn up; the way out: held) — never dropped */
+  asmPicture: { readonly s: import("../input/picture").PictureState; readonly aWas: number; readonly w: number; readonly far: boolean; readonly psiPark: number | null } | null;
   asmFollow: {
     readonly state: import("../input/camera_follow").FollowState | null;
     readonly piece: import("../core/vec").Vec3 | null;

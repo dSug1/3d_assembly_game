@@ -140,7 +140,7 @@ describe("R2 — the switch and the wiring: every turn's drawer through the one 
     expect(raw("src/render/tuning_menu.ts")).toContain('"pictureOne", 0, 1, 1)');
   });
   it("the zone's turn (`zoneMixPose`) and the framing turn (`framedPose`) through `turnPose`, the predicate the automatic tilt's latch; no other caller of either pose", () => {
-    expect(raw("src/render/assembly_wiring.ts")).toContain("const d = turnPose(zm.from, to, piece, zm.k, zm, zm.axis, st.asmTiltAuto, st.cfg.pictureOne);");
+    expect(raw("src/render/assembly_wiring.ts")).toContain("const d = turnPose(zm.from, to, piece, zm.k, zm, zm.axis, st.asmTiltAuto || (st.cfg.pictureOne === 1 && st.cfg.cameraFollower === 1 && approachBand(st) > 0), st.cfg.pictureOne);");
     expect(raw("src/input/upright.ts")).toContain("const d = turnPose(f.from, to, piece, k, f, f.axis, closeIn, pictureOne);");
     expect(raw("src/render/roll_shadow.ts")).toContain("framedPose(ft, G, piece, st.asmTiltAuto, st.cfg.pictureOne)");
     const files = (d: string): string[] => readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? files(`${d}/${e.name}`) : e.name.endsWith(".ts") ? [`${d}/${e.name}`] : []));

@@ -126,11 +126,11 @@ describe("the camera turned about the piece (a polar zone's turn)", () => {
     expect(gb).toMatch(/const camPlace = cameraPlaceNow\(st\);[^\n]*\n(?:\s*\/\/[^\n]*\n)*\s*if \(assemblyOn\(st\)\) spitStep\(st, camPlace\);\n\s*const camFrame = cameraFrameNow\(st, camPlace, off, dtSec \* 1000\);/);
     // ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` R2) both poses through the one rule (`turnPose`: the framing unless born close in with `pictureOne` 1; the turn
     // about the piece read for the clock) — `tests/turn_framing.test.ts`
-    expect(aw).toContain("const d = turnPose(zm.from, to, piece, zm.k, zm, zm.axis, st.asmTiltAuto, st.cfg.pictureOne);");
+    expect(aw).toContain("const d = turnPose(zm.from, to, piece, zm.k, zm, zm.axis, st.asmTiltAuto || (st.cfg.pictureOne === 1 && st.cfg.cameraFollower === 1 && approachBand(st) > 0), st.cfg.pictureOne);");
     expect(aw).toContain("const r = d.about;");
     // ⭐⭐⭐ (2026-11-18, FO3 S1) through the picture a follower of the logic (`rollPictureFrame`), which hands the ghost to `zoneMixPose` on both paths
     // ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §13 F2) …wherever the camera follower does not draw (close in, or `cameraFollower` 0)
-    expect(gb).toContain("const zp = fp ?? rollPictureFrame(st, pp, camAt, lookAt, camFrame.up, dtSec * 1000);");
+    expect(gb).toContain("?? rollPictureFrame(st, pp, camAt, lookAt, camFrame.up, dtSec * 1000));");
     const rs = readFileSync("src/render/roll_shadow.ts", "utf8");
     expect(rs).toContain("return zoneMixPose(st, piece, eye, look, up);");
     expect(rs).toContain("const zp = zoneMixPose(st, piece, eye, look, up);");

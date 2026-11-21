@@ -40,6 +40,7 @@ import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { crossingHold, crossingPitch, distanceToFacets, fingerInFrame, fingerSwapped, SPIT_CROSSING_PITCH_RAD, spitCameraHeading, spitSide, zoneAt, type PolarZone } from "../input/polar_zone";
 import { assignCharts, capTiltHeading, chartContour, chartZones, DEFAULT_CHART_OPTS, type ChartAssignment, type ChartFace } from "../input/orbit_charts";
 import { holdAtCrossing, turnPose, type CamPose, type EdgeHold } from "../input/orbit_tilt";
+import { approachOutMm, bandShare } from "../input/picture";
 import { poleCrossingDue, poleSeam } from "../input/pole_crossing";
 import { fingerOnLogic, gapStep, restShare } from "../input/roll_follow";
 import { lawHalfTurn } from "../input/upright";
@@ -113,7 +114,7 @@ type OrbitStateStart = Pick<
   | "asmGizmo" | "asmSupport" | "asmSupportLevel" | "pieceHold" | "pieceHoldPrev" | "asmLook" | "asmFacePoint" | "asmG" | "asmPrevQ" | "asmShown" | "asmFaceBand" | "asmFree" | "asmPlaceWas" | "asmMapQ"
   | "asmEdgeHold" | "asmZone" | "asmZoneMix" | "asmChange" | "asmPieceDrawn" | "asmDirEase" | "asmCamLast" | "asmRollShadow" | "asmSpitSide" | "asmSpitU" | "asmSpitPic" | "asmSpitPicWas" | "asmZoneAlpha" | "asmDySign" | "asmFingerDxMm" | "asmDxSign" | "asmCarriedYaw" | "asmHeadO"
   | "asmHeadW" | "asmHeadYaw" | "asmTilt" | "asmGOff" | "asmTiltAuto" | "asmTiltPending" | "asmOrbitMm" | "asmFrameMm" | "asmBlend" | "asmCalmWhole" | "asmCalmWholeV"
-  | "asmSquare" | "asmCalm" | "asmMouth" | "asmRawPrev" | "asmGizmoAt" | "asmGizmoLag" | "asmAskCalm" | "asmAsk" | "asmAskLevel" | "asmFollow"
+  | "asmSquare" | "asmCalm" | "asmMouth" | "asmRawPrev" | "asmGizmoAt" | "asmGizmoLag" | "asmAskCalm" | "asmAsk" | "asmAskLevel" | "asmFollow" | "asmPicture"
 >;
 
 /**
@@ -178,6 +179,7 @@ export function orbitStateStart(): OrbitStateStart {
     asmAsk: null,
     asmAskLevel: null,
     asmFollow: null,
+    asmPicture: null,
   };
 }
 
@@ -1581,6 +1583,15 @@ export function approachMove(st: SceneState, da: number): number {
   return st.approach - a0;
 }
 
+/**
+ * ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §4.2 — R3a) THE BAND'S SHARE at the approach's PLACE (`w`, D-P3 (a)): 1 at and inside the unlatch (0.65 m), a
+ * smoothstep down to 0 over his last `pictureBandMm` of approach finger beyond it (`approachOutMm`, `bandShare`) — the logic's own place, read by the picture
+ * and by a turn's rule at its birth (`zoneMixPose`: the way out born at w > 0 turned about the piece, §4.4).
+ */
+export function approachBand(st: SceneState): number {
+  return bandShare(approachOutMm(st.cfg, st.approach, orbitDvPerMm(st)), st.cfg.pictureBandMm);
+}
+
 /** ⭐ An approach input: `dyMm` of finger (UP brings the piece IN), at the orbit dy's pace on the curve's coordinate; recorded for the coast. */
 export function approachInput(st: SceneState, dyMm: number): void {
   const da = dyMm * orbitDvPerMm(st);
@@ -1625,7 +1636,8 @@ export function zoneMixPose(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, 
   // two's angles carried frame to frame (`zm.keep`, `FramingKeep`)
   // ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` D-P2 — packet R2, `pictureOne` 1) a turn born CLOSE IN (the automatic tilt latched) about the piece for its whole
   // life (`turnPose` → `turnFraming`, the one rule): the approach brought the piece along the view onto its aim — the solve swung, then had none (32 – 48°)
-  const d = turnPose(zm.from, to, piece, zm.k, zm, zm.axis, st.asmTiltAuto, st.cfg.pictureOne);
+  // ⭐⭐⭐ (R3a, §4.4) …and the way out, born in the band (w > 0: at the unlatch w is whole), about the piece too
+  const d = turnPose(zm.from, to, piece, zm.k, zm, zm.axis, st.asmTiltAuto || (st.cfg.pictureOne === 1 && st.cfg.cameraFollower === 1 && approachBand(st) > 0), st.cfg.pictureOne);
   const r = d.about;
   zm.axis = r.axis ?? zm.axis ?? [0, 1, 0]; // ⭐ the angle read (a turn of nothing has no axis of its own: done at once — never held for ever)
   zm.rad = r.angle;
