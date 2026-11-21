@@ -1,7 +1,7 @@
 // ⭐⭐⭐ (2026-11-18, package FO1 — `Claude/40_RENDER_SCENE/spec/FAST_ORBIT.md` §4, §6) THE FAST WALKS: one walk a run, the gizmo STEERED to targets on the
 // glass (so the ROUTE is the same whatever the pace), headless on the probes' virtual clock (`level_entry_check.mjs`'s harness, copied), every frame
 // recorded for `fast_walk_analyse.mjs`. Run by `fast_walk_batch.sh` (the runbook: scripts/probes/ORBIT_GATES.md §9).
-//   URL=... TGT="<label>:<x m>:<phi deg>:<face>[:pass];..." SEQ="<label> <label> ..." [REPS=1] [IN=0|half] [HALFN=7] LPX=20 [K=4] [TOL=0.008]
+//   URL=... TGT="<label>:<x m>:<phi deg>:<face>[:pass];..." SEQ="<label> <label> ..." [REPS=1] [IN=0|half|osc] [HALFN=7] [OSCN=4 OSCPX=5 OSCIN=40 OSCOUT=40 OSCMAX=600] LPX=20 [K=4] [TOL=0.008]
 //     [START_PX=2] [AY=0.229] [AZ=0.191] OUTJSON=<frames.json> [REC=<inputs.json>] node fast_walk_check.mjs
 //   A target is a place round the body's long axis (x along it; phi the angle round it in the y-z plane — 0 toward +z, 90° up): the gizmo is steered
 //   toward it (the error on the glass: FAST at LPX px a frame until it has passed it, then FINE at START_PX — see `leg`), reached within TOL m and on
@@ -210,6 +210,36 @@ try {
     console.log(`  start ${seq[0]}: ${await leg("to-start", seq[0], SPX)}`);
     const L = seq.slice(1);
     for (let r = 0; r < REPS; r++) for (let i = 0; i < L.length; i++) console.log(`  loop${r} ->${L[i]}: ${await leg(`loop${r}-${L[i]}`, L[i], LPX0, r === REPS - 1 && i === L.length - 1)}`);
+    // ⭐ (2026-11-21, packet H5 point 5 — the owner: *"when I A + dy to approach on the level face of scene 1, there is an insane amount of camera
+    // movements"*) IN=osc: after the legs, OSCN cycles of the A + dy approach at OSCPX px a frame — IN until the automatic tilt latches (`auto`) then OSCIN
+    // frames more, OUT until it lets go then OSCOUT frames more (each leg capped at OSCMAX frames); the finger re-pressed at the glass's border, A held
+    if (process.env.IN === "osc") {
+      const OSCN = +(process.env.OSCN ?? 4), PX = +(process.env.OSCPX ?? 5), NIN = +(process.env.OSCIN ?? 40), NOUT = +(process.env.OSCOUT ?? 40), MAX = +(process.env.OSCMAX ?? 600);
+      const a0 = (await state()).ap;
+      await drag("osc-probe", 250, 400, 0, -PX, 6, true);
+      const inDy = (await state()).ap < a0 - 1e-6 ? -1 : 1;
+      const aDrag = async (name, dy, until, extra) => {
+        await ev(`window.__leg = "${name}"`);
+        await keyA(true);
+        const y0 = dy < 0 ? 700 : 100; // inside the canvas (the legs' own border: 30 … 720)
+        let yy = y0, n = 0, after = -1;
+        await mouse("mousePressed", 250, yy, 1); await step(F(2));
+        while (n < MAX) {
+          if (after < 0 && until(await state())) after = 0;
+          if (after >= 0 && after++ >= extra) break;
+          if (yy + dy < 30 || yy + dy > 720) { await mouse("mouseReleased", 250, yy, 0); await step(1); yy = y0; await mouse("mousePressed", 250, yy, 1); await step(F(2)); }
+          yy += dy; await mouse("mouseMoved", 250, yy, 1); await step(1); n++;
+        }
+        await step(F(6)); await mouse("mouseReleased", 250, yy, 0); await keyA(false);
+        await ev(`window.__leg = "${name}-settle"`); await step(F(40));
+        const s = await state();
+        return `${n} fr, approach ${s.ap.toFixed(3)}, auto ${s.auto}`;
+      };
+      for (let c = 0; c < OSCN; c++) {
+        console.log(`  osc${c} in: ${await aDrag(`osc${c}-in`, inDy * PX, (s) => s.auto, NIN)}`);
+        console.log(`  osc${c} out: ${await aDrag(`osc${c}-out`, -inDy * PX, (s) => !s.auto, NOUT)}`);
+      }
+    }
   }
   const C = await ev("window.__cam");
   const pre = await ev("window.__preRec");
