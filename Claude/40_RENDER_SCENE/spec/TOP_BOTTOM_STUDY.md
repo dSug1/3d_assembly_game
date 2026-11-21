@@ -1,6 +1,6 @@
 # The top and bottom far out — THE STUDY after the last fix round (packet H4, 2026-11-21, branch `1.0.152-`)
 
-> **Status: PROPOSED — nothing built; for the owner's word.** (⭐ H5, 2026-11-21: his look on `f5e35c3` read — §7 – §9: A, B and point 2 one root, D-H19 the top rule only near the vertical; ✅ D-H20 DECIDED by him: `followMs` 200; point 5, the approach's handover, D-H22.) Written because H3 (`f5e35c3` live = `47e7267`) was the last fix round on this join and
+> **Status: ⭐ BUILT in R5 (2026-11-21, behind `pictureOne` 1: D-H13 – D-H16, D-H19 — [`PICTURE_REBUILD.md`](PICTURE_REBUILD.md) §8.4; gates owed). Written as PROPOSED — nothing built then; decided §6.** (⭐ H5, 2026-11-21: his look on `f5e35c3` read — §7 – §9: A, B and point 2 one root, D-H19 the top rule only near the vertical; ✅ D-H20 DECIDED by him: `followMs` 200; point 5, the approach's handover, D-H22.) Written because H3 (`f5e35c3` live = `47e7267`) was the last fix round on this join and
 > gates still fail ([`CAMERA_FOLLOWS_GIZMO.md`](CAMERA_FOLLOWS_GIZMO.md) §18; [`UPRIGHT_LESSONS.md`](UPRIGHT_LESSONS.md) row 2, §5 rule 2). His four
 > parts: the rules → the obstacles, each reproduced → a design from prior art, one owner per thing → its audit, gates and decisions.
 > ⛔ Offline only (the owner was testing on this PC): the code, the kit's recordings (`runs_h3`, `runs_h2`, `runs_g2`, `runs_h1`) and the pure
@@ -345,3 +345,18 @@ two frames; leaving it a **35°** jump, a 57° tilt back; at the follower's retu
 — ⛔ **but close in's tilt and the two jumps at the approach's end stay, identical with every upright switch at 0 as well** (`uprightCarried`,
 `uprightPicture`, `freeTurnMaxDeg` 0, `rollFollowMs` 200: the same figures to the 0.1°) — close in's own camera, older than the upright work (by switches,
 not proven frame for frame to `892b6a3`). `followMs` 200 changes none of it.
+
+## 10. The zenith crossing near the tips — his finding of 2026-11-21 night, the part that is NOT the picture's (PROPOSED, not built)
+*His words:* the gizmo *"stuck on the pole"* far and close (*"when the gizmo is stuck the dy does nothing in one direction"*); close in *"jittery and jerky
+… especially around the zenith edge and up to the poles and next to the level face"* (videos 202702, 203055, 220715). ⭐ The picture's part (R3's band:
+two heading owners blended over the vertical) is `PICTURE_REBUILD.md`'s R3 fix round 1. ⛔ **This part is the same in the old build** (`pictureOne` 0,
+frame for frame close in; kit `follow/r3fix/rd_stuck.mjs` on `runs_str`): on his free strokes (dx then dy) near the left tip the gizmo stands still 100 –
+114 of 120 frames of a dy stroke in EVERY build — 76 frames the edge's hold (`eh`: *"the dy that crossed held"*), 45 a turn running (*"the gizmo held until
+it completes"*). ⭐ **Root:** the spit's zenith crossing — his 2026-11-13 rule (*"replicate the behavior of scene 0 when crossing the zenith edge"*: one
+timed 180° turn over the ridge, the gizmo held, then the dy that crossed held; D-H8 one pass per gesture) — applies along the WHOLE ridge, and the ridge
+runs into the apex, where the ring round the axis is a few cm: a dy there crosses it at once, then again, each crossing a 180° turn and a hold (*"stuck"*,
+*"jerky"*). His own words of 2026-11-13 point the other way there: *"if the faces contour is small and many faces converge to a singularity, polar orbit
+shall be the only way"*. ⭐ **Proposal (D-R1, for his word — it bends his 11-13 zenith rule and D-H8, so NOT built tonight):** the crossing's turn by
+PLACE, as D-H19 (ii) already does far out — a half turn where the ring is wide (mid-axis), a partial one toward the tip end, none near the apex (one
+smooth yaw round the tip); the hold only after a real turn (R4's *"a hold only after a half turn"*), so near the apex a dy goes round with no stop. Gates:
+his free strokes (`drv_r3x.sh`'s), the gizmo still while a dy pushes ≤ the mid-body's share, the turns near the apex 0.

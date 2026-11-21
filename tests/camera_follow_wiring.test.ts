@@ -77,7 +77,8 @@ describe("F2 — the follower at the camera's stage", () => {
   it("not drawing: nothing written but its own state (dropped: it restarts at rest) — close in stays the live build's", () => {
     const f = between(code("render/camera_follow_wiring.ts"), "export function followFrame(", "// ⭐⭐⭐ (2026-11-21, R3b) a change of frame asked");
     // ⭐⭐⭐ (2026-11-21, R3a) dropped only on today's line (no picture hook); the one picture keeps it, parked (`picture_wiring.ts`)
-    expect(f).toContain("if (!followActive(st) || st.orbitPiecePlaced) {");
+    // ⭐ (2026-11-21 night, R3-FIX) `also`: the one picture's far path through a logic turn — absent (today's line), exactly the predicate before
+    expect(f).toContain("if ((also !== true && !followActive(st)) || st.orbitPiecePlaced) {");
     expect(f).toContain("if (pic === undefined) st.asmFollow = was === null ? null : { state: null, piece: null, rec: { on: 0 } }; return null; }");
   });
 
@@ -123,7 +124,8 @@ describe("H2 — the top's rule at the camera's stage", () => {
     const i1 = f.indexOf("if (top) {");
     const i0 = f.indexOf("} else {", i1);
     expect(i1).toBeGreaterThan(0);
-    expect(f.slice(i1, i0)).toContain("const r = followTopStep(s0, was?.top ?? null, { ask: st.asmAsk!, orbit: orbitW, psiL: st.asmAskLevel, nW: gizmoFacetW(st), upShown: st.asmCamLogic?.up ?? null, dySign: st.asmDySign, fingerMm: st.asmFrameMm }, dtMs, kt);");
+    // ⭐ (R5) H2 / H3's step exactly off the far rule as decided (`camera_follow_r5.test.ts` reads the other branch)
+    expect(f.slice(i1, i0)).toContain(": followTopStep(s0, was?.top ?? null, { ask: st.asmAsk!, orbit: orbitW, psiL: st.asmAskLevel, nW: gizmoFacetW(st), upShown: st.asmCamLogic?.up ?? null, dySign: st.asmDySign, fingerMm: st.asmFrameMm }, dtMs, kt);");
     expect(f.slice(i1, i0)).toContain("const orbitW = tiltDir(dirFrame(st), orbitDir(st.orbit.yaw, st.orbit.elevation));");
     expect(f.slice(i1, i0)).not.toContain("followStep(");
     expect(f.slice(i0)).toContain("s = followStep(s0, st.asmAsk!, dtMs, k);");
@@ -138,7 +140,8 @@ describe("H2 — the top's rule at the camera's stage", () => {
   it("the levelled reading at the rig's angles, beside the direction asked, only under the switch; the calm asked in its frame; the gizmo's facet off the face map (the MODEL's)", () => {
     const g = code("render/green_box_wiring.ts");
     const i = g.indexOf("st.asmAsk = askedDir(st, rig.yaw, rig.v);");
-    const j = g.indexOf("st.asmAskLevel = st.cfg.followTop === 1 ? levelledAsked(st, rig.yaw, rig.v) : null;");
+    // ⭐ (R5, D-H19) under the far rule as decided `farAsked` instead (`camera_follow_r5.test.ts`); else H2's exactly
+    const j = g.indexOf("st.asmAskLevel = st.cfg.followTop !== 1 ? null : farTopDecided(st) ? farAsked(st, rig.yaw, rig.v, st.asmAskCalm) : levelledAsked(st, rig.yaw, rig.v);");
     expect(j).toBeGreaterThan(i);
     expect(g.indexOf("const zp = pictureFrame(st, pp, [c0.x", j)).toBeGreaterThan(j);
     const a = code("render/assembly_wiring.ts");
@@ -179,7 +182,7 @@ describe("H3 — F-1 – F-3 at the camera's stage", () => {
 
   it("F-3: a turn STARTED (never its later frames), the switch on, a place shown: every angle state set to the map's place (`seamRebase`) — after the step", () => {
     const f = between(code("render/camera_follow_wiring.ts"), "if (top) {", "} else {");
-    const i = f.indexOf("const r = followTopStep(");
+    const i = f.indexOf("const r = farTopDecided(st) ? followFarStep("); // ⭐ (R5) either step: `followFarStep` under the far rule as decided, else `followTopStep`
     const j = f.indexOf("const rb = followRebaseAsked(st, r.started);");
     expect(i).toBeGreaterThan(0);
     expect(j).toBeGreaterThan(i);

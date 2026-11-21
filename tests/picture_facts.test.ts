@@ -62,7 +62,7 @@ describe("R3b — the holds and the rebase: the logic's own writers, the drawers
       expect(raw(f), f).not.toContain("seamRebase(");
     }
     const p = raw("render/picture_wiring.ts");
-    expect(p.match(/pictureEventsRead\(st, /g)?.length).toBe(3);
+    expect(p.match(/pictureEventsRead\(st, /g)?.length).toBe(4); // ⭐ (R3-FIX) + the far path's: the close drawer's facts where it runs for the logic
     expect(p).toContain("pictureEventsRead(st, fp.ev); publishDrawn(st, fp.cam);");
     expect(p).toContain("const G = rollPictureFrame(st, pp, eye, look, up, dtMs, left); pictureEventsRead(st, G.ev);");
     expect(p).toContain("pictureEventsRead(st, zp.ev); publishDrawn(st, zp.cam);");

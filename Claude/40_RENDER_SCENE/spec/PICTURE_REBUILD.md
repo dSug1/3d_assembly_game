@@ -1,6 +1,6 @@
 # The picture's rebuild — THE STUDY (packet R1, 2026-11-21, branch `1.0.153-Picture_rebuild`, src = `620f227`)
 
-> **Status: ⭐ DECIDED (2026-11-21, the owner on D-P1 – D-P8 as recommended: *"go ahead"*) — R2 building** (§4.7). Docs only up to here. His four parts: the rules → the obstacles, each reproduced → a design from
+> **Status: ⭐ DECIDED (2026-11-21, the owner on D-P1 – D-P8 as recommended: *"go ahead"*); R2 + R3 BUILT, DEPLOYED (main `ae456df` = `67d0473`) — ⭐⭐⭐ his look: *"the deploy is very good : this is the best implementation of the orbit so far"*; R4 closed (nothing built); R5 built (behind `pictureFarTop` 0); ⭐ R3-FIX rounds 1 + 2 built, gates PASS, DEPLOYED 2026-11-22 night** (§4.7). ⛔⛔ **His major finding on `ae456df` (2026-11-21, `Scene_0bis`, two videos): the gizmo stuck on a pole, far and close; large camera / piece jumps on a dy travel after a mix of dx and dy.** Read off his videos' HUD: the orbit's centre racing along the axis to the far apex (0.8 m in ≈ 25 frames), then pinned (`elev` 1.00 / 0.00 ⛔LIMIT) — his dy read as a move ALONG the axis. ⭐ **Reproduced (kit `follow/r3fix/runs_str`, free strokes from `../picture_repro` = `ae456df`'s code), R3's only — inside the band:** a dy stroke near the left tip carries the gizmo 0.22 m along the axis (`pictureOne` 0: 0.05), the drawn view looking down to 87 – 89°, its up past the horizontal (`up.y` −0.20); far out and deep close in identical. **Root:** the band blends two directions with DIFFERENT heading owners — the far follower's (world) and the logic's close-in one (on a spit: the SIDE of the axis) — nearly opposite on a spit, so the blend passes over the vertical; the finger is read on that drawn frame (the spit's swap past 60° looking down): dy → along the axis → a pole. ⛔ The far stall at 5.4 m (outside the band) NOT reproduced. Next: R3's fix round 1 — a short study first (one heading owner through the band; on a spit the far and close in agree on the side). Docs only up to here. ⭐ **Then R3-FIX BUILT** (`788085d`; R5 behind `pictureFarTop` 0, `3bad0b7`; the rule §4.3a, as built §8.5) — ⛔ gates owed. His four parts: the rules → the obstacles, each reproduced → a design from
 > prior art, one owner per thing → its audit, the decisions. ⛔ Offline only (he may be testing on this PC): the code, `git show` of the commits named,
 > the kit's recordings (`fo3/follow/h5/runs_h5b`, `h3/runs_h3`, `runs_g2`) and the pure functions run with `npx vite-node`. The scripts of this packet:
 > the kit's `fo3/follow/r1/` — `rd_r1a.mjs` (one approach cycle frame by frame), `rd_drawer.mjs` (the drawer's hand-overs far out), `rd_roll.mjs` (the
@@ -146,7 +146,7 @@ followers), its carried heading ψ, the edge turn, the up hand-over's share, the
 | the look point `asmLook`, the gizmo's foot, the hang, the gap, the owner's offsets | the eye (`followPose`'s rule) |
 | the gizmo's facet (model), his finger's mm this frame, the dy sign | the edge turn (H2 / H3, D-H13 – D-H16) |
 
-### 4.2 The direction: one spring, one target, faded by place
+### 4.2 The direction: one spring, one target, faded by place (⛔ amended by R3-FIX — §4.3a: the band blends the ELEVATION only)
 * **T = slerp(T_far, us, w)**, the spring `sphereSpring` (Lowe, *Game Programming Gems 4*, 2004) with τ = `followMs`·(1 − w): far out exactly today's
   follower (w = 0); at w = 1 exactly the logic's direction, no second ease over close in's.
 * **w — the band (D-P3 (a))**: a smoothstep of the approach's place over the last `pictureBandMm` (**10 mm** — ⛔ 40 tried and reverted 2026-11-21, §8.2; a slider: his `tiltBlendMm` figure) of his
@@ -155,7 +155,7 @@ followers), its carried heading ψ, the edge turn, the up hand-over's share, the
 * On a side face T_far and `us` agree at rest (the hand-over's step 0.1° on `Scene_0bis`'s sides, `TOP_BOTTOM_STUDY.md` §8 point 5): the band
   changes nothing. On a level face it pays the cap's gap (≈ 25° on `Scene_1`'s top) as ONE pitch over his last 10 mm of approach, the piece staying on the view's line.
 
-### 4.3 The up: one rule, handed over by his finger only
+### 4.3 The up: one rule, handed over by his finger only (⛔ amended by R3-FIX — §4.3a: the turntable of the DRAWN heading)
 * **Far (not latched, the band included)**: the turntable's — the meridian of the carried heading ψ (no roll term exists; at a near-vertical view ψ is
   the state, never the view's residue). The logic's up never enters far out, nor in the band (P6, K12).
 * **In (the latch)**: the up drawn is HELD (P8), then blended to G's by his orbit mm (`blendShare`, `tiltBlendMm`; whole at the first edge crossed —
@@ -164,6 +164,55 @@ followers), its carried heading ψ, the edge turn, the up hand-over's share, the
   its start from the drawn up (bumpless — Åström & Hägglund, *PID Controllers*, 1995), his out mm closing what is left: no spin (O-3); no drift (w = 1
   there: T is the logic's direction; the band brings the cap back by place as he backs out).
 * **Close (latched)**: G's up — the carried up, its band 15 / 50, J's framing — as approved (P17).
+
+### 4.3a ⛔ Amended by R3-FIX (fix round 1 on R3, 2026-11-21 night — the lead's finding on `ae456df`, `03cd142`; rule 4 amended by the lead from his third video)
+**The result first.** The drawn direction is a HEADING and an ELEVATION, each with ONE owner at every moment. Not latched — far, the band, between the band
+and the latch, through every logic turn, the way out — the heading is the follower's and the band moves the elevation only: the view never passes over the
+vertical, and the finger is never read on a frame drawn from another heading. Latched, G draws. At each change of owner (the latch, the unlatch) the pose
+drawn is HELD — its heading, its elevation, its up — and his finger closes the gap.
+* **The root.** R3's band slerped the follower's direction (a world heading) toward the logic's `us` (on a spit: the SIDE of the axis) — nearly opposite
+  there, so the blend passed over the vertical (87 – 89° down, `up.y` −0.20) and the finger, read on that frame (`zoneFinger` on `asmCamDrawn`), went along
+  the axis → a pole. Second part (his third video: the camera 2.4 m from its centre, in the band, a stream of the logic's turns): every logic turn not latched
+  (`asmZoneMix`) made `followActive` false, so R3's close branch drew — the follower PARKED (`followStart(T)` every frame, T from a reading that flips)
+  blended with the logic's turning G by w: jitter at every turn.
+1. **Far, the band included**: the heading the follower's (`headingOf(dFar)`, never blended by place); the elevation lerp(el(dFar), el(`us`), w); the eye,
+   look and piece by the follower's own rule at that direction (`followPose`). w 0, nothing held: the follower's own pose objects (bit for bit, as R3).
+   ⭐ R3's residual toward G's eye (`bandEye`: the logic camera's catch-up and its heading) is no longer drawn — it carried the logic's heading by place.
+   Equal headings and no residual (`Scene_1`'s fixture): R3's poses exactly.
+2. **Between the band's inner end and the latch** (w = 1, not latched): the same — the follower's heading at the logic's elevation (no longer G whole).
+3. **The latch**: G draws. A turn of G started at the latch frame starts from the pose DRAWN (`poseShown`: last frame drawn far and the latch on → the
+   camera drawn — already so after a frame the follower drew, now also after one drawn through a logic turn). ⛔ **Found in the code**: in a polar zone (the
+   spit included) no tilt is made (`tiltOn` returns in `asmZone`), so NO turn starts at the latch and G is the zone's pose at once (the spit: the side's
+   heading). ⇒ the picture's own hand-over (5.), as the up's already was: G = the drawn pose, then his orbit mm.
+4. **The way out — as amended by the lead**: not latched, the FOLLOWER draws through every logic turn (`asmZoneMix`, the way out's included; the square
+   camera's share; a tilt turning off): its state runs on, never parked, never restarted; rule 1's pose. The logic's turns run on their own clocks — the close
+   drawer still runs for them, not drawn (`zoneMixPose`'s angle, `zoneStep`, `seamOutFrame`), and the resolver (`changeResolve`) is unchanged, so the gizmo's
+   waits and the holds stay the logic's. The follower's own rule comes whole (its edge turn holds the gizmo and writes its dy hold, as far out). The way out
+   after the unlatch = the hand-over from G to rule 1's pose by the way out's own share (`asmZoneMix.out`'s k: his out mm, C3), else by his finger's mm over
+   `pictureBandMm`. `followPark` only in the close branch (latched).
+5. **The hand-over (one, for the whole pose)**: at each change of owner the drawn view's own heading (its up's only when exactly vertical — amended
+   while building, §8.5) and elevation are held as offsets from the new owner's, and the up's φ about the view. The owner's pose is turned by the offsets left —
+   about the world vertical, then about the horizontal axis square to the heading (the elevation kept within ±89.5°); the eye and the up about the look
+   point, the piece about the foot — never a slerp across the vertical. One share closes all three: latched the square camera's (`blendShare`; 0 while
+   pending), the way out its own, else his mm. A turn of G that starts from the drawn pose leaves offsets ≈ 0.
+   ⭐ **Decided by the lead (his rule, C4), 2026-11-21 night**: at the latch the hand-over is paid by his orbit finger at his own realignment pace — never
+   faster than `uprightAlignDegPerMm` (3°/mm) nor than `tiltBlendMm` (10 mm): share = min(1, mm / max(`tiltBlendMm`, gap° / `uprightAlignDegPerMm`)), the
+   gap (the larger of the heading's and the elevation's, between the pose drawn held and G) read once at its start; a 180° gap: 60 mm. Where the square
+   camera's own share already keeps that pace (its smoothstep's peak 1.5 × gap / `tiltBlendMm` ≤ 3°/mm: a gap ≤ 20°, as wherever a turn starts from the
+   pose drawn — `Scene_1`) it is kept as it is: nothing changes there.
+6. **The up**: not latched the turntable's of the DRAWN heading — outside the 20° cone the world's up (its literal), inside the meridian of the follower's
+   heading plus the heading offset held (from the view's own at the cone's edge); latched G's, turned by the offsets. After a latch the follower's heading
+   is the one drawn when the way out ends: the up turns there by the share (the f480 vector amended), never at once.
+⭐⭐ **Round 2 (2026-11-21 night, decided by the lead — his rule *"minimize the camera movements while maintaining the key rules"*).** Measured on round 1
+   (`4f34c7a`, kit `follow/r3fix/runs_gate/str_*`): the band's outer part on `Scene_0bis` drifts 0.05 m along the axis, as the old build; deeper in the
+   band (ap ≈ 0.67) the view goes 81 – 88° down (the logic's elevation, by rule 1's lerp) and past 60° looking down the spit's finger swap (`zoneFinger` →
+   `fingerSwapped`) turns his dy into a move along the axis: 0.25 m (old build 0.05). **Root: two payers of one gap on a spit** — the band paid the
+   elevation by place, and the latch's hand-over (C4) paid heading AND elevation by his orbit mm, because a polar zone has no pending turn at the latch.
+   **The rule:** the band's elevation share is w ONLY where the latch starts G's pending turn — not in a polar zone (`asmZone`, the spit included); in a
+   polar zone it is 0: the far elevation kept until the latch, the latch's hand-over (C4) the one payer. `Scene_1` (no zone) unchanged.
+7. **R5 behind its own switch `pictureFarTop`** (0 by default — the lead: its gates unfinished, its far strokes on `Scene_0bis` pin the gizmo at a pole,
+   `runs_str5/r5_farmix`; 1 = R5 as built); `farTopDecided` requires it.
+⭐ Identity: `pictureOne` 0 runs today's line, untouched (`620f227`). Far out outside the band with nothing held: the follower's own objects (R3's).
 
 ### 4.4 The turns, the wait, the hold — and what the logic reads
 * **Close in**: the logic's timed turns (T5) as today, drawn at w = 1 with τ = 0, so the picture has caught up exactly when their clock ends — the
@@ -210,9 +259,9 @@ converge in depth.
 | packet | builds | its gates (his symptoms; at 60 frames a second 5 and 9.5 px a frame = 571 px/s, at 143 8.4 px a frame = 1 200 px/s) |
 |---|---|---|
 | R2 (C) | ⭐ **BUILT `83c5d9c` — gates RUN 2026-11-21, PASS** (§8; kit `follow/r2/drv_r2.sh`, `runs`, `rd_cmp.mjs`, `rd_turns.mjs`): `pictureOne` 0 = `3bc9d7f` frame for frame; far out (his stretches) bit for bit; the gizmo 0.000 mm on every run; close in outside turns identical; the approach cycle latched 0.0° at 5 / 9.5 / 8.4 px (id: 290 – 520°, max 28 – 48°); in turns the max view step 10.7 / 6.3° (id 7.6 / 18.0), up 10.7 / 10.4° (id 9.0 / 26.2). ⚠ R3's baseline: the held cap's gap moved to the unlatch (5.9 + 17.1°), the follower's return 118° of up in one frame (id 94°), the drift 87 → 62°. close in's turns about the piece (`turnFraming(closeIn)` pure; `framing_sim.ts` as the vector's fixture — red on the two-target rule) | the approach cycle on `Scene_1`'s top: no view step over 3° at the approach's end or leaving (today 32 – 48°, 35°); `Scene_0bis` close in (`h3c_*`): frames outside a turn within 0.1° of `620f227`, the aim on the glass within 0.02 half-glass in its turns; far out bit for bit |
-| R3 (C) | ⭐ **BUILT `ce5abfe`, `f5344b5` (band 10 mm, `d758976`) — gates RUN 2026-11-21, PASS** (kit `follow/r3/drv_r3.sh` → `runs`, `drv_r3c.sh` → `runs_c`; `r2/rd_cmp.mjs`, `r3/rd_sum.mjs`, `r4/rd_slide_pd.mjs`): `pictureOne` 0 = `3bc9d7f` frame for frame; his ten far and the eleven S1 walks bit for bit; close in within 0.02 mm / 0.01° of R2 (the gizmo 0.021 mm: R3b's reader order), identical outside turns; the dy hold walks' holds, blocks and releases identical (z_close starts 45 mm apart: it begins in the band); the approach cycle (4 cycles) the view 290 / 276 / 273° in all (today 1 104 / 767 / 896°), its largest frame 5.9 / 11.1 / 9.7° (today 48.5 / 44.5 / 34.5°), the up 7.2 / 13.1 / 9.7° (today 105 – 123°) — ≈ 4.4° per mm of his finger at the band's steepest (its mean 2.7°/mm; his C4 3°/mm); no spin, no drift; the DRAWN piece within 15.2° of the view at 143 (as today), its step ≤ 3.4°; `Scene_0bis`'s side approach within 3.2° of today in the band, the same largest steps. (§8.2: the band on the follower's output — amended —, the up's hand-overs, ψ from the drawn up, the follower parked, the published facts, one resolver, the record split) `pictureStep` + wiring: the band, τ(w), the up's hand-overs, ψ from the drawn up, the published facts, one resolver, the record split | the approach cycle: no view or up step over 3° in any frame (today 23°, 94° up, the 22° drift), no leg ≥ 5° not asked in the 1 s after the unlatch; his ten and the S1 walks far out bit for bit outside the band; the gizmo's place, `asmMapQ`, `asmEdgeHold` per frame identical on every walk |
-| R4 (C) | D-P4: the drawn foot along the picture's direction far out | the approach far out on `Scene_1`'s top: the piece's step across the view ≤ 0.5° a frame (today sin(gap) × the dolly); sides bit for bit |
-| R5 (C) | the far target's top rule as he decides D-H13 – D-H19 | `TOP_BOTTOM_STUDY.md` §4's G-tip, G-BT, G-apex, G2; moves not asked (`rd_g1`) ≤ `de4a10e`'s (2 of 16 exits, 8 % of crossings); the far view's roughness p90 ≤ 1.1° (`rd_p3c`) |
+| R3 (C) | ⭐ **fix rounds 1 + 2 (R3-FIX) BUILT `788085d`, `4f34c7a` (the spit's latch at his C4 pace), `6c2b8a6` (round 2: no band in a polar zone) — gates RUN 2026-11-22 night, PASS** (kit `follow/r3fix/runs_gate`, `runs_gate2`; `r3fix/rd_stuck.mjs`, `r2/rd_cmp.mjs`, `r3/rd_sum.mjs`): `pictureOne` 0 exact; his ten far and the eleven S1 walks bit for bit; close within 0.06° / 2 mm of R3; `Scene_1`'s approach cycle as R3 (largest view 5.9 / 11.3 / 10.1°, today's 34 – 48°); ⭐ his `Scene_0bis` free strokes in the band (HALFN 9, 11, the mix) IDENTICAL to the old build — no tumble, no race along the axis (R3: the view 87 – 89° down, `up.y` −0.20, a dy 0.22 m along the axis); the spit's latch (an approach cycle at the left tip) ≤ 3.4° a frame (old build 31.8°); the dy holds identical (§4.3a, §8.5: one heading owner, the band the elevation only; the follower draws through every logic turn not latched; one hand-over of the whole pose at the latch and the unlatch); R5 behind `pictureFarTop` 0 (`3bad0b7`). Before it: ⭐ **BUILT `ce5abfe`, `f5344b5` (band 10 mm, `d758976`) — gates RUN 2026-11-21, PASS** (kit `follow/r3/drv_r3.sh` → `runs`, `drv_r3c.sh` → `runs_c`; `r2/rd_cmp.mjs`, `r3/rd_sum.mjs`, `r4/rd_slide_pd.mjs`): `pictureOne` 0 = `3bc9d7f` frame for frame; his ten far and the eleven S1 walks bit for bit; close in within 0.02 mm / 0.01° of R2 (the gizmo 0.021 mm: R3b's reader order), identical outside turns; the dy hold walks' holds, blocks and releases identical (z_close starts 45 mm apart: it begins in the band); the approach cycle (4 cycles) the view 290 / 276 / 273° in all (today 1 104 / 767 / 896°), its largest frame 5.9 / 11.1 / 9.7° (today 48.5 / 44.5 / 34.5°), the up 7.2 / 13.1 / 9.7° (today 105 – 123°) — ≈ 4.4° per mm of his finger at the band's steepest (its mean 2.7°/mm; his C4 3°/mm); no spin, no drift; the DRAWN piece within 15.2° of the view at 143 (as today), its step ≤ 3.4°; `Scene_0bis`'s side approach within 3.2° of today in the band, the same largest steps. (§8.2: the band on the follower's output — amended —, the up's hand-overs, ψ from the drawn up, the follower parked, the published facts, one resolver, the record split) `pictureStep` + wiring: the band, τ(w), the up's hand-overs, ψ from the drawn up, the published facts, one resolver, the record split | the approach cycle: no view or up step over 3° in any frame (today 23°, 94° up, the 22° drift), no leg ≥ 5° not asked in the 1 s after the unlatch; his ten and the S1 walks far out bit for bit outside the band; the gizmo's place, `asmMapQ`, `asmEdgeHold` per frame identical on every walk |
+| R4 (C) | ⭐ **CLOSED 2026-11-21, NOTHING BUILT — measured** (kit `follow/r4/CHECKPOINT_R4.md`, `rd_r4.ts`, the drawn piece `sh.pd`): far out (w 0) the piece slides 0.45 – 0.59° a mm of finger on `Scene_1`'s top against 0.58 – 0.64° on `Scene_0bis`'s side — the top NO worse than a side; the foot does not move far out (0.00 – 0.05 mm a frame: on the top `us` is the face's normal at the cap); the slide is his camera offsets' (`cameraYawOffsetDeg` 2.5, `cameraPitchOffsetDeg` 2: the view 3.2° off the followed direction, every face) plus the look point's ease (`lookShare`), partly cancelling on the top — §3 O-6's sin(gap) premise not in the frames. The lead, by his rule: the gate restated *the top no worse than a side, per mm*, met today; his offsets kept (his 2026-10-01/05 words). D-P4: the drawn foot along the picture's direction far out | the approach far out on `Scene_1`'s top: the piece's step across the view ≤ 0.5° a frame (today sin(gap) × the dolly); sides bit for bit |
+| R5 (C) | ⭐ **BUILT `1eca57d`, `af17b7d`, `ca21d0a`, `4ee392e` — gates owed**; ⛔ since R3-FIX behind its own switch `pictureFarTop`, **0** by default (`3bad0b7`, the lead) (§8.4): the far target's top rule as decided — D-H19 the reading in the world, D-H15 the jump by geometry, D-H13 + D-H14 two followers and the derived leash (104°), D-H16 the hold on the drawn up; **2317** vectors | `TOP_BOTTOM_STUDY.md` §4's G-tip, G-BT, G-apex, G2; moves not asked (`rd_g1`) ≤ `de4a10e`'s (2 of 16 exits, 8 % of crossings); the far view's roughness p90 ≤ 1.1° (`rd_p3c`) |
 | R6 (C) | the deletions (§4.6), after his look | every walk bit for bit with `pictureOne` 1 before and after |
 After a second fix round on one packet: stop and study (row 2).
 
@@ -357,3 +406,86 @@ camera's stage runs today's line (`followFrame ?? rollPictureFrame`), moved as w
   ⛔⛔ **REVERTED the same day (the lead's mistake):** the whole far approach of `Scene_1`'s top is ≈ **30 mm** of finger from its rest to 0.65 m (5 px a frame: 24 frames from `ap` 1.000 to the latch), so 34 / 40 mm reached the far REST — the far picture partly blended toward close in's everywhere: his ten stretches far and the eleven S1 walks no longer the follower's (from frame 6 – 8; the drawn height up to 7° above the follower's, the 60° cap D-F1 broken), while 0 and 10 mm are identical to `pictureOne` 0 there (kit `follow/r3/runs_b`). ⇒ **10 mm**, the design's (≈ 2.7° a mm, his realignment pace C4's 3° a mm); the gate amended by his rule: on the approach no frame's step over 3° per mm of his finger that frame, and none without his finger — the 3° a frame was a time figure (row 9: his finger pays, not the clock). A band that spreads the pitch further needs a share of each scene's far range, never mm beyond it: not built (it would break D-F1 wherever he rests).
 * ⚠ **Inferred, not run:** the identity of R3b on his walks; the band's feel; the gizmo's place, `asmMapQ` and `asmEdgeHold` per frame (the moves are
   read in the code, and no reader sits between a write's old and new places).
+
+### 8.4 R5 — the far target's top rule as decided (`1eca57d` D-H19, `af17b7d` D-H15, `ca21d0a` D-H13 + D-H14, `4ee392e` D-H16, 2026-11-21; ⛔ gates owed: §7 items 2 – 4, no headless run made)
+**The result first.** With `pictureOne` 1 (and `cameraFollower` 1, `followTop` 1: `farTopDecided`) the far follower aims, turns and holds by D-H13 –
+D-H16 and D-H19 as the lead took them by his rule ([`TOP_BOTTOM_STUDY.md`](TOP_BOTTOM_STUDY.md) §6). Close in, the gizmo's glide and travel and the calm's
+own computation are unchanged. With `pictureOne` 0 the far follower is H2 / H3 exactly (`620f227`): the new code is reached only through `farTopDecided`.
+No new slider.
+* **D-H19, the reading** (`farReading`, `farReadingShare` in `input/camera_follow.ts`; `farAsked` in `render/assembly_wiring.ts`, called at the rig's
+  angles for `asmAskLevel`): below 50° of the orbit's WORLD elevation (`st.orbit` in the world, his finger's place) the calm asked's own world heading
+  (the direction asked's); from 60° H2's `levelledHeading`; a smoothstep between, on `cameraHeading`'s own constants (read, not copied); a level face
+  carried at every elevation. On the kit's `band_sim.ts` fixtures: the tips 115.9 / 102.2 / 88.8° where H2 reads 180 / 180 / 0°; the bottom triangle's
+  six cases within 2.4° of each other (H2: 0, 90 and 180°).
+* **D-H15, the jump by geometry** (`farJump`, `followFarStep`; `farJumpRead` beside `farAsked`: last frame's calm asked kept IN THE WORLD in
+  `asmAskCalmWas`, read again in this frame's F at these angles into `asmAskLevelWas`; both reset with the orbit's state). The jump is this frame's
+  reading minus that one; a level face's side is the heading carried. A turn starts when the jump is at least `followTurnMinDeg` (10°), on any frame. Its
+  angle is the whole gap from the heading drawn to the reading beyond, at his finger's pace clamped (F-2, 520°/s). The gizmo still waits on `top.turn`;
+  F-3's rebase still runs at the start. The dy hold is still decided at the gizmo's facet change (over 90°: the crossing's own; a 0 writes none).
+  ⚠ The record's `top.x` now holds the jump on every frame where it is read (H3 wrote it only at a facet change).
+* **D-H13 + D-H14, two followers and the leash** (`FollowHead` in `top.hd`, `spring1`, `followLeashRad`): the heading follows the continuous reading,
+  unwrapped (the reading's own motion each frame; a turned jump removed, one under the band paid by the follower). The elevation follows the asked
+  height capped at 90° − `followPoleDeg` (60°) and is never drawn past the cap (a start above it eases down without rising). Both use τ = `followMs`
+  (200 ms). The leash is `followTurnMaxDegS` × `followMs` = 104°, derived (none when F-2 is off, `followTurnFinger` 0). A turn pays an offset while the
+  follower rests at its start, so nothing jumps. With no `hd` (a start, or the follower parked close in) both followers start at rest on the drawn direction.
+* **D-H16, the far dy hold on the drawn up** (`camera_follow_wiring.ts`): `upShown` is `st.asmCamDrawn?.up`, the picture's own frame of last frame
+  (published after the follower's step); `followTopStep` (`pictureOne` 0) keeps `asmCamLogic`.
+* **The vectors** (`tests/camera_follow_r5.test.ts`, 19; pinned lines amended in `camera_follow_wiring.test.ts`, `orbit_state_reset.test.ts`), each red on
+  a mutant: the share 0 (H2's reading) or read on F's pitch (tips, B, the band's ends); no level face carried; the old wiring lines; the jump a frame's
+  difference (a vertical edge — H3 turns there at 900°/s at 60 frames a second and 1 620 at 143); the turn the jump alone (its end off the reading —
+  H3 > 20° off); the jump 0, not wired, or last frame's calm not carried into the frame; no leash, a fixed 62.4° leash, the reading wrapped (over the top:
+  the height ≤ 60°, after the stop ≤ 520°/s, nothing backwards — H3 over 60° and backwards; below 520°/s frame for frame the plain follower); the height
+  not capped; the follower not at rest at a turn's start; the hold on the logic's up or on none. **2317** vectors (2298 before R5).
+* **Where the build departs from the study, or infers** (none worked around): (1) the turn may start on any frame while the hold keeps H3's moment (the
+  gizmo's facet change); on a side the calm's facet and the gizmo's are the same map place (`sh.t.stack`), but if the two ever changed on different
+  frames the hold would not be decided — inferred. (2) If the continuous reading itself steps by more than the leash without a geometric jump (a zone's
+  frame changing H2's reading above 60°, a seam rebase), the leash pulls the follower to 104° at once — not met in the vectors; the walks will show it.
+  (3) The first frame with no calm kept reads no jump. (4) `proto.ts`'s figures were at τ 120 ms (leash 62.4°); built at 200 ms (104°), §6's note.
+* **Owed** (none run): §7 items 2 – 4, each with `&pictureOne=0` as the identity — the kit's `follow/h5/drv_h5.sh` walks (A tipdy, B botbt, 2 edgez /
+  edgec, `Scene_1`'s top) at 60 and 143 frames a second, the S1 walks and holds (`follow/r3/drv_r3.sh`), his ten; read by `h5/rd_a2`, `rd_g1`, `rd_p3c`,
+  `r3/rd_sum`; the gates in §4.7's R5 row.
+
+### 8.5 R3-FIX — one heading owner (`788085d`; R5's switch `3bad0b7`; the C4 latch `4f34c7a`; round 2 `6c2b8a6`; 2026-11-21 night; ⭐ gates PASS, §4.7)
+⭐ **Round 2 (`6c2b8a6`, the lead's decision by his rule):** round 1's gates passed but deeper in the band on a spit the view went 81 – 88° down (the band's elevation lerp to the logic's), the spit's finger swap past 60° turned his dy into a move along the axis (0.25 m) — two payers of one gap; now in a polar zone the band pays nothing (`polar: st.asmZone !== null`), the latch's hand-over at his C4 pace the one payer; `Scene_1` unchanged.
+**The result first.** With `pictureOne` 1, not latched, the follower draws — far, in the band, between the band and the latch, and through every logic
+turn. Its heading is never blended; the band moves only the elevation, so the view stays on the follower's side of the vertical. Latched, G draws. At
+the latch and the unlatch the pose drawn is held and his finger closes the gap: nothing jumps. With `pictureOne` 0 nothing changed.
+* **Where.** `src/input/picture.ts`: `pictureStep` rewritten (the owner's pose, the hand-over, the up); `turnedPose` (a pose turned about the world
+  vertical, then about the horizontal axis square to its heading, the elevation within ±89.5°); `viewHeadEl`; `turntableUp` takes the DRAWN heading.
+  `bandDir` (the slerp) and `bandEye` (the residual toward G's eye) deleted. `src/render/picture_wiring.ts` `pictureFrame`: the far path is
+  `!asmTiltAuto && asmAsk !== null && !orbitPiecePlaced`; where `followActive` is false there (a logic turn, the square camera's share, a tilt turning
+  off), the close drawer runs first for the logic, not drawn, its facts read. `followFrame` takes `also`: run anyway, and leave the close drawer's own
+  state alone (the carried up's dx budget and yaw, the record `asmRollShadow`). `followPark` only in the close branch (latched). `assembly_wiring.ts`
+  `poseShown`: a turn started at the latch starts from the camera drawn (`drawnPose`). ⭐ Amended while building (§4.3a 5.): the hand-over reads each
+  view's OWN heading. Read off the up inside the cone, a rolled G read 100° off its view, and the latch turned the view by 4.6° (R3's cycle vector).
+* **Rule 3's start pose, how it is guaranteed.** Every turn at the latch frame is made by `seamTurnStart` → `poseShown`, read before the picture writes
+  this frame's facts. If last frame was drawn by the far path (`asmPicture.far`) and the latch is on, `poseShown` returns the camera drawn last frame
+  and the piece drawn. After a frame the follower drew alone, this is what R3 already returned. After a frame drawn through a logic turn, it used to be
+  the logic's ghost. Every other turn keeps its start, so its angle and clock are unchanged.
+* ⛔ **A contradiction with the brief, found in the code.** Rule 3 assumed a pending turn at every latch. In a polar zone (the spit included) `tiltOn`
+  returns early, so no turn starts there and G is the zone's pose at once, with the side's heading. Built: the picture's own hand-over (§4.3a 5.), the
+  same as the up's (P8). Cost: on a spit the heading's gap (90 – 180°) is paid by the square camera's share, his first `tiltBlendMm` (10 mm) of orbit
+  finger, so 9 – 18° a mm. That is above his C4 3° a mm, and it is a decision for the lead (a longer span for it, or nothing to pay if the zone's
+  camera kept the follower's heading, which would reopen the logic). ⭐ DECIDED by the lead (C4): the pace capped at 3°/mm, at least 10 mm (§4.3a 5.).
+* **Decided by the builder (for the lead's review).** (1) R3's residual toward G's eye is no longer drawn in the band: it carried the logic's heading by
+  place. On `Scene_1` the band now differs from R3 by the logic camera's catch-up, and the latch's turn starts from the pose drawn. (2) The follower's
+  own rule comes whole in the frames it now draws through a logic turn: its edge turn holds the gizmo (`tiltClampStep` reads `asmFollow.top.turn`) and
+  writes its dy hold. R3 had the follower parked there. (3) The resolver `changeResolve` is unchanged, so the logic's turns, their waits and their holds
+  are the logic's as in R3, though not drawn. (4) The hand-over closes, not latched, by the way out's own share while its turn lives, else by his mm over
+  `pictureBandMm`. (5) With the owner's 2° pitch offset the drawn view reaches el(`us`) + 2°: where the logic's direction is within 2° of the vertical,
+  the view passes it by that much, as the logic's own camera does.
+* **Identity.** `pictureOne` 0: `pictureLegacy`, `followFrame` without `also`, and `poseShown`'s guard are what they were. Far out outside the band with
+  nothing held: `pictureStep` returns the follower's own objects and the world's up (outside the 20° cone). In the cone (the detour only, `followTop` 0)
+  the up is now the meridian of the follower's heading, where R3 used the heading carried from the cone's edge.
+* **The vectors** (`tests/picture_fix.test.ts`, 7; written first and run on the old code: 6 red, and the identity one green by design). The spit's band
+  stays on the follower's side, never above the logic's elevation, `up.y` ≥ 0, up steps under 5°, and draws the follower's heading at w 1. Equal
+  headings give R3's poses (1e-9). The way out with opposite headings turns the heading by the share, with the follower's pose exactly at its end. The
+  spit's latch with no turn: held while pending, G exactly at the end. Rule 6: in the cone the up is the meridian of the follower's heading (old code
+  5.0°). The source vectors cover the far path and the latch's start. Mutants, each red: the slerp put back; the elevation not blended; no hand-over of
+  the direction; the way out's share ignored; the far path gated by `followActive`; the up from the view's own heading. `pictureFarTop`: the default 0
+  pinned (red on the old code and on the predicate without it). R3's own vectors amended where R3's rule changed (w 1, the latch's elevation, the f480
+  restart with the follower parked as the game parks it), and three source pins (`picture_facts`, `camera_follow_wiring`, `camera_follow_r5`).
+  `npm run verify`: **2323**, then **2324** (from 2317).
+* **Owed** (none run). §7 items 1 – 3 with `&pictureOne=0` as the identity. His three videos' strokes on `Scene_0bis` (kit `follow/r3fix`:
+  `walk_h.mjs`, `rd_stuck.mjs`), the band's dy near the left tip (R3: 0.22 m along the axis; `pictureOne` 0: 0.05). The approach cycle on `Scene_1`'s
+  top. The spit's latch and its way out (the heading paid by the mm). The dy hold walks (the follower's own holds now drawn through logic turns).

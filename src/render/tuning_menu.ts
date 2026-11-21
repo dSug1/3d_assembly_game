@@ -223,6 +223,8 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "camera follower far out: a simple polar orbit, world up (1; 0 = the carried up)", "cameraFollower", 0, 1, 1),
             // ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §4.7 — R2) the picture's rebuild, one switch: close in's turns about the piece
             tunable(st, "the picture's rebuild: one picture at every distance, close in's turns about the piece (1; 0 = as 620f227)", "pictureOne", 0, 1, 1),
+            // ⭐⭐⭐ (2026-11-21 night, `PICTURE_REBUILD.md` §4.3a item 7 — R3-FIX) R5 behind its own switch (0 by default)
+            tunable(st, "the far top rule as decided, R5 (1; 0 = H2 / H3) — with the picture's rebuild only", "pictureFarTop", 0, 1, 1),
             // ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §4.2 — R3a) the band: the follower's picture to the logic's over his last mm of approach before 0.65 m
             tunable(st, "the picture's band: far to close over the last mm of approach before 0.65 m (mm)", "pictureBandMm", 0, 100, 1),
             tunable(st, "follower: its one ease on the sphere (ms)", "followMs", 0, 500, 10), // ⭐ (2026-11-21, the owner: *"up to 500 ms with 10 ms increment"*)

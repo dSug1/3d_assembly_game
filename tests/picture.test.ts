@@ -2,6 +2,9 @@
  * ⭐⭐⭐ (2026-11-21, `Claude/40_RENDER_SCENE/spec/PICTURE_REBUILD.md` §4.1 – §4.3 — packet R3a) THE ONE PICTURE, pure (`src/input/picture.ts`).
  * Mutants run (each red): no blend (w forced 0); the picture's state dropped at the far resume (the follower restarted); the up from the view's residue
  * (ψ not carried); w by time instead of place. Red on the old code: the module did not exist.
+ * ⛔ (2026-11-21 night, §4.3a — R3-FIX) amended where R3's own rule changed: w 1 not latched is the follower's heading at the logic's elevation (no longer G
+ * whole); the latch HOLDS the pose drawn (the hand-over), so "no blend" shows as the latch's elevation, no longer as a jump; the state dropped at the resume
+ * is red in `picture_fix.test.ts` (the way out's hand-over); the f480 restart with the follower parked at the drawn up's heading, as the game parks it.
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
@@ -25,6 +28,10 @@ const sq = (u: Vec3, d: Vec3): Vec3 => {
 };
 const ZERO: Vec3 = [0, 0, 0];
 const GAP = 0.6;
+const unitV = (a: Vec3): Vec3 => {
+  const l = Math.hypot(...a);
+  return [a[0] / l, a[1] / l, a[2] / l];
+};
 
 /** One frame's readings in the fixture's geometry: the look point at the gizmo's foot (the origin), no offsets. */
 function frame(_far: boolean, w: number, dFar: Vec3, us: Vec3, hang: number, G: { eye: Vec3; up: Vec3 }, latched: boolean, share: number | null, mm: number): PictureIn {
@@ -72,14 +79,16 @@ describe("R3a — pictureStep: the ends are today's follower and G exactly", () 
     expect(r.state.hand?.r).toBe(0);
   });
 
-  it("w 1, far: G's eye, look and piece exactly (the latch then draws nothing new); close: G itself, its up when nothing is held", () => {
+  it("w 1, far (R3-FIX rule 2): the follower's rule at ITS heading and the logic's elevation — G's eye not drawn; close: G itself, its up when nothing is held", () => {
     const G = { eye: [0.1, 1.3, 0.05] as Vec3, up: [0, 0, -1] as Vec3 };
     const inp = frame(true, 1, dFar, us, 0.8, G, false, null, 0);
     const a = pictureStep(PICTURE_REST, inp);
-    const inG = inp.G;
-    expect(a.pose.eye).toBe(inG.eye);
-    expect(a.pose.look).toBe(inG.look);
-    expect(a.pose.piece).toBe(inG.piece);
+    const R = followPose(dirAtHeading(0, 87 * DEG), ZERO, ZERO, 0.8, GAP, 0, 0);
+    for (let i = 0; i < 3; i++) {
+      expect(a.pose.eye[i]!).toBeCloseTo(R.eye[i]!, 9);
+      expect(a.pose.piece[i]!).toBeCloseTo(R.piece[i]!, 9);
+    }
+    expect(a.pose.look).toBe(ZERO);
     const c = pictureStep({ ...PICTURE_REST, hand: { latched: true, phi0: 0, r: 0 } }, frame(false, 1, dFar, us, 0.8, G, true, 1, 0));
     expect(c.pose.up).toBe(G.up);
     expect(c.pose.eye).toBe(G.eye);
@@ -159,7 +168,10 @@ function cycle(p: number, mut: { noBlend?: boolean; dropAtResume?: boolean; wByT
     view = Math.max(view, ang(rows[i - 1]!.eye, rows[i]!.eye));
     up = Math.max(up, ang(rows[i - 1]!.up, rows[i]!.up));
   }
-  return { rows, view, up };
+  // (R3-FIX) the view's elevation drawn at the latch's first frame (the camera above the look point)
+  const l = rows.find((x) => x.latched)!;
+  const elAtLatch = Math.asin(-l.eye[1] / Math.hypot(...l.eye)) / DEG;
+  return { rows, view, up, elAtLatch };
 }
 
 describe("R3a — the approach cycle: no frame's view or up step over 3° (today 23°, 94° up, the 22° drift)", () => {
@@ -169,14 +181,11 @@ describe("R3a — the approach cycle: no frame's view or up step over 3° (today
     expect(r.rows[r.rows.length - 1]!.far).toBe(true);
     expect(r.view).toBeLessThan(3);
     expect(r.up).toBeLessThan(3);
+    expect(Math.abs(r.elAtLatch - 87)).toBeLessThan(1);
   });
 
-  it("mutant — no blend (w 0): the latch jumps the view (the cap's gap in one frame)", () => {
-    expect(cycle(0.5, { noBlend: true }).view).toBeGreaterThan(20);
-  });
-
-  it("mutant — the picture's state dropped at the far resume (the follower restarted): the up spins from the view's residue", () => {
-    expect(cycle(0.5, { dropAtResume: true }).up).toBeGreaterThan(3);
+  it("mutant — no blend (w 0): the band does not pay the pitch — the latch holds the cap's 60° (R3-FIX: held by the hand-over, no longer a jump)", () => {
+    expect(cycle(0.5, { noBlend: true }).elAtLatch).toBeLessThan(65);
   });
 
   it("the same place either way → the same picture (into the band and back, its two ends held); mutant — w by time: not the same", () => {
@@ -212,22 +221,35 @@ describe("R3a — a restart at a near-vertical view (the f480 case): the up from
     const eye: Vec3 = [c[0] * 2, c[1] * 2, c[2] * 2];
     let s: PictureState = PICTURE_REST;
     const ups: Vec3[] = [];
+    const views: { eye: Vec3; look: Vec3 }[] = [];
     for (let i = 0; i < 5; i++) {
       const r = pictureStep(s, frame(false, 1, c, c, 0.65, { eye, up: Gup }, true, 1, 0));
       s = r.state;
       ups.push(r.state.up!);
+      views.push(r.pose);
     }
+    // (R3-FIX) the follower parked at the heading carried from the drawn up (`followPark` ← ψ, as the game parks it), at its 60° cap
+    const dFar = dirAtHeading(s.tt!.psi, 60 * DEG);
     for (let k = 0; k <= 1.0001; k += 0.1) {
-      const r = pictureStep(s, frame(false, 1, c, c, 0.65, { eye, up: Gup }, false, Math.min(1, k), 0.5));
+      const r = pictureStep(s, frame(false, 1, dFar, c, 0.65, { eye, up: Gup }, false, Math.min(1, k), 0.5));
       s = r.state;
       ups.push(r.state.up!);
+      views.push(r.pose);
     }
     for (let i = 0; i < 10; i++) {
-      const r = pictureStep(s, frame(true, 1, c, c, 0.65, { eye, up: Gup }, false, null, 0.5));
+      const r = pictureStep(s, frame(true, 1, dFar, c, 0.65, { eye, up: Gup }, false, null, 0.5));
       s = r.state;
       ups.push(r.state.up!);
+      views.push(r.pose);
     }
-    expect(ang(ups[0]!, ups[ups.length - 1]!)).toBeLessThan(3);
+    // (R3-FIX) the view goes to the follower's heading by the share (5.6° here); the up stays the meridian of the heading carried (94°) at every view drawn —
+    // never the residue's (0°): no roll, no spin
+    for (let i = 0; i < ups.length; i++) {
+      const v = views[i]!;
+      const cv = unitV([v.eye[0] - v.look[0], v.eye[1] - v.look[1], v.eye[2] - v.look[2]]);
+      expect(ang(ups[i]!, sq(meridianUp(cv, 94 * DEG), cv))).toBeLessThan(3);
+      expect(ang(ups[i]!, sq(meridianUp(cv, 0), cv))).toBeGreaterThan(80);
+    }
     for (let i = 1; i < ups.length; i++) expect(ang(ups[i - 1]!, ups[i]!)).toBeLessThan(3);
   });
 });

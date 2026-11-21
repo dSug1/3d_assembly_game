@@ -22,11 +22,11 @@
  * `followTurnMaxDegS`; `followTurnRebase` (F-3) a turn started sets every angle state to the map's place at the gizmo (`seamRebase`).
  */
 import type { Vec3 } from "../core/vec";
-import { followPose, followStart, followStep, followTopStep, type FollowState, type FollowTop } from "../input/camera_follow";
+import { followFarStep, followPose, followStart, followStep, followTopStep, type FollowState, type FollowTop } from "../input/camera_follow";
 import { tiltDir, type CamFrame } from "../input/orbit_tilt";
 import { approachDistance, closeInGain, orbitDir } from "../input/assembly_orbit";
 import { orbitDegPerMm } from "../input/follow_camera";
-import { dirFrame, followRebaseAsked, gizmoFacetW, spitZone, type PictureEvents } from "./assembly_wiring";
+import { dirFrame, farTopDecided, followRebaseAsked, gizmoFacetW, spitZone, type PictureEvents } from "./assembly_wiring";
 import { upSquareToView } from "../input/camera_frame";
 import type { SceneState } from "./scene_state";
 
@@ -55,9 +55,13 @@ export function followFrame(
   off: { readonly yawRad: number; readonly pitchRad: number },
   dtMs: number,
   pic?: FollowPicture,
+  also?: boolean,
 ): { readonly eye: Vec3; readonly look: Vec3; readonly up: Vec3; readonly cam: CamFrame | null; readonly ev: PictureEvents } | null {
   const was = st.asmFollow;
-  if (!followActive(st) || st.orbitPiecePlaced) {
+  // ⭐⭐⭐ (2026-11-21 night, `PICTURE_REBUILD.md` §4.3a rule 4 — R3-FIX, the lead's amendment) `also`: the one picture's far path while a logic turn runs (the
+  // close drawer ran this frame for the LOGIC — its clocks, its state, its record — not drawn): the follower draws anyway, its state run on, never parked;
+  // the close drawer's own (the carried up's dx budget and yaw, the record `asmRollShadow`) left as that drawer wrote them
+  if ((also !== true && !followActive(st)) || st.orbitPiecePlaced) {
     // ⭐⭐⭐ (R3a, `pictureOne` 1) the picture keeps the state (parked at rest on its target: `picture_wiring.ts`) — never dropped
     if (pic === undefined) st.asmFollow = was === null ? null : { state: null, piece: null, rec: { on: 0 } };
     return null;
@@ -65,8 +69,10 @@ export function followFrame(
   // ⭐⭐⭐ (2026-11-21, R3b) a change of frame asked is resolved ONCE before this (`changeResolve`, `picture_wiring.ts`: here at once, the dy hold the logic's
   // crossing's — OP8; under the top's rule none: a hold far out only after the follower's own half turn, R4 amended, D-H8)
   const top = st.cfg.followTop === 1;
-  st.asmFingerDxMm = 0; // the carried up's dx budget: none far out (read again from 0 when it draws)
-  st.asmCarriedYaw = null;
+  if (also !== true) {
+    st.asmFingerDxMm = 0; // the carried up's dx budget: none far out (read again from 0 when it draws)
+    st.asmCarriedYaw = null;
+  }
   const hang = Math.hypot(pp[0] - foot[0], pp[1] - foot[1], pp[2] - foot[2]);
   const s0: FollowState = was?.state ?? followStart(hang > 1e-9 ? [(pp[0] - foot[0]) / hang, (pp[1] - foot[1]) / hang, (pp[2] - foot[2]) / hang] : st.asmAsk!);
   let s: FollowState;
@@ -82,7 +88,12 @@ export function followFrame(
     const degPerMm = dpm * closeInGain(approachDistance(st.cfg, st.approach), st.cfg.orbitGainFullM, st.cfg.orbitContactMmPerMm, dpm, st.asm?.radius ?? 0);
     const kt = { tauMs: st.cfg.followMs, poleDeg: st.cfg.followPoleDeg, minDeg: st.cfg.followTurnMinDeg, rollDegS: st.cfg.tiltRollDegS, paceShare: st.cfg.followTurnPace, onJump: st.cfg.followTurnOnJump === 1, finger: fin, degPerMm, maxDegS: fin ? st.cfg.followTurnMaxDegS : 0 };
     const orbitW = tiltDir(dirFrame(st), orbitDir(st.orbit.yaw, st.orbit.elevation));
-    const r = followTopStep(s0, was?.top ?? null, { ask: st.asmAsk!, orbit: orbitW, psiL: st.asmAskLevel, nW: gizmoFacetW(st), upShown: st.asmCamLogic?.up ?? null, dySign: st.asmDySign, fingerMm: st.asmFrameMm }, dtMs, kt);
+    // ⭐⭐⭐ (2026-11-21, R5 — `TOP_BOTTOM_STUDY.md` §3, §6) under the far rule as decided (`farTopDecided`: `pictureOne` 1) `followFarStep`: the far reading
+    // (D-H19, `asmAskLevel`), its jump by GEOMETRY (D-H15: last frame's calm at these angles, `asmAskLevelWas`), the dy hold on the up HE sees (D-H16: the
+    // picture's own frame drawn last frame, `asmCamDrawn` — ⛔ `asmCamLogic`, the logic's, written this frame just before); else H2 / H3 exactly
+    const r = farTopDecided(st)
+      ? followFarStep(s0, was?.top ?? null, { ask: st.asmAsk!, orbit: orbitW, psiL: st.asmAskLevel, nW: gizmoFacetW(st), upShown: st.asmCamDrawn?.up ?? null, dySign: st.asmDySign, fingerMm: st.asmFrameMm, ...(st.asmAskLevelWas !== null ? { psiLWas: st.asmAskLevelWas.psi } : {}) }, dtMs, kt)
+      : followTopStep(s0, was?.top ?? null, { ask: st.asmAsk!, orbit: orbitW, psiL: st.asmAskLevel, nW: gizmoFacetW(st), upShown: st.asmCamLogic?.up ?? null, dySign: st.asmDySign, fingerMm: st.asmFrameMm }, dtMs, kt);
     s = r.s;
     topS = r.top;
     // ⭐⭐⭐ (D-H8 = D-T4) the dy hold decided at the follower's own crossing: it REPLACES any hold still on (a 0 writes none — `holdAtCrossing`)
@@ -111,7 +122,7 @@ export function followFrame(
   const cam: CamFrame | null = lv > 1e-12 ? { dir: [-view[0] / lv, -view[1] / lv, -view[2] / lv], up: upD } : null; // ⭐ (R3b) published by the picture (`asmCamDrawn`)
   const g = { gap: 0, speed: 0 };
   const ghost = { eye, look, up: upSquareToView(up, [look[0] - eye[0], look[1] - eye[1], look[2] - eye[2]]) };
-  st.asmRollShadow = { ghost, dir: s.dir, piece: P.piece, held: g, free: g, turn: null, turnTw: 0, stays: false, tw: 0, gizmoFree: true, spit: spitZone(st) !== null, freshTurn: false, picture: { eye: P.eye, look: P.look, up: upD }, a2: 0, drawn: true, freed: 0 };
+  if (also !== true) st.asmRollShadow = { ghost, dir: s.dir, piece: P.piece, held: g, free: g, turn: null, turnTw: 0, stays: false, tw: 0, gizmoFree: true, spit: spitZone(st) !== null, freshTurn: false, picture: { eye: P.eye, look: P.look, up: upD }, a2: 0, drawn: true, freed: 0 };
   st.asmFollow = { state: s, piece: P.piece, rec: { on: 1, d: s.dir, sd: s.d, psi: s.psi, side: s.det.side, det: s.det.on ? 1 : 0, pace: s.pace, hang, ...(topRec !== null ? { top: topRec } : {}) }, ...(topS !== null ? { top: topS } : {}) };
   return { eye: P.eye, look: P.look, up: P.up, cam, ev };
 }

@@ -27,7 +27,7 @@ import { orbitDvPerMm, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from ".
 import type { LineSample, SceneState } from "./scene_state";
 import { faceTrianglesWorld } from "./contact_wiring";
 import { calmHeading, calmLevelHeading, calmShown, calmStep as calmStepEase, calmTarget, cameraHeading, capEdgePitch, heldOffsetStep, poleWeight, type CalmKnobs, type CalmState } from "../input/orbit_calm";
-import { askedCalm, followTurnHoldsGizmo, levelledHeading, type CalmAskTarget } from "../input/camera_follow";
+import { askedCalm, calmInFrame, calmWorld, farReading, followTurnHoldsGizmo, levelledHeading, type CalmAskTarget } from "../input/camera_follow";
 import { facetFrame } from "../input/face_map";
 import { qRotate, type Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
@@ -114,7 +114,7 @@ type OrbitStateStart = Pick<
   | "asmGizmo" | "asmSupport" | "asmSupportLevel" | "pieceHold" | "pieceHoldPrev" | "asmLook" | "asmFacePoint" | "asmG" | "asmPrevQ" | "asmShown" | "asmFaceBand" | "asmFree" | "asmPlaceWas" | "asmMapQ"
   | "asmEdgeHold" | "asmZone" | "asmZoneMix" | "asmChange" | "asmPieceDrawn" | "asmDirEase" | "asmCamLogic" | "asmCamDrawn" | "asmRollShadow" | "asmSpitSide" | "asmSpitU" | "asmSpitPic" | "asmSpitPicWas" | "asmZoneAlpha" | "asmDySign" | "asmFingerDxMm" | "asmDxSign" | "asmCarriedYaw" | "asmHeadO"
   | "asmHeadW" | "asmHeadYaw" | "asmTilt" | "asmGOff" | "asmTiltAuto" | "asmTiltPending" | "asmOrbitMm" | "asmFrameMm" | "asmBlend" | "asmCalmWhole" | "asmCalmWholeV"
-  | "asmSquare" | "asmCalm" | "asmMouth" | "asmRawPrev" | "asmGizmoAt" | "asmGizmoLag" | "asmAskCalm" | "asmAsk" | "asmAskLevel" | "asmFollow" | "asmPicture"
+  | "asmSquare" | "asmCalm" | "asmMouth" | "asmRawPrev" | "asmGizmoAt" | "asmGizmoLag" | "asmAskCalm" | "asmAsk" | "asmAskLevel" | "asmAskCalmWas" | "asmAskLevelWas" | "asmFollow" | "asmPicture"
 >;
 
 /**
@@ -179,6 +179,8 @@ export function orbitStateStart(): OrbitStateStart {
     asmAskCalm: null,
     asmAsk: null,
     asmAskLevel: null,
+    asmAskCalmWas: null,
+    asmAskLevelWas: null,
     asmFollow: null,
     asmPicture: null,
   };
@@ -311,6 +313,41 @@ export function askedDir(st: SceneState, yaw: number, v: number): Vec3 {
  */
 export function levelledAsked(st: SceneState, yaw: number, v: number): number | null {
   return levelledHeading(yaw, v, st.asmAskCalm, dirFrame(st), st.cfg.followPoleDeg);
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §4.7 R5 — `TOP_BOTTOM_STUDY.md` §3, §6) THE FAR TARGET'S TOP RULE AS DECIDED (D-H13 – D-H19): the one picture
+ * (`pictureOne` 1 with the follower) and the top's rule on. Else H2 / H3 exactly (`pictureOne` 0: `620f227`).
+ */
+export function farTopDecided(st: SceneState): boolean {
+  // ⭐⭐⭐ (2026-11-21 night, `PICTURE_REBUILD.md` §4.3a item 7 — R3-FIX) behind its own switch `pictureFarTop` (0 by default: R5's gates unfinished)
+  return st.cfg.pictureFarTop === 1 && st.cfg.pictureOne === 1 && st.cfg.cameraFollower === 1 && st.cfg.followTop === 1;
+}
+
+/**
+ * ⭐⭐⭐ (R5, D-H19) THE FAR READING at the orbit's angles `yaw`, `v` for the calm asked `c` (in this frame's F, `dirFrame`): the band read on the ORBIT's
+ * direction in the world (`st.orbit`, his finger's place — the follower's `orbit`). The MODEL's space.
+ */
+export function farAsked(st: SceneState, yaw: number, v: number, c: CalmState | null): number | null {
+  const R = dirFrame(st);
+  return farReading(yaw, v, c, R, st.cfg.followPoleDeg, tiltDir(R, orbitDir(st.orbit.yaw, st.orbit.elevation)));
+}
+
+/**
+ * ⭐⭐⭐ (R5, D-H15 — `TOP_BOTTOM_STUDY.md` §3 H-3) THE JUMP'S SECOND READING, at the rig's angles `yaw`, `v` beside the first (`farAsked` of this frame's
+ * calm): LAST frame's calm asked, kept in the world, read in this frame's F at these angles (`asmAskLevelWas`) — then this frame's calm kept. Off the far
+ * rule as decided: none kept. The MODEL's space.
+ */
+export function farJumpRead(st: SceneState, yaw: number, v: number): void {
+  if (!farTopDecided(st)) {
+    st.asmAskCalmWas = null;
+    st.asmAskLevelWas = null;
+    return;
+  }
+  const R = dirFrame(st);
+  const was = st.asmAskCalmWas;
+  st.asmAskLevelWas = was === null ? null : { psi: farAsked(st, yaw, v, calmInFrame(was.c, R)) };
+  st.asmAskCalmWas = { c: calmWorld(st.asmAskCalm, R) };
 }
 
 /** ⭐⭐⭐ (H2) THE GIZMO'S FACET NORMAL in the world — the face map's facet at the map's place (`asmShown`), turned out of its frame; the MODEL's (never a drawn mesh). `null`: no place. */
@@ -1692,12 +1729,21 @@ export function pictureEventsRead(st: SceneState, ev: PictureEvents): void {
 
 /** ⭐ The pose on the glass now (the camera drawn last frame) — a zone's turn starts from it. */
 function poseShown(st: SceneState): CamPose {
+  // ⭐⭐⭐ (2026-11-21 night, `PICTURE_REBUILD.md` §4.3a rule 3 — R3-FIX) under the one picture a turn started AT THE LATCH starts from the pose DRAWN: last frame
+  // drawn by the far path (not latched), the latch on now — after a frame the follower drew through a logic turn the record below is the close drawer's
+  // (the logic's pose), not the one on the glass. Every other turn as before (its start the logic's, its angle and its clock unchanged)
+  if (st.asmTiltAuto && st.asmPicture?.far === true && st.cfg.pictureOne === 1 && st.cfg.cameraFollower === 1) return drawnPose(st);
   // ⭐⭐⭐ (2026-11-18, `UPRIGHT_PICTURE.md` §2 step 3 — law U) the picture is a function of the logic's pose: a turn starts from the LOGIC's last pose (`G`),
   // so its first frame draws exactly last frame's picture (from the picture drawn, law U would turn it once more inside the band)
   const sh = st.asmRollShadow;
   if (sh !== null && sh.upright !== undefined) return { eye: sh.ghost.eye, look: sh.ghost.look, up: sh.ghost.up, piece: st.asmPieceDrawn };
   // ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md`) the carried up: a turn (close in) starts from the logic's last pose too — the picture is that pose turned by φ
   if (sh !== null && sh.one !== undefined) return { eye: sh.ghost.eye, look: sh.ghost.look, up: sh.ghost.up, piece: st.asmPieceDrawn };
+  return drawnPose(st);
+}
+
+/** ⭐ The camera drawn last frame, with the piece where it was drawn. */
+function drawnPose(st: SceneState): CamPose {
   const c = st.camera;
   const t = c.getTarget();
   return { eye: [c.position.x, c.position.y, c.position.z], look: [t.x, t.y, t.z], up: [c.upVector.x, c.upVector.y, c.upVector.z], piece: st.asmPieceDrawn };

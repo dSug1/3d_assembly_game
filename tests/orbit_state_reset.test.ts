@@ -75,6 +75,8 @@ const RESET: Record<string, unknown> = {
   asmAskCalm: null,
   asmAsk: null,
   asmAskLevel: null,
+  asmAskCalmWas: null,
+  asmAskLevelWas: null,
   asmFollow: null,
   asmPicture: null,
 };
@@ -88,7 +90,7 @@ const KEPT = [
 describe("⭐⭐⭐ the orbit's starting state (`orbitStateStart`, `resetOrbitState`)", () => {
   it("every `asm…` / `pieceHold…` field of the scene's state is decided: reset or kept (61)", () => {
     const decl = [...raw("render/scene_state.ts").matchAll(/^ {2}((?:asm|pieceHold)\w*)\??:/gm)].map((m) => m[1]!);
-    expect(decl.length).toBe(71); // ⭐ (2026-11-21, PICTURE_REBUILD.md §4.7 R3b) `asmCamLast` split: `asmCamLogic`, `asmCamDrawn`; ⭐ (R3a) + `asmPicture`; ⭐ (2026-11-21, CAMERA_FOLLOWS_GIZMO.md §18 H3) + `asmFrameMm`; ⭐ (2026-11-20, CAMERA_FOLLOWS_GIZMO.md §15 H2) + `asmAskLevel`; ⭐ (2026-11-20, CAMERA_FOLLOWS_GIZMO.md §13 F2) + `asmFollow`; ⭐ (F1) + `asmAskCalm`, `asmAsk` (the calm and the direction asked); ⭐ (2026-11-20, UPRIGHT_CARRIED_UP.md) + `asmFingerDxMm`, `asmDxSign`, `asmCarriedYaw`; // ⭐ (2026-11-19, UPRIGHT_PICTURE.md §12 RB1) + `asmChange` (a change asked, resolved at the camera's stage); ⭐ (2026-11-19, UD8b) − `asmPicLast` (the finger turned once at the entry); ⭐ (2026-11-18, law U) + `asmPicLast`; ⭐ (2026-11-18, FO3 S0) + `asmRollShadow`; ⭐ (2026-11-18, ES) + `asmSpitPic`, `asmSpitPicWas`; ⭐ (2026-11-16, C2W) + `asmPlaceWas`; ⛔ (step 2.5) − `asmZoneFacetsF` (`zoneFacetOf`'s memo, deleted with the old calm)
+    expect(decl.length).toBe(73); // ⭐ (2026-11-21, PICTURE_REBUILD.md §4.7 R5, D-H15) + `asmAskCalmWas`, `asmAskLevelWas` (the jump read by geometry); ⭐ (2026-11-21, PICTURE_REBUILD.md §4.7 R3b) `asmCamLast` split: `asmCamLogic`, `asmCamDrawn`; ⭐ (R3a) + `asmPicture`; ⭐ (2026-11-21, CAMERA_FOLLOWS_GIZMO.md §18 H3) + `asmFrameMm`; ⭐ (2026-11-20, CAMERA_FOLLOWS_GIZMO.md §15 H2) + `asmAskLevel`; ⭐ (2026-11-20, CAMERA_FOLLOWS_GIZMO.md §13 F2) + `asmFollow`; ⭐ (F1) + `asmAskCalm`, `asmAsk` (the calm and the direction asked); ⭐ (2026-11-20, UPRIGHT_CARRIED_UP.md) + `asmFingerDxMm`, `asmDxSign`, `asmCarriedYaw`; // ⭐ (2026-11-19, UPRIGHT_PICTURE.md §12 RB1) + `asmChange` (a change asked, resolved at the camera's stage); ⭐ (2026-11-19, UD8b) − `asmPicLast` (the finger turned once at the entry); ⭐ (2026-11-18, law U) + `asmPicLast`; ⭐ (2026-11-18, FO3 S0) + `asmRollShadow`; ⭐ (2026-11-18, ES) + `asmSpitPic`, `asmSpitPicWas`; ⭐ (2026-11-16, C2W) + `asmPlaceWas`; ⛔ (step 2.5) − `asmZoneFacetsF` (`zoneFacetOf`'s memo, deleted with the old calm)
     expect([...Object.keys(RESET), ...KEPT].sort()).toEqual([...decl].sort());
   });
 

@@ -11,9 +11,9 @@
  * where it has none), the height capped; at a facet change the follower's own turn by close in's functions, the gizmo waiting, the dy hold after a half turn.
  */
 import type { Vec3 } from "../core/vec";
-import { calmLevelHeading, type CalmState } from "./orbit_calm";
+import { calmLevelHeading, calmShown, LEVEL_HEADING_BLEND_RAD, LEVEL_HEADING_FROM_RAD, type CalmState } from "./orbit_calm";
 import { offsetFrame, orbitDir } from "./assembly_orbit";
-import { rollDurationMs, tiltDir, type Mat3 } from "./orbit_tilt";
+import { mulT, rollDurationMs, tiltDir, type Mat3 } from "./orbit_tilt";
 import { crossingEvent, FREE_EXIT_HOLD_FROM_RAD, isFreeFace, turnHolds } from "./free_face";
 import { turnHoldsGizmo } from "./seam_turn";
 
@@ -310,6 +310,37 @@ export function levelledHeading(yaw: number, v: number, c: CalmState | null, R: 
   return headingOf(n);
 }
 
+/**
+ * ⭐⭐⭐ (2026-11-21, `TOP_BOTTOM_STUDY.md` §3, §9, D-H19 — packet R5, `pictureOne` 1) THE BAND'S SHARE of the calm asked's own heading in the far reading:
+ * `cameraHeading`'s own band (`LEVEL_HEADING_BLEND_RAD` 50°, `LEVEL_HEADING_FROM_RAD` 60°, a smoothstep) read on the ORBIT's direction in the WORLD (`orbitW`,
+ * his finger's place) — 1 below 50° of its world elevation, 0 from 60°. ⛔ F's pitch: on a spit F's pitch is a world YAW (the root of A, B and point 2, §8).
+ */
+export function farReadingShare(orbitW: Vec3): number {
+  const p = Math.asin(clampN(Math.abs(orbitW[1]), 0, 1));
+  const x = clampN((LEVEL_HEADING_FROM_RAD - p) / (LEVEL_HEADING_FROM_RAD - LEVEL_HEADING_BLEND_RAD), 0, 1);
+  return x * x * (3 - 2 * x);
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-21, `TOP_BOTTOM_STUDY.md` §3, §9, D-H19 — packet R5, `pictureOne` 1) THE FAR READING: the heading the far follower aims at (rad, the
+ * follower's convention), or `null`: carried. The calm asked `c` (its normal in F; `R`: F → world) at the orbit's `yaw`, `v`: below 50° of the orbit's
+ * WORLD elevation (`orbitW`) the calm asked's own world heading (`de4a10e`'s calm — the direction asked, `askedDir`'s), from 60° H2's level reading
+ * (`levelledHeading`: no yaw on a pure dy near the vertical, the half turn at the zenith edge), a smoothstep between (`farReadingShare`); a LEVEL face
+ * (`isFreeFace` in the world) carried at every elevation. One rule for every frame. ⛔ H2's reading at every elevation: in a spit F's level is the
+ * vertical plane square to the axis — the calm toward a tip dropped (A), the bottom triangle's reading flipping on a 1e-9 residue (B), a turn along the
+ * apex edges (point 2).
+ */
+export function farReading(yaw: number, v: number, c: CalmState | null, R: Mat3 | null, poleDeg: number, orbitW: Vec3): number | null {
+  if (c !== null && isFreeFace(tiltDir(R, c.n), UP)) return null;
+  const L = levelledHeading(yaw, v, c, R, poleDeg);
+  const s = farReadingShare(orbitW);
+  if (!(s > 0)) return L;
+  const own = headingOf(tiltDir(R, calmShown(orbitDir(yaw, v), c)));
+  if (own === null) return L;
+  if (L === null || s >= 1) return own;
+  return wrapPi(L + s * wrapPi(own - L));
+}
+
 /** ⭐⭐⭐ (H2, D-H1) THE SPRING'S TARGET: the heading `psi`, the asked direction's elevation capped at 90° − `poleDeg` (60°) either way. */
 export function followTopTarget(psi: number, ask: Vec3, poleDeg: number): Vec3 {
   const cap = Math.PI / 2 - Math.max(0, poleDeg) * DEG;
@@ -386,6 +417,8 @@ export interface FollowTop {
   readonly step: number;
   readonly orbitWas: Vec3;
   readonly pace: number;
+  /** ⭐⭐⭐ (R5, D-H13) the far follower's two angles (`followFarStep`; absent: started at rest on the drawn direction) — `turn` then runs in its offset */
+  readonly hd?: FollowHead;
 }
 
 /** ⭐ The top's knobs: the spring's time, the height's cap, the band under which the spring pays, close in's speed, the pace share (D-H6). */
@@ -503,6 +536,166 @@ export function followTopStep(
     top: { psiT: psiL, nW: inp.nW ?? t0.nW, turn, step, orbitWas: inp.orbit, pace },
     ...(hold !== undefined ? { hold } : {}),
     delta,
+    started,
+  };
+}
+
+/* ⭐⭐⭐ R5 — THE FAR TARGET'S TOP RULE AS DECIDED (2026-11-21, `PICTURE_REBUILD.md` §4.7, `TOP_BOTTOM_STUDY.md` §3, §6: D-H13 – D-H19), `pictureOne` 1 ---- */
+
+/** ⭐ (R5, D-H15) a calm asked carried into the WORLD (`R`: F → world) — kept a frame, so it is read again at the next frame's angles in that frame's F. */
+export function calmWorld(c: CalmState | null, R: Mat3 | null): CalmState | null {
+  return c === null || R === null ? c : { ...c, n: tiltDir(R, c.n) };
+}
+
+/** ⭐ (R5, D-H15) a calm kept in the WORLD read in the frame `R` (F → world): its normal turned by `Rᵀ`. */
+export function calmInFrame(cW: CalmState | null, R: Mat3 | null): CalmState | null {
+  return cW === null || R === null ? cW : { ...cW, n: mulT(R, cW.n) };
+}
+
+/**
+ * ⭐⭐⭐ (R5, D-H15 — `TOP_BOTTOM_STUDY.md` §3 H-3) THE READING'S JUMP, BY GEOMETRY: this frame's far reading `psiL` minus LAST frame's calm's read at THIS
+ * frame's angles `psiLWas` — so the reading's own motion (his finger's) is never a jump, at any pace; a carried one (a level face, `null`) is the heading
+ * carried `psiT`; `psiLWas` absent (no calm kept): none. ⛔ A frame's difference (F-1, O-a): at 1 620°/s the reading moves 27° a frame — a "jump" at a
+ * vertical edge (his point 1).
+ */
+export function farJump(psiL: number | null, psiLWas: number | null | undefined, psiT: number): number {
+  if (psiLWas === undefined) return 0;
+  return wrapPi((psiL ?? psiT) - (psiLWas ?? psiT));
+}
+
+/** ⭐ (R5) One frame's readings far out: the top's (`FollowTopIn`, `psiL` the far reading — `farReading`) and last frame's calm's at this frame's angles. */
+export interface FollowFarIn extends FollowTopIn {
+  /** ⭐ (D-H15) last frame's calm asked read at THIS frame's angles (`farReading`): `null` carried (a level face); absent: none kept (no jump read) */
+  readonly psiLWas?: number | null;
+}
+
+/**
+ * ⭐⭐⭐ (R5, D-H13 — `TOP_BOTTOM_STUDY.md` §3 H-2, E-1) THE FAR FOLLOWER'S TWO ANGLES: the heading and the elevation as two 1-D followers. `c` the continuous
+ * reading (UNWRAPPED: each frame's own motion of the reading, the jumps a turn took removed), `h` / `hv` the heading's follower on it, `e` / `ev` the
+ * elevation's, `off` the turns' offset paid (the heading drawn `h + off`; a running turn pays its own share of it, `FollowTop.turn` in this offset).
+ */
+export interface FollowHead {
+  readonly c: number;
+  readonly h: number;
+  readonly hv: number;
+  readonly e: number;
+  readonly ev: number;
+  readonly off: number;
+}
+
+/** ⭐ (R5, D-H13) the ONE EASE on one angle: `sphereSpring`'s critically damped spring (Lowe, 2004) on a number — `x`, its speed `v`, toward `t`. */
+export function spring1(x: number, v: number, t: number, dtS: number, tauS: number): { readonly x: number; readonly v: number } {
+  if (!(tauS > 0) || !(dtS > 0)) return { x: t, v: 0 };
+  const om = 2 / tauS;
+  const e = x - t;
+  const tmp = (v + om * e) * dtS;
+  const ex = Math.exp(-om * dtS);
+  return { x: t + (e + tmp) * ex, v: (v - om * tmp) * ex };
+}
+
+/**
+ * ⭐⭐⭐ (R5, D-H14) THE LEASH (rad): the lag this spring has behind a heading moving at his clamp — lag = pace × τ (a ramp's steady lag for ω = 2 / τ), so
+ * `followTurnMaxDegS` × `followMs` (520°/s × 200 ms = 104°). DERIVED: below his clamp the leash is never taut (the plain follower); above it the camera turns
+ * with his finger, and after he stops it settles at most at the clamp. 0 (no clamp, or no ease): none.
+ */
+export function followLeashRad(maxDegS: number, tauMs: number): number {
+  return maxDegS > 0 && tauMs > 0 ? maxDegS * DEG * (tauMs / 1000) : 0;
+}
+
+/** ⭐ (R5) the two followers started at rest on the drawn direction (its speed carried, split onto the heading and the height), the reading `psiT` beside the heading. */
+function headStart(s0: FollowState, psiT: number): FollowHead {
+  const h = headingOf(s0.d) ?? s0.psi;
+  const e = Math.asin(clampN(s0.d[1], -1, 1));
+  const ce = Math.cos(e);
+  const hv = ce > 1e-6 ? dot3(s0.v, [Math.cos(h), 0, -Math.sin(h)]) / ce : 0;
+  const ev = dot3(s0.v, [-Math.sin(e) * Math.sin(h), Math.cos(e), -Math.sin(e) * Math.cos(h)]);
+  return { c: h + wrapPi(psiT - h), h, hv, e, ev, off: 0 };
+}
+
+/**
+ * ⭐⭐⭐ (R5) ONE FRAME OF THE FAR FOLLOWER UNDER THE TOP'S RULE AS DECIDED — D-H15: a turn only where the far reading jumps by GEOMETRY (`farJump`) over the
+ * band (`minDeg`, 10°), at any frame; its angle the WHOLE gap from the heading drawn to the reading beyond (`followTurnDelta`: the lag + the jump, the
+ * half turn's tie the way the heading went), at his finger's pace clamped (`followTurnDegS`, F-2); the gizmo waits while it runs (`top.turn`). The dy hold
+ * decided at the gizmo's facet change as H2 / H3 (`followTurnHold` on the jump: over 90° the crossing's own, `crossingEvent` on `upShown`; it replaces any
+ * older one). ⭐⭐⭐ D-H13 / D-H14: the heading and the elevation as TWO 1-D followers (`spring1`, τ `tauMs`): the heading on the continuous reading
+ * `c` UNWRAPPED (no short way after a fast dx), never more than the leash behind (`followLeashRad`: his clamp × τ, derived — taut it moves at his finger's
+ * pace, after he stops it settles at most at his clamp); the elevation toward the asked height capped at 90° − `poleDeg`, never drawn past the cap. A turn
+ * pays the offset `off` while the follower rests on `c` (the gizmo waits, so `c` is still). ⛔ The sphere spring here: its great circle cuts toward the
+ * pole over the top (86.5° for 55° asked at 1 620°/s) and turns the short way once its lag passes 180°. `s` / `top` `null`: started on the direction asked.
+ */
+export function followFarStep(
+  s: FollowState | null,
+  top: FollowTop | null,
+  inp: FollowFarIn,
+  dtMs: number,
+  k: FollowTopKnobs,
+): { readonly s: FollowState; readonly top: FollowTop; readonly hold?: 1 | -1 | 0; readonly delta: number | null; readonly started: boolean } {
+  const s0 = s ?? followStart(inp.ask);
+  const dtS = Math.max(0, dtMs) / 1000;
+  const tauS = k.tauMs / 1000;
+  const t0: FollowTop = top ?? { psiT: headingOf(s0.d) ?? s0.psi, nW: inp.nW, turn: null, step: 0, orbitWas: inp.orbit, pace: 0 };
+  const paceNow = k.finger === true ? followFingerPace(inp.fingerMm ?? 0, dtS, k.degPerMm ?? 0) : dtS > 0 ? angleOf(t0.orbitWas, inp.orbit) / dtS : 0;
+  const pace = Math.max(paceNow, k.tauMs > 0 ? t0.pace * Math.exp(-Math.max(0, dtMs) / k.tauMs) : 0);
+  const psiL = inp.psiL ?? t0.psiT;
+  const jump = farJump(inp.psiL, inp.psiLWas, t0.psiT);
+  // D-H13: the two followers — started at rest on the drawn direction where none (a start; the follower parked close in), a turn of another rule not carried
+  const hd0 = t0.hd ?? headStart(s0, t0.psiT);
+  let turn = t0.hd !== undefined ? t0.turn : null;
+  let off = turn !== null ? turn.psi0 + turn.k * turn.delta : hd0.off;
+  const drawn = hd0.h + off;
+  let hold: 1 | -1 | 0 | undefined;
+  let started = false;
+  if (t0.nW !== null && inp.nW !== null && angleOf(t0.nW, inp.nW) > FOLLOW_FACET_CHANGE_RAD) {
+    const crossHold = inp.upShown === null ? 0 : crossingEvent(inp.upShown, t0.nW, inp.nW, UP, inp.dySign).hold;
+    hold = followTurnHold(jump, crossHold);
+  }
+  const big = Math.abs(jump) >= Math.max(0, k.minDeg) * DEG && Math.abs(jump) > 0;
+  // the continuous reading: the reading's own motion this frame, unwrapped (a jump a turn takes removed; under the band the follower pays it)
+  const c = hd0.c + wrapPi(psiL - (big ? jump : 0) - t0.psiT);
+  let h = hd0.h;
+  let hv = hd0.hv;
+  if (big) {
+    // D-H15: the turn takes the WHOLE gap from the heading drawn to the reading beyond; the follower set AT REST on `c` (bumpless: the heading drawn kept in
+    // the offset), so when the gizmo moves on it takes over with no lag and no speed to lose
+    off = drawn - c;
+    h = c;
+    hv = 0;
+    turn = followTurnStart(off, followTurnDelta(drawn, psiL, t0.step), 0, followTurnDegS(pace, k.rollDegS, k.paceShare, k.maxDegS ?? 0));
+    started = turn !== null;
+  }
+  // D-H13 / D-H14: the heading's follower on `c`, never more than the leash behind — taut, it moves with `c` (his finger's pace), at the leash's speed
+  let f = spring1(h, hv, c, dtS, tauS);
+  const leash = followLeashRad(k.maxDegS ?? 0, k.tauMs);
+  if (leash > 0 && Math.abs(c - f.x) > leash) {
+    const sg = Math.sign(c - f.x);
+    f = { x: c - sg * leash, v: (sg * leash) / tauS };
+  }
+  if (turn !== null) {
+    turn = followTurnStep(turn, dtMs);
+    off = turn.psi0 + turn.k * turn.delta;
+    if (turn.k >= 1) turn = null;
+  }
+  // D-H13: the elevation's follower toward the asked height capped (90° − `poleDeg`), never drawn past the cap (nor further past it than it was, at a start)
+  const cap = Math.PI / 2 - Math.max(0, k.poleDeg) * DEG;
+  const eT = clampN(Math.asin(clampN(inp.ask[1], -1, 1)), -cap, cap);
+  const g = spring1(hd0.e, hd0.ev, eT, dtS, tauS);
+  const lim = Math.max(cap, Math.abs(hd0.e));
+  const e = clampN(g.x, -lim, lim);
+  const ev = e === g.x ? g.v : 0;
+  const psi = f.x + off;
+  const dir = dirAtHeading(psi, e);
+  const ce = Math.cos(e);
+  const v = add3(scale3([Math.cos(psi), 0, -Math.sin(psi)], f.v * ce), scale3([-Math.sin(e) * Math.sin(psi), ce, -Math.sin(e) * Math.cos(psi)], ev));
+  const stp = psi - drawn;
+  const step = Math.abs(stp) > 1e-9 ? stp : t0.step;
+  const paceS = Math.max(len3(v), dtS > 0 ? angleOf(s0.d, dir) / dtS : 0);
+  const tg = dirAtHeading(c + (turn !== null ? turn.psi0 + turn.delta : off), eT);
+  return {
+    s: { d: dir, v, tWas: tg, pace: paceS, det: s0.det, psi: wrapPi(psi), psiT: psiL, azWas: s0.azWas, psiStep: step, dir },
+    top: { psiT: psiL, nW: inp.nW ?? t0.nW, turn, step, orbitWas: inp.orbit, pace, hd: { c, h: f.x, hv: f.v, e, ev, off } },
+    ...(hold !== undefined ? { hold } : {}),
+    // the geometric jump every frame it is read (the record's `x`; `null`: none kept)
+    delta: inp.psiLWas === undefined ? null : jump,
     started,
   };
 }

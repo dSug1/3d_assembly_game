@@ -10,11 +10,16 @@
  * view's residue; latched G's. At each change between the two the up drawn is HELD (an offset about the view, set bumpless from the up drawn last frame)
  * and handed over by his finger only: latched the square camera's own share (`blendShare`, his orbit mm), the way out its share (his out mm), else his
  * finger's mm over `pictureBandMm`. ψ is set from the drawn up while latched, so the way out starts from it (Åström & Hägglund's bumpless transfer).
+ *
+ * ⭐⭐⭐ (2026-11-21 night, §4.3a — R3-FIX) ONE HEADING OWNER: the drawn direction a HEADING and an ELEVATION, each with one owner. Not latched the heading is the
+ * follower's and the band blends the ELEVATION only (⛔ R3's slerp toward `us`: on a spit the two headings nearly opposite, the blend went over the vertical);
+ * latched G. At each change of owner ONE hand-over holds the pose drawn — its heading, its elevation (the owner's pose turned about the world vertical, then
+ * about the horizontal axis square to the heading: never a slerp across the vertical) and its up's φ — closed by one share, his finger only.
  */
 import type { Vec3 } from "../core/vec";
 import type { GestureConfig } from "./gestureConfig";
 import { approachDistance, approachRange } from "./assembly_orbit";
-import { followPose } from "./camera_follow";
+import { dirAtHeading, followPose, headingOf } from "./camera_follow";
 import { rotateAbout, TILT_AUTO_HYST_M } from "./orbit_tilt";
 
 /**
@@ -77,41 +82,11 @@ export function bandShare(outMm: number, bandMm: number): number {
   return 1 - x * x * (3 - 2 * x);
 }
 
-/** ⭐ The direction drawn in the band: the follower's `dFar` turned toward the logic's `us` by `w` (slerp; 0 and 1 the ends themselves). */
-export function bandDir(dFar: Vec3, us: Vec3, w: number): Vec3 {
-  if (!(w > 0)) return dFar;
-  if (w >= 1) return us;
-  const c = Math.max(-1, Math.min(1, dot3(dFar, us)));
-  const th = Math.acos(c);
-  if (th < 1e-9) return dFar;
-  const s = Math.sin(th);
-  const a = Math.sin((1 - w) * th) / s;
-  const b = Math.sin(w * th) / s;
-  return unit3([dFar[0] * a + us[0] * b, dFar[1] * a + us[1] * b, dFar[2] * a + us[2] * b]);
-}
-
 /**
- * ⭐ The eye in the band: the follower's eye at the blended direction (`eyeD`), turned about the look point by `w` of the residual between the follower's
- * pose at the logic's direction (`eyeU`) and the logic's own eye (`eyeG`: its camera's 120 ms catch-up, the offsets' heading), its distance likewise —
- * so the piece stays on the view's line and w 1 is G's eye.
+ * ⛔ (R3-FIX, §4.3a) `bandDir` (the follower's direction slerped toward `us` by w) and `bandEye` (the residual toward G's eye by w) DELETED: both carried the
+ * logic's heading by place — on a spit nearly opposite to the follower's, the slerp passed over the vertical. The band moves the elevation only
+ * (`pictureStep`); G's eye is reached by the hand-over at the latch, or by G's own turn started from the pose drawn.
  */
-export function bandEye(eyeD: Vec3, eyeU: Vec3, eyeG: Vec3, look: Vec3, w: number): Vec3 {
-  if (!(w > 0)) return eyeD;
-  if (w >= 1) return eyeG;
-  const a = sub3(eyeU, look);
-  const b = sub3(eyeG, look);
-  const la = len3(a);
-  const lb = len3(b);
-  const e = sub3(eyeD, look);
-  const le = len3(e);
-  if (!(la > 1e-12) || !(lb > 1e-12) || !(le > 1e-12)) return eyeD;
-  const ax = cross3(a, b);
-  const s = len3(ax);
-  const th = Math.atan2(s, dot3(a, b));
-  const ed = s > 1e-12 ? rotateAbout([e[0] / le, e[1] / le, e[2] / le], [ax[0] / s, ax[1] / s, ax[2] / s], w * th) : [e[0] / le, e[1] / le, e[2] / le];
-  const r = le + w * (lb - la);
-  return [look[0] + ed[0] * r, look[1] + ed[1] * r, look[2] + ed[2] * r];
-}
 
 /* ⭐⭐⭐ THE TURNTABLE'S UP — world up, near the vertical a carried heading ψ (D-P5) ------------------------------------------------------------------------ */
 
@@ -139,16 +114,17 @@ export function meridianUp(c: Vec3, psi: number): Vec3 {
  * far picture, bit for bit) and ψ the view's own heading; inside it the meridian of a heading moved from the view's own (at the cone's edge) to the CARRIED
  * ψ (whole in the cone's inner half) by a smoothstep of the place — continuous both ways, and at a near-vertical view never the residue's heading.
  */
-export function turntableUp(c: Vec3, s: TurntableState | null, coneDeg: number): { readonly up: Vec3; readonly s: TurntableState } {
+export function turntableUp(c: Vec3, s: TurntableState | null, coneDeg: number, psiD?: number): { readonly up: Vec3; readonly s: TurntableState } {
   const h = Math.hypot(c[0], c[2]);
   const h0 = Math.sin(Math.max(0, coneDeg) * DEG);
-  const hv = h > 1e-9 ? Math.atan2(c[0], c[2]) : s !== null ? s.psiV : 0;
+  const hv = h > 1e-9 ? Math.atan2(c[0], c[2]) : s !== null ? s.psiV : (psiD ?? 0);
   if (h >= h0) return { up: WORLD_UP, s: { psi: hv, psiV: hv, inCone: false } };
-  const psi = s !== null ? s.psi : hv;
+  // ⭐⭐⭐ (R3-FIX, §4.3a rule 6) the heading DRAWN when known (`psiD`: not latched, the follower's plus the hand-over's offset left) — else the carried ψ
+  const psi = psiD ?? (s !== null ? s.psi : hv);
   const psiV = s !== null ? s.psiV + wrapPi(hv - s.psiV) : hv;
   const x = Math.max(0, 2 * (h / h0) - 1);
   const k = 1 - x * x * (3 - 2 * x);
-  return { up: meridianUp(c, psiV + (psi - psiV) * k), s: { psi, psiV, inCone: true } };
+  return { up: meridianUp(c, psiV + wrapPi(psi - psiV) * k), s: { psi, psiV, inCone: true } };
 }
 
 /** ⭐ The turntable's state SET from the up drawn (`up`) at `c` — ψ from the drawn up (O-3: never the view's residue); outside the cone the view's heading. */
@@ -170,21 +146,62 @@ export interface PicturePose {
   readonly piece: Vec3;
 }
 
-/** ⭐ The up's hand-over: whose up is the target (`latched`: G's; else the turntable's), the offset held at the change (rad, about the view), its share left. */
+/**
+ * ⭐ The hand-over: whose pose is the owner (`latched`: G's; else the follower's rule), the offsets held at the change — the up's `phi0` (rad, about the
+ * view) and (R3-FIX) the view's heading `dh` and elevation `de` (rad) — and the share left `r` (one share closes all three).
+ */
 export interface UpHand {
   readonly latched: boolean;
   readonly phi0: number;
   readonly r: number;
+  readonly dh?: number;
+  readonly de?: number;
+  /** (C4, the lead) latched: the span of his orbit mm that pays the gap held, read once at its start — `undefined`: the square camera's share as given */
+  readonly span?: number;
 }
 
-/** ⭐ The picture's state — never dropped: the turntable, the up's hand-over, the up drawn last frame (squared to its view). */
+/** ⭐ The picture's state — never dropped: the turntable, the hand-over, the up drawn last frame (squared to its view), the view drawn's heading and elevation (R3-FIX). */
 export interface PictureState {
   readonly tt: TurntableState | null;
   readonly hand: UpHand | null;
   readonly up: Vec3 | null;
+  readonly dir?: { readonly psi: number; readonly el: number } | null;
 }
 
-export const PICTURE_REST: PictureState = { tt: null, hand: null, up: null };
+export const PICTURE_REST: PictureState = { tt: null, hand: null, up: null, dir: null };
+
+/** ⭐ (R3-FIX) The hand-over keeps a view's elevation within this of the vertical (rad): a turn by an elevation offset never crosses it. */
+export const PICTURE_EL_MAX_RAD = 89.5 * DEG;
+
+/**
+ * ⭐ (R3-FIX) A view's HEADING and ELEVATION (`c` unit, look → eye): its own heading — exactly vertical, its up's (`psiFromUp`). ⛔ The up's heading within the
+ * cone: a view whose up is not its meridian (G rolled) read 100° off its own heading, and the hand-over then turned the view by that (4.6° at 87°).
+ */
+export function viewHeadEl(c: Vec3, up: Vec3): { readonly psi: number; readonly el: number } {
+  return { psi: Math.hypot(c[0], c[2]) > 1e-9 ? Math.atan2(c[0], c[2]) : psiFromUp(c, up), el: Math.asin(Math.max(-1, Math.min(1, c[1]))) };
+}
+
+/**
+ * ⭐⭐⭐ (R3-FIX, §4.3a rule 5) A POSE TURNED by a heading offset `dh` about the world vertical, then by an elevation offset `de` about the horizontal axis square
+ * to its new heading (`psi` + `dh`: `psi`, `el` its view's turntable heading and elevation), the view's elevation kept within ±`PICTURE_EL_MAX_RAD` — the eye
+ * and the up about the look point, the piece about the foot. Never a slerp across the vertical. Both 0: the pose itself.
+ */
+export function turnedPose(P: PicturePose, foot: Vec3, psi: number, el: number, dh: number, de: number): PicturePose {
+  if (dh === 0 && de === 0) return P;
+  const elT = Math.max(-PICTURE_EL_MAX_RAD, Math.min(PICTURE_EL_MAX_RAD, el + de));
+  const th = de === 0 ? 0 : elT - el;
+  const h = psi + dh;
+  const ax: Vec3 = [-Math.cos(h), 0, Math.sin(h)]; // square to the heading h: a positive turn about it raises a direction there
+  const rot = (v: Vec3): Vec3 => {
+    const a = dh !== 0 ? rotateAbout(v, WORLD_UP, dh) : v;
+    return th !== 0 ? rotateAbout(a, ax, th) : a;
+  };
+  const e = rot(sub3(P.eye, P.look));
+  const p = rot(sub3(P.piece, foot));
+  return { eye: [P.look[0] + e[0], P.look[1] + e[1], P.look[2] + e[2]], look: P.look, up: rot(P.up), piece: [foot[0] + p[0], foot[1] + p[1], foot[2] + p[2]] };
+}
+
+const viewOf = (P: PicturePose): Vec3 => unit3(sub3(P.eye, P.look));
 
 /** ⭐ One frame's readings (read-only: the logic's, last computed this frame; the follower's, far out). */
 export interface PictureIn {
@@ -212,55 +229,83 @@ export interface PictureIn {
   readonly mm: number;
   readonly spanMm: number;
   readonly coneDeg: number;
+  /** ⭐ (C4, decided by the lead) latched: his orbit mm since the blend began (0 pending), the span's floor (`tiltBlendMm`) and his pace (`uprightAlignDegPerMm`) */
+  readonly pace?: { readonly mm: number; readonly minMm: number; readonly degPerMm: number };
+  /** ⭐ (§4.3a round 2, decided by the lead) in a polar zone (`asmZone`, the spit included: no pending turn at the latch) the band pays no pitch */
+  readonly polar?: boolean;
 }
 
 /**
- * ⭐⭐⭐ (R3a, §4.1 – §4.3) ONE FRAME OF THE PICTURE. The pose: latched G's; else by the band — w 0 the follower's (`F` itself), w 1 G's eye, look and piece
- * exactly, between the follower's direction toward `us` by `w` and the residual to G's eye by `w` — far out and through the way out alike (its turn is G). The up: the target (latched G's, else the turntable's), plus the offset held
- * at each change of target (bumpless), closed by his finger only. Latched, ψ is set from the drawn up every frame (the way out starts from it).
+ * ⭐⭐⭐ (R3a, §4.1 – §4.3; ⛔ amended by R3-FIX, §4.3a) ONE FRAME OF THE PICTURE.
+ * 1. THE OWNER'S POSE — latched G's; else the FOLLOWER's rule: its heading (`headingOf(dFar)`, never blended by place) at the elevation lerp(el(`dFar`),
+ *    el(`us`), w) — w 0 the follower's own pose objects (`F`), far out bit for bit — through the band, between it and the latch (w 1) and the way out alike.
+ * 2. THE HAND-OVER — at each change of owner the view drawn last frame (its heading and elevation) and its up are held as offsets from the new
+ *    owner's (`dh`, `de`, `phi0`), closed by one share: latched the square camera's (`share`), the way out its own (`share`), else his mm over `spanMm`.
+ * 3. THE POSE DRAWN — the owner's turned by the offsets left (`turnedPose`); the up the target (latched G's turned; else the turntable's of the DRAWN heading,
+ *    the follower's plus the offset left) turned by φ left about the view. Latched, ψ is set from the drawn up every frame (the follower parks on it).
  */
 export function pictureStep(s: PictureState, inp: PictureIn): { readonly pose: PicturePose; readonly state: PictureState } {
-  let eye: Vec3;
-  let look: Vec3;
-  let piece: Vec3;
-  if (inp.latched || inp.w >= 1) {
-    eye = inp.G.eye;
-    look = inp.G.look;
-    piece = inp.G.piece;
-  } else if (!(inp.w > 0)) {
-    const F = inp.F ?? followPose(inp.dFar, inp.look, inp.foot, inp.hang, inp.gapM, inp.offYawRad, inp.offPitchRad);
-    eye = F.eye;
-    look = F.look;
-    piece = F.piece;
-  } else {
-    const Fd = followPose(bandDir(inp.dFar, inp.us, inp.w), inp.look, inp.foot, inp.hang, inp.gapM, inp.offYawRad, inp.offPitchRad);
-    const Fu = followPose(inp.us, inp.look, inp.foot, inp.hang, inp.gapM, inp.offYawRad, inp.offPitchRad);
-    eye = bandEye(Fd.eye, Fu.eye, inp.G.eye, inp.look, inp.w);
-    look = inp.look;
-    piece = Fd.piece;
+  const psiF = headingOf(inp.dFar) ?? s.dir?.psi ?? 0;
+  // 1. the owner's pose
+  let P: PicturePose;
+  if (inp.latched) P = inp.G;
+  // ⭐⭐⭐ (§4.3a round 2, decided by the lead) ONE PAYER OF A SPIT'S GAP: in a polar zone the latch starts no turn, so its hand-over (C4) pays the whole gap —
+  // the band pays no pitch there, the far elevation kept until the latch (⛔ round 1: the view 81 – 88° down in the band, the finger swap past 60° sent his
+  // dy 0.25 m along the axis). Elsewhere (a pending turn at the latch: `Scene_1`) the band pays the pitch by place, as designed (D-P3)
+  else if (!(inp.w > 0) || inp.polar === true) P = inp.F ?? followPose(inp.dFar, inp.look, inp.foot, inp.hang, inp.gapM, inp.offYawRad, inp.offPitchRad);
+  else {
+    const elF = Math.asin(Math.max(-1, Math.min(1, inp.dFar[1])));
+    const elU = Math.asin(Math.max(-1, Math.min(1, inp.us[1])));
+    const D = dirAtHeading(psiF, elF + (elU - elF) * Math.min(1, inp.w));
+    P = followPose(D, inp.look, inp.foot, inp.hang, inp.gapM, inp.offYawRad, inp.offPitchRad);
   }
-  const v = sub3(look, eye);
-  const lv = len3(v);
-  const vd: Vec3 = lv > 1e-12 ? [v[0] / lv, v[1] / lv, v[2] / lv] : [0, 0, -1];
-  const c: Vec3 = [-vd[0], -vd[1], -vd[2]];
-  const t = turntableUp(c, s.tt, inp.coneDeg);
-  const target = inp.latched ? inp.G.up : t.up;
-  // the hand-over: a change of target holds the up drawn (bumpless), his finger closes it
-  let hand = s.hand ?? { latched: inp.latched, phi0: 0, r: 0 };
+  // the owner's own view: its heading and elevation (latched by G's up; else by the turntable's at the follower's heading)
+  const own = (): { readonly psi: number; readonly el: number } => {
+    const c0 = viewOf(P);
+    return viewHeadEl(c0, inp.latched ? P.up : turntableUp(c0, s.tt, inp.coneDeg, psiF).up);
+  };
+  // 2. the hand-over: a change of owner holds the view drawn (its heading, its elevation) and its up (bumpless), his finger closes them
+  let hand: UpHand = s.hand ?? { latched: inp.latched, phi0: 0, r: 0, dh: 0, de: 0 };
+  let o: { readonly psi: number; readonly el: number } | null = null;
   if (hand.latched !== inp.latched) {
-    const A = squared(target, vd);
-    const B = s.up === null ? null : squared(s.up, vd);
-    const phi0 = A === null || B === null ? 0 : Math.atan2(dot3(vd, cross3(A, B)), dot3(A, B));
-    hand = { latched: inp.latched, phi0, r: phi0 !== 0 ? 1 : 0 };
+    o = own();
+    const dh = s.dir ? wrapPi(s.dir.psi - o.psi) : 0;
+    const de = s.dir ? s.dir.el - o.el : 0;
+    const P1 = turnedPose(P, inp.foot, o.psi, o.el, dh, de);
+    const v1 = viewOf(P1);
+    const vd1: Vec3 = [-v1[0], -v1[1], -v1[2]];
+    const target1 = inp.latched ? P1.up : turntableUp(v1, s.tt, inp.coneDeg, psiF + dh).up;
+    const A = squared(target1, vd1);
+    const B = s.up === null ? null : squared(s.up, vd1);
+    const phi0 = A === null || B === null ? 0 : Math.atan2(dot3(vd1, cross3(A, B)), dot3(A, B));
+    // ⭐⭐⭐ (2026-11-21 night, §4.3a 5. — decided by the lead, his rule C4) THE LATCH'S GAP AT HIS PACE: never faster than `degPerMm` nor than `minMm` — the
+    // span mm = max(`minMm`, gap° / `degPerMm`), the gap (the larger of the heading's and the elevation's) read once here; where the square camera's own
+    // smoothstep keeps that pace (its peak 1.5 × gap / `minMm` ≤ `degPerMm`: a gap ≤ 20° — a turn started from the pose drawn, `Scene_1`) kept as it is
+    const pc = inp.pace;
+    const gapDeg = Math.max(Math.abs(dh), Math.abs(de)) / DEG;
+    const span = inp.latched && pc !== undefined && pc.degPerMm > 0 && (1.5 * gapDeg) / Math.max(1e-9, pc.minMm) > pc.degPerMm ? Math.max(pc.minMm, gapDeg / pc.degPerMm) : undefined;
+    hand = { latched: inp.latched, phi0, r: phi0 !== 0 || dh !== 0 || de !== 0 ? 1 : 0, dh, de, ...(span !== undefined ? { span } : {}) };
   }
   if (hand.r > 0) {
-    const r = inp.share !== null ? Math.min(hand.r, clamp01(1 - inp.share)) : inp.spanMm > 0 ? Math.max(0, hand.r - Math.max(0, inp.mm) / inp.spanMm) : 0;
-    hand = { latched: hand.latched, phi0: hand.phi0, r };
+    const share = inp.latched && hand.span !== undefined && inp.pace !== undefined ? Math.min(1, Math.max(0, inp.pace.mm) / hand.span) : inp.share;
+    const r = share !== null ? Math.min(hand.r, clamp01(1 - share)) : inp.spanMm > 0 ? Math.max(0, hand.r - Math.max(0, inp.mm) / inp.spanMm) : 0;
+    hand = { ...hand, r };
   }
+  // 3. the pose drawn: the owner's turned by the offsets left
+  const dhr = (hand.dh ?? 0) * hand.r;
+  const der = (hand.de ?? 0) * hand.r;
+  if (dhr !== 0 || der !== 0) {
+    const ow = o ?? own();
+    P = turnedPose(P, inp.foot, ow.psi, ow.el, dhr, der);
+  }
+  const c = viewOf(P);
+  const vd: Vec3 = [-c[0], -c[1], -c[2]];
+  const t = turntableUp(c, s.tt, inp.coneDeg, inp.latched ? undefined : psiF + dhr);
+  const target = inp.latched ? P.up : t.up;
   const ang = hand.phi0 * hand.r;
   const tq = ang !== 0 ? squared(target, vd) : null;
   const up = tq === null ? target : rotateAbout(tq, vd, ang);
   const upSq = squared(up, vd) ?? up;
   const tt = inp.latched ? turntableFromDrawn(c, upSq, inp.coneDeg) : t.s;
-  return { pose: { eye, look, up, piece }, state: { tt, hand, up: upSq } };
+  return { pose: { eye: P.eye, look: P.look, up, piece: P.piece }, state: { tt, hand, up: upSq, dir: viewHeadEl(c, upSq) } };
 }
