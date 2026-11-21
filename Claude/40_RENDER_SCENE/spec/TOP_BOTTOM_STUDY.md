@@ -331,3 +331,11 @@ onto the bottom triangle (B), zigzags along both apex edges (2), `Scene_1`'s top
 across the threshold under the default, `followTop` 0, `cameraFollower` 0 — it needs a (P) probe mode first (`fast_walk_check.mjs` `IN=osc`, spelt out
 in the driver) — read by `rd_p5b.mjs` all along the travel (which camera draws each frame, the latch, the view's step, the orbit's yaw / pitch steps,
 the facet changes, the turns started, the eye's, look point's and gizmo's steps) and `rd_p5.mjs` (the gap that slides the piece across the view).
+⭐ **(3) RUN 2026-11-21** (the lead; kit `h5/drv_h5b.sh` + `drv_h5c.sh`, `runs_h5b/h5_*_s1top_approach_60_px5`, read by `rd_p5c.mjs` / `rd_p5d.mjs`; 4 cycles
+at 5 px a frame; the 2 px runs did not build): far out going in, the view turns **0°** in every build (a pure dolly). One cycle on `f5e35c3`: at the latch
+a **23°** jump (the drawer handed over); close in's tilt 37° in 10 frames; at the approach's END (the piece at its closest, `ap` 0.451) **33° + 48°** in
+two frames; leaving it a **35°** jump, a 57° tilt back; at the follower's return (≈ 0.85) the picture SPINS about the view **94° in one frame, ≈ 190° in
+5**, then a 25° drift of height to the 60° cap. With `cameraFollower` 0 the hand-over, the spin and the drift go (the up's turn going out 23° against 905°)
+— ⛔ **but close in's tilt and the two jumps at the approach's end stay, identical with every upright switch at 0 as well** (`uprightCarried`,
+`uprightPicture`, `freeTurnMaxDeg` 0, `rollFollowMs` 200: the same figures to the 0.1°) — close in's own camera, older than the upright work (by switches,
+not proven frame for frame to `892b6a3`). `followMs` 200 changes none of it.
