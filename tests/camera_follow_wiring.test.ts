@@ -77,7 +77,8 @@ describe("F2 — the follower at the camera's stage", () => {
   it("not drawing: nothing written but its own state (dropped: it restarts at rest) — close in stays the live build's", () => {
     const f = between(code("render/camera_follow_wiring.ts"), "export function followFrame(", "// ⭐⭐⭐ (2026-11-21, R3b) a change of frame asked");
     // ⭐⭐⭐ (2026-11-21, R3a) dropped only on today's line (no picture hook); the one picture keeps it, parked (`picture_wiring.ts`)
-    expect(f).toContain("if (!followActive(st) || st.orbitPiecePlaced) {");
+    // ⭐ (2026-11-21 night, R3-FIX) `also`: the one picture's far path through a logic turn — absent (today's line), exactly the predicate before
+    expect(f).toContain("if ((also !== true && !followActive(st)) || st.orbitPiecePlaced) {");
     expect(f).toContain("if (pic === undefined) st.asmFollow = was === null ? null : { state: null, piece: null, rec: { on: 0 } }; return null; }");
   });
 

@@ -383,7 +383,7 @@ describe("R5 D-H16 — the far dy hold on the drawn up", () => {
     expect(w).toContain(": followTopStep(s0, was?.top ?? null, { ask: st.asmAsk!, orbit: orbitW, psiL: st.asmAskLevel, nW: gizmoFacetW(st), upShown: st.asmCamLogic?.up ?? null,");
     // the frame drawn is published after the follower's step (so it reads last frame's), by the picture only
     const p = code("render/picture_wiring.ts");
-    const f = between(p, "const fp = followFrame(st, pp, foot, eye, look, up, gapM, off, dtMs, (P, dFar, hangF, usF) => {", "st.asmPicture = { s: s1,");
+    const f = between(p, "const fp = followFrame(st, pp, foot, eye, look, up, gapM, off, dtMs, hook, Gl !== null);", "st.asmPicture = { s: s1,"); // ⭐ (R3-FIX) the far path's call
     expect(f).toContain("publishDrawn(st, fp.cam);");
   });
 });

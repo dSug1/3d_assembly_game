@@ -10,6 +10,9 @@
  *   with the up's hand-over (none left: G itself, its own frame published as drawn), and unlatched (the way out) by the band toward the follower. The follower is
  *   PARKED meanwhile at rest on its own far target — the heading carried from the drawn up (O-3: never the view's residue), the facet and the orbit at
  *   their place — so it goes on from there, never restarted.
+ * * ⭐⭐⭐ (2026-11-21 night, §4.3a — R3-FIX) amended: NOT LATCHED THE FOLLOWER DRAWS, whatever logic turn runs (the close drawer then runs for the logic only,
+ *   not drawn); its heading the one owner, the band its elevation only; CLOSE is the latched frame (and the rare frame with no direction asked or a placed
+ *   piece). The latch and the unlatch hold the pose drawn and hand it over by his finger (`pictureStep`'s hand-over).
  */
 import type { Vec3 } from "../core/vec";
 import { followStart, followTopTarget, headingOf } from "../input/camera_follow";
@@ -19,7 +22,7 @@ import { orbitDir } from "../input/assembly_orbit";
 import { poseTurnAngle } from "../input/roll_follow";
 import { changeSeen, holdSeen, uprightWeight, viewFromVertical } from "../input/upright";
 import { PICTURE_CONE_DEG, PICTURE_REST, pictureStep, type PictureIn, type PicturePose } from "../input/picture";
-import { followActive, followFrame } from "./camera_follow_wiring";
+import { followActive, followFrame, type FollowPicture } from "./camera_follow_wiring";
 import { CHANGE_NONE, rollPictureFrame, type ChangeLeft } from "./roll_shadow";
 import { approachBand, changeApply, dirFrame, gizmoFacetW, pictureEventsRead } from "./assembly_wiring";
 import type { SceneState } from "./scene_state";
@@ -117,23 +120,37 @@ export function pictureFrame(
   const us: Vec3 = hang > 1e-9 ? [(pp[0] - foot[0]) / hang, (pp[1] - foot[1]) / hang, (pp[2] - foot[2]) / hang] : (st.asmAsk ?? [0, 0, 1]);
   const base = { us, look, foot, hang, gapM, offYawRad: off.yawRad, offPitchRad: off.pitchRad, mm, spanMm: st.cfg.pictureBandMm, coneDeg: PICTURE_CONE_DEG };
   let s1 = s0;
-  // FAR: the follower with the picture's hook (far out outside the band: its own pose objects)
-  const fp = followFrame(st, pp, foot, eye, look, up, gapM, off, dtMs, (P, dFar, hangF, usF) => {
-    const inp: PictureIn = { ...base, hang: hangF, us: usF, w, dFar, F: P, G: { eye, look, up, piece: pp }, latched: false, share: null };
-    const r = pictureStep(s0, inp);
-    s1 = r.state;
-    return r.pose;
-  });
-  if (fp !== null) {
-    pictureEventsRead(st, fp.ev);
-    publishDrawn(st, fp.cam);
-    // the heading the follower carries — where it is parked if close in begins without a latch
-    const fs = st.asmFollow;
-    const psiPark = fs?.top?.psiT ?? (fs?.state ? headingOf(fs.state.d) : null) ?? was?.psiPark ?? null;
-    st.asmPicture = { s: s1, aWas: st.approach, w, far: true, psiPark };
-    return fp;
+  // ⭐⭐⭐ (2026-11-21 night, `PICTURE_REBUILD.md` §4.3a rule 4 — R3-FIX, the lead's amendment) NOT LATCHED THE FOLLOWER DRAWS — far, the band, between it and
+  // the latch, through EVERY logic turn (`asmZoneMix`, the way out's included), the square camera's share, a tilt turning off: `followActive` is no reason to
+  // leave the far path. ⛔ R3: each logic turn sent the frame to the close branch — the follower parked (`followStart(T)` every frame, T from a reading that
+  // flips) blended with the logic's turning G by w: jitter at every turn (his third video, `Scene_0bis`, the camera 2.4 m from its centre)
+  const farPath = !st.asmTiltAuto && st.asmAsk !== null && !st.orbitPiecePlaced;
+  if (farPath) {
+    // the close drawer runs for the LOGIC where the follower would not have drawn (a turn's angle — `zoneMixPose` —, its clocks, the carried up's state, the
+    // record its rules read) — NOT drawn; its facts read as before (the resolver above unchanged: the gizmo's waits and the holds stay the logic's)
+    const Gl = followActive(st) ? null : rollPictureFrame(st, pp, eye, look, up, dtMs, left);
+    if (Gl !== null) pictureEventsRead(st, Gl.ev);
+    // the hand-over left from the latch closed by the way out's OWN share (C3: his out mm) while its turn lives; else by his mm (`pictureStep`)
+    const zmO = st.asmZoneMix;
+    const share = zmO !== null && zmO.out !== undefined ? zmO.k : null;
+    const hook: FollowPicture = (P, dFar, hangF, usF) => {
+      const inp: PictureIn = { ...base, hang: hangF, us: usF, w, dFar, F: P, G: { eye, look, up, piece: pp }, latched: false, share };
+      const r = pictureStep(s0, inp);
+      s1 = r.state;
+      return r.pose;
+    };
+    const fp = followFrame(st, pp, foot, eye, look, up, gapM, off, dtMs, hook, Gl !== null);
+    if (fp !== null) {
+      pictureEventsRead(st, fp.ev);
+      publishDrawn(st, fp.cam);
+      // the heading the follower carries — where it is parked if close in begins without a latch
+      const fs = st.asmFollow;
+      const psiPark = fs?.top?.psiT ?? (fs?.state ? headingOf(fs.state.d) : null) ?? was?.psiPark ?? null;
+      st.asmPicture = { s: s1, aWas: st.approach, w, far: true, psiPark };
+      return fp;
+    }
   }
-  // CLOSE: G drawn by the close drawer, as today; the up's hand-over by his finger
+  // CLOSE (latched; or no direction asked, or a placed piece): G drawn by the close drawer, as today; the hand-over by his finger
   const G = rollPictureFrame(st, pp, eye, look, up, dtMs, left);
   pictureEventsRead(st, G.ev);
   const latched = st.asmTiltAuto;

@@ -1728,12 +1728,21 @@ export function pictureEventsRead(st: SceneState, ev: PictureEvents): void {
 
 /** ⭐ The pose on the glass now (the camera drawn last frame) — a zone's turn starts from it. */
 function poseShown(st: SceneState): CamPose {
+  // ⭐⭐⭐ (2026-11-21 night, `PICTURE_REBUILD.md` §4.3a rule 3 — R3-FIX) under the one picture a turn started AT THE LATCH starts from the pose DRAWN: last frame
+  // drawn by the far path (not latched), the latch on now — after a frame the follower drew through a logic turn the record below is the close drawer's
+  // (the logic's pose), not the one on the glass. Every other turn as before (its start the logic's, its angle and its clock unchanged)
+  if (st.asmTiltAuto && st.asmPicture?.far === true && st.cfg.pictureOne === 1 && st.cfg.cameraFollower === 1) return drawnPose(st);
   // ⭐⭐⭐ (2026-11-18, `UPRIGHT_PICTURE.md` §2 step 3 — law U) the picture is a function of the logic's pose: a turn starts from the LOGIC's last pose (`G`),
   // so its first frame draws exactly last frame's picture (from the picture drawn, law U would turn it once more inside the band)
   const sh = st.asmRollShadow;
   if (sh !== null && sh.upright !== undefined) return { eye: sh.ghost.eye, look: sh.ghost.look, up: sh.ghost.up, piece: st.asmPieceDrawn };
   // ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md`) the carried up: a turn (close in) starts from the logic's last pose too — the picture is that pose turned by φ
   if (sh !== null && sh.one !== undefined) return { eye: sh.ghost.eye, look: sh.ghost.look, up: sh.ghost.up, piece: st.asmPieceDrawn };
+  return drawnPose(st);
+}
+
+/** ⭐ The camera drawn last frame, with the piece where it was drawn. */
+function drawnPose(st: SceneState): CamPose {
   const c = st.camera;
   const t = c.getTarget();
   return { eye: [c.position.x, c.position.y, c.position.z], look: [t.x, t.y, t.z], up: [c.upVector.x, c.upVector.y, c.upVector.z], piece: st.asmPieceDrawn };
