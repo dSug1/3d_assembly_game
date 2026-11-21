@@ -790,3 +790,4 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   second) the sides turn and surge (23.7° a frame), the spin over the top rolls 25° in a frame, `b_far` s4 loses its hold and loops, the wait
   69.6 s of 155 — two roots read (the jump a per-frame difference; the lag left to a spring that pays it the short way), not patched (the last
   round on this join) → `CAMERA_FOLLOWS_GIZMO.md` §18.
+* **2026-11-21 — packet H4: THE STUDY after the last fix round** (docs only, nothing built; his four parts): `b_far` s4's lost hold is the follower reading the LOGIC's up (`asmCamLast`, 64 of 157 half turns on his ten), not the spit's side; the wait's 24 mm drift is the depth glide restarted every frame; G3 counted his own motion (the exit's excess: `f5e35c3` passes); the design — two followers, a 62.4° leash, the jump by geometry, the turn taking the whole gap — and D-H13 – D-H18 → `TOP_BOTTOM_STUDY.md`.
