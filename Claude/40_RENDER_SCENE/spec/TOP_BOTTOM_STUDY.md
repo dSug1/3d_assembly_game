@@ -1,6 +1,6 @@
 # The top and bottom far out — THE STUDY after the last fix round (packet H4, 2026-11-21, branch `1.0.152-`)
 
-> **Status: PROPOSED — nothing built; for the owner's word.** Written because H3 (`f5e35c3` live = `47e7267`) was the last fix round on this join and
+> **Status: PROPOSED — nothing built; for the owner's word.** (⭐ H5, 2026-11-21: his look on `f5e35c3` read — §7 – §9: A, B and point 2 one root, D-H19 – D-H21.) Written because H3 (`f5e35c3` live = `47e7267`) was the last fix round on this join and
 > gates still fail ([`CAMERA_FOLLOWS_GIZMO.md`](CAMERA_FOLLOWS_GIZMO.md) §18; [`UPRIGHT_LESSONS.md`](UPRIGHT_LESSONS.md) row 2, §5 rule 2). His four
 > parts: the rules → the obstacles, each reproduced → a design from prior art, one owner per thing → its audit, gates and decisions.
 > ⛔ Offline only (the owner was testing on this PC): the code, the kit's recordings (`runs_h3`, `runs_h2`, `runs_g2`, `runs_h1`) and the pure
@@ -26,7 +26,7 @@
 |---|---|---|
 | K1 | No roll of the scene on the glass; gravity on the glass's vertical; a pole's half turn ONE smooth yaw | lessons §4 (11-18, 11-20) |
 | K2 | The camera a simple polar orbit following the gizmo through a smooth, faithful function; it looks at the orbit's centre; the calm part of it | lessons §4; `CAMERA_FOLLOWS_GIZMO.md` §0, §12 |
-| K3 | On the top the heading turns only by his dx, a level face and a zenith / nadir edge alike; a pure dy never yaws; the height capped at 60° | R1 = D-H1 (§14.4) |
+| K3 | On the top the heading turns only by his dx, a level face and a zenith / nadir edge alike; a pure dy never yaws (⭐ H5: where the orbit's pitch is the world's — on a spit the dy runs along a horizontal axis, §9); the height capped at 60° | R1 = D-H1 (§14.4) |
 | K4 | The edge is the only trigger: none / a quarter / a half turn by the edge left; a vertical edge between two sides is NONE | R2 = D-H2, T4, O2; his point 1 (§17) |
 | K5 | The gizmo waits while that turn runs, then follows his input again — "waiting that the camera catches up" | R3 = D-H3 (his proposal), T5 |
 | K6 | After a half turn pushed by his dy, that push held (released 8 mm back or with the gesture), by close in's functions | D-H4 / D-H8, T9, `DY_HOLD_REVERSAL.md` |
@@ -39,6 +39,7 @@
 | K13 | His symptoms are the gates, at his pace (desk 143 frames a second, 1 200 px/s top tenth; phone 571 px/s mean) | lessons row 8, §5 rule 3 |
 | K14 | Kept from what passed: no yaw on a pure dy; the dy hold far out; close in identical; the clamp; no turn at a side edge at his paces | §16.3, §18.3 |
 | K15 | Never reopen the gizmo's travel; everything the orbit decides in the MODEL's space; no 3D orientation widget; patent-free | lessons §3; the common brief |
+| ⭐ K16 | The calm is part of the camera's orbit at a spit's tips too: the camera turns toward a tip as the gizmo goes onto its triangles | his look on `f5e35c3`, A (§7) |
 
 ## 2. Part 2 — the obstacles, each reproduced before it is named
 **O-a — F-1's "jump" is a frame's difference, so it holds his own motion** (§18.4 root 1). *Recording* `sd84t1` (`Scene_1`'s sides, 1 200 px/s,
@@ -91,7 +92,7 @@ defect: shortened only by his slider (`followTurnMaxDegS`) or by D-H6 (c) (the w
 ## 3. Part 3 — the design: ONE OWNER PER THING (behind three switches; all 0 = `f5e35c3` frame for frame)
 | the thing | its one owner | reads | never |
 |---|---|---|---|
-| the continuous reading `c` | the reading's own motion: each frame `c += wrap(L − Δ − L_before)` | the levelled reading `L` (K8) and its jump `Δ` | a discontinuity |
+| the continuous reading `c` | the reading's own motion: each frame `c += wrap(L − Δ − L_before)` | the levelled reading `L` (K8) and its jump `Δ`; ⭐ on a SPIT `L` = the calm asked's WORLD heading (D-H19, §8 – §9) | a discontinuity; F's level on a spit |
 | the jump `Δ` (H-3) | GEOMETRY: the reading of this frame's calm minus last frame's calm, both at THIS frame's angles (carried on a level face) | the two calms asked, the rig's angles | a frame's difference (O-a) |
 | the heading outside a turn (H-2) | a 1-D critically damped follower on the UNWRAPPED `c` (τ `followMs` 120 ms), its speed always carried; a LEASH: never more than `followTurnMaxDegS` × `followMs` (62.4°) behind, and while taut never faster than his finger's pace | `c`, his finger's mm | the sphere's great circle; the reading's own stretch speed |
 | the turn (H-4) | started only when `|Δ|` ≥ the band (10°); its angle the WHOLE gap, from the heading drawn to the reading beyond (`ba369aa`'s angle: the lag + `Δ`); its pace F-2's (his finger, 360 – 520°/s); the follower set at rest on `c` | `Δ`, the heading drawn, his finger | the lag left for later |
@@ -158,6 +159,10 @@ His point 1: no turn at a vertical edge at ANY pace (H3: up to 400 px/s only). H
 | G9 | close in | — | identical | identical |
 | ⭐ G-geo | the jump at every vertical edge of `Scene_1` and `Scene_0bis` (a vector on the pure reading, a sweep along each edge); frames with `Δ` ≠ 0 and no facet change on his ten | — | — | < 1°; 0 frames |
 | G11 | vectors red on mutants (each decision; the leash's derivation; the hold's up) | — | 27 of 27 | all red |
+| ⭐ G-tip (H5) | his ten: on a spit's tip triangles the camera's turn toward the tip against the asked | 57 – 72° (asked 55 – 81°) | 3 – 13° | within 10° of the asked |
+| ⭐ G-BT (H5) | off the level face onto the bottom triangle: turns within 1 s | one swing | 90 + 90 (40 pairs) | one turn ≤ 100° |
+| ⭐ G-apex (H5) | turns at a crossing between two triangles; time turning on the triangles; the owed zigzags | 0; 0 % | 0.82 a second; 40 % (`ba369aa` 1.61, 29 %) | 0; ≤ 5 % |
+| G-level (H5, reported) | `Scene_1`'s top: the view's turn a frame per mm of gizmo; the rotation share | 0.63° height + 1.00° heading / 5.2 mm; 1.00 | 0.63° + 0.14°; 1.00 | his eye |
 
 **The switches** (rule 4; ORBIT › CAMERA FOLLOWER › THE EDGE'S TURN): `followHeadElev` (H-2 + E-1 + the leash; 0 = the sphere spring),
 `followTurnGeo` (H-3 + H-4; 0 = F-1), `followHoldDrawnUp` (D-H16; 0 = `asmCamLast`). All three 0 = `f5e35c3` frame for frame.
@@ -183,4 +188,93 @@ the switches already measure each alone. ⛔ Nothing in the gizmo's travel; the 
 | D-H16 | The follower's dy hold read on the picture HE sees (its own drawn up), never the logic's | yes — a defect: 64 of 157 half turns, `b_far` s4 |
 | D-H17 | G3 as the exit's step over the 33 ms before; G5 on the gizmo's angles and place (the ring's depth glide reported apart) | yes — the gates counted his own motion |
 | D-H18 | The gizmo's depth glide, restarted every frame (0.85 s at 60 frames a second, over 1.4 s at 143): (a) left as is — the feel he approved on 11-10; (b) written in ms as the decay it really is (τ ≈ 340 ms, his phone's feel at every frame rate); (c) the 125 ms as written | (b), as its own small packet behind a switch — and first his word on whether the glide counts as "what drives the gizmo" |
-D-H12 (F-4: in the spit a dx along the axis does not yaw toward a tip) still waits for his eye; untouched here.
+| ⭐ D-H19 (H5) | On a spit the follower's heading reads the calm asked in the WORLD (A, B, point 2 — one root, §8): the camera turns toward a tip as on `de4a10e`, one quarter turn off the level face's short edge (K4), no turn along the apex edges; upright frames unchanged bit for bit | yes — offline no turn along the edges (6 as built), the bottom triangle stable (±1.2° against 0 / 90 / 180°); behind a switch (0 = `f5e35c3`); gates G-tip, G-BT, G-apex, G1 |
+| ⭐ D-H20 (H5) | A level face far out (point 3): (a) as is; (b) the CALM on a level face for the picture — its height and heading held in the face's middle, the whole angle in his edge band (15 / 50), so a delta there moves the gizmo and the piece under a still picture; (c) close in's pan far out (the look on the gizmo — bends K2); (d) a longer ease (time; the piece trails its gizmo) | (b), its own small packet behind a switch, measured first on the owed `s1top` runs; the follower's targets only, nothing of the gizmo's travel — and first his word that a still picture in the face's middle is what he means |
+| ⭐ D-H21 (H5) | D-H12 (F-4: in the spit a dx along the axis does not yaw toward a tip) WITHDRAWN — his A (§7) answers it: the yaw toward a tip is wanted | yes |
+
+⭐ D-H15 amended by H5: its geometric jump is read on D-H19's reading on a spit (on the F-level one it inherits B and point 2). D-H13, D-H14, D-H16 – D-H18 unchanged.
+
+## 7. His look on `f5e35c3` (2026-11-21) — packet H5, docs only
+> Verbatim: *"This implementation is good except:
+> - scene 0bis on dy : A) there is no calm any more : the camera orbit yaws only when the gizmo arrives very close to the poles. So the triangle faces are
+>   viewed from the same view as the rectangle faces (attachment 3). This is not what was done previously and I don't like this new behavior. B) on the
+>   level face, when the gizmo arrives to the edge with dy, the camera turns 90 degrees and then immediately another 90 degrees if the dy continues to push
+>   (it then goes backwards, aligned with the input). I am not sure why this is now different from previous branches.
+> - scene 0bis edges of the triangles connecting the pole and either the zenith/nadir edge or connecting the pole with the corners of the level face: when
+>   I travel the gizmo close to these edges there is a lot of back and forth of the camera as the gizmo crosses these edges and the input directions change
+>   (attachments 1 and 2) (attachments 4 and 5). I don't recall the same issue in the previous branch.
+> - in the polar orbit when the gizmo is on the level face (for example in scene 1), the camera tends to follow each and every delta input: this is good for
+>   accuracy but it makes the camera view quite jerky. why can't it be smoothed similarly to when the camera pans when the tilted-orbit gizmo is on the level
+>   face ?"*
+
+Then: *"none of the sliders change what I observed and reported in my previous post"* (H3's three switches at 0 in the live menu: all four points stay).
+His screenshots (all `f5e35c3`, desktop, `Scene_0bis`), the kit's `fo3/follow/h5/look_f5e35c3_att1.png` … `att5.png`: **att 3** the camera square to
+the side (elevation 7°), the gizmo on a tip's side triangle seen nearly edge on; **att 1 – 2** the gizmo near the edge from the apex to a corner of the
+level face (the bottom), the camera along the axis (att 2); **att 4 – 5** the gizmo near the apex's edge toward the zenith ridge, the same camera height
+(47°), once along the axis (att 4), once square to the side (att 5). ⭐ **"The poles" = the tips' APICES** (the spit's own poles): on `Scene_0bis` the
+polar zone is a SPIT whose axis is the heptagon's length (world x), so his dy runs ALONG the axis toward an apex and the "yaw" he misses is the world
+heading turning toward a tip; a zenith / nadir is never reached far out (the height is capped at 60°). "The level face" = the bottom, on the floor.
+
+## 8. The four points — each reproduced, its build, its root, its place in the design
+Scripts in the kit's `fo3/follow/h5/`: `rd_a.mjs`, `rd_a2.mjs` (A), `rd_b.mjs`, `rd_b2.mjs`, `rd_b3.mjs` (B), `rd_p2.mjs`, `rd_p2b.mjs`, `rd_rb.mjs`
+(point 2), `rd_p3.mjs`, `rd_p3b.mjs` (point 3) on `runs_g2` / `runs_h1` (`de4a10e`), `runs_h2` (`ba369aa`), `runs_h3` (`f5e35c3`); the pure rules
+offline in `ab_sim.ts`, `p2_sim.ts` (`npx vite-node`). His ten = his 1.0.142 play replayed on each build (60 frames a second).
+
+**A — no calm on the tip triangles. Reproduced; root in H2's reading (`followTop` 1), so in `ba369aa` too; `de4a10e` had the calm.** On his ten, on the
+tips' side triangles, the camera turns toward the tip by p50 **57 – 72°** on `de4a10e`, **2 – 3°** on `ba369aa`, **3 – 13°** on `f5e35c3` (the calm
+asked 55 – 88° in all three; the face itself 62 – 77°); the reading (`top.L`) is square to the axis on 95 – 98 % of those frames in H2 and H3.
+*Offline* (`ab_sim.ts`, the pure `levelledHeading` in the spit's frame): 180.0° (square) on a side triangle at every calm share; the calm asked 62 – 80°
+toward the tip. *The root* — `levelledHeading` (`camera_follow.ts` l.298 – 312) reads the calm LEVEL in the orbit's frame F (`[cos y, 0, sin y]` turned
+by `R`). In an upright frame F's level is the world's; in a SPIT F's vertical is the horizontal axis, so every reading lies in the vertical plane square
+to the axis — its world heading 0° or 180° — and the calm's share toward the tip (F's pitch, a world YAW on a spit) is dropped. A yaw appears only
+where the reading degenerates (near an apex, on the bottom triangle). *The lead's leads*: the level reading at every pitch — the object right, the
+mechanism not: it is the FRAME (square below 50° of pitch too); the calm's ease missing the band — refuted (no jump exists: the reading is constant
+across a triangle); the reading null there — refuted (null only on the level face). ⭐ It is exactly D-H12 (F-4, *"in the spit a dx along the axis no
+longer yaws the camera toward a tip"*, left for his eye): his eye says no.
+
+**B — 90° then another 90° off the level face. Reproduced; the same root; in `ba369aa` too; not in `de4a10e`.** On his ten the exits off the level face
+onto the bottom triangle run *90 + 90* on both H2 and H3 (`ba369aa` `ilmj_60s` f131 – f156: the camera 176° → −93° → −3°, i.e. backwards; `f5e35c3`
+`ilmj_114s` f252 – f294: 90° there and back); 90 + 90 pairs within 0.6 s, all on the triangles: 51 on `ba369aa`, 40 on `f5e35c3`; `de4a10e`'s spring
+swings once toward the tip (~105°) and stays. *Offline* (`ab_sim.ts`): on the bottom triangle (normal (0.89, −0.46, 0)) the reading is **180°, 90° or
+0°** by the sign of a 1e-9 residue of the normal's z and the side of the face's middle line; the calm asked 88.8 – 91.2° whatever. *The root*: there
+the F-level direction is straight down, its horizontal part a residue, and the side test (`r·n > 0`, n's z exactly 0) falls to `headingOf(n)` (along the
+axis) or not by rounding. Leaving the level face (the heading carried) the first jump is a real quarter turn (K4, by the edge left); the second is the
+reading flipping on the same face. Each ≤ 90°, so no dy hold (D-H8 holds over 90° only): the camera ends reversed with his push going on —
+*"backwards, aligned with the input"*. `p2_sim.ts`: as built one turn then 5 swings back and forth (up to 9.6° a frame); fed the calm asked's world
+heading, the one quarter turn and nothing after. *Why it shows more now*: F-2's clamp (his 520°/s) — a turn lasts p50 198 ms against 106 ms on
+`ba369aa`; on the triangles 40 % of the time is spent turning, the gizmo held (29 %): the two turns are seen as two. Not the cause (his sliders at 0).
+
+**Point 2 — back and forth along the apex edges. Reproduced offline; the same root; in `ba369aa` too; not in `de4a10e`.** Across the apex → zenith-ridge
+edge the two upper triangles read 0° and 180° (or one falls to its normal's heading, ±103°); across the apex → level-corner edge the side triangle reads
+square and the bottom triangle 90° (B): every crossing near an apex is a jump of 90 – 180°, so a follower turn, the gizmo held. The finger in a spit is
+read on the DRAWN camera (`zoneFinger`, `assembly_wiring.ts` l.2479 – 2505: `fingerInFrame` on `st.asmCamLast`, which `followFrame` writes with the
+drawn pose): by design the finger keeps its way on the glass, so each turn rotates what his push does on the surface by the turn's angle — *"the input
+directions change"* — and a push that crossed can carry the gizmo back over the edge: another turn. *Offline* (`p2_sim.ts`, the pure rules at H3's
+defaults, a ±3 mm zigzag along each edge at 1.5 mm a frame): as built **6 turns, the gizmo held 48 / 59 of 150 frames, 5 / 6 back-and-forths**; fed the
+calm asked's world heading **0 turns, 0 held, none** (the calm is whole at an edge: both sides show the orbit's own direction). *Recordings*: turns at a
+crossing between two triangles on his ten — `de4a10e` 0, `ba369aa` 1.61, `f5e35c3` 0.82 a second; his replayed play does not follow those edges, so the
+back-and-forth count there is alike (0.38, 0.43, 0.32 a second) — the game run is owed (§9). *The lead's leads*: F-3's rebase — refuted (his sliders
+at 0; at the 57 rebases near an apex the orbit's yaw step is 0.0°); F-1 turning where `ba369aa` did not — refuted (`ba369aa` turns twice as often
+there: the reading itself jumps). Near an apex the orbit's own yaw sweeps fast (p50 12.9° a frame): the polar orbit's mapping, never reopened.
+
+**Point 3 — on a level face far out the camera follows every delta. Reproduced on the recordings; since the follower (`de4a10e`), not H2 / H3.** On
+`Scene_1`'s top (the S1 walks, 330 frames, the same route in the three builds) the camera's height steps **0.63°** a frame for 5.2 mm of gizmo on
+`de4a10e`, `ba369aa` and `f5e35c3` alike; its heading **1.00°** on `de4a10e`, 0.14° on H2 / H3 (carried within 30° of the vertical). All of it is a
+ROTATION of the view about the assembly's centre (the eye's step against the look point's: share 1.00). Close in on a level face (`h3c_*`, few frames):
+the view's turn p50 0.00°, the eye moving with the look point (rotation share 0.05) — a PAN. *The root*: far out the follower's target on a level face
+is the orbit's own direction (no calm on `Scene_1`'s cap: `asmAskCalm` null; the height the asked one under the 60° cap) through the ONE 120 ms spring,
+and the camera looks at the assembly's centre (`st.asmLook`, `lookShare` 0 far out — K2), so following the piece IS turning the whole picture: 1 mm of
+gizmo ≈ 0.15° of view. Close in is not smoothed by a longer time — its look point eases at **120 ms** (`LOOK_TAU_MS`, `assembly_wiring.ts` l.52,
+l.1375) after the gizmo's **45 ms** (`gizmoEaseMs`), the follower's own 120 ms — but its view does not TURN: the calm keeps it square in the face's middle
+and only the look point (the gizmo) slides. *Close in's way far out would cost*: the look point on the gizmo (bends K2, *"the camera looks at the
+centre of its orbit"*), or a longer ease (time; the piece, hung along the followed direction, would trail off its gizmo's line — the gizmo itself stays
+under the finger). The calm's way costs neither (D-H20).
+
+## 9. What H5 amends, and what is owed
+§1 (K3 narrowed, K16 added), §3 (the reading on a spit), §4 (the gates G-tip, G-BT, G-apex, G-level) and §6 (D-H19 – D-H21; D-H15 amended, D-H12
+withdrawn) are amended in place. Nothing else in the design changes: the two followers, the leash, the turn's whole gap, the hold on the drawn up and
+the depth glide's decision stand; D-H8 stands (B's second turn goes, not the rule).
+**Owed** (none run: no headless run while he tests): (1) the kit's `fo3/follow/h5/drv_h5.sh` — `Scene_0bis` along a side to a tip (A), the level face
+onto the bottom triangle (B), zigzags along the apex → zenith and apex → corner edges (point 2), `Scene_1`'s top far and close (point 3), at 571 px/s
+(60) and 1 200 px/s (143), on `f5e35c3`, `ba369aa` (H3's switches 0) and `de4a10e` (`followTop` 0) by URL, read with the readers above; (2) after
+D-H19 is built, the same, his ten, G1 on `Scene_1` / `Scene_0`; (3) D-H20 (b) measured on (1)'s `s1top` runs before any build.
