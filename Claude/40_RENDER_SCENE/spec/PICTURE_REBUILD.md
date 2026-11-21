@@ -1,6 +1,6 @@
 # The picture's rebuild — THE STUDY (packet R1, 2026-11-21, branch `1.0.153-Picture_rebuild`, src = `620f227`)
 
-> **Status: ⭐ DECIDED (2026-11-21, the owner on D-P1 – D-P8 as recommended: *"go ahead"*) — R2 building** (§4.7). Docs only up to here. His four parts: the rules → the obstacles, each reproduced → a design from
+> **Status: ⭐ DECIDED (2026-11-21, the owner on D-P1 – D-P8 as recommended: *"go ahead"*); R2 + R3 BUILT, DEPLOYED (main `ae456df` = `67d0473`) — ⭐⭐⭐ his look: *"the deploy is very good : this is the best implementation of the orbit so far"*; R4 closed (nothing built); R5 building** (§4.7). Docs only up to here. His four parts: the rules → the obstacles, each reproduced → a design from
 > prior art, one owner per thing → its audit, the decisions. ⛔ Offline only (he may be testing on this PC): the code, `git show` of the commits named,
 > the kit's recordings (`fo3/follow/h5/runs_h5b`, `h3/runs_h3`, `runs_g2`) and the pure functions run with `npx vite-node`. The scripts of this packet:
 > the kit's `fo3/follow/r1/` — `rd_r1a.mjs` (one approach cycle frame by frame), `rd_drawer.mjs` (the drawer's hand-overs far out), `rd_roll.mjs` (the

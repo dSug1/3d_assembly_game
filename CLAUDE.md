@@ -46,9 +46,8 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-11-21)
 
-⭐⭐⭐ **THE OWNER (2026-11-21, on the device): LIVE main `ba369aa` = `1.0.151-` at `c1edcaf` — THE TOP AND BOTTOM FAR OUT (H2) ON THE CAMERA FOLLOWER — IS THE BEST IMPLEMENTATION OF THE ORBIT CHARTS SO FAR** (*"this is the best implementation of orbits chart so far"*; it supersedes `de4a10e`, the camera follower of 2026-11-20, which superseded `12dc4b6`).
-Far out the camera is a simple polar orbit (world up) following the gizmo through one ease on the sphere (`cameraFollower` 1); over the top and bottom its heading is turned by dx only, one turn at an edge with the gizmo waiting, the dy held after a half turn (`followTop` 1; 0 = `de4a10e`); close in unchanged. **2255 vectors**.
-Open: his two exceptions (the side-to-side transition on `Scene_1` less smooth than `de4a10e`'s; the 180° realignment too fast under a fast input → a clamp slider) and the fixes F-1 – F-4 for his final review, nothing built → [`Claude/40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md`](Claude/40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md) §16 – §17; why the eleven upright builds before the follower failed → [`Claude/40_RENDER_SCENE/spec/UPRIGHT_LESSONS.md`](Claude/40_RENDER_SCENE/spec/UPRIGHT_LESSONS.md).
+⭐⭐⭐ **THE OWNER (2026-11-21, on the device): LIVE main `ae456df` = `1.0.153-Picture_rebuild` at `67d0473` — THE PICTURE'S REBUILD R2 + R3 — IS THE BEST IMPLEMENTATION OF THE ORBIT SO FAR** (*"the deploy is very good : this is the best implementation of the orbit so far"*; it supersedes `ba369aa`, the best orbit charts of the same day, which superseded `de4a10e` and `12dc4b6`).
+ONE picture at every distance (`pictureOne` 1; 0 = `3bc9d7f` frame for frame): close in's turns about the piece (the 32 – 48° jumps at the approach's end gone), far and close as TARGETS blended over his last 10 mm of approach before 0.65 m, the up handed over by his finger's mm (no spin, no drift), the picture writing nothing into the logic; far out the follower (world up, `followMs` 200) as before. R4 closed with nothing built; ⛔ open: R5 (`Scene_0bis`'s calm on the slanted faces, B, the apex edges — D-H13 – D-H19), then R6 (the old layers deleted) after his look. **2298 vectors** → [`Claude/40_RENDER_SCENE/spec/PICTURE_REBUILD.md`](Claude/40_RENDER_SCENE/spec/PICTURE_REBUILD.md); why the upright builds failed → [`Claude/40_RENDER_SCENE/spec/UPRIGHT_LESSONS.md`](Claude/40_RENDER_SCENE/spec/UPRIGHT_LESSONS.md).
 ⭐ When the orbit charts are completed, everything is merged into the `3d_assembly_game` worktree.
 The earlier status moved → [`Claude/00_CORE/history/2026-11-20_claude_md_status_moved.md`](Claude/00_CORE/history/2026-11-20_claude_md_status_moved.md), [`Claude/00_CORE/history/2026-11-18_queue_status_moved.md`](Claude/00_CORE/history/2026-11-18_queue_status_moved.md).
 
@@ -57,7 +56,7 @@ owner's order, and the working rules (the usage limit, the chains, the deploy).
 
 | the subject | where |
 |---|---|
-| ⭐ the camera follower far out (the best orbit so far); the lessons of the upright builds | [`Claude/40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md`](Claude/40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md), [`Claude/40_RENDER_SCENE/spec/UPRIGHT_LESSONS.md`](Claude/40_RENDER_SCENE/spec/UPRIGHT_LESSONS.md) |
+| ⭐ the picture's rebuild (the best orbit so far, `ae456df`); the camera follower far out; the lessons of the upright builds | [`Claude/40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md`](Claude/40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md), [`Claude/40_RENDER_SCENE/spec/UPRIGHT_LESSONS.md`](Claude/40_RENDER_SCENE/spec/UPRIGHT_LESSONS.md) |
 | the orbit on charts: the rules, the model, the seams | [`Claude/40_RENDER_SCENE/spec/ORBIT_CHARTS.md`](Claude/40_RENDER_SCENE/spec/ORBIT_CHARTS.md) |
 | the tilted pole close in (the rules T1 – T12) | [`Claude/40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md`](Claude/40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) |
 | a level face's entry; the silent entry (§15 – §17) | [`Claude/40_RENDER_SCENE/spec/LEVEL_FACE_ENTRY.md`](Claude/40_RENDER_SCENE/spec/LEVEL_FACE_ENTRY.md) |
