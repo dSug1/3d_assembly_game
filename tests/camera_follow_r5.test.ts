@@ -11,8 +11,11 @@ import {
   farReadingShare,
   followFarStep,
   followTopStep,
+  followLeashRad,
   followTurnHoldsGizmo,
   headingOf,
+  sphereSpring,
+  spring1,
   levelledHeading,
   type FollowFarIn,
   type FollowState,
@@ -135,7 +138,7 @@ const SA: V = [0, 0, 1];
 const SB: V = [1, 0, 0];
 type Step = typeof followFarStep;
 /** a dx at `rate` °/s from heading 0 (the gizmo waiting while a turn runs), the facet `SA` → `SB` at `edge`°, the reading jumping `disc`° there, he stops at `stop`° */
-function edgeRun(step: Step, rate: number, fps: number, el: number, edge: number, disc: number, stop: number) {
+function edgeRun(step: Step, rate: number, fps: number, el: number, edge: number, disc: number, stop: number, kn: FollowTopKnobs = K5) {
   const dt = 1000 / fps;
   let s: FollowState | null = null;
   let top: FollowTop | null = null;
@@ -149,6 +152,10 @@ function edgeRun(step: Step, rate: number, fps: number, el: number, edge: number
   let end: { drawn: number; reading: number } | null = null;
   let prev: number | null = null;
   let wasTurning = false;
+  let backAfterStop = 0;
+  let lagAtStopDeg = 0;
+  const headings: number[] = [];
+  const els: number[] = [];
   for (let i = 0; i < fps * 4; i++) {
     const holding = followTurnHoldsGizmo(top?.turn ?? null);
     let mm = 0;
@@ -162,7 +169,7 @@ function edgeRun(step: Step, rate: number, fps: number, el: number, edge: number
     const psiL = wrap(yaw + (beyond ? disc * D : 0));
     const ask = dirAtHeading(yaw, el * D);
     const inp: FollowFarIn = { ask, orbit: ask, psiL, nW: beyond ? SB : SA, upShown: null, dySign: 0, fingerMm: mm, ...(yawWas === null ? {} : { psiLWas: wrap(yaw + (yawWas >= edge * D ? disc * D : 0)) }) };
-    const r = step(s, top, inp, dt, K5);
+    const r = step(s, top, inp, dt, kn);
     if (r.started) turns++;
     s = r.s;
     top = r.top;
@@ -172,14 +179,18 @@ function edgeRun(step: Step, rate: number, fps: number, el: number, edge: number
       const dps = (Math.abs(wrap(h - prev)) / D) * fps;
       if (turning || wasTurning) maxTurnDegS = Math.max(maxTurnDegS, dps);
       if (stopped && !justStopped) maxAfterStopDegS = Math.max(maxAfterStopDegS, dps);
+      if (stopped && !justStopped && wrap(h - prev) * Math.sign(rate) < -1e-9) backAfterStop++;
     }
+    if (justStopped) lagAtStopDeg = Math.abs(wrap(psiL - h)) / D;
+    headings.push(h);
+    els.push(Math.asin(s.d[1]) / D);
     if (wasTurning && !turning) end = { drawn: h, reading: psiL };
     maxElDeg = Math.max(maxElDeg, Math.asin(s.d[1]) / D);
     wasTurning = turning;
     prev = h;
     yawWas = yaw;
   }
-  return { turns, maxTurnDegS, maxElDeg, maxAfterStopDegS, end };
+  return { turns, maxTurnDegS, maxElDeg, maxAfterStopDegS, end, backAfterStop, lagAtStopDeg, headings, els };
 }
 
 describe("R5 D-H15 — the turn on the reading's GEOMETRIC jump, its angle the whole gap", () => {
@@ -284,5 +295,58 @@ describe("R5 D-H15 — wired", () => {
     const w = code("render/camera_follow_wiring.ts");
     expect(w).toContain("const r = farTopDecided(st) ? followFarStep(s0, was?.top ?? null, { ask: st.asmAsk!, orbit: orbitW, psiL: st.asmAskLevel, nW: gizmoFacetW(st),");
     expect(w).toContain("...(st.asmAskLevelWas !== null ? { psiLWas: st.asmAskLevelWas.psi } : {}) }, dtMs, kt)");
+  });
+});
+
+// ⭐⭐⭐ D-H13 + D-H14 — the heading and the elevation as two 1-D followers (the heading unwrapped), the leash DERIVED (`followTurnMaxDegS` × `followMs`:
+// 520°/s × 200 ms = 104°). The old code: H3's sphere spring (over the top it cuts toward the pole; after a fast dx its lag passes 180° and it turns back).
+describe("R5 D-H13 + D-H14 — two followers and the derived leash", () => {
+  it("the leash: his clamp × the follower's time (104° at 520°/s and 200 ms), none without a clamp", () => {
+    expect(followLeashRad(520, 200) / D).toBeCloseTo(104, 9);
+    expect(followLeashRad(520, 120) / D).toBeCloseTo(62.4, 9);
+    expect([followLeashRad(0, 200), followLeashRad(520, 0)]).toEqual([0, 0]);
+  });
+
+  it("the one ease on a number is the sphere's spring: the same step along a great circle", () => {
+    const a = spring1(0, 0.5, 1, 1 / 60, 0.2);
+    const sp = sphereSpring([0, 0, 1], [0.5, 0, 0], [Math.sin(1), 0, Math.cos(1)], 1 / 60, 0.2);
+    expect(a.x).toBeCloseTo(Math.atan2(sp.d[0], sp.d[2]), 12);
+    expect(a.v).toBeCloseTo(sp.v[0] * Math.cos(a.x) - sp.v[2] * Math.sin(a.x), 9);
+  });
+
+  it("over the top (55° asked under the 60° cap), a fast dx then he stops: the height never past the cap, no frame after the stop over his 520°/s, none against his dx", () => {
+    for (const [rate, fps] of [[900, 60], [1620, 60], [1620, 143]] as const) {
+      const r = edgeRun(followFarStep, rate, fps, 55, 400, 0, 300);
+      expect(r.maxElDeg).toBeLessThanOrEqual(60 + 1e-9);
+      expect(r.maxAfterStopDegS).toBeLessThanOrEqual(520 * 1.01);
+      expect(r.backAfterStop).toBe(0);
+      expect(r.lagAtStopDeg).toBeLessThanOrEqual(104 + 1e-6);
+    }
+    // the asked height over the cap (75°; started there, at rest): eased down onto the cap, never rising on the way, at the cap within 0.01° by 1.5 s
+    const over = edgeRun(followFarStep, 900, 60, 75, 400, 0, 300).els;
+    expect(over.every((x, i) => i === 0 || x <= over[i - 1]! + 1e-12)).toBe(true);
+    expect(Math.max(...over.slice(90))).toBeLessThanOrEqual(60.01);
+    // H3's sphere spring: up toward the pole, and back the short way after the stop
+    const h3 = edgeRun(followTopStep, 1620, 60, 55, 400, 0, 300);
+    expect(h3.maxElDeg).toBeGreaterThan(60);
+    expect(h3.backAfterStop).toBeGreaterThan(0);
+  });
+
+  it("a vertical edge at 1 620°/s, 143 frames a second: the height the asked 15° (H3: 22.8°)", () => {
+    expect(edgeRun(followFarStep, 1620, 143, 15, 45, 0, 135).maxElDeg).toBeLessThanOrEqual(15 + 1e-6);
+    expect(edgeRun(followTopStep, 1620, 143, 15, 45, 0, 135).maxElDeg).toBeGreaterThan(18);
+  });
+
+  it("below his clamp the leash is never taut: frame for frame the plain follower (400 and 500°/s); above it, taut", () => {
+    for (const rate of [400, 500]) {
+      const a = edgeRun(followFarStep, rate, 60, 55, 400, 0, 300);
+      const b = edgeRun(followFarStep, rate, 60, 55, 400, 0, 300, { ...K5, maxDegS: 0 });
+      expect(a.headings.length).toBe(b.headings.length);
+      expect(Math.max(...a.headings.map((x, i) => Math.abs(wrap(x - b.headings[i]!))))).toBeLessThan(1e-12);
+    }
+    const c = edgeRun(followFarStep, 1620, 60, 55, 400, 0, 300);
+    const d = edgeRun(followFarStep, 1620, 60, 55, 400, 0, 300, { ...K5, maxDegS: 0 });
+    expect(c.lagAtStopDeg).toBeCloseTo(104, 6); // taut at the stop
+    expect(d.lagAtStopDeg).toBeGreaterThan(c.lagAtStopDeg + 20); // without it, 143°
   });
 });
