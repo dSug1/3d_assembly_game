@@ -201,7 +201,7 @@ describe("⭐⭐⭐ the wiring (source pins, comments stripped)", () => {
     expect(f).toContain("const paced = seamOutPaced(tl.off, st.asmTiltAuto, st.cfg.tiltOutBlendMm);");
     expect(f).toContain("crossTurn(st, { at: { mq: poleYawKept(mq0, ORBIT_PITCH_MAX_RAD, hP), g }, uWas, carry: false, paced, hold: held, tilt: true });");
     expect(f).toContain("} else st.asmMapQ = null; crossTurn(st, { at: null, uWas, carry: false, paced, hold: held, tilt: true });");
-    expect(fnCode(W, "function turnBegin(")).toContain("if (a.paced) seamOutStart(st); else if (a.noCamNull || st.asmCamLast !== null) seamTurnStart(st, a.byMm); if (a.uWas !== null) seamEase(st, a.uWas);"); // ⭐ (2026-11-19, RB1)
+    expect(fnCode(W, "function turnBegin(")).toContain("if (a.paced) seamOutStart(st); else if (a.noCamNull || st.asmCamLogic !== null) seamTurnStart(st, a.byMm); if (a.uWas !== null) seamEase(st, a.uWas);"); // ⭐ (2026-11-19, RB1)
     // the latch read is LAST frame's: `tiltOff` runs before the latch is stepped
     const a = fnCode(W, "export function assemblyFrame(");
     before(a, "if (st.asmTilt !== null && st.asmTilt.exit) tiltOff(st);", "st.asmTiltAuto = tiltAutoLatch(st.asmTiltAuto, approachDistance(st.cfg, st.approach), st.cfg.tiltAutoM);");
@@ -241,7 +241,7 @@ describe("⭐⭐⭐ the wiring (source pins, comments stripped)", () => {
   });
   it("⭐ coming back in: `tiltOn` starts its own turn (a new `asmZoneMix`, no `out`) and its own ease — nothing of the out-turn survives", () => {
     const s = fnCode(W, "function seamTurnStart(");
-    expect(s).toContain("st.asmZoneMix = st.asmCamLast === null ? null : { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0, ...(paced ? { byMm: true } : {}) };");
+    expect(s).toContain("st.asmZoneMix = st.asmCamLogic === null ? null : { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0, ...(paced ? { byMm: true } : {}) };");
     expect(s).not.toContain("out");
     const t = fnCode(W, "function tiltOn(");
     expect(t).toContain("st.asmFree = null; turnBegin(st, { paced: false, byMm, noCamNull: true, uWas, carry: false, tilt: true, stopCoast: false });"); // ⭐ (2026-11-19, RB1)

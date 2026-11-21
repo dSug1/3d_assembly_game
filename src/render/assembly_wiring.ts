@@ -39,11 +39,11 @@ import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { crossingHold, crossingPitch, distanceToFacets, fingerInFrame, fingerSwapped, SPIT_CROSSING_PITCH_RAD, spitCameraHeading, spitSide, zoneAt, type PolarZone } from "../input/polar_zone";
 import { assignCharts, capTiltHeading, chartContour, chartZones, DEFAULT_CHART_OPTS, type ChartAssignment, type ChartFace } from "../input/orbit_charts";
-import { holdAtCrossing, turnPose, type CamPose, type EdgeHold } from "../input/orbit_tilt";
+import { holdAtCrossing, turnPose, type CamFrame, type CamPose, type EdgeHold } from "../input/orbit_tilt";
 import { approachOutMm, bandShare } from "../input/picture";
 import { poleCrossingDue, poleSeam } from "../input/pole_crossing";
 import { fingerOnLogic, gapStep, restShare } from "../input/roll_follow";
-import { lawHalfTurn } from "../input/upright";
+import { carriedHold, holdSeen, lawHalfTurn } from "../input/upright";
 import { dirGap, easedDir, easeRest, poleYawKept, seamOutPaced, seamOutShare, seamOutStep, seamOutTarget, seamTurnPace, seamTurnStep, seamWholeRad, tiltLeavesNow, turnHoldsGizmo } from "../input/seam_turn";
 import { bandedFacet } from "../input/face_band";
 import { contourFaceAt, crossingEvent, entryBlendHeading, entryDepth, entryEdgeOf, exitHoldSign, headingStep, pictureOffset, transportUp, viewLevelTurned, exitTurnRad, faceOwnUp, freeEdges, freeEntryHeading, freeHeadingAngle, isFreeFace } from "../input/free_face";
@@ -112,7 +112,7 @@ export function ensureAssembly(st: SceneState): void {
 type OrbitStateStart = Pick<
   SceneState,
   | "asmGizmo" | "asmSupport" | "asmSupportLevel" | "pieceHold" | "pieceHoldPrev" | "asmLook" | "asmFacePoint" | "asmG" | "asmPrevQ" | "asmShown" | "asmFaceBand" | "asmFree" | "asmPlaceWas" | "asmMapQ"
-  | "asmEdgeHold" | "asmZone" | "asmZoneMix" | "asmChange" | "asmPieceDrawn" | "asmDirEase" | "asmCamLast" | "asmRollShadow" | "asmSpitSide" | "asmSpitU" | "asmSpitPic" | "asmSpitPicWas" | "asmZoneAlpha" | "asmDySign" | "asmFingerDxMm" | "asmDxSign" | "asmCarriedYaw" | "asmHeadO"
+  | "asmEdgeHold" | "asmZone" | "asmZoneMix" | "asmChange" | "asmPieceDrawn" | "asmDirEase" | "asmCamLogic" | "asmCamDrawn" | "asmRollShadow" | "asmSpitSide" | "asmSpitU" | "asmSpitPic" | "asmSpitPicWas" | "asmZoneAlpha" | "asmDySign" | "asmFingerDxMm" | "asmDxSign" | "asmCarriedYaw" | "asmHeadO"
   | "asmHeadW" | "asmHeadYaw" | "asmTilt" | "asmGOff" | "asmTiltAuto" | "asmTiltPending" | "asmOrbitMm" | "asmFrameMm" | "asmBlend" | "asmCalmWhole" | "asmCalmWholeV"
   | "asmSquare" | "asmCalm" | "asmMouth" | "asmRawPrev" | "asmGizmoAt" | "asmGizmoLag" | "asmAskCalm" | "asmAsk" | "asmAskLevel" | "asmFollow" | "asmPicture"
 >;
@@ -146,7 +146,8 @@ export function orbitStateStart(): OrbitStateStart {
     asmChange: null,
     asmPieceDrawn: null,
     asmDirEase: null,
-    asmCamLast: null,
+    asmCamLogic: null,
+    asmCamDrawn: null,
     asmRollShadow: null,
     asmSpitSide: 0,
     asmSpitU: null,
@@ -356,7 +357,7 @@ function easeCarry(st: SceneState, was: SceneState["asmZoneMix"]): void {
  * starts it; none before the first camera frame): `paced` — the automatic tilt made with the camera pending (its swing's pace, `seamTurnPace`).
  */
 function seamTurnStart(st: SceneState, paced: boolean): void {
-  st.asmZoneMix = st.asmCamLast === null ? null : { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0, ...(paced ? { byMm: true } : {}) };
+  st.asmZoneMix = st.asmCamLogic === null ? null : { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0, ...(paced ? { byMm: true } : {}) };
 }
 
 /**
@@ -429,7 +430,7 @@ function turnBegin(st: SceneState, a: TurnAsk): void {
   else {
     const mixWas = st.asmZoneMix;
     if (a.paced) seamOutStart(st);
-    else if (a.noCamNull || st.asmCamLast !== null) seamTurnStart(st, a.byMm);
+    else if (a.noCamNull || st.asmCamLogic !== null) seamTurnStart(st, a.byMm);
     if (a.uWas !== null) seamEase(st, a.uWas);
     else if (a.carry) easeCarry(st, mixWas);
     if (a.tilt && st.asmZoneMix !== null) st.asmZoneMix.tilt = true;
@@ -448,7 +449,7 @@ function changeAsk(st: SceneState, a: TurnAsk): void {
   const tok: object = {};
   const e = st.asmDirEase;
   if (a.uWas !== null) {
-    const gap = st.asmCamLast === null ? null : dirGap(a.uWas, drawnDir(st));
+    const gap = st.asmCamLogic === null ? null : dirGap(a.uWas, drawnDir(st));
     st.asmDirEase = gap === null ? null : { axis: gap.axis, angle: gap.angle, mix: tok };
   } else if (a.carry && e !== null && e.own === undefined) {
     const k = was !== null && e.mix === was.tok ? 0 : st.asmZoneMix !== null && e.mix === st.asmZoneMix ? st.asmZoneMix.k : null;
@@ -473,7 +474,7 @@ export function changeApply(st: SceneState, c: NonNullable<SceneState["asmChange
   st.asmChange = null;
   const e = st.asmDirEase;
   const mine = e !== null && e.mix === c.tok;
-  if (timed && st.asmCamLast !== null) {
+  if (timed && st.asmCamLogic !== null) {
     if (c.paced) seamOutStart(st);
     else seamTurnStart(st, c.byMm);
     if (c.tilt && st.asmZoneMix !== null) st.asmZoneMix.tilt = true;
@@ -1612,7 +1613,8 @@ export function assemblyCameraFrame(st: SceneState, cam: OrbitAt, off?: CameraAn
   const f = assemblyCameraFrameRaw(st, cam, off, dtMs);
   // ⭐⭐⭐ (2026-11-14) a zone's switch / the spit's crossing turns the camera ABOUT THE PIECE, on its pose (`zoneMixPose`, the camera's stage) — the frame
   // here is the one turned to. ⛔ (2026-11-13) its up turned about the view here: the piece went round the glass's centre, after a jump to the opposite corner
-  st.asmCamLast = { dir: f.dir, up: f.up };
+  // ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §4.4 — R3b) THE LOGIC'S OWN FRAME, its one writer (`asmCamLogic`; the frame drawn is the picture's: `asmCamDrawn`)
+  st.asmCamLogic = { dir: f.dir, up: f.up };
   return f;
 }
 
@@ -1643,9 +1645,49 @@ export function zoneMixPose(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, 
   zm.rad = r.angle;
   zm.rule = d.rule;
   zm.keep = d.keep;
-  const pose = d.pose;
-  st.asmCamLast = { dir: norm3([pose.eye[0] - pose.look[0], pose.eye[1] - pose.look[1], pose.eye[2] - pose.look[2]]), up: pose.up };
-  return pose;
+  // ⭐⭐⭐ (R3b) its camera frame no longer written here: the drawer hands it back (`zoneMixCam`), the picture publishes it (`asmCamDrawn`)
+  return d.pose;
+}
+
+/** ⭐⭐⭐ (R3b) The camera frame of a zone's turn's pose (`zoneMixPose`'s, while a turn runs) — the drawer's `cam`, published by the picture. */
+export function zoneMixCam(pose: CamPose): CamFrame {
+  return { dir: norm3([pose.eye[0] - pose.look[0], pose.eye[1] - pose.look[1], pose.eye[2] - pose.look[2]]), up: pose.up };
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §4.4 — R3b, D-P6) THE FACTS THE PICTURE PUBLISHES for the logic's holds, this frame: far out the follower's own turn
+ * started and its dy hold (D-H8), close in the carried up's change applied at once (C6) and law U's own half turn (RB3).
+ */
+export interface PictureEvents {
+  readonly followStarted?: boolean;
+  readonly followHold?: 1 | -1 | 0;
+  readonly carried?: { readonly halfStart: number; readonly crossed: 1 | -1 | 0 };
+  readonly lawHalf?: { readonly rad: number; readonly picture: CamPose; readonly ghost: CamPose };
+}
+
+/** ⭐⭐⭐ (H3, F-3 = D-H11) a turn started far out sets every angle state to the map's place at the gizmo (`followTurnRebase`; the map's place shown) */
+export function followRebaseAsked(st: SceneState, started: boolean): boolean {
+  return started && st.cfg.followTurnRebase === 1 && st.asmShown !== null;
+}
+
+/**
+ * ⭐⭐⭐ (R3b, D-P6) THE LOGIC READS THE PICTURE'S FACTS and writes its own state (moved from the drawers, at the same moment of the frame — right after the
+ * picture, before anything reads them): the dy hold at the follower's crossing (`holdAtCrossing`; it replaces any older one), then every angle state set
+ * at its turn's start (`seamRebase`, F-3); the carried up's hold at a change applied at once (`carriedHold`); law U's after its own half turn (`holdSeen`,
+ * a hold already on kept).
+ */
+export function pictureEventsRead(st: SceneState, ev: PictureEvents): void {
+  if (ev.followHold !== undefined) st.asmEdgeHold = holdAtCrossing(ev.followHold);
+  if (followRebaseAsked(st, ev.followStarted === true)) {
+    const sh = st.asmShown!;
+    seamRebase(st, { yaw: sh.yaw, pitch: sh.pitch });
+  }
+  if (ev.carried !== undefined) st.asmEdgeHold = carriedHold(ev.carried.halfStart, ev.carried.crossed, st.asmDxSign);
+  const lh = ev.lawHalf;
+  if (lh !== undefined && st.asmEdgeHold === null && st.asmG !== null) {
+    const sign = Math.sign(st.asmDySign);
+    st.asmEdgeHold = holdSeen({ timed: true, seenRad: lh.rad }, sign === 1 ? 1 : sign === -1 ? -1 : 0, lh.picture, lh.ghost);
+  }
 }
 
 /** ⭐ The pose on the glass now (the camera drawn last frame) — a zone's turn starts from it. */
@@ -2351,7 +2393,7 @@ function freeEntry(st: SceneState, map: FaceMap, B: Mat3, at: { readonly contour
   const F = at.contour[ci];
   if (F === undefined) return null;
   const from = prev !== null && prev.map === map ? contourOfFacet(map, B, at.contour, prev.stack) : -1;
-  const heading = freeEntryHeading(freeEdges(at.contour, ci, WORLD_UP), from, st.asmCamLast?.up ?? F.n, F.n);
+  const heading = freeEntryHeading(freeEdges(at.contour, ci, WORLD_UP), from, st.asmCamDrawn?.up ?? F.n, F.n);
   return heading === null ? null : { ci, from, heading };
 }
 
@@ -2490,10 +2532,11 @@ export function fingerAtEntry(st: SceneState, dx: number, fdy: number): { readon
 export function zoneFinger(st: SceneState, dx: number, fdy: number): { readonly dx: number; readonly fdy: number } {
   const z = spitZone(st);
   // ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §8 UD8b) the finger is already on the logic's glass (`fingerAtEntry`): outside a spit as it is; in a spit read
-  // on the logic's own frame (`asmCamLast`), as in `1.0.147-` — ⛔ (fix round 1) turned off the picture HERE, after the hold had read the raw glass's dy
+  // on the frame DRAWN last frame (`asmCamDrawn` — ⭐ R3b: the record `asmCamLast` held it at this moment), as in `1.0.147-` — ⛔ (fix round 1) turned off the
+  // picture HERE, after the hold had read the raw glass's dy
   if (z === null) return { dx, fdy };
   const dy = fdy;
-  const cf = st.asmCamLast;
+  const cf = st.asmCamDrawn;
   if (cf === null) return { dx, fdy: dy };
   // ⭐ F's up on the glass from the orbit's own angles (`cos θ·a − sin θ·d`: the way toward the pole — at the pole itself the way OFF it at the yaw, so a
   // drag that way leaves it; ⛔ the axis projected: undefined there, the last angle kept — the finger turned the yaw unseen, the gizmo stalled at the apex)

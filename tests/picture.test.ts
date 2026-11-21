@@ -236,8 +236,11 @@ describe("R3a — the wiring (source)", () => {
   const raw = (f: string): string => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8").replace(/\s+/g, " ");
   it("the camera's stage: the one picture under `pictureOne` 1 with the follower; today's line exactly otherwise", () => {
     const g = raw("render/green_box_wiring.ts");
-    expect(g).toContain("const zp = pictureOn(st) ? pictureFrame(st, pp, [c0.x, c0.y, c0.z], camAt, lookAt, camFrame.up, gapFull, off, dtSec * 1000, orbitDvPerMm(st)) : (followFrame(st, pp, [c0.x, c0.y, c0.z], camAt, lookAt, camFrame.up, gapFull, off, dtSec * 1000) ?? rollPictureFrame(st, pp, camAt, lookAt, camFrame.up, dtSec * 1000));");
-    expect(raw("render/picture_wiring.ts")).toContain("return st.cfg.pictureOne === 1 && st.cfg.cameraFollower === 1;");
+    expect(g).toContain("const zp = pictureFrame(st, pp, [c0.x, c0.y, c0.z], camAt, lookAt, camFrame.up, gapFull, off, dtSec * 1000, orbitDvPerMm(st));");
+    const p = raw("render/picture_wiring.ts");
+    expect(p).toContain("return st.cfg.pictureOne === 1 && st.cfg.cameraFollower === 1;");
+    expect(p).toContain("if (!pictureOn(st)) return pictureLegacy(st, pp, foot, eye, look, up, gapM, off, dtMs);");
+    expect(p).toContain("const zp = followFrame(st, pp, foot, eye, look, up, gapM, off, dtMs) ?? rollPictureFrame(st, pp, eye, look, up, dtMs, left);");
   });
 
   it("far: the follower's own step and pose, then the picture (the same functions, the same order); its state never dropped under the picture", () => {
@@ -246,7 +249,7 @@ describe("R3a — the wiring (source)", () => {
     expect(w).toContain("const P = pic === undefined ? P0 : pic(P0, s.dir, hang,");
     expect(w).toContain("if (pic === undefined) st.asmFollow = was === null ? null : { state: null, piece: null, rec: { on: 0 } }; return null;");
     const p = raw("render/picture_wiring.ts");
-    expect(p).toContain("const G = rollPictureFrame(st, pp, eye, look, up, dtMs);");
+    expect(p).toContain("const G = rollPictureFrame(st, pp, eye, look, up, dtMs, left);");
     expect(p).toContain("const dFar = followPark(st, psiPark) ?? us;");
     expect(p).toContain("const psiPark = latched ? (s0.tt?.psi ?? was?.psiPark ?? null) : (was?.psiPark ?? s0.tt?.psi ?? null);");
     expect(p).not.toMatch(/followStart\(\s*us|followStart\(hang/);

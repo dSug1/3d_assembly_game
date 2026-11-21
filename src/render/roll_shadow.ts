@@ -16,14 +16,40 @@
  */
 import type { Vec3 } from "../core/vec";
 import { upSquareToView } from "../input/camera_frame";
-import { rotateAbout, squareTurning, type CamPose } from "../input/orbit_tilt";
+import { rotateAbout, squareTurning, type CamFrame, type CamPose } from "../input/orbit_tilt";
 import { followStep, FREE_TURN_MAX_DEG, framedLine, GAP_ZERO, onGlass, poseRolled, poseTurnAngle, ROLL_FOLLOW_MS, turnIsFree, twistAbout, type FollowMode } from "../input/roll_follow";
 import { easeRest } from "../input/seam_turn";
-import { askedTwist, CARRIED_REST, carriedHold, changeSeen, framedPose, framingFrom, framingStep, holdSeen, upCarried, UPRIGHT_REST, uprightStep, uprightWeight, viewFromVertical } from "../input/upright";
-import { changeApply, orbitPoleAxis, spitZone, zoneMixPose } from "./assembly_wiring";
+import { askedTwist, CARRIED_REST, framedPose, framingFrom, framingStep, upCarried, UPRIGHT_REST, uprightStep } from "../input/upright";
+import { orbitPoleAxis, spitZone, zoneMixCam, zoneMixPose, type PictureEvents } from "./assembly_wiring";
 import type { SceneState } from "./scene_state";
 
 const DEG = Math.PI / 180;
+
+/**
+ * ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §4.4 — R3b, D-P6) WHAT A DRAWER HANDS BACK: the pose, the camera frame it draws (`cam` — published as `asmCamDrawn` by
+ * the picture only; `null`: none of its own, the logic's frame is the one drawn) and the facts the logic reads (`ev`: the holds' events). ⛔ No drawer
+ * writes the logic's state any more (`asmCamLast`, `asmEdgeHold`; `asmChange` resolved in `picture_wiring.ts`, the one resolver).
+ */
+export interface DrawnPose extends CamPose {
+  readonly cam: CamFrame | null;
+  readonly ev: PictureEvents;
+}
+
+/** ⭐⭐⭐ (R3b) A change of frame as the one resolver left it for the close drawer (`changeResolve`): applied at once (`change`), the crossing's dy, the angle freed. */
+export interface ChangeLeft {
+  readonly change: boolean;
+  readonly crossed?: 1 | -1 | 0;
+  readonly freed: number;
+}
+
+export const CHANGE_NONE: ChangeLeft = { change: false, freed: 0 };
+
+const NO_EVENTS: PictureEvents = {};
+
+/** the camera frame `zoneMixPose` drew (its turn's) — `null`: no turn, the pose as given */
+function zoneCam(zmOn: boolean, pose: CamPose): CamFrame | null {
+  return zmOn ? zoneMixCam(pose) : null;
+}
 
 /** ⭐ One frame of the shadow (`ghostIn`: the pose the camera's stage hands to `zoneMixPose`; `piece`: where the piece is drawn). */
 export function rollShadowFrame(st: SceneState, piece: Vec3, ghostIn: CamPose, dtMs: number): void {
@@ -96,13 +122,15 @@ const OWN_CLOCK: object = Object.freeze({ own: true });
  *   from the pose shown — the picture —, O5); the frame after it ends, and the first frame: 0; the square camera turning or a tilt's exit asked (no zone
  *   turn): the twist not taken, the gap closing (§12.4 2.).
  * * THE PICTURE: the ghost turned about the framed line by the gap (`poseRolled`) — the piece and the look point exact on the glass (R3); gap 0: the
- *   pose as given, bit for bit (R5). `st.asmCamLast` the picture's (the finger in a spit read off it, R7).
+ *   pose as given, bit for bit (R5). Its frame handed back (`cam`, published as `asmCamDrawn` — the finger in a spit read off it, R7).
  */
-export function rollPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Vec3, dtMs: number): CamPose {
+export function rollPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Vec3, dtMs: number, left: ChangeLeft = CHANGE_NONE): DrawnPose {
   const maxDeg = st.cfg.freeTurnMaxDeg;
   if (!(maxDeg > 0)) {
     rollShadowFrame(st, piece, { eye, look, up }, dtMs);
-    return zoneMixPose(st, piece, eye, look, up);
+    const zmOn = st.asmZoneMix !== null;
+    const zp0 = zoneMixPose(st, piece, eye, look, up);
+    return { eye: zp0.eye, look: zp0.look, up: zp0.up, cam: zoneCam(zmOn, zp0), ev: NO_EVENTS };
   }
   const view: Vec3 = [look[0] - eye[0], look[1] - eye[1], look[2] - eye[2]];
   const ghost: CamPose = { eye, look, up: upSquareToView(up, view) };
@@ -113,8 +141,8 @@ export function rollPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: V
   const tiltHold = tl !== null && (tl.exit || tl.off);
   // ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §12 RB1) law U decides each change ONCE (`changeSeen`, in `uprightPictureFrame`): nothing below runs for it
   // ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` — packet E) ONE CARRIED UP (`carriedFrame`); 0: law U (`1f62928`)
-  if (st.cfg.uprightPicture === 1 && st.cfg.uprightCarried === 1) return carriedFrame(st, piece, eye, look, up, dtMs, ghost, sq, tiltHold);
-  if (st.cfg.uprightPicture === 1) return uprightPictureFrame(st, piece, eye, look, up, dtMs, ghost, sq, tiltHold);
+  if (st.cfg.uprightPicture === 1 && st.cfg.uprightCarried === 1) return carriedFrame(st, piece, eye, look, up, dtMs, sq, tiltHold, left);
+  if (st.cfg.uprightPicture === 1) return uprightPictureFrame(st, piece, eye, look, up, dtMs, sq, tiltHold, left);
   let zm = st.asmZoneMix;
   const fresh = zm !== null && zm !== was?.turn;
   let freed = 0;
@@ -137,26 +165,28 @@ export function rollPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: V
   const afterStay = was !== null && was.turn !== null && zm === null;
   const mode: FollowMode = was === null || !was.drawn || was.upright !== undefined || zm !== null || afterStay ? "ZERO" : gizmoFree ? "TAKE" : "SKIP";
   const g = followStep(was?.free ?? GAP_ZERO, tw, dtMs, st.cfg.rollFollowMs, mode);
+  const zmOn = st.asmZoneMix !== null;
   const zp = zoneMixPose(st, piece, eye, look, up);
   let pose = zp;
   let picture = ghost;
+  let cam = zoneCam(zmOn, zp);
   if (zm === null && g.gap !== 0) {
     picture = poseRolled(ghost, line, g.gap);
     pose = picture;
     const d: Vec3 = [picture.eye[0] - picture.look[0], picture.eye[1] - picture.look[1], picture.eye[2] - picture.look[2]];
     const l = Math.hypot(d[0], d[1], d[2]);
-    st.asmCamLast = { dir: [d[0] / l, d[1] / l, d[2] / l], up: picture.up };
+    cam = { dir: [d[0] / l, d[1] / l, d[2] / l], up: picture.up };
   }
   const turnTw = fresh ? tw : (was?.turnTw ?? 0);
   st.asmRollShadow = { ghost, dir: line.dir, piece, held: g, free: g, turn: zm, turnTw, stays: zm !== null, tw, gizmoFree, spit: spitZone(st) !== null, freshTurn: fresh, picture, a2: placeError(st, ghost, picture, piece, line), drawn: true, freed };
-  return pose;
+  return { eye: pose.eye, look: pose.look, up: pose.up, cam, ev: NO_EVENTS };
 }
 
 /**
  * ⭐⭐⭐ (2026-11-18, `UPRIGHT_PICTURE.md` §2 steps 3 – 4 — law U, `uprightPicture` 1) ONE FRAME OF THE UPRIGHT PICTURE, at the camera's stage: `G` the logic's
  * pose (`zoneMixPose`: the ghost, or a timed turn's pose where a turn stays — FO3's gap NOT applied, UD4); `φ` from law U (`uprightStep`: the turn about
  * the framed line that puts gravity on the glass's vertical, weighted by the view's angle from the vertical and the square camera's complement — UD3,
- * `uprightCloseIn` 0); the picture `P = poseRolled(G, L, φ)` — the piece and the look point exact on the glass; `φ` 0: `G` itself. `st.asmCamLast` stays
+ * `uprightCloseIn` 0); the picture `P = poseRolled(G, L, φ)` — the piece and the look point exact on the glass; `φ` 0: `G` itself. `asmCamLast` (R3b: `asmCamLogic`) stays
  * the logic's (`zoneMixPose` wrote it); the record in `st.asmRollShadow` (`ghost` = `G`).
  * ⭐⭐⭐ (2026-11-19, §12 RB1 — the rebuild) FIRST, the change of frame ASKED this frame (`asmChange`, by `turnBegin`) resolved ONCE (`changeSeen`): its angle
  * the logic's pose last frame to this frame's (`ghost`, before any turn), `w` before it the picture's last frame, after it this ghost's; a timed turn or at
@@ -164,28 +194,18 @@ export function rollPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: V
  * twist about the framed line undone — UD4b's rule, now a property of the decision). ⛔ (fix round 1, F3) the carry whole on a timed turn's first frame too:
  * measured inert (the logic's twist 0 on all 141 such frames), removed.
  */
-function uprightPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Vec3, dtMs: number, ghost: CamPose, sqTurning: boolean, tiltHold: boolean): CamPose {
+function uprightPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Vec3, dtMs: number, sqTurning: boolean, tiltHold: boolean, left: ChangeLeft): DrawnPose {
   const was = st.asmRollShadow;
   const sq = st.asmSquare;
   const share = sq.n === null || !(sq.q > 0) ? 0 : sq.q;
   const scale = st.cfg.uprightCloseIn === 1 ? 1 : 1 - share;
   const knobs = { fromDeg: st.cfg.uprightFromDeg, fullDeg: st.cfg.uprightFullDeg, maxDegS: st.cfg.uprightMaxDegS };
-  let freed = 0;
-  const ask = st.asmChange;
-  if (ask !== null) {
-    const drawn = was !== null && was.drawn && was.upright !== undefined;
-    const turnRad = drawn ? poseTurnAngle(was.ghost, ghost) : Number.NaN;
-    const stays = !drawn || was.turn !== null || ask.paced || ask.byMm || ask.tilt || sqTurning || tiltHold;
-    const wAfter = uprightWeight(viewFromVertical(ghost), knobs.fromDeg, knobs.fullDeg) * scale;
-    const seen = changeSeen({ stays, wBefore: drawn ? was.upright!.w : 0, wAfter, turnRad, freeMaxDeg: st.cfg.freeTurnMaxDeg });
-    // ⭐⭐⭐ (§12 RB2) the hold the change asked: ONLY a turn he sees of 90° or more, the push held as he made it on the picture (`holdSeen`)
-    const hold = ask.hold === undefined ? undefined : holdSeen(seen, ask.hold, drawn ? was.picture : null, drawn ? was.ghost : null);
-    changeApply(st, ask, seen.timed, hold);
-    if (!seen.timed) freed = turnRad > 0 ? turnRad : Number.MIN_VALUE;
-  }
+  // ⭐⭐⭐ (R3b) the change asked resolved ONCE before (`changeResolve`, `picture_wiring.ts` — law U's rule moved there as written): the angle it freed
+  const freed = left.freed;
   const zm = st.asmZoneMix;
   const fresh = zm !== null && zm !== was?.turn;
   const gizmoFree = zm === null && !sqTurning && !tiltHold;
+  const zmOn = st.asmZoneMix !== null;
   const G = zoneMixPose(st, piece, eye, look, up);
   const line = framedLine(G, piece);
   const tw = was === null ? 0 : twistAbout(was.ghost, G, line.dir);
@@ -194,49 +214,34 @@ function uprightPictureFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3,
   const P = poseRolled(G, line, r.phi);
   // ⭐⭐⭐ (2026-11-19, §12 RB3) THE LAW'S OWN HALF TURN is a turn he sees: the gizmo held while it closes (`lawHalfTurn`, T5's reader) and the push that was on
   // held after it — as any seen turn's (`holdSeen`, last frame's picture: the glass the push was made on); a hold already on (the change's) kept
-  if (r.halfStart > 0 && st.asmEdgeHold === null && st.asmG !== null && was !== null) {
-    const sign = Math.sign(st.asmDySign);
-    st.asmEdgeHold = holdSeen({ timed: true, seenRad: r.halfStart }, sign === 1 ? 1 : sign === -1 ? -1 : 0, was.picture, was.ghost);
-  }
+  // ⭐⭐⭐ (R3b) published: the logic's own hold code writes it (`pictureEventsRead`)
+  const ev: PictureEvents = r.halfStart > 0 && was !== null ? { lawHalf: { rad: r.halfStart, picture: was.picture, ghost: was.ghost } } : NO_EVENTS;
   const turnTw = fresh ? tw : (was?.turnTw ?? 0);
   const g = { gap: r.phi, speed: 0 };
   st.asmRollShadow = { ghost: G, dir: line.dir, piece, held: g, free: g, turn: zm, turnTw, stays: zm !== null, tw, gizmoFree, spit: spitZone(st) !== null, freshTurn: fresh, picture: P, a2: placeError(st, G, P, piece, line), drawn: true, freed, upright: { state: r.state, w: r.w, phi: r.phi } };
-  return P;
+  return { eye: P.eye, look: P.look, up: P.up, cam: zoneCam(zmOn, G), ev };
 }
 
 /**
  * ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` §4 — packet E, `uprightCarried` 1) ONE CARRIED UP, at the camera's stage: the picture is the logic's pose `G` turned by
- * `φ` about the framed line, drawn AND read (one glass: `asmCamLast`, the silent entry, the finger — `fingerAtEntry` reads law U's record only), and ONE owner
+ * `φ` about the framed line, drawn AND read (one glass: `asmCamDrawn` — R3b —, the silent entry, the finger — `fingerAtEntry` reads law U's record only), and ONE owner
  * turns its up (`upCarried`). FIRST the change asked this frame resolved ONCE (`changeSeen`) by who owns the roll — the square camera's complement `κ` (one
  * pose's OP2): far out applied at once, close in a timed turn as today. Then `G` (`zoneMixPose`), the turn the finger ASKED (C1, `askedTwist`: the drawn
  * orbit's yaw step about its pole axis, none across a change of the logic's frame), the dx's budget (C4), `upCarried`, `P`. C6: at a change applied at
  * once the push held from the same answer (`carriedHold`: the dy as OP8; a dx only when a half turn opened); the gizmo still meanwhile (C7, the spring).
  */
-function carriedFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Vec3, dtMs: number, ghost: CamPose, sqTurning: boolean, tiltHold: boolean): CamPose {
+function carriedFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Vec3, dtMs: number, sqTurning: boolean, tiltHold: boolean, left: ChangeLeft): DrawnPose {
   const was = st.asmRollShadow;
   const sq = st.asmSquare;
   const share = sq.n === null || !(sq.q > 0) ? 0 : sq.q;
   const kappa = st.cfg.uprightCloseIn === 1 ? 1 : 1 - share;
   const knobs = { fromDeg: st.cfg.uprightFromDeg, fullDeg: st.cfg.uprightFullDeg, maxDegS: st.cfg.uprightMaxDegS, alignDegPerMm: st.cfg.uprightAlignDegPerMm, halfHold: st.cfg.uprightHalfHold === 1 };
-  let freed = 0;
-  let change = false;
-  let crossed: 1 | -1 | 0 | undefined;
-  const ask = st.asmChange;
-  if (ask !== null) {
-    const drawn = was !== null && was.drawn && was.one !== undefined;
-    const turnRad = drawn ? poseTurnAngle(was.ghost, ghost) : Number.NaN;
-    const stays = !drawn || was.turn !== null || ask.paced || ask.byMm || ask.tilt || sqTurning || tiltHold;
-    const seen = changeSeen({ stays, wBefore: drawn ? was.one!.kappa : 0, wAfter: kappa, turnRad, freeMaxDeg: st.cfg.freeTurnMaxDeg });
-    changeApply(st, ask, seen.timed, seen.timed && ask.hold !== undefined ? holdSeen(seen, ask.hold, null, null) : undefined);
-    if (!seen.timed) {
-      change = true;
-      crossed = ask.hold;
-      freed = turnRad > 0 ? turnRad : Number.MIN_VALUE;
-    }
-  }
+  // ⭐⭐⭐ (R3b) the change asked resolved ONCE before (`changeResolve`, `picture_wiring.ts` — the carried up's rule moved there as written)
+  const { freed, change, crossed } = left;
   const zm = st.asmZoneMix;
   const fresh = zm !== null && zm !== was?.turn;
   const gizmoFree = zm === null && !sqTurning && !tiltHold;
+  const zmOn = st.asmZoneMix !== null;
   const G = zoneMixPose(st, piece, eye, look, up);
   const line = framedLine(G, piece);
   const tw = was === null ? 0 : twistAbout(was.ghost, G, line.dir);
@@ -261,10 +266,11 @@ function carriedFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Ve
   const ft = st.cfg.uprightFraming === 1 ? framingStep(was?.one?.framing ?? null, change, shown, freed, r.halfStart, dtMs, st.cfg.uprightMaxDegS, kappa) : null;
   const fd = ft === null ? null : framedPose(ft, G, piece, st.asmTiltAuto, st.cfg.pictureOne); // ⭐⭐⭐ (R2) born close in: about the piece (`turnPose`)
   const D = fd === null ? P : poseRolled(fd.pose, line, r.phi);
-  if (change && crossed !== undefined) st.asmEdgeHold = carriedHold(r.halfStart, crossed, st.asmDxSign);
+  // ⭐⭐⭐ (R3b) published: the logic's own hold code writes it (`pictureEventsRead`: `carriedHold`)
+  const ev: PictureEvents = change && crossed !== undefined ? { carried: { halfStart: r.halfStart, crossed } } : NO_EVENTS;
   const d: Vec3 = [D.eye[0] - D.look[0], D.eye[1] - D.look[1], D.eye[2] - D.look[2]];
   const l = Math.hypot(d[0], d[1], d[2]);
-  if (l > 1e-12) st.asmCamLast = { dir: [d[0] / l, d[1] / l, d[2] / l], up: D.up };
+  const cam: CamFrame | null = l > 1e-12 ? { dir: [d[0] / l, d[1] / l, d[2] / l], up: D.up } : zoneCam(zmOn, G);
   const sp = st.asmSpitPic;
   if (sp !== null && r.phi !== 0) {
     const u2 = rotateAbout(sp.up, line.dir, r.phi);
@@ -276,5 +282,5 @@ function carriedFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Ve
   const turnTw = fresh ? tw : (was?.turnTw ?? 0);
   const g = { gap: r.phi, speed: 0 };
   st.asmRollShadow = { ghost: G, dir: line.dir, piece, held: g, free: g, turn: zm, turnTw, stays: zm !== null, tw, gizmoFree, spit: spitZone(st) !== null, freshTurn: fresh, picture: D, a2: placeError(st, G, D, piece, line), drawn: true, freed, one: { state: r.state, w: r.w, phi: r.phi, kappa, halfStart: r.halfStart, holding: r.holding, change, framing: fd === null ? null : fd.turn } };
-  return D;
+  return { eye: D.eye, look: D.look, up: D.up, cam, ev };
 }

@@ -417,8 +417,12 @@ export interface SceneState {
    *  the new chart's direction back to the one drawn before the change of frame (`dirGap`), its rest `1 − k` of the turn `mix` (`asmZoneMix`, the same
    *  object — another turn, or none: whole), applied in `dirAt` (`easedDir`); `null`: none */
   asmDirEase: { readonly axis: import("../core/vec").Vec3; readonly angle: number; readonly mix: object; /** ⭐⭐⭐ (2026-11-18, `FAST_ORBIT.md` §14 — FO3 S1, O3) no timed turn carries it (a change made free): its REST on a clock of its own (rad and rad a second, `gapStep` at `rollFollowMs`; its share `restShare`); absent: the turn's `mix` */ readonly own?: import("../input/roll_follow").RollGap } | null;
-  /** ⭐ (D-Z7) the last camera frame built around the assembly (the switch's start, the finger's screen) */
-  asmCamLast: import("../input/orbit_tilt").CamFrame | null;
+  /** ⭐ (D-Z7) the last camera frame built around the assembly — ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §4.4 — R3b, D-P6) split from `asmCamLast`'s two writers:
+   *  THE LOGIC'S OWN FRAME, written by `assemblyCameraFrame` only (this frame's, from the camera's stage on: a turn's start, the follower's crossing read) */
+  asmCamLogic: import("../input/orbit_tilt").CamFrame | null;
+  /** ⭐⭐⭐ (R3b) THE FRAME DRAWN, written by the picture only (`picture_wiring.ts`: the drawer's own, else the logic's) — read the frame after (the finger in a
+   *  spit, a free face's entry): exactly what `asmCamLast` held then */
+  asmCamDrawn: import("../input/orbit_tilt").CamFrame | null;
   /** ⭐⭐⭐ (2026-11-18, `FAST_ORBIT.md` §12.6 S0) THE SHADOW of the picture a follower of the logic — computed and recorded, NEVER drawn (`roll_shadow.ts`):
    *  the ghost and its framed line, the frame's twist, the two gaps (`held`: taken only with the gizmo free today; `free`: as S1 would), the turn under
    *  way and its twist at its first frame, the picture it would draw, A2's error on the glass; `null`: none yet (a reset) */

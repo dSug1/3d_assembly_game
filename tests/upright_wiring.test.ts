@@ -168,7 +168,7 @@ describe("law U's wiring (`roll_shadow.ts` uprightPictureFrame, `assembly_wiring
     expect(pw.indexOf("const fe = asmOn")).toBeLessThan(pw.indexOf("st.asmDySign = dySignPushing(st.asmDySign, fdx0, fdy0);"));
     expect(pw).toContain("const zf = asmOn && !shiftApproach ? zoneFinger(st, fh.dx, fh.fdy) : { dx: fh.dx, fdy: fh.fdy };");
     expect(aw).toContain("if (z === null) return { dx, fdy };");
-    expect(aw).toContain("const cf = st.asmCamLast;");
+    expect(aw).toContain("const cf = st.asmCamDrawn;");
     expect(aw).not.toContain("fingerOnGhost(");
     expect(aw).toContain("if (sh !== null && sh.upright !== undefined) return { eye: sh.ghost.eye, look: sh.ghost.look, up: sh.ghost.up, piece: st.asmPieceDrawn };");
   });
@@ -188,9 +188,9 @@ describe("RB1 — ONE OWNER PER CHANGE (UPRIGHT_PICTURE.md §12, the rebuild): e
     return s.slice(i, s.indexOf("\n}\n", i) + 3);
   };
   it("(1) a turn is created only by `seamTurnStart` (and `seamOutStart` through it), called only by the one starter `turnBegin` and the resolver `changeApply`", () => {
-    const creates = aw.match(/asmZoneMix = (\{|st\.asmCamLast === null \? null : \{)/g) ?? [];
+    const creates = aw.match(/asmZoneMix = (\{|st\.asmCamLogic === null \? null : \{)/g) ?? [];
     expect(creates.length).toBe(1);
-    expect(fn(aw, "function seamTurnStart(")).toContain("st.asmZoneMix = st.asmCamLast === null ? null : {");
+    expect(fn(aw, "function seamTurnStart(")).toContain("st.asmZoneMix = st.asmCamLogic === null ? null : {");
     const callers = (name: string) => {
       const out: string[] = [];
       for (const m of aw.matchAll(new RegExp(`(?<!function )\\b${name}\\(st`, "g"))) {
@@ -219,16 +219,22 @@ describe("RB1 — ONE OWNER PER CHANGE (UPRIGHT_PICTURE.md §12, the rebuild): e
     expect(aw).toContain("return st.cfg.freeTurnMaxDeg > 0 && st.cfg.uprightPicture === 1;");
     const up = fn(rs, "function uprightPictureFrame(");
     expect(up).not.toMatch(/asmZoneMix =|asmDirEase =/);
-    // ⭐ (RB3) the one hold written here: the law's own half turn's, by the same rule as a change's (`holdSeen`), only where no hold is on
-    expect(up.match(/asmEdgeHold =(?!=)/g)?.length).toBe(1);
-    expect(up).toContain("if (r.halfStart > 0 && st.asmEdgeHold === null && st.asmG !== null && was !== null) {");
-    expect(up).toContain("st.asmEdgeHold = holdSeen({ timed: true, seenRad: r.halfStart }, sign === 1 ? 1 : sign === -1 ? -1 : 0, was.picture, was.ghost);");
+    // ⭐ (RB3) the one hold: the law's own half turn's, by the same rule as a change's (`holdSeen`), only where no hold is on — ⭐⭐⭐ (2026-11-21, R3b)
+    // published by the drawer, written by the logic's own hold code (`pictureEventsRead`) at the same moment
+    expect(up.match(/asmEdgeHold =(?!=)/g)).toBeNull();
+    expect(up).toContain("const ev: PictureEvents = r.halfStart > 0 && was !== null ? { lawHalf: { rad: r.halfStart, picture: was.picture, ghost: was.ghost } } : NO_EVENTS;");
+    expect(aw).toContain("if (lh !== undefined && st.asmEdgeHold === null && st.asmG !== null) {");
+    expect(aw).toContain("st.asmEdgeHold = holdSeen({ timed: true, seenRad: lh.rad }, sign === 1 ? 1 : sign === -1 ? -1 : 0, lh.picture, lh.ghost);");
     // ⭐ (RB3) T5's one reader holds the gizmo while the law's half turn closes — no second mechanism
     expect(aw).toContain("const zoneTurning = (zm !== null && turnHoldsGizmo(zm.out !== undefined, zm.byMm === true, st.asmTiltPending, st.asmBlend !== null, zm.k)) || lawHalfTurn(st.asmRollShadow?.upright?.state ?? st.asmRollShadow?.one?.state) || followTurnHoldsGizmo(st.asmFollow?.top?.turn ?? null);");
     expect(aw.match(/lawHalfTurn\(/g)?.length).toBe(1);
-    expect((up.match(/changeSeen\(/g) ?? []).length).toBe(1);
-    expect((up.match(/changeApply\(/g) ?? []).length).toBe(1);
-    expect(up.indexOf("changeApply(")).toBeLessThan(up.indexOf("const G = zoneMixPose(st, piece, eye, look, up);"));
+    // ⭐⭐⭐ (2026-11-21, R3b) resolved ONCE, in the one resolver before the drawer (`changeResolve`): law U's rule there, once; the drawer none
+    const cr = readFileSync("src/render/picture_wiring.ts", "utf8");
+    const res = cr.slice(cr.indexOf("function changeResolve("), cr.indexOf("function publishDrawn("));
+    expect((up.match(/changeSeen\(|changeApply\(/g) ?? []).length).toBe(0);
+    expect((res.match(/changeSeen\(/g) ?? []).length).toBe(2);
+    expect((res.match(/changeApply\(/g) ?? []).length).toBe(3);
+    expect(cr.indexOf("const left = changeResolve(st, eye, look, up);")).toBeLessThan(cr.indexOf("rollPictureFrame(st, pp, eye, look, up, dtMs, left)"));
     expect(rs).not.toMatch(/uprightFrees\(|uprightHoldKept\(|cfg\.uprightBandFree|cfg\.uprightFreeTurns/);
   });
   it("FO3's freeing (a turn made then dropped) runs only with law U off; F3 gone: the carry whole only on a change applied at once", () => {
@@ -249,7 +255,7 @@ describe("RB1 — `changeApply`: a change applied at once leaves nothing turning
         asmDirEase: { axis: [0, 1, 0] as Vec3, angle: 0.3, mix: tok },
         asmZoneMix: null as unknown,
         asmEdgeHold: { sign: -1 as const, back: 2 },
-        asmCamLast: { dir: [1, 0, 0], up: [0, 1, 0] },
+        asmCamLogic: { dir: [1, 0, 0], up: [0, 1, 0] },
         asmRollShadow: { upright: { state: {}, w: 1, phi: 0 }, ghost: pose },
         asmPieceDrawn: null,
       },
@@ -343,7 +349,8 @@ describe("RB2 — THE HOLD IS A DIRECTION ON THE PICTURE'S GLASS (UPRIGHT_PICTUR
     expect(pw).toContain("const held = asmOn ? edgeHoldGlass(st.asmEdgeHold, raw.dx, raw.fdy) : raw;");
     expect(pw).toContain("const along = asmOn && st.asmEdgeHold !== null ? edgeHoldAlong(st.asmEdgeHold, raw.dx, raw.fdy) : 0;");
     expect(pw).not.toContain("edgeHoldDy(");
-    const rs = readFileSync("src/render/roll_shadow.ts", "utf8");
-    expect(rs).toContain("const hold = ask.hold === undefined ? undefined : holdSeen(seen, ask.hold, drawn ? was.picture : null, drawn ? was.ghost : null);");
+    // ⭐⭐⭐ (2026-11-21, R3b) law U's resolution moved as written into the one resolver (`changeResolve`)
+    const pic = readFileSync("src/render/picture_wiring.ts", "utf8");
+    expect(pic).toContain("const hold = ask.hold === undefined ? undefined : holdSeen(seen, ask.hold, drawn ? was.picture : null, drawn ? was.ghost : null);");
   });
 });

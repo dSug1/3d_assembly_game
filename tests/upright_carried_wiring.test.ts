@@ -10,6 +10,8 @@ const raw = (f: string): string => readFileSync(f, "utf8").replace(/\r\n/g, "\n"
 const rs = raw("src/render/roll_shadow.ts");
 const gb = raw("src/render/green_box_wiring.ts");
 const pw = raw("src/render/pointer_wiring.ts");
+const pic = raw("src/render/picture_wiring.ts"); // ⭐⭐⭐ (2026-11-21, R3b) the one resolver of the change asked
+const aw = raw("src/render/assembly_wiring.ts"); // ⭐⭐⭐ (R3b) the logic's own hold code (`pictureEventsRead`)
 const body = (src: string, head: string): string => {
   const i = src.indexOf(head);
   expect(i).toBeGreaterThanOrEqual(0);
@@ -21,8 +23,10 @@ const count = (s: string, sub: string): number => s.split(sub).length - 1;
 describe("the carried up's wiring — read in the source", () => {
   const cf = body(rs, "function carriedFrame(");
   it("the switch: `uprightCarried` 1 takes the camera's stage before law U; 0 leaves law U as it was", () => {
-    const a = rs.indexOf("if (st.cfg.uprightPicture === 1 && st.cfg.uprightCarried === 1) return carriedFrame(st, piece, eye, look, up, dtMs, ghost, sq, tiltHold);");
-    const b = rs.indexOf("if (st.cfg.uprightPicture === 1) return uprightPictureFrame(st, piece, eye, look, up, dtMs, ghost, sq, tiltHold);");
+    const a = rs.indexOf("if (st.cfg.uprightPicture === 1 && st.cfg.uprightCarried === 1) return carriedFrame(st, piece, eye, look, up, dtMs, sq, tiltHold, left);");
+    const b = rs.indexOf("if (st.cfg.uprightPicture === 1) return uprightPictureFrame(st, piece, eye, look, up, dtMs, sq, tiltHold, left);");
+    // ⭐⭐⭐ (R3b) the resolver the same switch: the carried up's rule first, law U's after
+    expect(pic.indexOf("if (st.cfg.uprightCarried === 1) {")).toBeGreaterThan(0);
     expect(a).toBeGreaterThan(0);
     expect(b).toBeGreaterThan(a);
   });
@@ -33,8 +37,12 @@ describe("the carried up's wiring — read in the source", () => {
     expect(cf).toContain("const P = poseRolled(G, line, r.phi);");
   });
   it("no camera turn far out but the half turn: a change resolved by the square camera's authority κ (far out applied at once)", () => {
-    expect(cf).toContain("const seen = changeSeen({ stays, wBefore: drawn ? was.one!.kappa : 0, wAfter: kappa, turnRad, freeMaxDeg: st.cfg.freeTurnMaxDeg });");
+    // ⭐⭐⭐ (R3b) resolved ONCE before the drawer, the rule moved as written (`changeResolve`); the drawer reads what it left (`left`)
+    expect(pic).toContain("const seen = changeSeen({ stays, wBefore: drawn ? was.one!.kappa : 0, wAfter: kappa, turnRad, freeMaxDeg: st.cfg.freeTurnMaxDeg });");
+    expect(pic).toContain("const kappa = st.cfg.uprightCloseIn === 1 ? 1 : 1 - share;");
+    expect(cf).toContain("const { freed, change, crossed } = left;");
     expect(cf).toContain("const kappa = st.cfg.uprightCloseIn === 1 ? 1 : 1 - share;");
+    expect(cf).not.toContain("changeSeen(");
   });
   it("the turn asked: the drawn orbit's yaw step about its pole axis, none across a change of the logic's frame", () => {
     expect(cf).toContain("const same = cy !== null && cy.zone === st.asmZone && cy.tilt === tiltId && !change && was !== null;");
@@ -46,8 +54,10 @@ describe("the carried up's wiring — read in the source", () => {
     expect(cf).toContain("const dxMm = st.asmFingerDxMm;\n  st.asmFingerDxMm = 0;");
   });
   it("the push held from the same answer, written once at the change; nothing in the frame's loop writes a hold afterwards", () => {
-    expect(count(cf, "st.asmEdgeHold =")).toBe(1);
-    expect(cf).toContain("if (change && crossed !== undefined) st.asmEdgeHold = carriedHold(r.halfStart, crossed, st.asmDxSign);");
+    // ⭐⭐⭐ (R3b, D-P6) published by the drawer, written by the logic's own hold code (`pictureEventsRead`), at the same moment
+    expect(count(cf, "st.asmEdgeHold =")).toBe(0);
+    expect(cf).toContain("const ev: PictureEvents = change && crossed !== undefined ? { carried: { halfStart: r.halfStart, crossed } } : NO_EVENTS;");
+    expect(aw).toContain("if (ev.carried !== undefined) st.asmEdgeHold = carriedHold(ev.carried.halfStart, ev.carried.crossed, st.asmDxSign);");
     expect(count(gb, "asmEdgeHold =")).toBe(0);
   });
   it("T5 made real: while the half turn holds, the orbit's target IS the orbit drawn, its spring and the coast stopped — before the spring steps", () => {
@@ -82,13 +92,13 @@ describe("the framing carried from the pose shown — read in the source (packet
   });
   it("the pose drawn is the one read and returned: the finger's glass, the next frame's pose shown, the camera", () => {
     expect(cf).toContain("const d: Vec3 = [D.eye[0] - D.look[0], D.eye[1] - D.look[1], D.eye[2] - D.look[2]];");
-    expect(cf).toContain("up: D.up };");
+    expect(cf).toContain("up: D.up } : zoneCam(zmOn, G);");
     expect(cf).toContain("picture: D, a2: placeError(st, G, D, piece, line)");
-    expect(cf).toContain("framing: fd === null ? null : fd.turn } };\n  return D;");
+    expect(cf).toContain("framing: fd === null ? null : fd.turn } };\n  return { eye: D.eye, look: D.look, up: D.up, cam, ev };");
   });
   it("φ, the half turn and the holds untouched: upCarried once, before the framing, and the hold from its answer as before", () => {
     expect(count(cf, "upCarried(")).toBe(1);
     expect(cf.indexOf("const r = upCarried(")).toBeLessThan(cf.indexOf("framingStep("));
-    expect(cf).toContain("if (change && crossed !== undefined) st.asmEdgeHold = carriedHold(r.halfStart, crossed, st.asmDxSign);");
+    expect(cf).toContain("const ev: PictureEvents = change && crossed !== undefined ? { carried: { halfStart: r.halfStart, crossed } } : NO_EVENTS;");
   });
 });

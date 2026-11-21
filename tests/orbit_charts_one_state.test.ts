@@ -285,7 +285,7 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): ONE STATE (⛔ the
     const c = fnSource(W, "function crossTurn(");
     expect(c).toContain("seamRebase(st, mq);");
     before(c, "seamRebase(st, mq);", "turnBegin(st, { paced: c.paced, byMm: false, noCamNull: false, uWas: c.uWas, carry: c.carry, tilt: c.tilt === true, stopCoast: true, hold: c.hold });"); // ⭐ (2026-11-19, RB1) through the one starter
-    expect(fnSource(W, "function turnBegin(")).toContain("const mixWas = st.asmZoneMix; if (a.paced) seamOutStart(st); else if (a.noCamNull || st.asmCamLast !== null) seamTurnStart(st, a.byMm); if (a.uWas !== null) seamEase(st, a.uWas); else if (a.carry) easeCarry(st, mixWas);");
+    expect(fnSource(W, "function turnBegin(")).toContain("const mixWas = st.asmZoneMix; if (a.paced) seamOutStart(st); else if (a.noCamNull || st.asmCamLogic !== null) seamTurnStart(st, a.byMm); if (a.uWas !== null) seamEase(st, a.uWas); else if (a.carry) easeCarry(st, mixWas);");
     expect(f).toContain("if (nW !== null) sqO.target = nW;");
     expect(f.match(/turnAngles\(/g)?.length).toBe(1);
   });
@@ -300,7 +300,7 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): ONE STATE (⛔ the
   });
   it("⭐ the entry's and the exit's turns from the pose SHOWN (`poseShown`, as a zone's), paced by the swing's rule; `zoneStep` leaves a paced turn to it", () => {
     const s = fnSource(W, "function seamTurnStart(");
-    expect(s).toContain("st.asmZoneMix = st.asmCamLast === null ? null : { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0, ...(paced ? { byMm: true } : {}) };");
+    expect(s).toContain("st.asmZoneMix = st.asmCamLogic === null ? null : { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0, ...(paced ? { byMm: true } : {}) };");
     const t = fnSource(W, "function seamTurnFrame(");
     expect(t).toContain("if (zm === null || zm.byMm !== true) return;");
     expect(t).toContain("const pace = seamTurnPace(true, st.asmTiltPending, bl !== null);");

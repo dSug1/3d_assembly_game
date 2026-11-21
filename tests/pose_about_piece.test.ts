@@ -113,8 +113,8 @@ describe("the camera turned about the piece (a polar zone's turn)", () => {
   it("wired: the zone's switch and the spit's crossing start from the pose on the glass; the camera's stage turns it about the piece", () => {
     const aw = readFileSync("src/render/assembly_wiring.ts", "utf8");
     const gb = readFileSync("src/render/green_box_wiring.ts", "utf8");
-    expect(aw).toContain("st.asmZoneMix = st.asmCamLast === null ? null : { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0, ...(paced ? { byMm: true } : {}) };"); // ⭐ (2026-11-19, UPRIGHT_PICTURE.md §12 RB1) the one creation, `seamTurnStart`, through `turnBegin`
-    expect(aw).toContain("else if (a.noCamNull || st.asmCamLast !== null) seamTurnStart(st, a.byMm);"); // ⭐ (2026-11-19, RB1) the free entry's turn: `noCamNull` false
+    expect(aw).toContain("st.asmZoneMix = st.asmCamLogic === null ? null : { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0, ...(paced ? { byMm: true } : {}) };"); // ⭐ (2026-11-19, UPRIGHT_PICTURE.md §12 RB1) the one creation, `seamTurnStart`, through `turnBegin`
+    expect(aw).toContain("else if (a.noCamNull || st.asmCamLogic !== null) seamTurnStart(st, a.byMm);"); // ⭐ (2026-11-19, RB1) the free entry's turn: `noCamNull` false
     // ⭐⭐⭐ (2026-11-14) the turn by ANGLE at one speed; the spit's side off the camera's own direction
     // ⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4c) over the turn's WHOLE angle (`turnWhole`: the camera's own with no eased direction — as before)
     expect(aw).toContain("const whole = turnWhole(st, zm);");
@@ -130,9 +130,11 @@ describe("the camera turned about the piece (a polar zone's turn)", () => {
     expect(aw).toContain("const r = d.about;");
     // ⭐⭐⭐ (2026-11-18, FO3 S1) through the picture a follower of the logic (`rollPictureFrame`), which hands the ghost to `zoneMixPose` on both paths
     // ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §13 F2) …wherever the camera follower does not draw (close in, or `cameraFollower` 0)
-    expect(gb).toContain("?? rollPictureFrame(st, pp, camAt, lookAt, camFrame.up, dtSec * 1000));");
+    // ⭐⭐⭐ (2026-11-21, R3a – R3b) …through the one call at the stage (`pictureFrame`), today's line in `picture_wiring.ts`
+    expect(gb).toContain("const zp = pictureFrame(st, pp, [c0.x, c0.y, c0.z], camAt, lookAt, camFrame.up, gapFull, off, dtSec * 1000, orbitDvPerMm(st));");
+    expect(readFileSync("src/render/picture_wiring.ts", "utf8")).toContain("?? rollPictureFrame(st, pp, eye, look, up, dtMs, left);");
     const rs = readFileSync("src/render/roll_shadow.ts", "utf8");
-    expect(rs).toContain("return zoneMixPose(st, piece, eye, look, up);");
+    expect(rs).toContain("const zp0 = zoneMixPose(st, piece, eye, look, up);");
     expect(rs).toContain("const zp = zoneMixPose(st, piece, eye, look, up);");
     // ⭐⭐⭐ (2026-11-14) the spit's side: the SHOWN rule at the ORBIT's own angles (⛔ the piece's spring: late; ⛔ the bare orbit: the square camera's turn over the ridge unseen)
     expect(aw).not.toContain("const u = dirAt(st, st.orbit.yaw, st.orbit.elevation);");

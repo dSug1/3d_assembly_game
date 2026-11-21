@@ -45,7 +45,8 @@ describe("F1 — the direction asked, recorded", () => {
     const g = code("render/green_box_wiring.ts");
     const i = g.indexOf("st.asmAsk = askedDir(st, rig.yaw, rig.v);");
     expect(i).toBeGreaterThan(0);
-    expect(g.indexOf("rollPictureFrame(st, pp,", i)).toBeGreaterThan(i);
+    // ⭐⭐⭐ (2026-11-21, R3b) the picture is one call at the stage (`pictureFrame`)
+    expect(g.indexOf("const zp = pictureFrame(st, pp,", i)).toBeGreaterThan(i);
   });
 });
 
@@ -63,17 +64,18 @@ describe("F2 — the follower at the camera's stage", () => {
 
   it("the stage: the follower first; the live picture (`rollPictureFrame`) ONLY where it does not draw; one writer of the camera", () => {
     const g = code("render/green_box_wiring.ts");
-    // ⭐⭐⭐ (2026-11-21, R3a) the one picture (`pictureOne` 1 with the follower: `pictureFrame` — the follower first, the close drawer where it does not draw); else this line exactly
-    expect(g).toContain(": (followFrame(st, pp, [c0.x, c0.y, c0.z], camAt, lookAt, camFrame.up, gapFull, off, dtSec * 1000) ?? rollPictureFrame(st, pp, camAt, lookAt, camFrame.up, dtSec * 1000));");
-    expect(g).toContain("? pictureFrame(st, pp, [c0.x, c0.y, c0.z], camAt, lookAt, camFrame.up, gapFull, off, dtSec * 1000, orbitDvPerMm(st))");
-    expect(g.match(/rollPictureFrame\(/g)?.length).toBe(1);
+    // ⭐⭐⭐ (2026-11-21, R3a – R3b) the picture one call at the stage (`pictureFrame`); today's line exactly in `picture_wiring.ts` (`pictureOne` 0 or the follower off)
+    expect(g).toContain("const zp = pictureFrame(st, pp, [c0.x, c0.y, c0.z], camAt, lookAt, camFrame.up, gapFull, off, dtSec * 1000, orbitDvPerMm(st));");
+    expect(g.match(/rollPictureFrame\(|followFrame\(/g)).toBeNull();
+    const pw = code("render/picture_wiring.ts");
+    expect(pw).toContain("const zp = followFrame(st, pp, foot, eye, look, up, gapM, off, dtMs) ?? rollPictureFrame(st, pp, eye, look, up, dtMs, left);");
     expect(g.match(/st\.camera\.setPosition\(/g)?.length).toBe(1);
     const w = code("render/camera_follow_wiring.ts");
     expect(w).not.toMatch(/st\.camera\.(setPosition|setTarget|upVector|position)/);
   });
 
   it("not drawing: nothing written but its own state (dropped: it restarts at rest) — close in stays the live build's", () => {
-    const f = between(code("render/camera_follow_wiring.ts"), "export function followFrame(", "// a change of frame asked");
+    const f = between(code("render/camera_follow_wiring.ts"), "export function followFrame(", "// ⭐⭐⭐ (2026-11-21, R3b) a change of frame asked");
     // ⭐⭐⭐ (2026-11-21, R3a) dropped only on today's line (no picture hook); the one picture keeps it, parked (`picture_wiring.ts`)
     expect(f).toContain("if (!followActive(st) || st.orbitPiecePlaced) {");
     expect(f).toContain("if (pic === undefined) st.asmFollow = was === null ? null : { state: null, piece: null, rec: { on: 0 } }; return null; }");
@@ -81,12 +83,17 @@ describe("F2 — the follower at the camera's stage", () => {
 
   it("a change asked: applied at once, the dy hold the LOGIC's crossing's (OP8); nothing here undoes a turn, a hold or an ease", () => {
     const w = code("render/camera_follow_wiring.ts");
-    // ⭐ (H2) under the top's rule (`followTop` 1) the logic's hold is not written far out (R4 amended); 0: as `de4a10e`
-    expect(w).toContain("if (ask !== null) changeApply(st, ask, false, top ? undefined : ask.hold !== undefined ? holdAtCrossing(ask.hold) : undefined);");
+    // ⭐ (H2) under the top's rule (`followTop` 1) the logic's hold is not written far out (R4 amended); 0: as `de4a10e` — ⭐⭐⭐ (R3b) resolved ONCE, before the
+    // drawer, in the one resolver (`changeResolve`, where the follower draws)
+    const pw = code("render/picture_wiring.ts");
+    expect(between(pw, "function changeResolve(", "function publishDrawn(")).toContain("if (followActive(st) && !st.orbitPiecePlaced) { const top = st.cfg.followTop === 1; changeApply(st, ask, false, top ? undefined : ask.hold !== undefined ? holdAtCrossing(ask.hold) : undefined); return CHANGE_NONE; }");
+    expect(w).not.toContain("changeApply(");
     expect(w).not.toMatch(/asmZoneMix\s*=[^=]/);
     // ⭐ (H2, D-H8) the ONE hold written here: the follower's own crossing's, through `holdAtCrossing` (it replaces any older one)
-    expect(w.match(/asmEdgeHold\s*=[^=]/g)?.length).toBe(1);
-    expect(w).toContain("if (r.hold !== undefined) st.asmEdgeHold = holdAtCrossing(r.hold);");
+    // ⭐⭐⭐ (R3b, D-P6) …PUBLISHED: the logic's own code writes it (`pictureEventsRead`), no drawer
+    expect(w.match(/asmEdgeHold\s*=[^=]/g)).toBeNull();
+    expect(w).toContain("ev = { followStarted: r.started, ...(r.hold !== undefined ? { followHold: r.hold } : {}) };");
+    expect(code("render/assembly_wiring.ts")).toContain("if (ev.followHold !== undefined) st.asmEdgeHold = holdAtCrossing(ev.followHold);");
     expect(w).not.toMatch(/asmDirEase\s*=[^=]/);
     expect(w).not.toMatch(/asmChange\s*=[^=]/);
   });
@@ -97,7 +104,7 @@ describe("F2 — the follower at the camera's stage", () => {
     expect(w).toContain("const P0 = followPose(s.dir, look, foot, hang, gapM, off.yawRad, off.pitchRad);");
     expect(w).toContain("st.pieceAnchor = P.piece;");
     expect(w).toContain("st.asmPieceDrawn = [P.piece[0], P.piece[1], P.piece[2]];");
-    expect(w).toContain("if (lv > 1e-12) st.asmCamLast = { dir: [-view[0] / lv, -view[1] / lv, -view[2] / lv], up: upD };");
+    expect(w).toContain("const cam: CamFrame | null = lv > 1e-12 ? { dir: [-view[0] / lv, -view[1] / lv, -view[2] / lv], up: upD } : null;");
     const r = between(w, "st.asmRollShadow = {", "};");
     expect(r).not.toContain("one:");
     expect(r).not.toContain("upright:");
@@ -116,7 +123,7 @@ describe("H2 — the top's rule at the camera's stage", () => {
     const i1 = f.indexOf("if (top) {");
     const i0 = f.indexOf("} else {", i1);
     expect(i1).toBeGreaterThan(0);
-    expect(f.slice(i1, i0)).toContain("const r = followTopStep(s0, was?.top ?? null, { ask: st.asmAsk!, orbit: orbitW, psiL: st.asmAskLevel, nW: gizmoFacetW(st), upShown: st.asmCamLast?.up ?? null, dySign: st.asmDySign, fingerMm: st.asmFrameMm }, dtMs, kt);");
+    expect(f.slice(i1, i0)).toContain("const r = followTopStep(s0, was?.top ?? null, { ask: st.asmAsk!, orbit: orbitW, psiL: st.asmAskLevel, nW: gizmoFacetW(st), upShown: st.asmCamLogic?.up ?? null, dySign: st.asmDySign, fingerMm: st.asmFrameMm }, dtMs, kt);");
     expect(f.slice(i1, i0)).toContain("const orbitW = tiltDir(dirFrame(st), orbitDir(st.orbit.yaw, st.orbit.elevation));");
     expect(f.slice(i1, i0)).not.toContain("followStep(");
     expect(f.slice(i0)).toContain("s = followStep(s0, st.asmAsk!, dtMs, k);");
@@ -133,7 +140,7 @@ describe("H2 — the top's rule at the camera's stage", () => {
     const i = g.indexOf("st.asmAsk = askedDir(st, rig.yaw, rig.v);");
     const j = g.indexOf("st.asmAskLevel = st.cfg.followTop === 1 ? levelledAsked(st, rig.yaw, rig.v) : null;");
     expect(j).toBeGreaterThan(i);
-    expect(g.indexOf("followFrame(st, pp, [c0.x", j)).toBeGreaterThan(j);
+    expect(g.indexOf("const zp = pictureFrame(st, pp, [c0.x", j)).toBeGreaterThan(j);
     const a = code("render/assembly_wiring.ts");
     expect(between(a, "export function levelledAsked(", "export function gizmoFacetW(")).toContain("return levelledHeading(yaw, v, st.asmAskCalm, dirFrame(st), st.cfg.followPoleDeg); }");
     const gz = between(a, "export function gizmoFacetW(st: SceneState): Vec3 | null {", "function drawnDir(");
@@ -173,11 +180,14 @@ describe("H3 — F-1 – F-3 at the camera's stage", () => {
   it("F-3: a turn STARTED (never its later frames), the switch on, a place shown: every angle state set to the map's place (`seamRebase`) — after the step", () => {
     const f = between(code("render/camera_follow_wiring.ts"), "if (top) {", "} else {");
     const i = f.indexOf("const r = followTopStep(");
-    const j = f.indexOf("const rb = r.started && st.cfg.followTurnRebase === 1 && sh !== null;");
+    const j = f.indexOf("const rb = followRebaseAsked(st, r.started);");
     expect(i).toBeGreaterThan(0);
     expect(j).toBeGreaterThan(i);
-    expect(f).toContain("const sh = st.asmShown;");
-    expect(f.indexOf("if (rb) seamRebase(st, { yaw: sh.yaw, pitch: sh.pitch });")).toBeGreaterThan(j);
+    // ⭐⭐⭐ (R3b, D-P6) the rebase MOVED to its reader, the logic (`pictureEventsRead`, right after the picture): the predicate one function
+    expect(f).not.toContain("seamRebase(");
+    const a = code("render/assembly_wiring.ts");
+    expect(a).toContain("return started && st.cfg.followTurnRebase === 1 && st.asmShown !== null;");
+    expect(between(a, "export function pictureEventsRead(", "if (ev.carried !== undefined)")).toContain("if (followRebaseAsked(st, ev.followStarted === true)) { const sh = st.asmShown!; seamRebase(st, { yaw: sh.yaw, pitch: sh.pitch }); }");
     expect(code("render/assembly_wiring.ts")).toContain("export function seamRebase(st: SceneState, mq: { readonly yaw: number; readonly pitch: number }): void {");
   });
 });
