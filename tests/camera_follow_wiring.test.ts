@@ -113,7 +113,7 @@ describe("H2 — the top's rule at the camera's stage", () => {
     const i1 = f.indexOf("if (top) {");
     const i0 = f.indexOf("} else {", i1);
     expect(i1).toBeGreaterThan(0);
-    expect(f.slice(i1, i0)).toContain("const r = followTopStep(s0, was?.top ?? null, { ask: st.asmAsk!, orbit: orbitW, psiL: st.asmAskLevel, nW: gizmoFacetW(st), upShown: st.asmCamLast?.up ?? null, dySign: st.asmDySign }, dtMs, kt);");
+    expect(f.slice(i1, i0)).toContain("const r = followTopStep(s0, was?.top ?? null, { ask: st.asmAsk!, orbit: orbitW, psiL: st.asmAskLevel, nW: gizmoFacetW(st), upShown: st.asmCamLast?.up ?? null, dySign: st.asmDySign, fingerMm: st.asmFrameMm }, dtMs, kt);");
     expect(f.slice(i1, i0)).toContain("const orbitW = tiltDir(dirFrame(st), orbitDir(st.orbit.yaw, st.orbit.elevation));");
     expect(f.slice(i1, i0)).not.toContain("followStep(");
     expect(f.slice(i0)).toContain("s = followStep(s0, st.asmAsk!, dtMs, k);");
@@ -143,5 +143,38 @@ describe("H2 — the top's rule at the camera's stage", () => {
     const w = code("render/camera_follow_wiring.ts");
     expect(w).toContain("...(topRec !== null ? { top: topRec } : {})");
     expect(w).toContain("...(topS !== null ? { top: topS } : {})");
+  });
+});
+
+// ⭐⭐⭐ (2026-11-21, `CAMERA_FOLLOWS_GIZMO.md` §17.3 – §18 — H3) THE FIX ROUND F-1 – F-3, wired behind three switches (all 0 = `ba369aa` frame for frame).
+describe("H3 — F-1 – F-3 at the camera's stage", () => {
+  it("the three switches 1 by default, the clamp 520°/s (his realignment pace in the upright builds)", () => {
+    expect([DEFAULT_CONFIG.followTurnOnJump, DEFAULT_CONFIG.followTurnFinger, DEFAULT_CONFIG.followTurnMaxDegS, DEFAULT_CONFIG.followTurnRebase]).toEqual([1, 1, 520, 1]);
+  });
+
+  it("F-1 and F-2 handed to the pure step: the switch, his finger's pace at the drag's own degrees per mm, the clamp ONLY with F-2's switch (0: H2's)", () => {
+    const w = code("render/camera_follow_wiring.ts");
+    expect(w).toContain("const fin = st.cfg.followTurnFinger === 1;");
+    expect(w).toContain("const dpm = orbitDegPerMm(st.cfg, st.orbit.elevation).yawDegPerMm;");
+    expect(w).toContain("const degPerMm = dpm * closeInGain(approachDistance(st.cfg, st.approach), st.cfg.orbitGainFullM, st.cfg.orbitContactMmPerMm, dpm, st.asm?.radius ?? 0);");
+    expect(w).toContain("onJump: st.cfg.followTurnOnJump === 1, finger: fin, degPerMm, maxDegS: fin ? st.cfg.followTurnMaxDegS : 0 };");
+    expect(w).toContain("fingerMm: st.asmFrameMm }, dtMs, kt);");
+  });
+
+  it("F-2: this frame's finger travel is the orbit's own, deadbanded (`asmOrbitMm` as `assemblyFrame` takes it), every frame", () => {
+    const a = code("render/assembly_wiring.ts");
+    expect(a).toContain("const fingerMm = st.asmOrbitMm; st.asmOrbitMm = 0; st.asmFrameMm = fingerMm;");
+    expect(code("render/pointer_wiring.ts")).toContain("st.asmOrbitMm += Math.hypot(db.dx, db.dy) / mmToPx(1);");
+  });
+
+  it("F-3: a turn STARTED (never its later frames), the switch on, a place shown: every angle state set to the map's place (`seamRebase`) — after the step", () => {
+    const f = between(code("render/camera_follow_wiring.ts"), "if (top) {", "} else {");
+    const i = f.indexOf("const r = followTopStep(");
+    const j = f.indexOf("const rb = r.started && st.cfg.followTurnRebase === 1 && sh !== null;");
+    expect(i).toBeGreaterThan(0);
+    expect(j).toBeGreaterThan(i);
+    expect(f).toContain("const sh = st.asmShown;");
+    expect(f.indexOf("if (rb) seamRebase(st, { yaw: sh.yaw, pitch: sh.pitch });")).toBeGreaterThan(j);
+    expect(code("render/assembly_wiring.ts")).toContain("export function seamRebase(st: SceneState, mq: { readonly yaw: number; readonly pitch: number }): void {");
   });
 });
