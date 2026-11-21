@@ -22,11 +22,11 @@
  * `followTurnMaxDegS`; `followTurnRebase` (F-3) a turn started sets every angle state to the map's place at the gizmo (`seamRebase`).
  */
 import type { Vec3 } from "../core/vec";
-import { followPose, followStart, followStep, followTopStep, type FollowState, type FollowTop } from "../input/camera_follow";
+import { followFarStep, followPose, followStart, followStep, followTopStep, type FollowState, type FollowTop } from "../input/camera_follow";
 import { tiltDir, type CamFrame } from "../input/orbit_tilt";
 import { approachDistance, closeInGain, orbitDir } from "../input/assembly_orbit";
 import { orbitDegPerMm } from "../input/follow_camera";
-import { dirFrame, followRebaseAsked, gizmoFacetW, spitZone, type PictureEvents } from "./assembly_wiring";
+import { dirFrame, farTopDecided, followRebaseAsked, gizmoFacetW, spitZone, type PictureEvents } from "./assembly_wiring";
 import { upSquareToView } from "../input/camera_frame";
 import type { SceneState } from "./scene_state";
 
@@ -82,7 +82,11 @@ export function followFrame(
     const degPerMm = dpm * closeInGain(approachDistance(st.cfg, st.approach), st.cfg.orbitGainFullM, st.cfg.orbitContactMmPerMm, dpm, st.asm?.radius ?? 0);
     const kt = { tauMs: st.cfg.followMs, poleDeg: st.cfg.followPoleDeg, minDeg: st.cfg.followTurnMinDeg, rollDegS: st.cfg.tiltRollDegS, paceShare: st.cfg.followTurnPace, onJump: st.cfg.followTurnOnJump === 1, finger: fin, degPerMm, maxDegS: fin ? st.cfg.followTurnMaxDegS : 0 };
     const orbitW = tiltDir(dirFrame(st), orbitDir(st.orbit.yaw, st.orbit.elevation));
-    const r = followTopStep(s0, was?.top ?? null, { ask: st.asmAsk!, orbit: orbitW, psiL: st.asmAskLevel, nW: gizmoFacetW(st), upShown: st.asmCamLogic?.up ?? null, dySign: st.asmDySign, fingerMm: st.asmFrameMm }, dtMs, kt);
+    // ⭐⭐⭐ (2026-11-21, R5 — `TOP_BOTTOM_STUDY.md` §3, §6) under the far rule as decided (`farTopDecided`: `pictureOne` 1) `followFarStep`: the far reading
+    // (D-H19, `asmAskLevel`), its jump by GEOMETRY (D-H15: last frame's calm at these angles, `asmAskLevelWas`); else H2 / H3 exactly
+    const r = farTopDecided(st)
+      ? followFarStep(s0, was?.top ?? null, { ask: st.asmAsk!, orbit: orbitW, psiL: st.asmAskLevel, nW: gizmoFacetW(st), upShown: st.asmCamLogic?.up ?? null, dySign: st.asmDySign, fingerMm: st.asmFrameMm, ...(st.asmAskLevelWas !== null ? { psiLWas: st.asmAskLevelWas.psi } : {}) }, dtMs, kt)
+      : followTopStep(s0, was?.top ?? null, { ask: st.asmAsk!, orbit: orbitW, psiL: st.asmAskLevel, nW: gizmoFacetW(st), upShown: st.asmCamLogic?.up ?? null, dySign: st.asmDySign, fingerMm: st.asmFrameMm }, dtMs, kt);
     s = r.s;
     topS = r.top;
     // ⭐⭐⭐ (D-H8 = D-T4) the dy hold decided at the follower's own crossing: it REPLACES any hold still on (a 0 writes none — `holdAtCrossing`)

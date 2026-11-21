@@ -27,7 +27,7 @@ import { orbitDvPerMm, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from ".
 import type { LineSample, SceneState } from "./scene_state";
 import { faceTrianglesWorld } from "./contact_wiring";
 import { calmHeading, calmLevelHeading, calmShown, calmStep as calmStepEase, calmTarget, cameraHeading, capEdgePitch, heldOffsetStep, poleWeight, type CalmKnobs, type CalmState } from "../input/orbit_calm";
-import { askedCalm, farReading, followTurnHoldsGizmo, levelledHeading, type CalmAskTarget } from "../input/camera_follow";
+import { askedCalm, calmInFrame, calmWorld, farReading, followTurnHoldsGizmo, levelledHeading, type CalmAskTarget } from "../input/camera_follow";
 import { facetFrame } from "../input/face_map";
 import { qRotate, type Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
@@ -114,7 +114,7 @@ type OrbitStateStart = Pick<
   | "asmGizmo" | "asmSupport" | "asmSupportLevel" | "pieceHold" | "pieceHoldPrev" | "asmLook" | "asmFacePoint" | "asmG" | "asmPrevQ" | "asmShown" | "asmFaceBand" | "asmFree" | "asmPlaceWas" | "asmMapQ"
   | "asmEdgeHold" | "asmZone" | "asmZoneMix" | "asmChange" | "asmPieceDrawn" | "asmDirEase" | "asmCamLogic" | "asmCamDrawn" | "asmRollShadow" | "asmSpitSide" | "asmSpitU" | "asmSpitPic" | "asmSpitPicWas" | "asmZoneAlpha" | "asmDySign" | "asmFingerDxMm" | "asmDxSign" | "asmCarriedYaw" | "asmHeadO"
   | "asmHeadW" | "asmHeadYaw" | "asmTilt" | "asmGOff" | "asmTiltAuto" | "asmTiltPending" | "asmOrbitMm" | "asmFrameMm" | "asmBlend" | "asmCalmWhole" | "asmCalmWholeV"
-  | "asmSquare" | "asmCalm" | "asmMouth" | "asmRawPrev" | "asmGizmoAt" | "asmGizmoLag" | "asmAskCalm" | "asmAsk" | "asmAskLevel" | "asmFollow" | "asmPicture"
+  | "asmSquare" | "asmCalm" | "asmMouth" | "asmRawPrev" | "asmGizmoAt" | "asmGizmoLag" | "asmAskCalm" | "asmAsk" | "asmAskLevel" | "asmAskCalmWas" | "asmAskLevelWas" | "asmFollow" | "asmPicture"
 >;
 
 /**
@@ -179,6 +179,8 @@ export function orbitStateStart(): OrbitStateStart {
     asmAskCalm: null,
     asmAsk: null,
     asmAskLevel: null,
+    asmAskCalmWas: null,
+    asmAskLevelWas: null,
     asmFollow: null,
     asmPicture: null,
   };
@@ -328,6 +330,23 @@ export function farTopDecided(st: SceneState): boolean {
 export function farAsked(st: SceneState, yaw: number, v: number, c: CalmState | null): number | null {
   const R = dirFrame(st);
   return farReading(yaw, v, c, R, st.cfg.followPoleDeg, tiltDir(R, orbitDir(st.orbit.yaw, st.orbit.elevation)));
+}
+
+/**
+ * ⭐⭐⭐ (R5, D-H15 — `TOP_BOTTOM_STUDY.md` §3 H-3) THE JUMP'S SECOND READING, at the rig's angles `yaw`, `v` beside the first (`farAsked` of this frame's
+ * calm): LAST frame's calm asked, kept in the world, read in this frame's F at these angles (`asmAskLevelWas`) — then this frame's calm kept. Off the far
+ * rule as decided: none kept. The MODEL's space.
+ */
+export function farJumpRead(st: SceneState, yaw: number, v: number): void {
+  if (!farTopDecided(st)) {
+    st.asmAskCalmWas = null;
+    st.asmAskLevelWas = null;
+    return;
+  }
+  const R = dirFrame(st);
+  const was = st.asmAskCalmWas;
+  st.asmAskLevelWas = was === null ? null : { psi: farAsked(st, yaw, v, calmInFrame(was.c, R)) };
+  st.asmAskCalmWas = { c: calmWorld(st.asmAskCalm, R) };
 }
 
 /** ⭐⭐⭐ (H2) THE GIZMO'S FACET NORMAL in the world — the face map's facet at the map's place (`asmShown`), turned out of its frame; the MODEL's (never a drawn mesh). `null`: no place. */

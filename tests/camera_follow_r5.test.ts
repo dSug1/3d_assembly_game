@@ -4,8 +4,22 @@
 // between; a level face carried. The fixtures are the kit's `h5/band_sim.ts` / `ab_sim.ts` (`Scene_0bis`'s spit: F's y the world's x).
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { farReading, farReadingShare, headingOf, levelledHeading } from "../src/input/camera_follow";
-import { calmShown } from "../src/input/orbit_calm";
+import {
+  dirAtHeading,
+  farJump,
+  farReading,
+  farReadingShare,
+  followFarStep,
+  followTopStep,
+  followTurnHoldsGizmo,
+  headingOf,
+  levelledHeading,
+  type FollowFarIn,
+  type FollowState,
+  type FollowTop,
+  type FollowTopKnobs,
+} from "../src/input/camera_follow";
+import { calmShown, type CalmState } from "../src/input/orbit_calm";
 import { zoneFrame } from "../src/input/polar_zone";
 import { mulT, tiltDir } from "../src/input/orbit_tilt";
 import { orbitDir, vOfPitch } from "../src/input/assembly_orbit";
@@ -111,5 +125,164 @@ describe("R5 D-H19 — the far reading in the WORLD (the band of `cameraHeading`
     const a = code("render/assembly_wiring.ts");
     expect(between(a, "export function farTopDecided(", "export function farAsked(")).toContain("return st.cfg.pictureOne === 1 && st.cfg.cameraFollower === 1 && st.cfg.followTop === 1; }");
     expect(between(a, "export function farAsked(", "export function gizmoFacetW(")).toContain("return farReading(yaw, v, c, R, st.cfg.followPoleDeg, tiltDir(R, orbitDir(st.orbit.yaw, st.orbit.elevation))); }");
+  });
+});
+
+// ⭐⭐⭐ D-H15 — the turn only on the far reading's GEOMETRIC jump (last frame's calm read at this frame's angles), its angle the whole gap from the heading
+// drawn, at his finger's pace clamped. The old code: H3's `followTopStep` (F-1: the jump a frame's difference, at a facet change).
+const K5: FollowTopKnobs = { tauMs: 200, poleDeg: 30, minDeg: 10, rollDegS: 360, paceShare: 1, onJump: true, finger: true, degPerMm: 5, maxDegS: 520 };
+const SA: V = [0, 0, 1];
+const SB: V = [1, 0, 0];
+type Step = typeof followFarStep;
+/** a dx at `rate` °/s from heading 0 (the gizmo waiting while a turn runs), the facet `SA` → `SB` at `edge`°, the reading jumping `disc`° there, he stops at `stop`° */
+function edgeRun(step: Step, rate: number, fps: number, el: number, edge: number, disc: number, stop: number) {
+  const dt = 1000 / fps;
+  let s: FollowState | null = null;
+  let top: FollowTop | null = null;
+  let yaw = 0;
+  let yawWas: number | null = null;
+  let stopped = false;
+  let turns = 0;
+  let maxTurnDegS = 0;
+  let maxElDeg = -90;
+  let maxAfterStopDegS = 0;
+  let end: { drawn: number; reading: number } | null = null;
+  let prev: number | null = null;
+  let wasTurning = false;
+  for (let i = 0; i < fps * 4; i++) {
+    const holding = followTurnHoldsGizmo(top?.turn ?? null);
+    let mm = 0;
+    if (!stopped && !holding) {
+      yaw += (rate * D * dt) / 1000;
+      mm = (rate * dt) / 1000 / 5;
+    }
+    const justStopped = !stopped && yaw >= stop * D;
+    if (justStopped) stopped = true;
+    const beyond = yaw >= edge * D;
+    const psiL = wrap(yaw + (beyond ? disc * D : 0));
+    const ask = dirAtHeading(yaw, el * D);
+    const inp: FollowFarIn = { ask, orbit: ask, psiL, nW: beyond ? SB : SA, upShown: null, dySign: 0, fingerMm: mm, ...(yawWas === null ? {} : { psiLWas: wrap(yaw + (yawWas >= edge * D ? disc * D : 0)) }) };
+    const r = step(s, top, inp, dt, K5);
+    if (r.started) turns++;
+    s = r.s;
+    top = r.top;
+    const h = headingOf(s.d)!;
+    const turning = top.turn !== null;
+    if (prev !== null) {
+      const dps = (Math.abs(wrap(h - prev)) / D) * fps;
+      if (turning || wasTurning) maxTurnDegS = Math.max(maxTurnDegS, dps);
+      if (stopped && !justStopped) maxAfterStopDegS = Math.max(maxAfterStopDegS, dps);
+    }
+    if (wasTurning && !turning) end = { drawn: h, reading: psiL };
+    maxElDeg = Math.max(maxElDeg, Math.asin(s.d[1]) / D);
+    wasTurning = turning;
+    prev = h;
+    yawWas = yaw;
+  }
+  return { turns, maxTurnDegS, maxElDeg, maxAfterStopDegS, end };
+}
+
+describe("R5 D-H15 — the turn on the reading's GEOMETRIC jump, its angle the whole gap", () => {
+  it("the jump by geometry: this frame's reading minus last frame's calm's at the same angles; a level face the heading carried; none kept: 0", () => {
+    expect(farJump(1.0, 0.9, 0)).toBeCloseTo(0.1, 12);
+    expect(farJump(-3.1, 3.1, 0)).toBeCloseTo(2 * Math.PI - 6.2, 12);
+    expect(farJump(null, 0.5, 0.2)).toBeCloseTo(-0.3, 12); // onto a level face: carried
+    expect(farJump(0.5, null, 0.2)).toBeCloseTo(0.3, 12); // off a level face: the reading beyond against the heading carried (B's real quarter turn)
+    expect(farJump(0.5, undefined, 0.2)).toBe(0);
+  });
+
+  it("his point 1 — a vertical edge: NO turn at any pace, 60 and 143 frames a second (H3: from 900°/s at 60, 1 620 at 143)", () => {
+    for (const fps of [60, 143]) for (const rate of [300, 900, 1620]) expect(edgeRun(followFarStep, rate, fps, 15, 45, 0, 135).turns).toBe(0);
+    expect(edgeRun(followTopStep, 900, 60, 15, 45, 0, 135).turns).toBe(1);
+    expect(edgeRun(followTopStep, 1620, 143, 15, 45, 0, 135).turns).toBe(1);
+  });
+
+  it("a far edge (the reading jumps 180°): ONE turn, ending ON the reading beyond (the whole gap: his lag + the jump), every turn frame within his 520°/s clamp", () => {
+    for (const [rate, fps] of [[300, 60], [900, 60], [1620, 60], [900, 143]] as const) {
+      const r = edgeRun(followFarStep, rate, fps, 50, 90, 180, 200);
+      expect(r.turns).toBe(1);
+      expect(Math.abs(wrap(r.end!.drawn - r.end!.reading))).toBeLessThan(1e-6);
+      expect(r.maxTurnDegS).toBeLessThanOrEqual(520 * 1.01);
+    }
+    // H3 (the jump alone from the heading drawn): the lag left behind the turn — it ends off the reading
+    const h3 = edgeRun(followTopStep, 900, 60, 50, 90, 180, 200);
+    expect(Math.abs(wrap(h3.end!.drawn - h3.end!.reading)) / D).toBeGreaterThan(20);
+  });
+});
+
+// ⭐⭐⭐ point 2 — a zigzag across an apex edge of `Scene_0bis`'s tip (the two upper triangles meeting on the plane z = 0, the orbit low in the world, the
+// calm whole at the edge): the far reading continuous, no turn started. The old code: H2's reading (0° / 180° by the side) with H3's jump at the facet change.
+describe("R5 D-H19 + D-H15 — a zigzag across an apex edge", () => {
+  const NP = un([0.88, 0.42, 0.21]);
+  const NM = un([0.88, 0.42, -0.21]);
+  const calmAt = (z: number): CalmState => {
+    const x = Math.min(1, Math.abs(z) / 0.05);
+    const s = 1 - 0.7 * x * x * (3 - 2 * x);
+    return { n: RT(z >= 0 ? NP : NM), sH: s, sV: s };
+  };
+  function zigzag(rule: "far" | "h3") {
+    let s: FollowState | null = null;
+    let top: FollowTop | null = null;
+    let z = 0.006;
+    let dz = -0.0015;
+    let zWas: number | null = null;
+    let turns = 0;
+    let maxReadStep = 0;
+    let readWas: number | null = null;
+    for (let i = 0; i < 160; i++) {
+      if (!followTurnHoldsGizmo(top?.turn ?? null)) {
+        z += dz;
+        if (Math.abs(z) > 0.006 + 1e-12) {
+          dz = -dz;
+          z += 2 * dz;
+        }
+      }
+      const uW = un([0.3, 0.12, z]);
+      const uF = RT(uW);
+      const yaw = Math.atan2(uF[2], uF[0]);
+      const v = vOfPitch(Math.asin(uF[1]));
+      const c = calmAt(z);
+      const ask = tiltDir(R, calmShown(orbitDir(yaw, v), c));
+      const nW = z >= 0 ? NP : NM;
+      const psiL = rule === "far" ? farReading(yaw, v, c, R, 30, uW) : levelledHeading(yaw, v, c, R, 30);
+      const base = { ask, orbit: uW, psiL, nW, upShown: null, dySign: 0, fingerMm: 0.5 };
+      const r: ReturnType<Step> =
+        rule === "far"
+          ? followFarStep(s, top, { ...base, ...(zWas === null ? {} : { psiLWas: farReading(yaw, v, calmAt(zWas), R, 30, uW) }) }, 1000 / 60, K5)
+          : followTopStep(s, top, base, 1000 / 60, K5);
+      if (r.started) turns++;
+      s = r.s;
+      top = r.top;
+      if (readWas !== null && psiL !== null) maxReadStep = Math.max(maxReadStep, Math.abs(wrap(psiL - readWas)) / D);
+      readWas = psiL;
+      zWas = z;
+    }
+    return { turns, maxReadStep };
+  }
+  it("the far reading continuous across the edge (≤ 2° a frame) and NO turn started; H2's reading flips there (over 90°) and H3 turns", () => {
+    const far = zigzag("far");
+    expect(far.turns).toBe(0);
+    expect(far.maxReadStep).toBeLessThan(2);
+    const h3 = zigzag("h3");
+    expect(h3.maxReadStep).toBeGreaterThan(90); // 0° / 180° by the side, or its normal's ±103° (`TOP_BOTTOM_STUDY.md` §8, point 2)
+    expect(h3.turns).toBeGreaterThan(2);
+  });
+});
+
+describe("R5 D-H15 — wired", () => {
+  it("the second reading beside the first at the rig's angles (last frame's calm kept in the world, read in this frame's F), handed to `followFarStep` under the far rule as decided", () => {
+    const g = code("render/green_box_wiring.ts");
+    const i = g.indexOf("st.asmAskLevel = st.cfg.followTop !== 1 ? null : farTopDecided(st)");
+    const j = g.indexOf("farJumpRead(st, rig.yaw, rig.v);");
+    expect(j).toBeGreaterThan(i);
+    expect(g.indexOf("const zp = pictureFrame(", j)).toBeGreaterThan(j);
+    const a = code("render/assembly_wiring.ts");
+    const f = between(a, "export function farJumpRead(", "export function gizmoFacetW(");
+    expect(f).toContain("if (!farTopDecided(st)) { st.asmAskCalmWas = null; st.asmAskLevelWas = null; return; }");
+    expect(f).toContain("st.asmAskLevelWas = was === null ? null : { psi: farAsked(st, yaw, v, calmInFrame(was.c, R)) }; st.asmAskCalmWas = { c: calmWorld(st.asmAskCalm, R) };");
+    expect(between(a, "type OrbitStateStart = Pick<", ">;")).toContain('"asmAskCalmWas" | "asmAskLevelWas"');
+    const w = code("render/camera_follow_wiring.ts");
+    expect(w).toContain("const r = farTopDecided(st) ? followFarStep(s0, was?.top ?? null, { ask: st.asmAsk!, orbit: orbitW, psiL: st.asmAskLevel, nW: gizmoFacetW(st),");
+    expect(w).toContain("...(st.asmAskLevelWas !== null ? { psiLWas: st.asmAskLevelWas.psi } : {}) }, dtMs, kt)");
   });
 });

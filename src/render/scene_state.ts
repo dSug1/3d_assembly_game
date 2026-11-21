@@ -515,6 +515,10 @@ export interface SceneState {
   asmAsk: import("../core/vec").Vec3 | null;
   /** ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §15 — H2) THE CALM'S LEVELLED READING this frame at the same angles (`levelledAsked`, `followTop` 1): the follower's heading target far out (rad); `null`: carried, or the switch 0 */
   asmAskLevel: number | null;
+  /** ⭐⭐⭐ (2026-11-21, R5, D-H15 — `farTopDecided`) the calm asked kept a frame IN THE WORLD (`calmWorld`; `null`: none kept), and LAST frame's calm's far
+   *  reading at this frame's angles (`farJumpRead`; `psi` `null`: carried — a level face; the field `null`: none kept) — the jump read by geometry */
+  asmAskCalmWas: { readonly c: import("../input/orbit_calm").CalmState | null } | null;
+  asmAskLevelWas: { readonly psi: number | null } | null;
   /** ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §13 — F2) THE CAMERA FOLLOWER (`render/camera_follow_wiring.ts`): its state while it draws far out (`null`
    *  where it does not: it restarts at rest), the piece drawn last frame, and the frame's record for the probes (`rec`); `null`: never drawn yet */
   /** ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §4.1 — R3a, `pictureOne` 1) THE ONE PICTURE's state (`render/picture_wiring.ts`, `input/picture.ts`): the turntable, the

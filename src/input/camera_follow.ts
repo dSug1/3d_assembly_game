@@ -13,7 +13,7 @@
 import type { Vec3 } from "../core/vec";
 import { calmLevelHeading, calmShown, LEVEL_HEADING_BLEND_RAD, LEVEL_HEADING_FROM_RAD, type CalmState } from "./orbit_calm";
 import { offsetFrame, orbitDir } from "./assembly_orbit";
-import { rollDurationMs, tiltDir, type Mat3 } from "./orbit_tilt";
+import { mulT, rollDurationMs, tiltDir, type Mat3 } from "./orbit_tilt";
 import { crossingEvent, FREE_EXIT_HOLD_FROM_RAD, isFreeFace, turnHolds } from "./free_face";
 import { turnHoldsGizmo } from "./seam_turn";
 
@@ -534,6 +534,98 @@ export function followTopStep(
     top: { psiT: psiL, nW: inp.nW ?? t0.nW, turn, step, orbitWas: inp.orbit, pace },
     ...(hold !== undefined ? { hold } : {}),
     delta,
+    started,
+  };
+}
+
+/* ⭐⭐⭐ R5 — THE FAR TARGET'S TOP RULE AS DECIDED (2026-11-21, `PICTURE_REBUILD.md` §4.7, `TOP_BOTTOM_STUDY.md` §3, §6: D-H13 – D-H19), `pictureOne` 1 ---- */
+
+/** ⭐ (R5, D-H15) a calm asked carried into the WORLD (`R`: F → world) — kept a frame, so it is read again at the next frame's angles in that frame's F. */
+export function calmWorld(c: CalmState | null, R: Mat3 | null): CalmState | null {
+  return c === null || R === null ? c : { ...c, n: tiltDir(R, c.n) };
+}
+
+/** ⭐ (R5, D-H15) a calm kept in the WORLD read in the frame `R` (F → world): its normal turned by `Rᵀ`. */
+export function calmInFrame(cW: CalmState | null, R: Mat3 | null): CalmState | null {
+  return cW === null || R === null ? cW : { ...cW, n: mulT(R, cW.n) };
+}
+
+/**
+ * ⭐⭐⭐ (R5, D-H15 — `TOP_BOTTOM_STUDY.md` §3 H-3) THE READING'S JUMP, BY GEOMETRY: this frame's far reading `psiL` minus LAST frame's calm's read at THIS
+ * frame's angles `psiLWas` — so the reading's own motion (his finger's) is never a jump, at any pace; a carried one (a level face, `null`) is the heading
+ * carried `psiT`; `psiLWas` absent (no calm kept): none. ⛔ A frame's difference (F-1, O-a): at 1 620°/s the reading moves 27° a frame — a "jump" at a
+ * vertical edge (his point 1).
+ */
+export function farJump(psiL: number | null, psiLWas: number | null | undefined, psiT: number): number {
+  if (psiLWas === undefined) return 0;
+  return wrapPi((psiL ?? psiT) - (psiLWas ?? psiT));
+}
+
+/** ⭐ (R5) One frame's readings far out: the top's (`FollowTopIn`, `psiL` the far reading — `farReading`) and last frame's calm's at this frame's angles. */
+export interface FollowFarIn extends FollowTopIn {
+  /** ⭐ (D-H15) last frame's calm asked read at THIS frame's angles (`farReading`): `null` carried (a level face); absent: none kept (no jump read) */
+  readonly psiLWas?: number | null;
+}
+
+/**
+ * ⭐⭐⭐ (R5) ONE FRAME OF THE FAR FOLLOWER UNDER THE TOP'S RULE AS DECIDED — D-H15: a turn only where the far reading jumps by GEOMETRY (`farJump`) over the
+ * band (`minDeg`, 10°), at any frame; its angle the WHOLE gap from the heading drawn to the reading beyond (`followTurnDelta`: the lag + the jump, the
+ * half turn's tie the way the heading went), at his finger's pace clamped (`followTurnDegS`, F-2); the gizmo waits while it runs (`top.turn`). The dy hold
+ * decided at the gizmo's facet change as H2 / H3 (`followTurnHold` on the jump: over 90° the crossing's own, `crossingEvent` on `upShown`; it replaces any
+ * older one). Else the spring as `followTopStep`. `s` / `top` `null`: started on the direction asked.
+ */
+export function followFarStep(
+  s: FollowState | null,
+  top: FollowTop | null,
+  inp: FollowFarIn,
+  dtMs: number,
+  k: FollowTopKnobs,
+): { readonly s: FollowState; readonly top: FollowTop; readonly hold?: 1 | -1 | 0; readonly delta: number | null; readonly started: boolean } {
+  const s0 = s ?? followStart(inp.ask);
+  const dtS = Math.max(0, dtMs) / 1000;
+  const psiD = headingOf(s0.d) ?? s0.psi;
+  const t0: FollowTop = top ?? { psiT: psiD, nW: inp.nW, turn: null, step: 0, orbitWas: inp.orbit, pace: 0 };
+  const paceNow = k.finger === true ? followFingerPace(inp.fingerMm ?? 0, dtS, k.degPerMm ?? 0) : dtS > 0 ? angleOf(t0.orbitWas, inp.orbit) / dtS : 0;
+  const pace = Math.max(paceNow, k.tauMs > 0 ? t0.pace * Math.exp(-Math.max(0, dtMs) / k.tauMs) : 0);
+  const psiL = inp.psiL ?? t0.psiT;
+  const jump = farJump(inp.psiL, inp.psiLWas, t0.psiT);
+  let turn = t0.turn;
+  let hold: 1 | -1 | 0 | undefined;
+  let started = false;
+  if (t0.nW !== null && inp.nW !== null && angleOf(t0.nW, inp.nW) > FOLLOW_FACET_CHANGE_RAD) {
+    const crossHold = inp.upShown === null ? 0 : crossingEvent(inp.upShown, t0.nW, inp.nW, UP, inp.dySign).hold;
+    hold = followTurnHold(jump, crossHold);
+  }
+  if (Math.abs(jump) >= Math.max(0, k.minDeg) * DEG && Math.abs(jump) > 0) {
+    const from = turn !== null ? turn.psi0 + turn.k * turn.delta : psiD;
+    turn = followTurnStart(from, followTurnDelta(from, psiL, t0.step), 0, followTurnDegS(pace, k.rollDegS, k.paceShare, k.maxDegS ?? 0));
+    started = turn !== null;
+  }
+  let sp: { readonly d: Vec3; readonly v: Vec3 };
+  let tg: Vec3;
+  if (turn !== null) {
+    turn = followTurnStep(turn, dtMs);
+    const psi = turn.psi0 + turn.k * turn.delta;
+    const el0 = Math.asin(clampN(s0.d[1], -1, 1));
+    tg = followTopTarget(psi, inp.ask, k.poleDeg);
+    const r = sphereSpring(dirAtHeading(psi, el0), meridional(s0.v, psi, el0), tg, dtS, k.tauMs / 1000);
+    const el1 = Math.asin(clampN(r.d[1], -1, 1));
+    sp = { d: dirAtHeading(psi, el1), v: meridional(r.v, psi, el1) };
+    if (turn.k >= 1) turn = null;
+  } else {
+    tg = followTopTarget(psiL, inp.ask, k.poleDeg);
+    sp = sphereSpring(s0.d, s0.v, tg, dtS, k.tauMs / 1000);
+  }
+  const psiN = headingOf(sp.d) ?? psiD;
+  const stp = wrapPi(psiN - psiD);
+  const step = Math.abs(stp) > 1e-9 ? stp : t0.step;
+  const paceS = Math.max(len3(sp.v), dtS > 0 ? angleOf(s0.d, sp.d) / dtS : 0);
+  return {
+    s: { d: sp.d, v: sp.v, tWas: tg, pace: paceS, det: s0.det, psi: psiN, psiT: psiL, azWas: s0.azWas, psiStep: step, dir: sp.d },
+    top: { psiT: psiL, nW: inp.nW ?? t0.nW, turn, step, orbitWas: inp.orbit, pace },
+    ...(hold !== undefined ? { hold } : {}),
+    // the geometric jump every frame it is read (the record's `x`; `null`: none kept)
+    delta: inp.psiLWas === undefined ? null : jump,
     started,
   };
 }

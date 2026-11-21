@@ -123,7 +123,8 @@ describe("H2 — the top's rule at the camera's stage", () => {
     const i1 = f.indexOf("if (top) {");
     const i0 = f.indexOf("} else {", i1);
     expect(i1).toBeGreaterThan(0);
-    expect(f.slice(i1, i0)).toContain("const r = followTopStep(s0, was?.top ?? null, { ask: st.asmAsk!, orbit: orbitW, psiL: st.asmAskLevel, nW: gizmoFacetW(st), upShown: st.asmCamLogic?.up ?? null, dySign: st.asmDySign, fingerMm: st.asmFrameMm }, dtMs, kt);");
+    // ⭐ (R5) H2 / H3's step exactly off the far rule as decided (`camera_follow_r5.test.ts` reads the other branch)
+    expect(f.slice(i1, i0)).toContain(": followTopStep(s0, was?.top ?? null, { ask: st.asmAsk!, orbit: orbitW, psiL: st.asmAskLevel, nW: gizmoFacetW(st), upShown: st.asmCamLogic?.up ?? null, dySign: st.asmDySign, fingerMm: st.asmFrameMm }, dtMs, kt);");
     expect(f.slice(i1, i0)).toContain("const orbitW = tiltDir(dirFrame(st), orbitDir(st.orbit.yaw, st.orbit.elevation));");
     expect(f.slice(i1, i0)).not.toContain("followStep(");
     expect(f.slice(i0)).toContain("s = followStep(s0, st.asmAsk!, dtMs, k);");
@@ -180,7 +181,7 @@ describe("H3 — F-1 – F-3 at the camera's stage", () => {
 
   it("F-3: a turn STARTED (never its later frames), the switch on, a place shown: every angle state set to the map's place (`seamRebase`) — after the step", () => {
     const f = between(code("render/camera_follow_wiring.ts"), "if (top) {", "} else {");
-    const i = f.indexOf("const r = followTopStep(");
+    const i = f.indexOf("const r = farTopDecided(st) ? followFarStep("); // ⭐ (R5) either step: `followFarStep` under the far rule as decided, else `followTopStep`
     const j = f.indexOf("const rb = followRebaseAsked(st, r.started);");
     expect(i).toBeGreaterThan(0);
     expect(j).toBeGreaterThan(i);
