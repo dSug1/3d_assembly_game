@@ -320,9 +320,20 @@ export function followTopTarget(psi: number, ask: Vec3, poleDeg: number): Vec3 {
  * ⭐⭐⭐ (H2, D-H6 — the owner: *"Your pace + a slider"*) THE TURN'S SPEED (deg a second): close in's (`rollDegS`, `tiltRollDegS`) raised toward his own orbit
  * pace at the crossing (`paceRadS`) by `share` — 1 (the default) his pace whenever it is faster, never slower than close in's; 0 close in's speed.
  */
-export function followTurnDegS(paceRadS: number, rollDegS: number, share: number): number {
+export function followTurnDegS(paceRadS: number, rollDegS: number, share: number, maxDegS = 0): number {
   const base = Math.max(0, rollDegS);
-  return base + clampN(share, 0, 1) * Math.max(0, Math.max(0, paceRadS) / DEG - base);
+  const v = base + clampN(share, 0, 1) * Math.max(0, Math.max(0, paceRadS) / DEG - base);
+  // ⭐⭐⭐ (H3, F-2 — the owner: *"let's clamp the realignment speed (slider)"*) never over `maxDegS` (`followTurnMaxDegS`; 0: no clamp) — over close in's floor too
+  return maxDegS > 0 ? Math.min(v, maxDegS) : v;
+}
+
+/**
+ * ⭐⭐⭐ (H3, F-2 = D-H10) HIS FINGER'S PACE on the glass (rad a second): the finger's deadbanded travel this frame (`mm`, as the orbit reads it) a second × the
+ * orbit's own degrees per mm far out (`degPerMm`: `orbitDegPerMm`'s yaw — the dy's too far out) — ⛔ the orbit's direction's speed (2 500 – 6 500°/s near
+ * `Scene_0bis`'s bottom while the finger moved at his pace: root (b), `CAMERA_FOLLOWS_GIZMO.md` §16.4).
+ */
+export function followFingerPace(mm: number, dtS: number, degPerMm: number): number {
+  return dtS > 0 ? (Math.max(0, mm) / dtS) * Math.max(0, degPerMm) * DEG : 0;
 }
 
 /** ⭐⭐⭐ (H2) The follower's own turn: from the heading `psi0` by `delta` (rad, signed) over `durMs`, `tMs` run, its share `k` (1: whole). */
@@ -384,6 +395,14 @@ export interface FollowTopKnobs {
   readonly minDeg: number;
   readonly rollDegS: number;
   readonly paceShare: number;
+  /** ⭐⭐⭐ (H3, F-1 = D-H9, `followTurnOnJump`) a turn only where the levelled reading ITSELF jumps across the edge (absent / false: H2's, from the heading drawn) */
+  readonly onJump?: boolean;
+  /** ⭐⭐⭐ (H3, F-2 = D-H10, `followTurnFinger`) his pace read on his FINGER (`fingerMm` × `degPerMm`); absent / false: the orbit's direction's (H2's) */
+  readonly finger?: boolean;
+  /** ⭐ (H3, F-2) the orbit's own degrees per mm far out (`orbitDegPerMm`'s yaw) */
+  readonly degPerMm?: number;
+  /** ⭐ (H3, F-2) the turn's top speed (deg a second; 0 / absent: no clamp) */
+  readonly maxDegS?: number;
 }
 
 /**
@@ -397,6 +416,8 @@ export interface FollowTopIn {
   readonly nW: Vec3 | null;
   readonly upShown: Vec3 | null;
   readonly dySign: number;
+  /** ⭐ (H3, F-2) the finger's deadbanded travel this frame (mm, the orbit's — `asmOrbitMm` as `assemblyFrame` took it); absent: 0 */
+  readonly fingerMm?: number;
 }
 
 /** `v` kept along the meridian at the heading `psi`, elevation `el` (the turn owns the heading: the spring keeps the height). */
@@ -410,6 +431,8 @@ function meridional(v: Vec3, psi: number, el: number): Vec3 {
  * levelled reading (`followTurnDelta`), a turn over the band started at his pace (`followTurnStart`, `followTurnDegS`), the dy hold decided (`hold`, written by
  * the wiring through `holdAtCrossing`: it replaces any older one, a 0 writes none); while a turn runs it owns the heading (the spring's direction laid on its
  * meridian), the spring keeps the height; else the spring toward the heading target and the capped height. `s` / `top` `null`: started on the direction asked.
+ * ⭐⭐⭐ (H3, `CAMERA_FOLLOWS_GIZMO.md` §17.3) `k.onJump` (F-1): the turn only on the reading's own jump; `k.finger` (F-2): his finger's pace, `k.maxDegS` its
+ * clamp; `started`: a turn started this frame (F-3: the wiring sets every angle state to the map's place then — `seamRebase`).
  */
 export function followTopStep(
   s: FollowState | null,
@@ -417,23 +440,44 @@ export function followTopStep(
   inp: FollowTopIn,
   dtMs: number,
   k: FollowTopKnobs,
-): { readonly s: FollowState; readonly top: FollowTop; readonly hold?: 1 | -1 | 0; readonly delta: number | null } {
+): { readonly s: FollowState; readonly top: FollowTop; readonly hold?: 1 | -1 | 0; readonly delta: number | null; readonly started: boolean } {
   const s0 = s ?? followStart(inp.ask);
   const dtS = Math.max(0, dtMs) / 1000;
   const psiD = headingOf(s0.d) ?? s0.psi;
   const t0: FollowTop = top ?? { psiT: psiD, nW: inp.nW, turn: null, step: 0, orbitWas: inp.orbit, pace: 0 };
-  // his pace: the orbit's own direction's speed (the finger's place, continuous through a change of frame), a peak decaying on the follower's ease
-  const paceNow = dtS > 0 ? angleOf(t0.orbitWas, inp.orbit) / dtS : 0;
+  // his pace: the orbit's own direction's speed (the finger's place, continuous through a change of frame), a peak decaying on the follower's ease —
+  // ⭐⭐⭐ (H3, F-2) or his FINGER's on the glass (`followFingerPace`), the same peak
+  const paceNow = k.finger === true ? followFingerPace(inp.fingerMm ?? 0, dtS, k.degPerMm ?? 0) : dtS > 0 ? angleOf(t0.orbitWas, inp.orbit) / dtS : 0;
   const pace = Math.max(paceNow, k.tauMs > 0 ? t0.pace * Math.exp(-Math.max(0, dtMs) / k.tauMs) : 0);
   const psiL = inp.psiL ?? t0.psiT;
   let turn = t0.turn;
   let hold: 1 | -1 | 0 | undefined;
   let delta: number | null = null;
+  let started = false;
   if (t0.nW !== null && inp.nW !== null && angleOf(t0.nW, inp.nW) > FOLLOW_FACET_CHANGE_RAD) {
-    const from = turn !== null ? turn.psi0 + turn.k * turn.delta : psiD;
-    delta = followTurnDelta(from, psiL, t0.step);
-    turn = followTurnStart(from, delta, k.minDeg, followTurnDegS(pace, k.rollDegS, k.paceShare));
-    hold = followTurnHold(delta, inp.upShown === null ? 0 : crossingEvent(inp.upShown, t0.nW, inp.nW, UP, inp.dySign).hold);
+    const degS = followTurnDegS(pace, k.rollDegS, k.paceShare, k.maxDegS ?? 0);
+    const crossHold = inp.upShown === null ? 0 : crossingEvent(inp.upShown, t0.nW, inp.nW, UP, inp.dySign).hold;
+    if (k.onJump === true) {
+      // ⭐⭐⭐ (H3, F-1 = D-H9) THE READING'S OWN JUMP across the edge: the reading after the change − the reading the frame before (or the heading carried),
+      // the half turn's tie the way the heading was going — ⛔ measured from the heading DRAWN (root (a): the spring's lag behind his dx paid as a turn at
+      // every facet change, a vertical edge too — his point 1). From the band a turn of that jump applied from the heading drawn (the lag before the edge kept,
+      // left to the spring), a running turn's rest carried into it; under it nothing: no turn (a running one goes on), no wait, no hold
+      const jump = followTurnDelta(t0.psiT, psiL, t0.step);
+      delta = jump;
+      if (Math.abs(jump) >= Math.max(0, k.minDeg) * DEG && Math.abs(jump) > 0) {
+        const from = turn !== null ? turn.psi0 + turn.k * turn.delta : psiD;
+        const rest = turn !== null ? (1 - turn.k) * turn.delta : 0;
+        turn = followTurnStart(from, rest + jump, 0, degS);
+        started = turn !== null;
+      }
+      hold = followTurnHold(jump, crossHold);
+    } else {
+      const from = turn !== null ? turn.psi0 + turn.k * turn.delta : psiD;
+      delta = followTurnDelta(from, psiL, t0.step);
+      turn = followTurnStart(from, delta, k.minDeg, degS);
+      started = turn !== null;
+      hold = followTurnHold(delta, crossHold);
+    }
   }
   let sp: { readonly d: Vec3; readonly v: Vec3 };
   let tg: Vec3;
@@ -459,5 +503,6 @@ export function followTopStep(
     top: { psiT: psiL, nW: inp.nW ?? t0.nW, turn, step, orbitWas: inp.orbit, pace },
     ...(hold !== undefined ? { hold } : {}),
     delta,
+    started,
   };
 }
