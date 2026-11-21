@@ -27,6 +27,9 @@ import { zoneFrame } from "../src/input/polar_zone";
 import { mulT, tiltDir } from "../src/input/orbit_tilt";
 import { crossingEvent } from "../src/input/free_face";
 import { orbitDir, vOfPitch } from "../src/input/assembly_orbit";
+import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
+import { farTopDecided } from "../src/render/assembly_wiring";
+import type { SceneState } from "../src/render/scene_state";
 
 type V = [number, number, number];
 const D = Math.PI / 180;
@@ -127,7 +130,7 @@ describe("R5 D-H19 — the far reading in the WORLD (the band of `cameraHeading`
     expect(i).toBeGreaterThan(0);
     expect(j).toBeGreaterThan(i);
     const a = code("render/assembly_wiring.ts");
-    expect(between(a, "export function farTopDecided(", "export function farAsked(")).toContain("return st.cfg.pictureOne === 1 && st.cfg.cameraFollower === 1 && st.cfg.followTop === 1; }");
+    expect(between(a, "export function farTopDecided(", "export function farAsked(")).toContain("return st.cfg.pictureFarTop === 1 && st.cfg.pictureOne === 1 && st.cfg.cameraFollower === 1 && st.cfg.followTop === 1; }"); // ⭐ (R3-FIX) its own switch
     expect(between(a, "export function farAsked(", "export function gizmoFacetW(")).toContain("return farReading(yaw, v, c, R, st.cfg.followPoleDeg, tiltDir(R, orbitDir(st.orbit.yaw, st.orbit.elevation))); }");
   });
 });
@@ -385,5 +388,20 @@ describe("R5 D-H16 — the far dy hold on the drawn up", () => {
     const p = code("render/picture_wiring.ts");
     const f = between(p, "const fp = followFrame(st, pp, foot, eye, look, up, gapM, off, dtMs, hook, Gl !== null);", "st.asmPicture = { s: s1,"); // ⭐ (R3-FIX) the far path's call
     expect(f).toContain("publishDrawn(st, fp.cam);");
+  });
+});
+
+// ⭐⭐⭐ (2026-11-21 night, `PICTURE_REBUILD.md` §4.3a item 7 — R3-FIX) R5 BEHIND ITS OWN SWITCH `pictureFarTop` (0 by default — the lead: its gates unfinished, its
+// far strokes on `Scene_0bis` pin the gizmo at a pole): R5's vectors above are its pure rules and its wiring, read with the switch at 1. Red on the old code
+// (no switch: R5 on with `pictureOne`); mutant: the predicate without the switch.
+describe("R5's switch `pictureFarTop`", () => {
+  const st = (o: Partial<typeof DEFAULT_CONFIG>) => ({ cfg: { ...DEFAULT_CONFIG, ...o } }) as unknown as SceneState;
+  it("0 by default: the far rule as decided OFF (H2 / H3 exactly); 1: R5 as built, only with the one picture, the follower and the top's rule", () => {
+    expect(DEFAULT_CONFIG.pictureFarTop).toBe(0);
+    expect(farTopDecided(st({}))).toBe(false);
+    expect(farTopDecided(st({ pictureFarTop: 1 }))).toBe(true);
+    expect(farTopDecided(st({ pictureFarTop: 1, pictureOne: 0 }))).toBe(false);
+    expect(farTopDecided(st({ pictureFarTop: 1, cameraFollower: 0 }))).toBe(false);
+    expect(farTopDecided(st({ pictureFarTop: 1, followTop: 0 }))).toBe(false);
   });
 });
