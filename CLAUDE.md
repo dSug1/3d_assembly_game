@@ -49,7 +49,7 @@ npm run build       # production bundle into dist/
 ⭐⭐⭐ **THE OWNER (2026-11-20, on the device): LIVE main `de4a10e` = `1.0.150-Camera_follows_gizmo` at `656929e` — THE CAMERA FOLLOWER — IS THE BEST IMPLEMENTATION OF THE ORBIT SO FAR** (*"This is very good"*; it supersedes `12dc4b6`).
 Far out the camera is a simple polar orbit (world up) following the gizmo's direction through one ease on the sphere; close in unchanged (`cameraFollower` 1; 0 = the build before, `b03a4dd`). **2233 vectors**.
 → [`Claude/40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md`](Claude/40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md) §13 – §14; why the eleven upright builds before it failed → [`Claude/40_RENDER_SCENE/spec/UPRIGHT_LESSONS.md`](Claude/40_RENDER_SCENE/spec/UPRIGHT_LESSONS.md).
-Open: his three points on the top and bottom of the orbit (the camera's yaw on a pure dy, the hold far out, the red section turned round the pole) — advice given, nothing built (§14).
+⭐ 2026-11-21: LIVE main `ba369aa` = `1.0.151-` at `c1edcaf` — the top and bottom far out (H2, `followTop` 1; 0 = `de4a10e`), deployed on his word for his look; measured failing on his ten stretches (77 frames over 45° in one frame, 94 piece jumps a minute); his decisions D-H9 – D-H12 open (§16).
 ⭐ When the orbit charts are completed, everything is merged into the `3d_assembly_game` worktree.
 The earlier status moved → [`Claude/00_CORE/history/2026-11-20_claude_md_status_moved.md`](Claude/00_CORE/history/2026-11-20_claude_md_status_moved.md), [`Claude/00_CORE/history/2026-11-18_queue_status_moved.md`](Claude/00_CORE/history/2026-11-18_queue_status_moved.md).
 

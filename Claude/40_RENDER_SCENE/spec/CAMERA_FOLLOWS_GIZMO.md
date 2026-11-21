@@ -724,3 +724,7 @@ faster than close in's `tiltRollDegS`, 0 close in's speed). By URL too (`?follow
 | D-H11 | at the follower's crossing every angle set to the map's place, as close in's crossing | yes — root (c) |
 | D-H12 | in the spit a dx along the axis no longer yaws the camera toward a tip | his eye |
 After a fix round on these, if a gate still fails: stop and study (lessons row 2).
+
+### 16.8 Deployed for his look (2026-11-21)
+
+His word: *"deploy what you have built before I decide"*. LIVE main `ba369aa` = `1.0.151-` at `c1edcaf` (`followTop` 1 by default; 0 = `de4a10e` frame for frame), `npm run verify` 2255 green. Deployed as measured above, failing gates included; D-H9 – D-H12 wait for his look. `de4a10e` stays the best orbit so far until he says otherwise.

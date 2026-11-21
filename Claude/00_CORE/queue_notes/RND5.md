@@ -778,3 +778,5 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   hold after a dy-made half turn. Measured: no yaw on a pure dy (73° → 1.8°), `b_far`'s hold set 6 of 6, close in identical; ⛔ on his own play 77
   frames over 45° (0) and 94 piece jumps a minute (26.8) — three roots read (the turn read against the camera's lag, his pace read on the orbit's
   direction, the wait not holding the map's place), D-H9 – D-H12 for his word; no fix round, no device look → `CAMERA_FOLLOWS_GIZMO.md` §16.
+* **2026-11-21 — H2 DEPLOYED for his look** (his word: *"deploy what you have built before I decide"*): LIVE main `ba369aa` = `1.0.151-` at
+  `c1edcaf` (`followTop` 1; 0 = `de4a10e`), verify 2255 green; the failing gates as measured; D-H9 – D-H12 after his look → `CAMERA_FOLLOWS_GIZMO.md` §16.8.
