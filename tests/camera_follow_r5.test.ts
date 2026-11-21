@@ -25,6 +25,7 @@ import {
 import { calmShown, type CalmState } from "../src/input/orbit_calm";
 import { zoneFrame } from "../src/input/polar_zone";
 import { mulT, tiltDir } from "../src/input/orbit_tilt";
+import { crossingEvent } from "../src/input/free_face";
 import { orbitDir, vOfPitch } from "../src/input/assembly_orbit";
 
 type V = [number, number, number];
@@ -348,5 +349,41 @@ describe("R5 D-H13 + D-H14 — two followers and the derived leash", () => {
     const d = edgeRun(followFarStep, 1620, 60, 55, 400, 0, 300, { ...K5, maxDegS: 0 });
     expect(c.lagAtStopDeg).toBeCloseTo(104, 6); // taut at the stop
     expect(d.lagAtStopDeg).toBeGreaterThan(c.lagAtStopDeg + 20); // without it, 143°
+  });
+});
+
+// ⭐⭐⭐ D-H16 — far out the dy hold decided on the picture HE sees: the DRAWN up of last frame (`asmCamDrawn`, published by the picture only), never the
+// logic's (`asmCamLogic`, written the same frame just before the follower read it: 64 of 157 half turns on his ten, `b_far` s4).
+describe("R5 D-H16 — the far dy hold on the drawn up", () => {
+  // a ridge along x: off its front slope onto its back slope, the reading jumping 180° there, a dy pushing up the glass
+  const NF = un([0, 0.7071, 0.7071]);
+  const NB = un([0, 0.7071, -0.7071]);
+  const at = (upShown: V) => {
+    const ask = dirAtHeading(0, 40 * D);
+    const base: FollowFarIn = { ask, orbit: ask, psiL: 0, nW: NF, upShown, dySign: 1, fingerMm: 1, psiLWas: 0 };
+    const r0 = followFarStep(null, null, base, 1000 / 60, K5);
+    return followFarStep(r0.s, r0.top, { ...base, psiL: Math.PI, psiLWas: 0, nW: NB }, 1000 / 60, K5);
+  };
+  it("the half turn's hold is the crossing's own on the up GIVEN — two ups on the two sides of the edge, two signs: the wiring decides which glass is read", () => {
+    const upA = un([0, 0.7071, -0.7071]);
+    const upB = un([0, -0.7071, 0.7071]);
+    const a = at(upA);
+    const b = at(upB);
+    expect(a.started && b.started).toBe(true);
+    expect(a.hold).toBe(crossingEvent(upA, NF, NB, [0, 1, 0], 1).hold);
+    expect(b.hold).toBe(crossingEvent(upB, NF, NB, [0, 1, 0], 1).hold);
+    expect(a.hold).not.toBe(b.hold);
+  });
+
+  it("wired: under the far rule as decided the follower reads the DRAWN up of last frame (`asmCamDrawn`); H2 / H3 the logic's as before", () => {
+    const w = code("render/camera_follow_wiring.ts");
+    const far = between(w, "const r = farTopDecided(st) ? followFarStep(", ": followTopStep(");
+    expect(far).toContain("upShown: st.asmCamDrawn?.up ?? null");
+    expect(far).not.toContain("asmCamLogic");
+    expect(w).toContain(": followTopStep(s0, was?.top ?? null, { ask: st.asmAsk!, orbit: orbitW, psiL: st.asmAskLevel, nW: gizmoFacetW(st), upShown: st.asmCamLogic?.up ?? null,");
+    // the frame drawn is published after the follower's step (so it reads last frame's), by the picture only
+    const p = code("render/picture_wiring.ts");
+    const f = between(p, "const fp = followFrame(st, pp, foot, eye, look, up, gapM, off, dtMs, (P, dFar, hangF, usF) => {", "st.asmPicture = { s: s1,");
+    expect(f).toContain("publishDrawn(st, fp.cam);");
   });
 });

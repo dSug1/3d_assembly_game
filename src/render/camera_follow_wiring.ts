@@ -83,9 +83,10 @@ export function followFrame(
     const kt = { tauMs: st.cfg.followMs, poleDeg: st.cfg.followPoleDeg, minDeg: st.cfg.followTurnMinDeg, rollDegS: st.cfg.tiltRollDegS, paceShare: st.cfg.followTurnPace, onJump: st.cfg.followTurnOnJump === 1, finger: fin, degPerMm, maxDegS: fin ? st.cfg.followTurnMaxDegS : 0 };
     const orbitW = tiltDir(dirFrame(st), orbitDir(st.orbit.yaw, st.orbit.elevation));
     // ⭐⭐⭐ (2026-11-21, R5 — `TOP_BOTTOM_STUDY.md` §3, §6) under the far rule as decided (`farTopDecided`: `pictureOne` 1) `followFarStep`: the far reading
-    // (D-H19, `asmAskLevel`), its jump by GEOMETRY (D-H15: last frame's calm at these angles, `asmAskLevelWas`); else H2 / H3 exactly
+    // (D-H19, `asmAskLevel`), its jump by GEOMETRY (D-H15: last frame's calm at these angles, `asmAskLevelWas`), the dy hold on the up HE sees (D-H16: the
+    // picture's own frame drawn last frame, `asmCamDrawn` — ⛔ `asmCamLogic`, the logic's, written this frame just before); else H2 / H3 exactly
     const r = farTopDecided(st)
-      ? followFarStep(s0, was?.top ?? null, { ask: st.asmAsk!, orbit: orbitW, psiL: st.asmAskLevel, nW: gizmoFacetW(st), upShown: st.asmCamLogic?.up ?? null, dySign: st.asmDySign, fingerMm: st.asmFrameMm, ...(st.asmAskLevelWas !== null ? { psiLWas: st.asmAskLevelWas.psi } : {}) }, dtMs, kt)
+      ? followFarStep(s0, was?.top ?? null, { ask: st.asmAsk!, orbit: orbitW, psiL: st.asmAskLevel, nW: gizmoFacetW(st), upShown: st.asmCamDrawn?.up ?? null, dySign: st.asmDySign, fingerMm: st.asmFrameMm, ...(st.asmAskLevelWas !== null ? { psiLWas: st.asmAskLevelWas.psi } : {}) }, dtMs, kt)
       : followTopStep(s0, was?.top ?? null, { ask: st.asmAsk!, orbit: orbitW, psiL: st.asmAskLevel, nW: gizmoFacetW(st), upShown: st.asmCamLogic?.up ?? null, dySign: st.asmDySign, fingerMm: st.asmFrameMm }, dtMs, kt);
     s = r.s;
     topS = r.top;
