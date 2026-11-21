@@ -42,8 +42,7 @@ import { cameraOffsetAt, easeShare, gizmoBlendTravel, horizontalShare, rigSwingN
 import { governedRingStep } from "../input/turn_governor";
 import { GRAVITY_FRAMES, quadFrames } from "../core/orientation_set";
 import { cameraFrameHeld, upSquareToView } from "../input/camera_frame";
-import { rollPictureFrame } from "./roll_shadow";
-import { followFrame } from "./camera_follow_wiring";
+import { pictureFrame } from "./picture_wiring";
 import { elevationGainScale } from "../input/orbit";
 import { UNTURNED } from "../input/orbit_rig";
 import { contactFrame } from "./contact_wiring";
@@ -1085,8 +1084,9 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     // ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §13 — F2) FAR OUT THE CAMERA FOLLOWER (`cameraFollower` 1): a simple polar orbit (world up) about the look
     // point following the direction asked, the piece hung along the same direction (`followFrame`); `null` close in or with the switch 0: the picture below
     const c0 = st.orbitCentreM;
-    const fp = followFrame(st, pp, [c0.x, c0.y, c0.z], camAt, lookAt, camFrame.up, gapFull, off, dtSec * 1000);
-    const zp = fp ?? rollPictureFrame(st, pp, camAt, lookAt, camFrame.up, dtSec * 1000);
+    // ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §4.1, §4.4 — R3a, R3b) THE PICTURE, one call (`picture_wiring.ts`): the one picture at every distance (`pictureOne` 1
+    // with `cameraFollower` 1), else today's line exactly (`followFrame ?? rollPictureFrame`) — the change asked resolved once, the frame drawn published there
+    const zp = pictureFrame(st, pp, [c0.x, c0.y, c0.z], camAt, lookAt, camFrame.up, gapFull, off, dtSec * 1000, orbitDvPerMm(st));
     camAt = [zp.eye[0], zp.eye[1], zp.eye[2]];
     lookAt = [zp.look[0], zp.look[1], zp.look[2]];
     upIn = zp.up;

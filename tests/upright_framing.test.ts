@@ -75,10 +75,10 @@ describe("the framing carried from the pose shown — the pose drawn (`framingSh
     const a = onGlass(A, PIECE);
     const b = onGlass(B, PIECE);
     expect(Math.hypot(a[0] - b[0], a[1] - b[1])).toBeGreaterThan(0.1); // the snap there is to carry
-    const p0 = framedPose(f0, B, PIECE).pose;
+    const p0 = framedPose(f0, B, PIECE, false, 1).pose;
     const g0 = onGlass(p0, PIECE);
     expect(Math.hypot(g0[0] - a[0], g0[1] - a[1])).toBeLessThan(1e-9);
-    const p1 = framedPose({ ...f0, doneMs: 300 }, B, PIECE).pose;
+    const p1 = framedPose({ ...f0, doneMs: 300 }, B, PIECE, false, 1).pose;
     const g1 = onGlass(p1, PIECE);
     expect(Math.hypot(g1[0] - b[0], g1[1] - b[1])).toBeLessThan(1e-9);
   });
@@ -87,7 +87,7 @@ describe("the framing carried from the pose shown — the pose drawn (`framingSh
     const b = onGlass(B, PIECE);
     let f: FramingTurn = f0;
     for (const t of [60, 120, 180, 240]) {
-      const r = framedPose({ ...f, doneMs: t }, B, PIECE);
+      const r = framedPose({ ...f, doneMs: t }, B, PIECE, false, 1);
       f = r.turn;
       const g = onGlass(r.pose, PIECE);
       const k = framingShare({ ...f0, doneMs: t });
@@ -107,7 +107,7 @@ describe("the framing carried from the pose shown — where it starts (`framingF
     const phi = Math.PI;
     const from = framingFrom(P, was, line, phi);
     const f: FramingTurn = { from, doneMs: 0, wholeMs: 300, keep: null, rule: 0, axis: null };
-    const D = poseRolled(framedPose(f, G, now).pose, line, phi);
+    const D = poseRolled(framedPose(f, G, now, false, 1).pose, line, phi);
     const a = onGlass(P, was);
     const d = onGlass(D, now);
     expect(Math.hypot(d[0] - a[0], d[1] - a[1])).toBeLessThan(1e-3); // under one pixel of his glass (the toric solve with the piece moved: 0.3 px)

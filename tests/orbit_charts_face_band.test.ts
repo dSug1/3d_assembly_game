@@ -266,7 +266,7 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): one band", () => {
     expect(r).toContain("const d = cur === null || cur === t.stack ? 0 : distanceToFacets(map, [cur], t.surface);");
     expect(r).toContain("st.asmFaceBand = { map, facet: bandedFacet(cur, t.stack, d, edgeMarginM(st)) };");
     // ⛔ the sway: nothing drawn, picked or seen by the camera
-    expect(r).not.toMatch(/getBoundingInfo|pickWithRay|absolutePosition|computeWorldMatrix|st\.camera\.|cameraPrev|asmCamLast|modelCast|asmG\b/);
+    expect(r).not.toMatch(/getBoundingInfo|pickWithRay|absolutePosition|computeWorldMatrix|st\.camera\.|cameraPrev|asmCamLast|asmCamLogic|asmCamDrawn|modelCast|asmG\b/);
   });
   it("⭐ read once a frame in `assemblyFrame`, right where the place is set and before the tilt's frame reads it", () => {
     const A = fnCode(W, "export function assemblyFrame(");

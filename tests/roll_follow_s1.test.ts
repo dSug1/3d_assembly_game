@@ -104,7 +104,8 @@ describe("the wiring (`roll_shadow.ts` rollPictureFrame) — read in the source"
   const rs = readFileSync("src/render/roll_shadow.ts", "utf8");
   const aw = readFileSync("src/render/assembly_wiring.ts", "utf8");
   it("freeTurnMaxDeg 0: the shadow and today's zoneMixPose, nothing else (R10)", () => {
-    expect(rs).toMatch(/if \(!\(maxDeg > 0\)\) \{\n\s*rollShadowFrame\(st, piece, \{ eye, look, up \}, dtMs\);\n\s*return zoneMixPose\(st, piece, eye, look, up\);\n\s*\}/);
+    // ⭐⭐⭐ (2026-11-21, R3b) …its turn's camera frame handed back (`cam`) for the picture to publish, no write
+    expect(rs).toMatch(/if \(!\(maxDeg > 0\)\) \{\n\s*rollShadowFrame\(st, piece, \{ eye, look, up \}, dtMs\);\n\s*const zmOn = st\.asmZoneMix !== null;\n\s*const zp0 = zoneMixPose\(st, piece, eye, look, up\);\n\s*return \{ eye: zp0\.eye, look: zp0\.look, up: zp0\.up, cam: zoneCam\(zmOn, zp0\), ev: NO_EVENTS \};\n\s*\}/);
   });
   it("a turn made free only at its first frame, none of the kinds that stay, nothing that stays drawn last frame, on its whole angle", () => {
     expect(rs).toContain("if (zm !== null && fresh && was !== null && was.drawn && was.turn === null && zm.byMm !== true && zm.out === undefined && zm.tilt !== true && !sq && !tiltHold) {");

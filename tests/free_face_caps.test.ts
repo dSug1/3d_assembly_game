@@ -235,7 +235,7 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`)", () => {
     const f = fn("function freeEntry(");
     expect(f).toContain("const ci = contourOfFacet(map, B, at.contour, stack);");
     expect(f).toContain("const from = prev !== null && prev.map === map ? contourOfFacet(map, B, at.contour, prev.stack) : -1;");
-    expect(f).toContain("const heading = freeEntryHeading(freeEdges(at.contour, ci, WORLD_UP), from, st.asmCamLast?.up ?? F.n, F.n);");
+    expect(f).toContain("const heading = freeEntryHeading(freeEdges(at.contour, ci, WORLD_UP), from, st.asmCamDrawn?.up ?? F.n, F.n);");
     expect(f).not.toMatch(/getBoundingInfo|pickWithRay|absolutePosition|computeWorldMatrix|cameraPrev|modelCast|gizmoNormal/);
     expect(raw.match(/freeEntry\(st, /g)?.length).toBe(2);
     expect(fn("function freeFaceFrame(")).toContain("const en = freeEntry(st, map, B, at, t.stack, prev);");

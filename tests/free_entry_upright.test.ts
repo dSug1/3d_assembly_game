@@ -419,6 +419,6 @@ describe("the switch `freeEntryUpright` (0 or 1, the default 1) — validated as
     expect(f.match(/st\.asmFree = /g)?.length).toBe(1);
     expect(f.match(/entryBlendHeading\(/g)?.length).toBe(2);
     // ⛔ the sway: the picture is read on the camera's own direction (the MODEL's, turned into the world) — nothing drawn
-    expect(f).not.toMatch(/getBoundingInfo|pickWithRay|absolutePosition|computeWorldMatrix|cameraPrev|asmCamLast/);
+    expect(f).not.toMatch(/getBoundingInfo|pickWithRay|absolutePosition|computeWorldMatrix|cameraPrev|asmCamLast|asmCamLogic|asmCamDrawn/);
   });
 });

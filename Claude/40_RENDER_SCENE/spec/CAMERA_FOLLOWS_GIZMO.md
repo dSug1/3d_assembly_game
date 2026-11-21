@@ -862,3 +862,5 @@ swings to catch up after he stops, over the top with a roll on the glass. On `Sc
 `followTurnMinDeg` 10° · `followTurnPace` 1 · `followTurnOnJump` 1 (0 = `ba369aa`) · `followTurnFinger` 1 (0 = `ba369aa`: the orbit's pace, no top
 speed) · **`followTurnMaxDegS` 520°/s — "the 180° realignment's top speed"** (0 – 2 000, step 10; 0 = none) · `followTurnRebase` 1 (0 = `ba369aa`).
 By URL too. All three switches 0 = `ba369aa` frame for frame; `followTop` 0 = `de4a10e`.
+
+⭐ **The study after this last round (packet H4, 2026-11-21) — PROPOSED, nothing built**: O-c's root is the logic's up read by the follower's hold, O-d's the depth glide restarted every frame, G3 counted his own motion; the design (two followers, a leash, the jump by geometry) and D-H13 – D-H18 → [`TOP_BOTTOM_STUDY.md`](TOP_BOTTOM_STUDY.md).

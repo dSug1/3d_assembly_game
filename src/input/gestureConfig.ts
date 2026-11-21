@@ -433,6 +433,10 @@ export interface GestureConfig {
   uprightFraming: number;
   /** ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §13 — F2) THE CAMERA FOLLOWER far out: a simple polar orbit (world up) following the direction asked (1); 0: the carried up, frame for frame (`461eeb2`) */
   cameraFollower: number;
+  /** ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §4.7 — the picture's rebuild, R2 – R6) THE REBUILD'S ONE SWITCH (1); 0: `620f227` frame for frame. R2: a camera turn born close in turned about the piece for its whole life */
+  pictureOne: number;
+  /** ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §4.2 — R3a, D-P3 (a)) THE BAND: far ↔ close a change of target over his last this-many mm of approach finger before the unlatch (0.65 m) — the follower's pose to the logic's by place (mm; 0: none) */
+  pictureBandMm: number;
   /** ⭐ (F2, D-F6) the follower's ONE ease: a critically damped spring on the sphere (ms) */
   followMs: number;
   /** ⭐ (F2, D-F1) the camera goes round the vertical this far from it far out (deg; 0 = no detour) */
@@ -925,7 +929,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   uprightHalfHold: 1, // ⭐ (C7) the gizmo still for the whole half turn
   uprightFraming: 1, // ⭐⭐⭐ (packet J) a change's framing carried from the pose shown
   cameraFollower: 1, // ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §13 — F2) the follower draws far out on this branch; 0 = the live build (`461eeb2`)
-  followMs: 120, // ⭐ (F2, D-F6) the calm's own 120 ms it replaces — on the RAW target 50 ms (the prototype's D, tuned on the eased one) left 56 frames over 45° offline (`CAMERA_FOLLOWS_GIZMO.md` §13)
+  pictureOne: 1, // ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` D-P2 — packet R2) close in's turns about the piece on this branch; 0 = `620f227` frame for frame
+  pictureBandMm: 10, // ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §4.2 — R3a) the band: his `tiltBlendMm` figure, 10 mm of approach finger before 0.65 m; ⛔ 40 (the lead, reverted the same day): Scene_1's whole far approach is ≈ 30 mm, the far rest was blended
+  followMs: 200, // ⭐ (2026-11-21, the owner tried the slider: *"at 200 ms is better at far out distance … set default to 200ms"*; 120 before) (F2, D-F6) the calm's own 120 ms it replaces — on the RAW target 50 ms (the prototype's D, tuned on the eased one) left 56 frames over 45° offline (`CAMERA_FOLLOWS_GIZMO.md` §13)
   followPoleDeg: 30, // ⭐ (F2) his D-F1: no nearer than 30° to straight above far out
   followFromDeg: 60, // ⭐ (F2) the detour's reach (the prototype's D)
   followMaxDegS: 900, // ⭐ (F2) the last resort (the prototype's D) — opened by his own pace (`followCeiling`)
@@ -1125,6 +1131,8 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (cfg.uprightHalfHold !== 0 && cfg.uprightHalfHold !== 1) throw new Error(`uprightHalfHold (${cfg.uprightHalfHold}) must be 0 or 1.`);
   if (cfg.uprightFraming !== 0 && cfg.uprightFraming !== 1) throw new Error(`uprightFraming (${cfg.uprightFraming}) must be 0 or 1.`);
   if (cfg.cameraFollower !== 0 && cfg.cameraFollower !== 1) throw new Error(`cameraFollower (${cfg.cameraFollower}) must be 0 or 1.`);
+  if (cfg.pictureOne !== 0 && cfg.pictureOne !== 1) throw new Error(`pictureOne (${cfg.pictureOne}) must be 0 or 1.`);
+  if (!(cfg.pictureBandMm >= 0 && cfg.pictureBandMm <= 100)) throw new Error(`pictureBandMm (${cfg.pictureBandMm}) must be in [0, 100] mm.`);
   if (!(cfg.followMs >= 0 && cfg.followMs <= 500)) throw new Error(`followMs (${cfg.followMs}) must be in [0, 500] ms.`);
   if (!(cfg.followPoleDeg >= 0 && cfg.followPoleDeg <= 60)) throw new Error(`followPoleDeg (${cfg.followPoleDeg}) must be in [0, 60] deg.`);
   if (!(cfg.followFromDeg >= 10 && cfg.followFromDeg <= 90 && cfg.followFromDeg > cfg.followPoleDeg)) throw new Error(`followFromDeg (${cfg.followFromDeg}) must be in [10, 90] deg and over followPoleDeg.`);
