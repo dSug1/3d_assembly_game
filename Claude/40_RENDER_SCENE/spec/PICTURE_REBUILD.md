@@ -1,6 +1,6 @@
 # The picture's rebuild — THE STUDY (packet R1, 2026-11-21, branch `1.0.153-Picture_rebuild`, src = `620f227`)
 
-> **Status: PROPOSED — nothing built; for the owner's word.** Docs only. His four parts: the rules → the obstacles, each reproduced → a design from
+> **Status: ⭐ DECIDED (2026-11-21, the owner on D-P1 – D-P8 as recommended: *"go ahead"*) — R2 building** (§4.7). Docs only up to here. His four parts: the rules → the obstacles, each reproduced → a design from
 > prior art, one owner per thing → its audit, the decisions. ⛔ Offline only (he may be testing on this PC): the code, `git show` of the commits named,
 > the kit's recordings (`fo3/follow/h5/runs_h5b`, `h3/runs_h3`, `runs_g2`) and the pure functions run with `npx vite-node`. The scripts of this packet:
 > the kit's `fo3/follow/r1/` — `rd_r1a.mjs` (one approach cycle frame by frame), `rd_drawer.mjs` (the drawer's hand-overs far out), `rd_roll.mjs` (the
@@ -260,6 +260,7 @@ make close in gravity-upright near the vertical (P17); shorten the waits (45 % o
 | D-P7 | Rule (3) amended: one smoothing per regime; no pace layer; the gate "no frame over 3°" on the approach cycle, elsewhere the excess over the 33 ms before (D-H17) ≤ 5° | yes |
 | D-P8 | The order R2 → R3 → R4 → R5 → R6, each behind `pictureOne`, his look after R3 and after R5 | yes |
 D-H13 – D-H19 (`TOP_BOTTOM_STUDY.md` §6) enter at R5 as he decides them; D-H22 is answered by D-P3.
+⭐ **His word (2026-11-21): *"go ahead"* — D-P1 – D-P8 DECIDED as recommended**, R2 first; the owed runs (§7) one batch at a time when he frees the PC.
 
 ## 7. Owed runs (none run: no headless run while he tests) — from `../camera_follow`, one batch at a time
 1. **The approach cycle** (R2, R3, R4), each build and `&pictureOne=0` (the identity to `620f227`): the kit's `follow/h5/drv_h5c.sh` line —
