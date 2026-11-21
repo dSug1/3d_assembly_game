@@ -138,7 +138,8 @@ describe("H2 — the top's rule at the camera's stage", () => {
   it("the levelled reading at the rig's angles, beside the direction asked, only under the switch; the calm asked in its frame; the gizmo's facet off the face map (the MODEL's)", () => {
     const g = code("render/green_box_wiring.ts");
     const i = g.indexOf("st.asmAsk = askedDir(st, rig.yaw, rig.v);");
-    const j = g.indexOf("st.asmAskLevel = st.cfg.followTop === 1 ? levelledAsked(st, rig.yaw, rig.v) : null;");
+    // ⭐ (R5, D-H19) under the far rule as decided `farAsked` instead (`camera_follow_r5.test.ts`); else H2's exactly
+    const j = g.indexOf("st.asmAskLevel = st.cfg.followTop !== 1 ? null : farTopDecided(st) ? farAsked(st, rig.yaw, rig.v, st.asmAskCalm) : levelledAsked(st, rig.yaw, rig.v);");
     expect(j).toBeGreaterThan(i);
     expect(g.indexOf("const zp = pictureFrame(st, pp, [c0.x", j)).toBeGreaterThan(j);
     const a = code("render/assembly_wiring.ts");

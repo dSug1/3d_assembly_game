@@ -11,7 +11,7 @@
  * where it has none), the height capped; at a facet change the follower's own turn by close in's functions, the gizmo waiting, the dy hold after a half turn.
  */
 import type { Vec3 } from "../core/vec";
-import { calmLevelHeading, type CalmState } from "./orbit_calm";
+import { calmLevelHeading, calmShown, LEVEL_HEADING_BLEND_RAD, LEVEL_HEADING_FROM_RAD, type CalmState } from "./orbit_calm";
 import { offsetFrame, orbitDir } from "./assembly_orbit";
 import { rollDurationMs, tiltDir, type Mat3 } from "./orbit_tilt";
 import { crossingEvent, FREE_EXIT_HOLD_FROM_RAD, isFreeFace, turnHolds } from "./free_face";
@@ -308,6 +308,37 @@ export function levelledHeading(yaw: number, v: number, c: CalmState | null, R: 
   const nh = Math.hypot(n[0], n[2]);
   if (Math.hypot(r[0], r[2]) > LEVEL_EPS && (nh <= LEVEL_EPS || r[0] * n[0] + r[2] * n[2] > 0)) return Math.atan2(r[0], r[2]);
   return headingOf(n);
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-21, `TOP_BOTTOM_STUDY.md` §3, §9, D-H19 — packet R5, `pictureOne` 1) THE BAND'S SHARE of the calm asked's own heading in the far reading:
+ * `cameraHeading`'s own band (`LEVEL_HEADING_BLEND_RAD` 50°, `LEVEL_HEADING_FROM_RAD` 60°, a smoothstep) read on the ORBIT's direction in the WORLD (`orbitW`,
+ * his finger's place) — 1 below 50° of its world elevation, 0 from 60°. ⛔ F's pitch: on a spit F's pitch is a world YAW (the root of A, B and point 2, §8).
+ */
+export function farReadingShare(orbitW: Vec3): number {
+  const p = Math.asin(clampN(Math.abs(orbitW[1]), 0, 1));
+  const x = clampN((LEVEL_HEADING_FROM_RAD - p) / (LEVEL_HEADING_FROM_RAD - LEVEL_HEADING_BLEND_RAD), 0, 1);
+  return x * x * (3 - 2 * x);
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-21, `TOP_BOTTOM_STUDY.md` §3, §9, D-H19 — packet R5, `pictureOne` 1) THE FAR READING: the heading the far follower aims at (rad, the
+ * follower's convention), or `null`: carried. The calm asked `c` (its normal in F; `R`: F → world) at the orbit's `yaw`, `v`: below 50° of the orbit's
+ * WORLD elevation (`orbitW`) the calm asked's own world heading (`de4a10e`'s calm — the direction asked, `askedDir`'s), from 60° H2's level reading
+ * (`levelledHeading`: no yaw on a pure dy near the vertical, the half turn at the zenith edge), a smoothstep between (`farReadingShare`); a LEVEL face
+ * (`isFreeFace` in the world) carried at every elevation. One rule for every frame. ⛔ H2's reading at every elevation: in a spit F's level is the
+ * vertical plane square to the axis — the calm toward a tip dropped (A), the bottom triangle's reading flipping on a 1e-9 residue (B), a turn along the
+ * apex edges (point 2).
+ */
+export function farReading(yaw: number, v: number, c: CalmState | null, R: Mat3 | null, poleDeg: number, orbitW: Vec3): number | null {
+  if (c !== null && isFreeFace(tiltDir(R, c.n), UP)) return null;
+  const L = levelledHeading(yaw, v, c, R, poleDeg);
+  const s = farReadingShare(orbitW);
+  if (!(s > 0)) return L;
+  const own = headingOf(tiltDir(R, calmShown(orbitDir(yaw, v), c)));
+  if (own === null) return L;
+  if (L === null || s >= 1) return own;
+  return wrapPi(L + s * wrapPi(own - L));
 }
 
 /** ⭐⭐⭐ (H2, D-H1) THE SPRING'S TARGET: the heading `psi`, the asked direction's elevation capped at 90° − `poleDeg` (60°) either way. */

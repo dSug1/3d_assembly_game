@@ -27,7 +27,7 @@ import { orbitDvPerMm, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from ".
 import type { LineSample, SceneState } from "./scene_state";
 import { faceTrianglesWorld } from "./contact_wiring";
 import { calmHeading, calmLevelHeading, calmShown, calmStep as calmStepEase, calmTarget, cameraHeading, capEdgePitch, heldOffsetStep, poleWeight, type CalmKnobs, type CalmState } from "../input/orbit_calm";
-import { askedCalm, followTurnHoldsGizmo, levelledHeading, type CalmAskTarget } from "../input/camera_follow";
+import { askedCalm, farReading, followTurnHoldsGizmo, levelledHeading, type CalmAskTarget } from "../input/camera_follow";
 import { facetFrame } from "../input/face_map";
 import { qRotate, type Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
@@ -311,6 +311,23 @@ export function askedDir(st: SceneState, yaw: number, v: number): Vec3 {
  */
 export function levelledAsked(st: SceneState, yaw: number, v: number): number | null {
   return levelledHeading(yaw, v, st.asmAskCalm, dirFrame(st), st.cfg.followPoleDeg);
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §4.7 R5 — `TOP_BOTTOM_STUDY.md` §3, §6) THE FAR TARGET'S TOP RULE AS DECIDED (D-H13 – D-H19): the one picture
+ * (`pictureOne` 1 with the follower) and the top's rule on. Else H2 / H3 exactly (`pictureOne` 0: `620f227`).
+ */
+export function farTopDecided(st: SceneState): boolean {
+  return st.cfg.pictureOne === 1 && st.cfg.cameraFollower === 1 && st.cfg.followTop === 1;
+}
+
+/**
+ * ⭐⭐⭐ (R5, D-H19) THE FAR READING at the orbit's angles `yaw`, `v` for the calm asked `c` (in this frame's F, `dirFrame`): the band read on the ORBIT's
+ * direction in the world (`st.orbit`, his finger's place — the follower's `orbit`). The MODEL's space.
+ */
+export function farAsked(st: SceneState, yaw: number, v: number, c: CalmState | null): number | null {
+  const R = dirFrame(st);
+  return farReading(yaw, v, c, R, st.cfg.followPoleDeg, tiltDir(R, orbitDir(st.orbit.yaw, st.orbit.elevation)));
 }
 
 /** ⭐⭐⭐ (H2) THE GIZMO'S FACET NORMAL in the world — the face map's facet at the map's place (`asmShown`), turned out of its frame; the MODEL's (never a drawn mesh). `null`: no place. */
