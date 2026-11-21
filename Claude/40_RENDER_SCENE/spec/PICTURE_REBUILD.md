@@ -210,7 +210,7 @@ converge in depth.
 | packet | builds | its gates (his symptoms; at 60 frames a second 5 and 9.5 px a frame = 571 px/s, at 143 8.4 px a frame = 1 200 px/s) |
 |---|---|---|
 | R2 (C) | ⭐ **BUILT `83c5d9c` — gates RUN 2026-11-21, PASS** (§8; kit `follow/r2/drv_r2.sh`, `runs`, `rd_cmp.mjs`, `rd_turns.mjs`): `pictureOne` 0 = `3bc9d7f` frame for frame; far out (his stretches) bit for bit; the gizmo 0.000 mm on every run; close in outside turns identical; the approach cycle latched 0.0° at 5 / 9.5 / 8.4 px (id: 290 – 520°, max 28 – 48°); in turns the max view step 10.7 / 6.3° (id 7.6 / 18.0), up 10.7 / 10.4° (id 9.0 / 26.2). ⚠ R3's baseline: the held cap's gap moved to the unlatch (5.9 + 17.1°), the follower's return 118° of up in one frame (id 94°), the drift 87 → 62°. close in's turns about the piece (`turnFraming(closeIn)` pure; `framing_sim.ts` as the vector's fixture — red on the two-target rule) | the approach cycle on `Scene_1`'s top: no view step over 3° at the approach's end or leaving (today 32 – 48°, 35°); `Scene_0bis` close in (`h3c_*`): frames outside a turn within 0.1° of `620f227`, the aim on the glass within 0.02 half-glass in its turns; far out bit for bit |
-| R3 (C) | `pictureStep` + wiring: the band, τ(w), the up's hand-overs, ψ from the drawn up, the published facts, one resolver, the record split | the approach cycle: no view or up step over 3° in any frame (today 23°, 94° up, the 22° drift), no leg ≥ 5° not asked in the 1 s after the unlatch; his ten and the S1 walks far out bit for bit outside the band; the gizmo's place, `asmMapQ`, `asmEdgeHold` per frame identical on every walk |
+| R3 (C) | ⭐ **BUILT `ce5abfe`, `f5344b5` — gates owed** (§8.2: the band on the follower's output — amended —, the up's hand-overs, ψ from the drawn up, the follower parked, the published facts, one resolver, the record split) `pictureStep` + wiring: the band, τ(w), the up's hand-overs, ψ from the drawn up, the published facts, one resolver, the record split | the approach cycle: no view or up step over 3° in any frame (today 23°, 94° up, the 22° drift), no leg ≥ 5° not asked in the 1 s after the unlatch; his ten and the S1 walks far out bit for bit outside the band; the gizmo's place, `asmMapQ`, `asmEdgeHold` per frame identical on every walk |
 | R4 (C) | D-P4: the drawn foot along the picture's direction far out | the approach far out on `Scene_1`'s top: the piece's step across the view ≤ 0.5° a frame (today sin(gap) × the dolly); sides bit for bit |
 | R5 (C) | the far target's top rule as he decides D-H13 – D-H19 | `TOP_BOTTOM_STUDY.md` §4's G-tip, G-BT, G-apex, G2; moves not asked (`rd_g1`) ≤ `de4a10e`'s (2 of 16 exits, 8 % of crossings); the far view's roughness p90 ≤ 1.1° (`rd_p3c`) |
 | R6 (C) | the deletions (§4.6), after his look | every walk bit for bit with `pictureOne` 1 before and after |
@@ -294,3 +294,64 @@ key rules (calm, etc.)"*: D-H13 – D-H17 yes (D-H14 tied), D-H18 (a) left as is
   none: at k 0 the framing holds the piece's place too. It is a guard, not a test of the change.
 * ⚠ Inferred, not run: the logic reads `asmCamLast`, which is written from the pose drawn. During a close-in turn it now carries the turn about the piece.
   R3's published frame (§4.4) owns that split.
+### 8.2 R3 — the one picture and the published facts (`ce5abfe` R3a, `f5344b5` R3b, 2026-11-21; ⛔ gates owed: §7 items 1 – 3, no headless run made)
+**The result first.** With `pictureOne` 1 (and `cameraFollower` 1) one function draws at every distance. Far out outside the band it draws the follower
+exactly. Over his last 10 mm of approach finger before 0.65 m it moves to the logic's pose by place, so the latch and the unlatch draw nothing new. The up
+is handed over by his finger only, and the follower is never restarted. The picture writes nothing into the logic any more. With either switch at 0 the
+camera's stage runs today's line (`followFrame ?? rollPictureFrame`), moved as written.
+
+* **Where it is.** `src/input/picture.ts` (pure): `approachOutMm` (his approach finger's mm beyond 0.65 m), `bandShare` (w), `bandDir`, `bandEye`,
+  `turntableUp` / `turntableFromDrawn` / `psiFromUp` (the up), `pictureStep` (the frame). `src/render/picture_wiring.ts`: `pictureFrame` (the one call at
+  the camera's stage, `green_box_wiring.ts`), `pictureLegacy` (today's line), `changeResolve` (the one resolver), `publishDrawn`, `followPark`.
+  `assembly_wiring.ts`: `approachBand` (w from the logic's own place), `pictureEventsRead` (the logic's reader), `zoneMixCam`. Slider `pictureBandMm`
+  (10 mm, ORBIT › CAMERA FOLLOWER).
+* **Far out, why it is bit for bit outside the band.** `followFrame` runs exactly as before: the same resolver, the same `followTopStep` /
+  `followStep`, the same `followPose`, in the same order. Its pose then goes through a hook to `pictureStep`. At w 0, with no up held and the view
+  outside the turntable's cone, `pictureStep` returns the follower's own eye, look and piece objects and the world's up literal. So `followFrame`
+  publishes the same values. The far cap (60°, plus the owner's 2° pitch offset) stays 8° outside the 20° cone.
+  ⚠ Two places where this does not hold: the detour (`followTop` 0, up to 80°) enters the cone, and a placed piece (`orbitPiecePlaced`) now gets the
+  turntable's up instead of the carried up.
+* **The pose.** Latched: G (the close drawer's) exactly. Not latched: w 0 is the follower, w 1 is G's eye, look and piece exactly. In between, the
+  follower's direction is turned toward `us` by w (`bandDir`) and its eye by w of the remaining gap to G's eye (`bandEye`). That gap is the camera's
+  120 ms catch-up and the offsets' heading. The piece stays on the view's line, and the drawn piece moves to the logic's.
+  ⭐ **Amended (1):** the spec puts the band on the follower's TARGET, with τ = `followMs`·(1 − w). Built: the band acts on the follower's OUTPUT, with
+  its spring unchanged. The ends are the same (w 0 today's follower, w 1 the logic's exactly, no second ease), and the picture is a function of place
+  both ways (vector). With τ(1 − w) the lag differs going in and going out, and the drift by time comes back after a fast exit.
+  ⭐ **Amended (2):** the band also draws through the way out. Its turn is G, and it runs over 12 mm of out finger (`tiltOutBlendMm`), more than the
+  band's 10. Drawn as G alone, the follower's return after it jumped 28° in the fixture.
+* **The up (D-P5).** Not latched (far, the band, the way out) the target is the turntable's: world up, or within 20° of the vertical the meridian of a
+  carried heading ψ — whole in the cone's inner half, blended by place toward its edge. Latched the target is G's up. At each change of target the
+  drawn up is HELD as an offset about the view (bumpless), then closed by his finger only. Latched it closes with the square camera's own share
+  (`blendShare`, `asmTiltPending` / `asmBlend`). The way out closes it with its share (`asmZoneMix.k`, his out mm). Elsewhere it closes over
+  `pictureBandMm` of his finger (orbit mm, approach mm outward). While latched, ψ is set from the drawn up every frame, so the way out starts from it.
+* **The follower parked, never restarted (O-3).** While G draws, the follower rests ON its own target: the levelled reading, else the carried heading,
+  at the asked height capped. Its top state sits at the gizmo's facet and the orbit's place now. Latched, the heading comes from the drawn up. Through
+  the way out it is HELD: read from the view in the band, it fed back on itself frame by frame, a drift by time.
+* **The way out born in the band is turned about the piece** (§4.4): `zoneMixPose` passes `asmTiltAuto || approachBand > 0` to `turnPose`, only with
+  both switches on.
+* **R3b — the readers of `asmCamLast`, re-pointed** (its value at each read is unchanged): the null checks in `seamTurnStart`, `turnBegin`, the ease's
+  gap and `changeApply` → `asmCamLogic` (they run at the camera's stage, after the logic's frame, or ask only "a frame exists"). `freeEntry`'s heading
+  and `zoneFinger` → `asmCamDrawn` (they run before the stage and read last frame's end value). `followTopStep`'s `upShown` → `asmCamLogic` (it read the
+  logic's frame of this frame; D-H16 changes that at R5). `asmCamLogic` is written only by `assemblyCameraFrame`. `asmCamDrawn` is written only by
+  `publishDrawn`: the drawer's own frame, else the logic's — exactly what `asmCamLast` held after the stage.
+* **R3b — moves, not changes.** The drawers (`followFrame`, `rollPictureFrame`, `carriedFrame`, `uprightPictureFrame`, `zoneMixPose`) hand back their
+  frame (`cam`) and their hold events (`ev`). The follower's crossing hold and its F-3 rebase, the carried up's hold and law U's half-turn hold are
+  written by the logic's `pictureEventsRead`, right after the drawer, before anything reads them. `asmChange` is resolved once, before any drawer, by
+  `changeResolve`. Where the follower draws it is applied at once; elsewhere it uses the carried up's rule or law U's, each moved as written. ⚠ The
+  brief's "latched → close in's rule" is built as "the follower not drawing → close in's rule": that is today's split, and so the values stay the same.
+* **The vectors.** `tests/picture.test.ts` (13): the band by place, the ends (w 0 the follower's objects and the world's up, w 1 G exactly), the turntable,
+  the approach cycle, the same place either way, the f480 restart. `tests/picture_facts.test.ts` (6): one writer per frame, the readers, the drawers
+  publishing, the reader's holds, the one resolver. All red on the old code (the modules and fields did not exist). Mutants, each red:
+  - no blend (`bandShare` 0): the band's vectors and the cycle (27° in one frame);
+  - the state dropped (`turntableUp` without its state): the cycle and the f480 vector;
+  - the up from the residue (ψ = the view's heading): the same two;
+  - w by time (in the fixture): the same-place vector;
+  - a drawer writing the hold again, the drawn frame written by a drawer, `zoneFinger` on the logic's frame, the reader dropping the follower's hold:
+    each red in `picture_facts`.
+  `npm run verify`: 2290 (R3a), then 2296 (R3b) — up from 2277.
+* ⛔ **A contradiction in the spec, for the lead.** At his pace the gate "no frame's view step over 3°" cannot hold with a 10 mm band on a level face.
+  The band pays the cap's gap (≈ 27° on `Scene_1`'s top) over 10 mm of finger. At 5 px a frame (1.3 mm) that is a mean 3.5° a frame and a smoothstep
+  peak of 6.0°; at 9.5 px (2.5 mm), 10.5° a frame (the fixture). The fixture passes at 0.5 mm a frame (view 2.3°, up 2.7°). A 3° peak at 2.5 mm a
+  frame needs a band of about 34 mm. The gate is not bent: the slider is his.
+* ⚠ **Inferred, not run:** the identity of R3b on his walks; the band's feel; the gizmo's place, `asmMapQ` and `asmEdgeHold` per frame (the moves are
+  read in the code, and no reader sits between a write's old and new places).
