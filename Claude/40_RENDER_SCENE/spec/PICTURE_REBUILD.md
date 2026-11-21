@@ -195,6 +195,11 @@ drawn is HELD — its heading, its elevation, its up — and his finger closes t
    about the world vertical, then about the horizontal axis square to the heading (the elevation kept within ±89.5°); the eye and the up about the look
    point, the piece about the foot — never a slerp across the vertical. One share closes all three: latched the square camera's (`blendShare`; 0 while
    pending), the way out its own, else his mm. A turn of G that starts from the drawn pose leaves offsets ≈ 0.
+   ⭐ **Decided by the lead (his rule, C4), 2026-11-21 night**: at the latch the hand-over is paid by his orbit finger at his own realignment pace — never
+   faster than `uprightAlignDegPerMm` (3°/mm) nor than `tiltBlendMm` (10 mm): share = min(1, mm / max(`tiltBlendMm`, gap° / `uprightAlignDegPerMm`)), the
+   gap (the larger of the heading's and the elevation's, between the pose drawn held and G) read once at its start; a 180° gap: 60 mm. Where the square
+   camera's own share already keeps that pace (its smoothstep's peak 1.5 × gap / `tiltBlendMm` ≤ 3°/mm: a gap ≤ 20°, as wherever a turn starts from the
+   pose drawn — `Scene_1`) it is kept as it is: nothing changes there.
 6. **The up**: not latched the turntable's of the DRAWN heading — outside the 20° cone the world's up (its literal), inside the meridian of the follower's
    heading plus the heading offset held (from the view's own at the cone's edge); latched G's, turned by the offsets. After a latch the follower's heading
    is the one drawn when the way out ends: the up turns there by the share (the f480 vector amended), never at once.
@@ -453,7 +458,7 @@ the latch and the unlatch the pose drawn is held and his finger closes the gap: 
   returns early, so no turn starts there and G is the zone's pose at once, with the side's heading. Built: the picture's own hand-over (§4.3a 5.), the
   same as the up's (P8). Cost: on a spit the heading's gap (90 – 180°) is paid by the square camera's share, his first `tiltBlendMm` (10 mm) of orbit
   finger, so 9 – 18° a mm. That is above his C4 3° a mm, and it is a decision for the lead (a longer span for it, or nothing to pay if the zone's
-  camera kept the follower's heading, which would reopen the logic).
+  camera kept the follower's heading, which would reopen the logic). ⭐ DECIDED by the lead (C4): the pace capped at 3°/mm, at least 10 mm (§4.3a 5.).
 * **Decided by the builder (for the lead's review).** (1) R3's residual toward G's eye is no longer drawn in the band: it carried the logic's heading by
   place. On `Scene_1` the band now differs from R3 by the logic camera's catch-up, and the latch's turn starts from the pose drawn. (2) The follower's
   own rule comes whole in the frames it now draws through a logic turn: its edge turn holds the gizmo (`tiltClampStep` reads `asmFollow.top.turn`) and
