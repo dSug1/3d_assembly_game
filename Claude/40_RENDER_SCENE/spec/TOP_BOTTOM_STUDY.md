@@ -393,3 +393,23 @@ pole (F's elevation) — near-tip close in −28°, mid-body close in +5°, far 
 between two angles (the builder's first reading 12° → 25°, calibrated on his strokes): mid-axis 1 (his 11-13 rule unchanged), toward the tip end
 partial, near the apex 0 — no turn, so no mapping flip and no re-crossing. D-R1.2 – D-R1.4 unchanged; ⚠ the far tips (33° – 85°) get `w` 0 too: the
 gates measure the far presets (one rule for every frame; if the far picture is worse, reported, not patched).
+* **As built (2026-11-22)** — `b2a6ae1` (the builder; checkpoint kit `follow/dr1/CHECKPOINT_DR1.md` §4 – §6). ⭐ **The place:** `w` = 1 − smoothstep(|the
+  map's pitch toward the pole|) (`spitPlaceShare`, `input/polar_zone.ts`; `asmMapQ.pitch`, F's elevation) from `spitPlaceFromDeg` **12°** to
+  `spitPlaceToDeg` **25°** (the first reading; not re-calibrated — see the failure); written once a frame by `spitStep` alone (`asmSpitW`, before its free
+  face's return; null under the switch 0, out of a spit, with no map place). **The readers:** `spitCameraHeading(u, a, side, w?)` — the side's bias × `w`
+  (w absent: its own old line); both callers pass `st.asmSpitW ?? undefined` — the camera frame (`assemblyCameraFrameRaw`) and the free face's entry
+  (`freeShownHeading`'s `offB`); the finger's mapping follows through the frame drawn. **The hold:** a side change on a crossing path with `w` 0 silent, as
+  round a tip (`asmEdgeHold` null, no `crossTurn`); between, the one event as before (`changeSeen`, `holdSeen`). **The switch** `spitTurnByPlace` (1) and
+  the two angles in ORBIT › POLAR ZONES › THE SPIT'S CROSSING (132 → 135 sliders). **Vectors** 2278 → **2287** (`tests/spit_turn_by_place.test.ts`, 9:
+  8 red on `ae0ed63` — the heading at `w` 0 two sides π apart there —, 1 green by design: `w` absent = the old formula, bit for bit).
+  ⭐ **Measured** (his six `Scene_0bis` presets, `drv_str.sh`): the switch **0** — all six frame for frame R6's (`runs_dr1z`, max difference 0); the switch
+  **1** — the five FAR presets frame for frame R6's too (the far tips' `w` 0 changes nothing on his far strokes); ⛔ **close in FAILS the view / up gate**
+  (`runs_dr1a`): still 317 → 262 / 507, U 100 → 72 / 120 (eh 76 → 0, turn 45 → 0 frames), D 88 → 81, U2 106 → 78 / 160 — but **up max 12° → 178°, frames
+  over 5° 214 → 375, side changes in U 2 → 8 and in U2 1 → 6** (the right tip, map pitch +26°): fifteen ONE-FRAME up flips of 178°. ⭐ **Why:** close in
+  the camera's shown direction is the SQUARE camera's (square to the gizmo's face), not the orbit's — at the near-tip ridge it passes STRAIGHT OVER the
+  axis like mid-body's (u (−0.04, 1.00, 0.00) → (0.04, 1.00, −0.03), f209 → f210) while the map pitch says −27.5°. There the heading's flip at a side
+  change is ≈ 180° for ANY `w`: `w` > 0 the bias rules the null level part (a turn seen ≈ 180°: timed, the hold — today's stuck); `w` 0 the level part's
+  own direction flips, drawn at once (the change silent) — the spin the bias was made against, and the finger's mapping turning with it drives the same
+  dy back over the ridge 12 frames later: a re-crossing LOOP at `w` 0 itself. ⛔ So `w` alone cannot give *no turn, no hold* near the tip AND *no spin
+  looking down*: stopped there (the brief's rule), no second mechanism, no re-calibration run. ⚠ **Do not deploy `b2a6ae1` at its default 1;** at 0 it
+  is `6fc1f5d`'s crossing frame for frame. The lead's / the owner's word next.
