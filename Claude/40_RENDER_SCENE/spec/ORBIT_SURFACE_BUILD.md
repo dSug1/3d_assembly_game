@@ -83,7 +83,7 @@ given depth. Its vectors against a second implementation (the study's brute-forc
 shape is moved and turned, and for every order of its parts; each vector shown red on a mutant. Its cost measured (the time to build a map for a set
 like `Scene_1`'s), as a figure for the wiring step. A new file under `src`, a new test file, new helpers; nothing calls it yet.
 
-**S2 — the READOUT** (designed 2026-11-22; his word *"proceed"*: building) → [ORBIT_SURFACE_READOUT.md](ORBIT_SURFACE_READOUT.md): the landing map at the
+**S2 — the READOUT** (designed 2026-11-22; his word *"proceed"*: BUILT and GATED the same night — §7) → [ORBIT_SURFACE_READOUT.md](ORBIT_SURFACE_READOUT.md): the landing map at the
 gizmo's place every frame, exact (no grid), beside today's depth on `Scene_1` — a second ring and a HUD line with its cost; driving nothing; behind
 `landingReadout` (0 = `3b7a479` frame for frame).
 
@@ -155,6 +155,9 @@ gizmo's place every frame, exact (no grid), beside today's depth on `Scene_1` �
   `scripts/probes/surface_study/shapes.ts`, which they import). ⚠ Built and checked by Fable alone, no second agent's audit; scripts are
   outside `npm run verify`.
 * ⭐ **S2 — BUILT 2026-11-22 (P1 `dfeb7ef9`, P2 `fafbde6b`, P2b `d21a4826` — on `Scene_1` only), the gates G1 – G3 OWED** → [ORBIT_SURFACE_READOUT.md](ORBIT_SURFACE_READOUT.md) §13.
+* ⭐ **S2 — AUDITED, FIXED (`e91d3e82`), GATED 2026-11-22 night** → [ORBIT_SURFACE_READOUT.md](ORBIT_SURFACE_READOUT.md) §13.7, §14: G1 bit for bit on his four
+  records at 1 and 0; G2 offline 2.5 – 6.6 ms a preparation, 2 – 4 preparations a record, ~3 µs a frame; G3 met on the top, ONE FINDING on the side
+  facets (P2 as held: half a piece out until the player aligns — his word, §8 row 9). His look owed (USB, or his deploy word).
 
 ## 8. ⛔ FINDINGS → RULES → CHECKS: THE LEDGER (the owner's rules, 2026-11-17 and 2026-11-22)
 
@@ -181,6 +184,8 @@ marked? → its check, its control, its row in §8"*; a builder with nothing to 
 | 6 | The orbited piece's collision ignores every FROZEN body, and `Scene_2`'s plinth is frozen (read in the code at the review; not seen in the game) | ⏳ to decide once seen in the game: the game's rule changes, or a scene's frozen parts other than its floor are reported | **C3** — OWED | none yet | ⏳ owed — first to check in the pick-up flow (later, with `Scene_2`: §2bis) |
 | 7 | The landing map's cost grows with the placed parts' convex pieces (S1: 36 – 270 ms a direction on `Scene_1` for a whole map) | ⏳ proposed: a budget per scene, once the wiring has chosen the map's representation | **C2** — OWED | none yet (B3 will run the game's own function on the `.glb`) | ⏳ owed — after the wiring's choice |
 | 8 | The specification's own checks, from the shapes study: solids (B1), exposed per stage (B2), where each held piece first touches (B3), coverage (B5), features at a threshold (B6) | `PART_AUTHORING.md` §6.1, each with its pass rule | `PART_AUTHORING.md` §6.3's ten lines, put into §10.2's form when a build script applies them | specified there | ⏳ not built — B1, B2 first; B3, B5 once the landing map is wired |
+| 9 | On a side facet P2 (the piece AS HELD, resting face down) stands half the piece's size out: +22.5 mm across it, +51.8 mm along it (S2's G3 on his records, `ORBIT_SURFACE_READOUT.md` §14) | — a GAME rule's (P2's orientation), not a scene's | none — golden vectors once decided (`SCENE_WORKFLOW.md` §9.2) | none (a game rule) | ⏳ his word: (a) as held — recommended, (b) as it would land, (c) both |
+| 10 | The readout and the footprint support read each placed part as ONE convex body (S2's build, `ORBIT_SURFACE_READOUT.md` §13.8) | a part authored as data is convex | **C4** (construction) | ⏳ owed: its hull's volume = its mesh's | ⏳ the check owed |
 
 ⭐ Rows are ADDED by each package and by each look of the owner; a row leaves only when its check is built AND has been seen failing.
 

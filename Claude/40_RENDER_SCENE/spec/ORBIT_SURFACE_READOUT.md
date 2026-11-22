@@ -1,7 +1,8 @@
 # THE READOUT — the landing map beside today's depth on `Scene_1` (package S2, designed 2026-11-22)
 
 > **STATUS** · ⭐ **DESIGNED 2026-11-22; his word *"proceed"* (2026-11-22): §10's three choices as proposed — BUILT 2026-11-22 (P1 `dfeb7ef9`,
-> P2 `fafbde6b`, P2b `d21a4826`, §13); the gates G1 – G3, the auditor's read and his look OWED** (branch `1.0.158from1.0.157-Orbit_surface`, worktree `../orbit_surface`).
+> P2 `fafbde6b`, P2b `d21a4826`, §13; the audit's fix round 1 `e91d3e82`, §13.7); ⭐ GATED 2026-11-22 night (§14: G1 bit for bit; G2 3 – 7 ms
+> a facet on this PC; G3 met on the top, ONE FINDING on the side facets — a question for him); his look OWED** (branch `1.0.158from1.0.157-Orbit_surface`, worktree `../orbit_surface`).
 > **OWNS** · S2's design: what the readout shows, what it reads, where it hooks, its switch, its cost readout, its vectors and gates.
 > **READ WITH** · [ORBIT_SURFACE.md](ORBIT_SURFACE.md) §2.2 P2 and §6 (the build list, item 1); [ORBIT_SURFACE_LANDING_MAP.md](ORBIT_SURFACE_LANDING_MAP.md)
 > §10.6 (what the wiring must know), §10.9 (the representation); [ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md) §2bis (his answers), §9 (the terms
@@ -246,3 +247,48 @@ G1 – G3: see §14.
 Nothing measured yet that teaches a rule: C2's budget waits for G2 and his phone. One candidate from the build itself, for his word: the readout
 (and the footprint support) read each placed part's mesh as ONE convex body — true on `Scene_1`, false for a non-convex part; a scene check *"every
 placed body the orbit reads is convex (its hull's volume = its mesh's)"* would make that assumption a check (`SCENE_WORKFLOW.md` §10, not written).
+
+## 14. The gates (2026-11-22 night, the owner asleep — run by the session that briefed the build)
+
+* **G0** — `npm run verify`: 190 files, 2346 tests, on `e91d3e82` (after fix round 1).
+* **G1 — identity: PASSED, bit for bit.** His four records of 2026-11-22 replayed headless from this worktree against the `3b7a479` code's replays
+  (`follow/cap/runs_r/L1_*`: D-H23 and D-H24 on) — the kit's `fo3/surface/` (`drv_rs.sh`, `run_g1.sh`, `run_g1b.sh`; the walker `walk_rs.mjs` =
+  `walk_r.mjs` + each frame's readout, read only; `cmp_id.mjs`: the camera's position, target and up, and the gizmo). On `d21a4826`, at
+  `landingReadout` 1 AND 0, all four (`Scene_1` back 2 916 frames, front 6 034; `Scene_0bis` back 5 011, front 8 381): the largest difference
+  **0** on every frame. On `e91d3e82`, `Scene_1` back and front at 1: **0** again. No probe profile left in %TEMP%.
+* **G2 — the cost.** ⚠ Not measurable on the replays (the audit's finding 4: their clock stands still within a frame — which is also what makes G1
+  bit for bit). Offline instead — `scripts/surface/readout_cost.ts`, one process, the PC otherwise idle: on `Scene_1`'s 36 placed boxes (its four
+  frusta left out: ~10 % more pieces in the game), the study's two pieces, the six directions — **a preparation 2.5 – 3.5 ms (the median), 6.6 ms
+  the worst cold; a readout 1.1 – 2.7 µs (the worst batch 3.0 µs)**, far under the 50 ms line. **His records: 2 preparations (back) and 4 (front)
+  over the whole record** (the key changed once — the pick-up — then one per facet reached). ⭐ So on this PC the readout costs one 3 – 7 ms frame
+  when the gizmo first reaches a facet, and ~3 µs a frame after. The phone's figures (the HUD's `landing` line) are owed: they decide
+  `ORBIT_SURFACE_LANDING_MAP.md` §10.9 (no grid kept, or a tile) and C2's budget.
+* **G3 — the predicted differences, read on his own records** (rather than screenshots: each frame's readout, the kit's `rd_g3.mjs`, grouped by the
+  facet's normal; the front record crossed the top round `Piece44`, both records the sides):
+  * **The top (normal +y) — the predictions MET.** Δ 0 over the open top (1 786 frames); **+41.3 mm round `Piece44`** (41 mm proud: P2 touches its
+    top within about half a piece of its edges — today's point at x −5 … 73 mm for a part centred at x 23 mm, P2 at its top, y 539.8 mm) — *"off
+    `Piece44`'s edge the ring stays up for about half a piece past the edge"*; **+73.3 mm over the recess just left of `Piece44`** (32 mm deep:
+    today's point on its floor, the piece first touching `Piece44`'s top) — a slot beside a proud part reading the part's top, as predicted for the
+    goal slot. The channel's central band was not crossed in these records: not seen.
+  * ⛔ **The side facets (normals ±x, ±z) — NOT as the predictions assume: a FINDING.** Δ is a CONSTANT there: **+22.5 mm** across the piece's
+    45 mm (±z) and **+51.8 mm** along its 103.5 mm (±x) — half the piece's size along the normal — on every frame (the back record: not one frame
+    agrees). The root: P2 reads the piece **AS HELD** (his Q2), and in his records the piece is never turned in the orbit (the key changed once): it
+    stays resting face down, so against a side facet its SIDE touches first and its resting face's centre — the point the gizmo stands for —
+    stops half a piece out. The game turns the piece onto a facet only on the PLAYER's tap (the resting-face alignment, `green_box_wiring.ts`
+    `alignRestingFace`, `RESTING_FACE_ALIGNMENT.md` §2: the resting face anti-aligned with the gizmo's face); his records hold none. The
+    specification's predictions (`ORBIT_SURFACE.md` §2.2 P2, *what it changes on the glass*) assume the resting face toward the facet. Nothing is
+    wrong in the readout (V2 holds; the top agrees): the question is the rule's.
+  * **For his look — the question** (nothing changed: the readout drives nothing). On a side facet, which piece does P2 read? **(a) as held** (his
+    Q2, as built): until he aligns the piece, a side's gizmo would stand half a piece out once P2 drives — the true place its reference stops if
+    the piece is not turned; after the alignment tap the key changes, the facet is prepared anew and Δ falls to 0 except at walls and rims (V2, V4b;
+    not yet seen on a record). **(b) as it would land** (turned onto the facet, its resting face against it — the alignment's target): Δ 0 on a flat
+    side whatever the player did; one preparation per facet AND its landing orientation. **(c)** both on the HUD. ⭐ Recommended: **(a)** — it is
+    what the game does (the turn is the player's), and the readout shows him the cost of not aligning; his look: on a side facet, the HUD's Δ
+    before and after the alignment tap. The ledger: `ORBIT_SURFACE_BUILD.md` §8 row 9.
+* **Lessons → rules** (§11, `SCENE_WORKFLOW.md` §10). The side-facet finding is a GAME rule's (P2's orientation: golden vectors once decided —
+  `SCENE_WORKFLOW.md` §9.2), not a scene's: no scene rule. The builder's candidate (§13.8) IS a construction rule — **C4**: a part authored as data
+  is convex (a box, a prism, a frustum — `PART_AUTHORING.md` §2), because the readout and the footprint support read each placed part as ONE convex
+  body; its check OWED (the ledger's row 10).
+* **How he looks** (rule 5): `npm run dev:usb` from `../orbit_surface` with `adb reverse` (`50_BUILD_DEPLOY/DEVICE_TESTING_USB.md`), `Scene_1`; or his
+  word to deploy (⛔ not done: deploy only on his word). The ring and the HUD's `landing` line; the slider `landingReadout` (GIZMO & SECTIONS): 0 =
+  `3b7a479`.
