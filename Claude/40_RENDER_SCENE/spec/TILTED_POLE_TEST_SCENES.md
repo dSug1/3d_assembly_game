@@ -5,6 +5,9 @@
 > them (F1 – F9) · **READ IF** · you build a test scene, RINGS, W8 or the surface's definition before step B · **THE OWNER'S DECISIONS** on what
 > remains (2026-11-16, evening) · [`TILTED_POLE_CLOSE_IN.md`](TILTED_POLE_CLOSE_IN.md) §17.
 
+⛔ **ARCHIVED (2026-11-22, the owner: *"archive properly so as not to pollute the pipeline"*)**: the branch `1.0.146t-` deleted, its worktree removed,
+kept as the tag `archive/1.0.146t-Orbit-charts-test-scenes` (`f787193`) — to reopen: `git worktree add ../orbit_charts_test_scenes archive/1.0.146t-Orbit-charts-test-scenes`.
+
 ## 14. PACKAGE T1 — THE TEST SCENES, as briefed (2026-11-16, an Opus agent; before C2's wiring)
 
 * **What**: six test shapes as scenes, in a THROWAWAY worktree (`../orbit_charts_test_scenes`, branch `1.0.146t-Orbit-charts-test-scenes`, from

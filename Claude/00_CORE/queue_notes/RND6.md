@@ -1,6 +1,8 @@
 # RND6 — The black canvas on the iPhone (the WebGL context lost, never restored)
 
 > **STATUS** · ⛔ **NOT FIXED — NOTHING BUILT**, by the owner's instruction · diagnosed to `Scene_2`'s loads; the mechanism PROBABLE, not verified
+> **NEXT** · ⏸ merged into the main line 2026-11-22 (`1.0.154from1.0.145-Merged-with-camera-follow-worktree`); the owner: *"We will need to work later on in this issue, once the orbit
+> surface work will have been completed"*
 > **LAST VERIFIED** · 2026-11-16, on the live build `40c6325` (its tree = `c7ac510`, branch `1.0.146-Orbit-charts`)
 
 ## The page to read first
