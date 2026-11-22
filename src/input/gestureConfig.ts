@@ -438,6 +438,12 @@ export interface GestureConfig {
   /** ⭐⭐⭐ (2026-11-22, `CAMERA_FOLLOWS_GIZMO.md` §19, D-H20 — his back and forth at a facet change far out) the far turn aimed at the reading where the gizmo
    *  waits (F-3's place shown) (1); 0 = at the finger's reading, `4dbd704` frame for frame */
   followTurnAtGizmo: number;
+  /** ⭐⭐⭐ (2026-11-22 evening, `CAMERA_FOLLOWS_GIZMO.md` §20, D-H23) 1: the far jump read at ONE place — the crossing of the calm's source, both sides at this
+   *  frame's angles; 0 = `40b8095` (D-H15 as built: last frame's calm — a pace threshold, the gizmo waiting at the edges) */
+  followJumpAtPlace: number;
+  /** ⭐⭐⭐ (2026-11-22 evening, `CAMERA_FOLLOWS_GIZMO.md` §20.8, D-H24) 1: the far follower's taut leash at HIS FINGER's pace (never under the clamp), as D-H14
+   *  was decided; 0 = `9147bd2e` (at the reading's pace — its spikes copied, up to 23.9° a frame at 60 fps) */
+  followLeashPace: number;
   /** ⭐⭐⭐ (2026-11-10, POLAR_ORBIT_CLEANUP.md §9.4 — the owner's TILTED POLE) a press on a cap tilts the orbit so the cap is a side (1); off (0): the polar cap as before. ⛔ (2026-11-15, the owner: *"cancel my rule and remove the press action on the orbit"*) no press tilts: 1 the automatic tilt close in (`tiltAutoM`), 0 none. */
   tiltedPole: number;
   /** ⭐⭐⭐ (2026-11-10, the owner: *"limit the speed of the scene tilt at crossing"* → *"one speed for every tilt"*) EVERY tilt — the roll back to upright, the swing of a tilt just made — at this speed (°/s; 0: at once) — ⛔ `tiltRollMinMs` (a whole roll in 250 ms whatever its size) replaced. */
@@ -909,6 +915,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   followPoleDeg: 30, // ⭐ (F2) his D-F1: no nearer than 30° to straight above far out
   followTurnMinDeg: 10, // ⭐ (H2) T11's band: under it the spring pays
   followTurnPace: 1, // ⭐ (H2, D-H6 — the owner: *"Your pace + a slider"*) his pace by default; 0 = close in's speed
+  followLeashPace: 1, // ⭐⭐⭐ (2026-11-22 evening, D-H24) 0 = `9147bd2e`: the taut leash at the reading's pace
+  followJumpAtPlace: 1, // ⭐⭐⭐ (2026-11-22 evening, D-H23 — his *"proceed with the fix and tests without asking me questions"*) 0 = `40b8095`: a far turn with the gizmo held on the share's ramp at his pace
   followTurnAtGizmo: 1, // ⭐⭐⭐ (2026-11-22, D-H20 — his *"If in line with previous rules, proceed with the fix"*) 0 = `4dbd704`: the turn landed past the reading, the spring took it back
   followTurnMaxDegS: 520, // ⭐⭐⭐ (H3, F-2, his clamp) his own realignment pace in the upright builds (`UPRIGHT_LESSONS.md` §3): a half turn 0.35 s
   gizmoEaseMs: 45, // ⭐⭐ (2026-11-04, the owner: *"update the lag the gizmo's position the piece follows to 45ms"*; 62, 55 before, the former GIZMO_TAU_MS 90)
@@ -1102,6 +1110,8 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.followTurnMinDeg >= 0 && cfg.followTurnMinDeg <= 90)) throw new Error(`followTurnMinDeg (${cfg.followTurnMinDeg}) must be in [0, 90] deg.`);
   if (!(cfg.followTurnPace >= 0 && cfg.followTurnPace <= 1)) throw new Error(`followTurnPace (${cfg.followTurnPace}) must be in [0, 1].`);
   if (cfg.followTurnAtGizmo !== 0 && cfg.followTurnAtGizmo !== 1) throw new Error(`followTurnAtGizmo (${cfg.followTurnAtGizmo}) must be 0 or 1.`);
+  if (cfg.followJumpAtPlace !== 0 && cfg.followJumpAtPlace !== 1) throw new Error(`followJumpAtPlace (${cfg.followJumpAtPlace}) must be 0 or 1.`);
+  if (cfg.followLeashPace !== 0 && cfg.followLeashPace !== 1) throw new Error(`followLeashPace (${cfg.followLeashPace}) must be 0 or 1.`);
   if (!(cfg.followTurnMaxDegS >= 0 && cfg.followTurnMaxDegS <= 2000)) throw new Error(`followTurnMaxDegS (${cfg.followTurnMaxDegS}) must be in [0, 2000] deg/s.`);
   if (cfg.freeEntryUpright !== 0 && cfg.freeEntryUpright !== 1) throw new Error(`freeEntryUpright (${cfg.freeEntryUpright}) must be 0 or 1.`);
   if (!(cfg.edgeHoldMm >= 0 && cfg.edgeHoldMm <= 200)) throw new Error(`edgeHoldMm (${cfg.edgeHoldMm}) must be in [0, 200] mm.`);

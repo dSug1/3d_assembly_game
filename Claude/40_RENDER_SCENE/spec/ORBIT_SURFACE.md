@@ -1,5 +1,9 @@
 # THE ORBIT'S SURFACE — what it aims at, its rules and principles, its singularities, its obstacles, what the rebuild must specify (2026-11-16)
 
+> ⭐⭐⭐ **2026-11-22 — THE SURFACE WORK STARTS (his word: *"We will then move to the orbit surface work"*).** The condition below is MET: the orbit
+> charts are CLOSED (LIVE `40b8095`, the best so far) and this branch is merged (`1.0.154-`, 2026-11-22). The workfront: `1.0.156-Orbit-surface`.
+> First: ask him again what §8 (its end) keeps for this moment → [`HANDOVER_2026-11-22_orbit_surface.md`](../../00_CORE/queue_notes/HANDOVER_2026-11-22_orbit_surface.md).
+
 > ⛔⛔ **THE OWNER'S DECISIONS OF 2026-11-16 ARE RECORDED (§8) — PROVISIONAL: TO BE TESTED, AND MAY BE REVERSED BY THE TESTING. NOTHING BUILT, NO GAME
 > CODE CHANGED.** Branch `1.0.146s-Orbit-surface-spec` (from `1.0.146-Orbit-charts`, `1190db2`). **[OWNER]** quotes the owner, with its file, section
 > and date; **[DECIDED 2026-11-16]** marks what he decided, or accepted by agreeing with a written recommendation (*"I agree with the recommendations,

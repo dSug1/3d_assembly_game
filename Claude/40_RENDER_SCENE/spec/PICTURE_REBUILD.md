@@ -443,7 +443,9 @@ No new slider.
   gizmo's facet change); on a side the calm's facet and the gizmo's are the same map place (`sh.t.stack`), but if the two ever changed on different
   frames the hold would not be decided — inferred. (2) If the continuous reading itself steps by more than the leash without a geometric jump (a zone's
   frame changing H2's reading above 60°, a seam rebase), the leash pulls the follower to 104° at once — not met in the vectors; the walks will show it.
-  (3) The first frame with no calm kept reads no jump. (4) `proto.ts`'s figures were at τ 120 ms (leash 62.4°); built at 200 ms (104°), §6's note.
+  (3) The first frame with no calm kept reads no jump. (4) `proto.ts`'s figures were at τ 120 ms (leash 62.4°); built at 200 ms (104°), §6's note. (5) ⚠ (found 2026-11-22 evening, his PC
+  records) the jump compares LAST frame's place's calm with this frame's — two places, not the two faces at one place: a pace threshold at the sides
+  (the gizmo waiting at the edges) → D-H23, [`CAMERA_FOLLOWS_GIZMO.md`](CAMERA_FOLLOWS_GIZMO.md) §20.
 * **Owed** (none run): §7 items 2 – 4, each with `&pictureOne=0` as the identity — the kit's `follow/h5/drv_h5.sh` walks (A tipdy, B botbt, 2 edgez /
   edgec, `Scene_1`'s top) at 60 and 143 frames a second, the S1 walks and holds (`follow/r3/drv_r3.sh`), his ten; read by `h5/rd_a2`, `rd_g1`, `rd_p3c`,
   `r3/rd_sum`; the gates in §4.7's R5 row.
