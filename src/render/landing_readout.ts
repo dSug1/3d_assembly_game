@@ -5,8 +5,9 @@
  * `st.landing` (the gizmo, the piece, the calm and the camera are `3b7a479`'s at `landingReadout` 1 as at 0). The rules are `core/landing_map.ts`'s
  * (`prepareLanding`, `readoutAt`, `readoutKey`, `landingAxes`, `heldPiece`); here only the state, the call, the ring and the line.
  *
- * ⭐ THE CACHE: one preparation per facet, under one key (`readoutKey` — the face map's identity and frame, the placed set's key, the held piece's id and
- * orientation): rebuilt at a pick-up, a turn of the piece, a seat, a frame change (`ORBIT_SURFACE_LANDING_MAP.md` §10.6). Only the frame's facet is ever
+ * ⭐ THE CACHE: one preparation per facet and normal, under one key (`readoutKey` — the face map's identity and frame, the placed set's key, the held
+ * piece's id, points, orientation and resting face's centre): rebuilt at a pick-up, a turn of the piece, a change of resting face, a seat, a frame change
+ * (`ORBIT_SURFACE_LANDING_MAP.md` §10.6). Only the frame's facet is ever
  * prepared, and only when the gizmo reaches it — so at most ONE preparation a frame (the specification's warning: 10 – 20 maps in a frame may hitch).
  * ⭐ MODEL coordinates only: the placed parts on their model pose (`placedParts`), the held piece by its model orientation (`worldPlacementOf`).
  */
@@ -53,9 +54,9 @@ export interface GizmoRead {
 
 /** ⭐ The readout's state (`st.landing`). */
 export interface LandingReadoutState {
-  /** the cache's key (`readoutKey`) — and its preparations, one per facet (the map's facet index) */
+  /** the cache's key (`readoutKey`) — and its preparations, one per facet and normal (`facetEntry`: the map's facet index, the exact normal) */
   key: string;
-  readonly prepared: Map<number, PreparedLanding>;
+  readonly prepared: Map<string, PreparedLanding>;
   /** the frame's readout (in the world): the frame it was read in, P2's answer, whether the drawn gizmo is the edge blend, the pieces refused */
   shown: { readonly frame: number; readonly readout: Readout; readonly band: boolean; readonly refused: readonly string[] } | null;
   /** the last preparation (ms), the worst over 2 s and when it was set, the query (µs, a mean over ~30 frames) */
@@ -65,14 +66,16 @@ export interface LandingReadoutState {
   queryUs: number;
 }
 
-/** ⭐ each face map object its own number (the cache key's map identity): a rebuilt map is a new object, a new number */
-const MAP_IDS = new WeakMap<FaceMap, number>();
-let MAP_SEQ = 0;
-function mapId(map: FaceMap): number {
-  let k = MAP_IDS.get(map);
-  if (k === undefined) MAP_IDS.set(map, (k = ++MAP_SEQ));
+/** ⭐ each object its own number (the cache key's identities — a face map, a held piece's points list): a rebuilt one is a new object, a new number */
+const IDS = new WeakMap<object, number>();
+let ID_SEQ = 0;
+function idOf(o: object): number {
+  let k = IDS.get(o);
+  if (k === undefined) IDS.set(o, (k = ++ID_SEQ));
   return k;
 }
+/** ⭐ (fix round 1, D6) a facet's entry: its index AND the exact normal it was prepared for (a cap's normal may differ from its facet's `n`) */
+const facetEntry = (stack: number, n: Vec3): string => `${stack}:${n[0]},${n[1]},${n[2]}`;
 
 /**
  * ⭐⭐⭐ THE READOUT, ONCE A FRAME — called by `assemblyFrame` right after the frame's own gizmo (`raw`: `rawGizmo`'s result, `drawn`: `mapGizmo`'s), never
@@ -107,20 +110,21 @@ function readFrame(st: SceneState, s: LandingReadoutState, raw: GizmoRead | null
   if (f === undefined) return 0;
   const R = src.frame(st);
   const parts = src.placed(st);
-  const key = readoutKey({ map: mapId(map), frame: R, placed: parts.key, held: id, orientation: place.orientation });
+  const key = readoutKey({ map: idOf(map), frame: R, placed: parts.key, held: id, shape: idOf(local), orientation: place.orientation, restingCentre: rc });
   if (key !== s.key) {
     s.key = key;
     s.prepared.clear();
   }
   let prepMs = 0;
-  let prep = s.prepared.get(raw.t.stack);
+  const entry = facetEntry(raw.t.stack, raw.t.normal);
+  let prep = s.prepared.get(entry);
   if (prep === undefined) {
     const t0 = performance.now();
     const placed = parts.parts.map((points, k) => ({ id: parts.ids[k]!, points }));
     prep = prepareLanding(placed, [heldPiece(local, place.orientation, rc)], landingAxes(raw.t.normal, f.t, f.b, R));
     prepMs = performance.now() - t0;
     s.prepLastMs = prepMs;
-    s.prepared.set(raw.t.stack, prep);
+    s.prepared.set(entry, prep);
   }
   // ⭐ (§3) the facet's own place (on its plane) and today's point (`rawGizmo`'s, before the edge blend), in the world
   const at = R === null ? raw.t.surface : mulM(R, raw.t.surface);

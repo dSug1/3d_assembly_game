@@ -429,15 +429,21 @@ export interface ReadoutKeyOf {
   readonly placed: string;
   /** the held piece's id */
   readonly held: string;
+  /** ⭐ (fix round 1) its points' identity (a number the caller gives each points list: a new shape, a new number) */
+  readonly shape: number;
   /** its model orientation */
   readonly orientation: Quat;
+  /** ⭐ (fix round 1 — the audit) its REFERENCE POINT, the resting face's centre in its own frame: a tapped face changes it with no turn */
+  readonly restingCentre: Vec3;
 }
 
 /**
- * ⭐⭐ (S2, §4; `ORBIT_SURFACE_LANDING_MAP.md` §10.6 — rebuilt at a pick-up, a turn of the piece, a seat, a frame change) THE READOUT'S CACHE KEY: every
- * number EXACT (its shortest round-trip text) — any turn of the piece, however small, is a new key; the same inputs, the same key. Pure.
+ * ⭐⭐ (S2, §4; `ORBIT_SURFACE_LANDING_MAP.md` §10.6 — rebuilt at a pick-up, a turn of the piece, a CHANGE OF RESTING FACE, a seat, a frame change) THE
+ * READOUT'S CACHE KEY: every number EXACT (its shortest round-trip text) — any turn of the piece, however small, any new reference point, is a new
+ * key; the same inputs, the same key. Pure. ⛔ (fix round 1) the resting centre was left out: a tapped face whose turn was refused kept the old
+ * reference point's preparations (Δ off by tens of mm).
  */
 export function readoutKey(k: ReadoutKeyOf): string {
   const R = k.frame === null ? "world" : k.frame.map((r) => r.join(",")).join(";");
-  return `m${k.map}|R${R}|P${k.placed}|H${k.held}|q${k.orientation.join(",")}`;
+  return `m${k.map}|R${R}|P${k.placed}|H${k.held}#${k.shape}|q${k.orientation.join(",")}|c${k.restingCentre.join(",")}`;
 }

@@ -154,7 +154,7 @@ describe("⭐⭐⭐ V2 — `readoutAt`'s SIGN and SIZE (Δ = P2's level − toda
 });
 
 describe("⭐⭐⭐ V3 — `readoutKey`: a turn of the piece, a seat, a frame change each change it; an unchanged frame does not", () => {
-  const base: ReadoutKeyOf = { map: 3, frame: null, placed: "Piece1/Piece1|Piece44/Piece44", held: "green-box", orientation: [Math.SQRT1_2, Math.SQRT1_2, 0, 0] };
+  const base: ReadoutKeyOf = { map: 3, frame: null, placed: "Piece1/Piece1|Piece44/Piece44", held: "green-box", shape: 1, orientation: [Math.SQRT1_2, Math.SQRT1_2, 0, 0], restingCentre: [0, 0, 0.02] };
   const key = readoutKey(base);
   it("the same inputs (rebuilt, new arrays) → the same key", () => {
     expect(readoutKey({ ...base, orientation: [Math.SQRT1_2, Math.SQRT1_2, 0, 0], placed: ["Piece1/Piece1", "Piece44/Piece44"].join("|") })).toBe(key);
@@ -169,6 +169,11 @@ describe("⭐⭐⭐ V3 — `readoutKey`: a turn of the piece, a seat, a frame ch
     expect(readoutKey({ ...base, placed: `${base.placed}|Piece45/Piece45` })).not.toBe(key);
     expect(readoutKey({ ...base, map: 4 })).not.toBe(key);
     expect(readoutKey({ ...base, held: "turquoise-piece" })).not.toBe(key);
+  });
+  it("⭐ (fix round 1, the audit) a CHANGE OF RESTING FACE with the SAME orientation (a tapped face whose turn was refused) changes it; a new shape changes it", () => {
+    expect(readoutKey({ ...base, restingCentre: [0, 0, -0.02] })).not.toBe(key);
+    expect(readoutKey({ ...base, restingCentre: [0, 0, 0.02] })).toBe(key); // rebuilt, the same point: the same key
+    expect(readoutKey({ ...base, shape: 2 })).not.toBe(key);
   });
   it("a FRAME change (the tilt, a zone: the map's frame) changes it", () => {
     expect(readoutKey({ ...base, frame: [[1, 0, 0], [0, 0, -1], [0, 1, 0]] })).not.toBe(key);

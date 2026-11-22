@@ -11,7 +11,8 @@ import { DEFAULT_CONFIG, validateGestureConfig } from "../src/input/gestureConfi
 import { landingLine, landingMarkerFrame, landingReadoutFrame, type GizmoRead, type ReadoutSource } from "../src/render/landing_readout";
 import type { SceneState } from "../src/render/scene_state";
 import type { FaceMap } from "../src/input/face_map";
-import { qFromAxisAngle, type Quat, type Vec3 } from "../src/core/vec";
+import { qFromAxisAngle, qmul, qRotate, type Quat, type Vec3 } from "../src/core/vec";
+import type { Turn } from "../src/core/landing_map";
 import { bx, toConvex } from "./helpers/surface_shapes";
 
 const raw = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8").replace(/\r\n/g, "\n");
@@ -94,17 +95,34 @@ describe("⭐⭐ V4b — the module AT 1 on a stub frame: the readout into `st.l
   for (const x of [-50, 50]) for (const y of [-10, 10]) for (const z of [-20, 20]) LOCAL.push([x * M, y * M, z * M]);
   const RC: Vec3 = [0, 0, 20 * M]; // turned 90° about x: its +z face down
   const placed = toConvex([bx("plate", -200, 200, 0, 40, -200, 200), bx("block", 60, 200, 40, 81, -200, 200)]);
-  const make = () => {
+  const Q90: Quat = qFromAxisAngle([1, 0, 0], Math.PI / 2);
+  /** the stub frame; `turn` (R and the quaternion qR it is): the map's frame — the parts and the held piece turned by it in the world, the facets not */
+  const make = (turn: { R: Turn; qR: Quat } | null = null, shared?: { readonly map: FaceMap }) => {
     const greenBox = { name: "g" };
     const objects = new Map<string, unknown>();
-    const hold = (q: Quat) => objects.set("g", { id: "g", parent: null, local: { position: [0, 0.2, 0], orientation: q }, shape: { points: LOCAL } });
-    hold(qFromAxisAngle([1, 0, 0], Math.PI / 2));
-    const st = { cfg: { landingReadout: 1 }, landing: null, greenBox, world: { objects }, orbitPieces: [{ mesh: greenBox, restingCentre: RC }], orbitPiecePlaced: false, frames: 7, sceneSpec: { id: "Scene_1" } } as unknown as SceneState;
-    const map = { facets: [{ n: [0, 1, 0], t: [1, 0, 0], b: [0, 0, 1] }, { n: [1, 0, 0], t: [0, 0, -1], b: [0, 1, 0] }] } as unknown as FaceMap;
-    const src: ReadoutSource = { map: () => map, frame: () => null, placed: () => ({ key: "plate|block", parts: placed.map((p) => p.points), ids: placed.map((p) => p.id) }) };
-    return { st, src, hold };
+    const hold = (q: Quat) => objects.set("g", { id: "g", parent: null, local: { position: [0, 0.2, 0], orientation: turn === null ? q : qmul(turn.qR, q) }, shape: { points: LOCAL } });
+    hold(Q90);
+    const orbitPieces = [{ mesh: greenBox, restingCentre: RC }];
+    const setRc = (rc: Vec3) => (orbitPieces[0] = { mesh: greenBox, restingCentre: rc });
+    const st = { cfg: { landingReadout: 1 }, landing: null, greenBox, world: { objects }, orbitPieces, orbitPiecePlaced: false, frames: 7, sceneSpec: { id: "Scene_1" } } as unknown as SceneState;
+    const map = shared?.map ?? ({ facets: [{ n: [0, 1, 0], t: [1, 0, 0], b: [0, 0, 1] }, { n: [1, 0, 0], t: [0, 0, -1], b: [0, 1, 0] }] } as unknown as FaceMap);
+    const parts = turn === null ? placed : placed.map((p) => ({ id: p.id, points: p.points.map((q) => qRotate(turn.qR, q)) }));
+    let frameR: Turn | null = turn?.R ?? null;
+    const src: ReadoutSource = { map: () => map, frame: () => frameR, placed: () => ({ key: "plate|block", parts: parts.map((p) => p.points), ids: parts.map((p) => p.id) }) };
+    /** the map's frame changed under the same map object and placed key (a zone's frame): the world's parts as they are */
+    const reframe = (R: Turn) => {
+      frameR = R;
+    };
+    return { st, src, hold, setRc, map, reframe };
   };
   const at = (x: number, y: number, stack = 0, n: Vec3 = [0, 1, 0]): GizmoRead => ({ hit: { point: [x * M, y * M, 0] }, t: { stack, normal: n, surface: [x * M, 40 * M, 0] } });
+  const E0 = "0:0,1,0";
+  /** the rows of the turn by `q` (`mulM`'s convention: R · v = qRotate(q, v)) */
+  const rowsOf = (q: Quat): Turn => [0, 1, 2].map((i) => [0, 1, 2].map((j) => qRotate(q, [j === 0 ? 1 : 0, j === 1 ? 1 : 0, j === 2 ? 1 : 0])[i]!)) as unknown as Turn;
+  const deltaMm = (st: SceneState) => {
+    const r = st.landing!.shown!.readout;
+    return r.kind === "land" ? r.delta / M : NaN;
+  };
 
   it("Δ and the part at the gizmo's place; the drawn gizmo off today's point → `band`; the HUD line in the design's form", () => {
     const { st, src } = make();
@@ -128,17 +146,64 @@ describe("⭐⭐ V4b — the module AT 1 on a stub frame: the readout into `st.l
   it("⭐ THE CACHE: the same key → the same preparation; another facet → a second one (one a frame); a TURN of the piece → all cleared, the current one again", () => {
     const { st, src, hold } = make();
     landingReadoutFrame(st, at(0, 40), at(0, 40), src);
-    const p0 = st.landing!.prepared.get(0);
+    const p0 = st.landing!.prepared.get(E0);
     expect(p0).toBeDefined();
     landingReadoutFrame(st, at(5, 40), at(5, 40), src);
-    expect(st.landing!.prepared.get(0)).toBe(p0); // not prepared again
+    expect(st.landing!.prepared.get(E0)).toBe(p0); // not prepared again
     landingReadoutFrame(st, at(0, 40, 1, [1, 0, 0]), at(0, 40, 1, [1, 0, 0]), src);
     expect(st.landing!.prepared.size).toBe(2);
-    expect(st.landing!.prepared.get(0)).toBe(p0);
+    expect(st.landing!.prepared.get(E0)).toBe(p0);
     hold(qFromAxisAngle([1, 0, 0], Math.PI / 2 + 1e-9)); // a turn of the piece, however small
     landingReadoutFrame(st, at(0, 40), at(0, 40), src);
     expect(st.landing!.prepared.size).toBe(1);
-    expect(st.landing!.prepared.get(0)).not.toBe(p0);
+    expect(st.landing!.prepared.get(E0)).not.toBe(p0);
+  });
+
+  it("⭐ (fix round 1, the audit) a CHANGE OF RESTING FACE with the SAME orientation (a tapped face, its turn refused) → prepared anew: P2 read from the new reference point", () => {
+    const { st, src, setRc } = make();
+    landingReadoutFrame(st, at(0, 40), at(0, 40), src);
+    const p0 = st.landing!.prepared.get(E0);
+    expect(Math.abs(deltaMm(st))).toBeLessThan(1e-9);
+    setRc([0, 0, -20 * M]); // its -z face, the one facing UP: the piece now hangs 40 mm below its reference point
+    landingReadoutFrame(st, at(0, 40), at(0, 40), src);
+    expect(st.landing!.prepared.get(E0)).not.toBe(p0);
+    expect(Math.abs(deltaMm(st) - 40)).toBeLessThan(1e-9);
+  });
+
+  it("⭐ (fix round 1) THE MAP'S FRAME (tilted or zoned, R not the identity): the place and today's point turned by R, the facet's axes by R — the same Δ as unturned; another R under the same map and placed key → prepared anew", () => {
+    const qR = qFromAxisAngle([1, 2, 3], 0.7);
+    const R = rowsOf(qR);
+    const { st, src, map, reframe } = make({ R, qR });
+    landingReadoutFrame(st, at(11, 40), at(11, 40), src);
+    const r = st.landing!.shown!.readout;
+    expect(r.kind === "land" && r.part).toBe("block");
+    expect(Math.abs(deltaMm(st) - 41)).toBeLessThan(1e-9);
+    const want = qRotate(qR, [11 * M, 81 * M, 0]); // the place turned, at P2's level
+    for (let k = 0; k < 3; k++) expect(Math.abs(r.point[k]! - want[k]!), `point ${k}`).toBeLessThan(1e-12);
+    // today's point higher on the same line (the map's frame): Δ follows today's level, turned by R
+    landingReadoutFrame(st, { hit: { point: [11 * M, 60 * M, 0] }, t: at(11, 40).t }, at(11, 60), src);
+    expect(Math.abs(deltaMm(st) - 21)).toBeLessThan(1e-9);
+    // ⭐ another frame R2 under the SAME map object and placed key: prepared anew, the result a fresh state's
+    const p0 = st.landing!.prepared.get(E0);
+    const R2 = rowsOf(qmul(qFromAxisAngle([0, 1, 0], 0.4), qR));
+    reframe(R2);
+    landingReadoutFrame(st, at(11, 40), at(11, 40), src);
+    expect(st.landing!.prepared.get(E0)).not.toBe(p0);
+    const fresh = make({ R, qR }, { map });
+    fresh.reframe(R2);
+    landingReadoutFrame(fresh.st, at(11, 40), at(11, 40), fresh.src);
+    expect(st.landing!.shown!.readout).toEqual(fresh.st.landing!.shown!.readout);
+  });
+
+  it("⭐ (fix round 1, D6) one preparation per facet AND NORMAL: the same stack read with another normal (a cap's) prepares anew — never the other normal's", () => {
+    const { st, src } = make();
+    landingReadoutFrame(st, at(11, 40), at(11, 40), src);
+    const n2: Vec3 = [0, 0.8, 0.6];
+    landingReadoutFrame(st, at(11, 40, 0, n2), at(11, 40, 0, n2), src);
+    expect(st.landing!.prepared.size).toBe(2);
+    const fresh = make();
+    landingReadoutFrame(fresh.st, at(11, 40, 0, n2), at(11, 40, 0, n2), fresh.src);
+    expect(st.landing!.shown!.readout).toEqual(fresh.st.landing!.shown!.readout);
   });
 
   it("⭐ (§13.4 D1) `Scene_1` ONLY: on another scene at 1 nothing is prepared, no readout, the line says so", () => {
