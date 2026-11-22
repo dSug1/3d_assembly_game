@@ -14,7 +14,7 @@ still hold).
 * ⚠ **His amendment (2026-11-22 ~15:00, on `40b8095`)**: the camera's back and forth is still seen on `Scene_0bis`'s faces "on the opposite side of the
   assembly", and on `Scene_1`'s vertical edges at a fast polar orbit (*"not here in previous branches builds … not seen at low orbit speed"*).
   **Not reproduced headless**: with D-H20 on, no back and forth at any pace tried (3 – 30 px a frame, 60 and 50 fps); off, many (kit
-  `follow/cap/CHECKPOINT_CAP.md`, last section). Owed from him: the same gesture with `followTurnAtGizmo` 0 and 1, a screen recording. The orbit's
+  `follow/cap/CHECKPOINT_CAP.md`, last section). ⭐ His device test: `followTurnAtGizmo` 0 or 1 — **no change**, the same back and forth on both scenes → a DIFFERENT mechanism from D-H20's (D-H20 stays: it removes a measured one). Owed: a screen recording; his A/B with `pictureFarTop` 0 (the far rule before R5) and `followTurnMinDeg` 45 (no edge turns) to locate it. The orbit's
   closure stands on his word; this is open until then.
 * **The workfront:** the MAIN folder `3d_assembly_game` (the only worktree), branch **`1.0.156-Orbit-surface`**, made from `1.0.155-Orbits-finalized`
   (local, not pushed — start from `1.0.155-Orbits-finalized` elsewhere).
