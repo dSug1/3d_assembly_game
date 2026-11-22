@@ -1035,3 +1035,54 @@ Six play records on his PC (the dev server with `#rec`, `src/render/play_recorde
   source, none at `Scene_1`'s side edges, the gizmo's frozen frames while his mouse moves; G3 the true flips kept — a level face's exits and its dy hold
   as at 0 (the kit's pole walks); G4 nothing worse — no frame over 520°/s, the camera's lag after his strokes within the leash, the piece's steps.
 * ⛔ Not in this step: close in (its own turns, the tilt) — unchanged; a deploy — his word only.
+
+### 20.7 AS BUILT AND MEASURED — D-H23 (2026-11-22 evening, `9147bd2e` on `1.0.156-Orbit-surface`; docs `ea3a28a1` before it; verify 2316)
+* **Code**: `calmAskedAt` (`assembly_wiring.ts`) runs `calmTargets` ITSELF on a shallow copy of the state with the place set (one owner — no copy of the
+  rule) and folds its target as `calmFrame` does; `farJumpAtRead` (called right after `farJumpRead`): where the calm's source (its normal, or none)
+  differs from last frame's, the crossing on the map between the two places (`placeCrossings` in `input/camera_follow.ts`: 6 samples, 8 halvings), both
+  sides' calms there read at this frame's angles (`farAsked`) → `asmJumpAt`; the same source `[]`; fallbacks `null` (the jump as built). `followFarStep`
+  takes `jumpAt` (`farJumpAcross`). State `asmJumpAt`, `asmJumpWas` (reset with the orbit's). Slider THE EDGE'S TURN (134).
+* **Vectors** (`tests/follow_jump_at_place.test.ts`, 8; **5 red against `ea3a28a1`'s code**, the key one *"expected true to be false"* — the old follower
+  turns on the share's ramp alone): no crossing → no turn, the heading monotone onto the reading; a real 27° crossing → the same turn as before;
+  `farJumpAcross`, `placeCrossings`; ⭐ **lesson 1 as a property**: two sides' calms with the horizontal share whole read the same at every angle tried
+  (passes on the old code too — it is the existing rule D-H23 stands on); the default; the wiring. Amended pins: R5's wiring (the new argument), the state
+  reset (75 fields), the menu (134).
+* **His records replayed** (the kit's `walk_r.mjs` / `drv_r.sh`: his window and dpr, each frame at its recorded time, his events, the start reached
+  gradually — the replays reproduce his turns to a frame or two; baselines on `507b4024`):
+
+| record (replayed) | far turns (inside one source) | gizmo frozen while his mouse moves | camera peak | frames > 520°/s | largest step a frame |
+|---|---|---|---|---|---|
+| `Scene_1` back 4.25 m — base / D-H23 | 6 (5) / **0** | 42 / 14 | 520 / 1 241°/s | 0 / 5 | 7.5° / 13.4° |
+| `Scene_1` front 7.5 + 2.5 m | 12 (10) / **0** | 84 / 22 | 520 / 4 483°/s | 0 / 22 | 7.5° / **43.9°** |
+| `Scene_0bis` back far | 11 (10) / **0** | 72 / 40 | 520 / 376°/s | 0 / 0 | 8.3° / 4.6° |
+| `Scene_0bis` front 7.5 + 2.5 m | 14 (12) / **1** (a real crossing) | 127 / 69 | 520 / 520°/s | 0 / 0 | 7.3° / 7.3° |
+
+  The camera's heading turns back only at his own reversals (5, 11, 15, 28 — unchanged). **G1 identity at 0**: the four replays at `followJumpAtPlace=0`
+  against the baselines — **0.0 difference over 22 342 frames**. In the game the jump read at a vertical edge is exactly 0 (`Scene_1` back f4314: stack
+  1 → 0, the calm's normal 0° → 90°, `x` 0.00) — lesson 1 holds in the game.
+* **60 frames a second** (the iPhone's rate; `Scene_1` far, side strokes): at 300 px/s turns **34 → 0** (all 34 inside one face), peak 405 → 453°/s,
+  largest step 6.8 → 7.6°; at his mean 540 px/s turns **39 → 0**, but peak 520 → 1 435°/s, **103 frames over 520°/s, steps up to 23.9°**. The heading's
+  turning points are all at a stroke's start (his reversals): none inside a stroke. The gizmo now travels his whole stroke (≈ 495° of camera a stroke,
+  210° with the waits).
+* **G3** (`Scene_1`'s top — up, on, off, sideways, 60 fps): at 3 px a frame identical figures; at 9 the old rule's 3 turns (the top's own edges, f125,
+  f663, f843) → 0, peak 521 → 239°/s, largest step 8.7 → 4.0°.
+
+### 20.8 What D-H23 uncovered: the leash, taut, copies the reading's spikes — D-H24 (his order *"proceed with the fix and tests without asking me questions"*)
+* **Read frame by frame**: 108 of the 121 frames over 8.7° at 60 fps have the camera AT the leash (lag 104°). His finger moves the orbit a steady 12.2° a
+  frame (the follower's own record of his pace: 729°/s); at an edge the reading moves 31°, 24°, 18° in three frames (the share 0.32 → 0.87 → 0.32), and the
+  taut leash (`followFarStep`: `f = { x: c − sg·leash, … }`) moves the camera with it — 23.9° in one frame. On `Scene_1`'s top at 2.5 m (`cb4r` f5855,
+  his fastest spin, ~1 700°/s): the reading 46° in one frame near the pole → the camera 43.9°. With the waits the leash was never taut: the gizmo held,
+  his motion thrown away, every turn at ≤ 520°/s.
+* **The rule it departs from**: D-H14 as decided (`TOP_BOTTOM_STUDY.md` §6, the study's own words in `followFarStep`'s doc) — *"taut it moves at his
+  finger's pace, after he stops it settles at most at his clamp"*; the build moves at the READING's pace, spikes included. And his founding words for the
+  follower (§0): *"both smooth (so it shall filter out the gizmo jumps or sudden changes of direction) while being faithful to the gizmo (… not be too far
+  behind …)"*.
+* **D-H24 — the taut leash at his finger's pace**: when the follower is more than the leash behind, it moves toward the leash's place by at most
+  max(his finger's pace — `pace`, the follower's own — , his clamp 520°/s) × the frame's time, never behind the spring's own step; its speed carried at
+  most the leash's (no overshoot: a critically damped spring never passes its target from that speed). Under the leash nothing changes; after he stops it
+  settles at most at his clamp (as decided). The lag may pass the leash for the few frames of a spike and comes back as the reading slows.
+* **Switch** `followLeashPace` (THE EDGE'S TURN, 1; 0 = `9147bd2e`, D-H23 alone, frame for frame). **Vectors**: a taut follower under a reading that
+  spikes 31 / 24 / 18° while his finger moves 12.2° a frame — no step over his finger's pace (before: 23.9°); after he stops, ≤ 520°/s and no step back.
+  **Gates**: G1 identity at 0 against D-H23's runs; the 60 fps strokes and his four records at 1 — the largest step ≤ his finger's pace a frame, no
+  frame faster than max(his pace, 520°/s), no turning point inside a stroke, the turns and the waits as D-H23.
+* ⛔ The second change to the far follower this session — the last before his look (his rule: after a second fix round on one join, stop and study).
