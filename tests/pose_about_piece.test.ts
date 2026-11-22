@@ -126,13 +126,13 @@ describe("the camera turned about the piece (a polar zone's turn)", () => {
     expect(gb).toMatch(/const camPlace = cameraPlaceNow\(st\);[^\n]*\n(?:\s*\/\/[^\n]*\n)*\s*if \(assemblyOn\(st\)\) spitStep\(st, camPlace\);\n\s*const camFrame = cameraFrameNow\(st, camPlace, off, dtSec \* 1000\);/);
     // ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` R2) both poses through the one rule (`turnPose`: the framing unless born close in with `pictureOne` 1; the turn
     // about the piece read for the clock) — `tests/turn_framing.test.ts`
-    expect(aw).toContain("const d = turnPose(zm.from, to, piece, zm.k, zm, zm.axis, st.asmTiltAuto || (st.cfg.pictureOne === 1 && st.cfg.cameraFollower === 1 && approachBand(st) > 0), st.cfg.pictureOne);");
+    expect(aw).toContain("const d = turnPose(zm.from, to, piece, zm.k, zm, zm.axis, st.asmTiltAuto || approachBand(st) > 0);"); // ⛔ (2026-11-22, PICTURE_REBUILD.md §8.6 — R6) `pictureOne`, `cameraFollower` deleted
     expect(aw).toContain("const r = d.about;");
     // ⭐⭐⭐ (2026-11-18, FO3 S1) through the picture a follower of the logic (`rollPictureFrame`), which hands the ghost to `zoneMixPose` on both paths
     // ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §13 F2) …wherever the camera follower does not draw (close in, or `cameraFollower` 0)
     // ⭐⭐⭐ (2026-11-21, R3a – R3b) …through the one call at the stage (`pictureFrame`), today's line in `picture_wiring.ts`
     expect(gb).toContain("const zp = pictureFrame(st, pp, [c0.x, c0.y, c0.z], camAt, lookAt, camFrame.up, gapFull, off, dtSec * 1000, orbitDvPerMm(st));");
-    expect(readFileSync("src/render/picture_wiring.ts", "utf8")).toContain("?? rollPictureFrame(st, pp, eye, look, up, dtMs, left);");
+    expect(readFileSync("src/render/picture_wiring.ts", "utf8")).toContain("rollPictureFrame(st, pp, eye, look, up, dtMs, left);"); // ⛔ (2026-11-22, PICTURE_REBUILD.md §8.6 — R6) today's line (`?? rollPictureFrame`) deleted: the picture's own calls
     const rs = readFileSync("src/render/roll_shadow.ts", "utf8");
     expect(rs).toContain("const G = zoneMixPose(st, piece, eye, look, up);"); // ⛔ (2026-11-22, R6) the shadow's and FO3 S1's calls deleted: the carried up's
     // ⭐⭐⭐ (2026-11-14) the spit's side: the SHOWN rule at the ORBIT's own angles (⛔ the piece's spring: late; ⛔ the bare orbit: the square camera's turn over the ridge unseen)

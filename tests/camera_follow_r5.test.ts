@@ -126,18 +126,18 @@ describe("R5 D-H19 — the far reading in the WORLD (the band of `cameraHeading`
   it("wired: under the far rule as decided the reading at the rig's angles is `farAsked`'s (the band on the orbit's world direction); else H2's exactly", () => {
     const g = code("render/green_box_wiring.ts");
     const i = g.indexOf("st.asmAsk = askedDir(st, rig.yaw, rig.v);");
-    const j = g.indexOf("st.asmAskLevel = st.cfg.followTop !== 1 ? null : farTopDecided(st) ? farAsked(st, rig.yaw, rig.v, st.asmAskCalm) : levelledAsked(st, rig.yaw, rig.v);");
+    const j = g.indexOf("st.asmAskLevel = farTopDecided(st) ? farAsked(st, rig.yaw, rig.v, st.asmAskCalm) : levelledAsked(st, rig.yaw, rig.v);"); // ⛔ (2026-11-22, R6) `followTop` 0 deleted
     expect(i).toBeGreaterThan(0);
     expect(j).toBeGreaterThan(i);
     const a = code("render/assembly_wiring.ts");
-    expect(between(a, "export function farTopDecided(", "export function farAsked(")).toContain("return st.cfg.pictureFarTop === 1 && st.cfg.pictureOne === 1 && st.cfg.cameraFollower === 1 && st.cfg.followTop === 1; }"); // ⭐ (R3-FIX) its own switch
+    expect(between(a, "export function farTopDecided(", "export function farAsked(")).toContain("return st.cfg.pictureFarTop === 1; }"); // ⭐ (R3-FIX) its own switch — ⛔ (R6) `pictureOne`, `cameraFollower`, `followTop` deleted
     expect(between(a, "export function farAsked(", "export function gizmoFacetW(")).toContain("return farReading(yaw, v, c, R, st.cfg.followPoleDeg, tiltDir(R, orbitDir(st.orbit.yaw, st.orbit.elevation))); }");
   });
 });
 
 // ⭐⭐⭐ D-H15 — the turn only on the far reading's GEOMETRIC jump (last frame's calm read at this frame's angles), its angle the whole gap from the heading
 // drawn, at his finger's pace clamped. The old code: H3's `followTopStep` (F-1: the jump a frame's difference, at a facet change).
-const K5: FollowTopKnobs = { tauMs: 200, poleDeg: 30, minDeg: 10, rollDegS: 360, paceShare: 1, onJump: true, finger: true, degPerMm: 5, maxDegS: 520 };
+const K5: FollowTopKnobs = { tauMs: 200, poleDeg: 30, minDeg: 10, rollDegS: 360, paceShare: 1, degPerMm: 5, maxDegS: 520 }; // ⛔ (2026-11-22, R6) `onJump`, `finger` deleted: always on
 const SA: V = [0, 0, 1];
 const SB: V = [1, 0, 0];
 type Step = typeof followFarStep;
@@ -287,7 +287,7 @@ describe("R5 D-H19 + D-H15 — a zigzag across an apex edge", () => {
 describe("R5 D-H15 — wired", () => {
   it("the second reading beside the first at the rig's angles (last frame's calm kept in the world, read in this frame's F), handed to `followFarStep` under the far rule as decided", () => {
     const g = code("render/green_box_wiring.ts");
-    const i = g.indexOf("st.asmAskLevel = st.cfg.followTop !== 1 ? null : farTopDecided(st)");
+    const i = g.indexOf("st.asmAskLevel = farTopDecided(st)");
     const j = g.indexOf("farJumpRead(st, rig.yaw, rig.v);");
     expect(j).toBeGreaterThan(i);
     expect(g.indexOf("const zp = pictureFrame(", j)).toBeGreaterThan(j);
@@ -397,13 +397,10 @@ describe("R5 D-H16 — the far dy hold on the drawn up", () => {
 // (no switch: R5 on with `pictureOne`); mutant: the predicate without the switch.
 describe("R5's switch `pictureFarTop`", () => {
   const st = (o: Partial<typeof DEFAULT_CONFIG>) => ({ cfg: { ...DEFAULT_CONFIG, ...o } }) as unknown as SceneState;
-  it("1 by default (the owner, 2026-11-22): R5 as built, only with the one picture, the follower and the top's rule; 0: the far rule as decided OFF (H2 / H3 exactly)", () => {
+  it("1 by default (the owner, 2026-11-22): R5 as built; 0: the far rule as decided OFF (H2 / H3 exactly) — ⛔ (R6) the one picture's, the follower's and the top's switches deleted", () => {
     expect(DEFAULT_CONFIG.pictureFarTop).toBe(1);
     expect(farTopDecided(st({}))).toBe(true);
     expect(farTopDecided(st({ pictureFarTop: 0 }))).toBe(false);
     expect(farTopDecided(st({ pictureFarTop: 1 }))).toBe(true);
-    expect(farTopDecided(st({ pictureFarTop: 1, pictureOne: 0 }))).toBe(false);
-    expect(farTopDecided(st({ pictureFarTop: 1, cameraFollower: 0 }))).toBe(false);
-    expect(farTopDecided(st({ pictureFarTop: 1, followTop: 0 }))).toBe(false);
   });
 });

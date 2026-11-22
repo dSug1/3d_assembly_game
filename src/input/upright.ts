@@ -362,12 +362,12 @@ export function framingShare(f: FramingTurn): number {
 /**
  * ⭐ THE POSE DRAWN IN A FRAMING TURN, toward `to` (the logic's pose) at its share: the piece (`piece`) and the aim each carried straight on the glass
  * (`poseFramingTwo`); degenerate — about the piece alone (`poseAboutPiece`); the rule chosen at the turn's first frame and kept. Returns the turn with its
- * carried angles. ⭐⭐⭐ (2026-11-21, packet R2) through the ONE rule (`turnPose`): a turn born close in (`closeIn`) with `pictureOne` 1 about the piece for
+ * carried angles. ⭐⭐⭐ (2026-11-21, packet R2) through the ONE rule (`turnPose`): a turn born close in (`closeIn`) about the piece for
  * its whole life. Pure.
  */
-export function framedPose(f: FramingTurn, to: CamPose, piece: Vec3, closeIn: boolean, pictureOne: number): { readonly pose: CamPose; readonly turn: FramingTurn } {
+export function framedPose(f: FramingTurn, to: CamPose, piece: Vec3, closeIn: boolean): { readonly pose: CamPose; readonly turn: FramingTurn } {
   const k = framingShare(f);
-  const d = turnPose(f.from, to, piece, k, f, f.axis, closeIn, pictureOne);
+  const d = turnPose(f.from, to, piece, k, f, f.axis, closeIn);
   if (d.framed) return { pose: d.pose, turn: { ...f, keep: d.keep, rule: 1 } };
   return { pose: d.pose, turn: { ...f, rule: d.rule, axis: d.about.axis ?? f.axis } };
 }

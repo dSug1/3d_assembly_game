@@ -202,13 +202,10 @@ describe("H2 — one frame of the follower with the top's rule (`followTopStep`)
     expect(r.hold).toBeUndefined();
   });
 
-  it("CARRIED: no reading keeps the heading target; his pace raises the turn's speed (900°/s asked → a half turn in 200 ms)", () => {
+  it("CARRIED: no reading keeps the heading target (⛔ R6: H2's pace read on the orbit's direction deleted — `followTurnFinger` 0 — and its vector)", () => {
     const a = run(null, null, { ask: dirAtHeading(0.7, 40 * D), orbit: O, psiL: 0.7, nW: TOP, upShown: UPS, dySign: 0 }, 300);
     const c = run(a.s, a.top, { ask: dirAtHeading(2, 40 * D), orbit: O, psiL: null, nW: TOP, upShown: UPS, dySign: 0 }, 300);
     expect(c.top.psiT).toBeCloseTo(0.7, 12);
     expect(headingOf(c.s.dir)!).toBeCloseTo(0.7, 6);
-    // the orbit's direction moving at 900°/s on the crossing frame (6.3° in 7 ms)
-    const b = followTopStep(c.s, { ...c.top, orbitWas: dirAtHeading(0.7, 40 * D) }, { ask: dirAtHeading(0.7, 46.3 * D), orbit: dirAtHeading(0.7, 46.3 * D), psiL: 0.7 + Math.PI, nW: FAR, upShown: UPS, dySign: 0 }, 7, K);
-    expect(b.top.turn!.durMs).toBeCloseTo(200, 0);
   });
 });

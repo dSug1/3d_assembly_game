@@ -215,19 +215,13 @@ export function installTuningMenu(st: SceneState): void {
         {
           title: "CAMERA FOLLOWER",
           sliders: [
-            tunable(st, "camera follower far out: a simple polar orbit, world up (1; 0 = the carried up)", "cameraFollower", 0, 1, 1),
-            // ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §4.7 — R2) the picture's rebuild, one switch: close in's turns about the piece
-            tunable(st, "the picture's rebuild: one picture at every distance, close in's turns about the piece (1; 0 = as 620f227)", "pictureOne", 0, 1, 1),
+            // ⛔ (2026-11-22, `PICTURE_REBUILD.md` §8.6 — R6) `cameraFollower`, `pictureOne`, `followFromDeg`, `followMaxDegS`, `followTop` deleted with their 0 paths
             // ⭐⭐⭐ (2026-11-21 night, `PICTURE_REBUILD.md` §4.3a item 7 — R3-FIX) R5 behind its own switch (0 by default)
-            tunable(st, "the far top rule as decided, R5 (1; 0 = H2 / H3) — with the picture's rebuild only", "pictureFarTop", 0, 1, 1),
+            tunable(st, "the far top rule as decided, R5 (1; 0 = H2 / H3)", "pictureFarTop", 0, 1, 1),
             // ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §4.2 — R3a) the band: the follower's picture to the logic's over his last mm of approach before 0.65 m
             tunable(st, "the picture's band: far to close over the last mm of approach before 0.65 m (mm)", "pictureBandMm", 0, 100, 1),
             tunable(st, "follower: its one ease on the sphere (ms)", "followMs", 0, 500, 10), // ⭐ (2026-11-21, the owner: *"up to 500 ms with 10 ms increment"*)
             tunable(st, "follower: round the vertical, never nearer than (deg; 0 = over it)", "followPoleDeg", 0, 60, 1),
-            tunable(st, "follower: the detour round the vertical starts at (deg off it)", "followFromDeg", 10, 90, 1),
-            tunable(st, "follower: the yaw's last-resort ceiling, never under his pace (deg a second; 0 = none)", "followMaxDegS", 0, 2880, 40),
-            // ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §15 – §16 — H2) the top and bottom far out
-            tunable(st, "follower: the top's rule — the calm's level heading, a turn at an edge with the gizmo waiting (1; 0 = the detour)", "followTop", 0, 1, 1),
           ],
           subsections: [
             {
@@ -236,10 +230,8 @@ export function installTuningMenu(st: SceneState): void {
               sliders: [
                 tunable(st, "follower: an edge's gap paid by a turn from (deg; under it the spring)", "followTurnMinDeg", 0, 45, 1),
                 tunable(st, "follower: the edge's turn at his pace (1) … close in's speed (0)", "followTurnPace", 0, 1, 0.05),
-                tunable(st, "the edge's turn only where the level heading itself jumps — none between two sides (1; 0 = as ba369aa)", "followTurnOnJump", 0, 1, 1),
-                tunable(st, "the edge's turn at his finger's pace (1; 0 = the orbit's, as ba369aa — no top speed)", "followTurnFinger", 0, 1, 1),
+                // ⛔ (2026-11-22, R6) `followTurnOnJump`, `followTurnFinger`, `followTurnRebase` deleted with their 0 paths (`ba369aa`)
                 tunable(st, "the 180° realignment's top speed (deg a second; 0 = none)", "followTurnMaxDegS", 0, 2000, 10),
-                tunable(st, "the gizmo really waits: the angles set to its place when a turn starts (1; 0 = as ba369aa)", "followTurnRebase", 0, 1, 1),
               ],
             },
           ],

@@ -1,6 +1,6 @@
 /**
- * ⭐⭐⭐ (2026-11-21, `Claude/40_RENDER_SCENE/spec/PICTURE_REBUILD.md` §4.1 – §4.4 — packet R3a, `pictureOne` 1 with `cameraFollower` 1) THE ONE PICTURE AT THE
- * CAMERA'S STAGE: the state and the one call in place of `followFrame ?? rollPictureFrame`. The rules are pure (`input/picture.ts`, `pictureStep`).
+ * ⭐⭐⭐ (2026-11-21, `Claude/40_RENDER_SCENE/spec/PICTURE_REBUILD.md` §4.1 – §4.4 — packet R3a; ⛔ R6: its switches `pictureOne`, `cameraFollower` deleted)
+ * THE ONE PICTURE AT THE CAMERA'S STAGE: the state and the one call in place of `followFrame ?? rollPictureFrame`. The rules are pure (`input/picture.ts`, `pictureStep`).
  *
  * * FAR (the follower draws — `followActive`, as today): `followFrame` with the picture's hook: the follower's own step and pose (`followTopStep` /
  *   `followStep`, `followPose`, their turns — unchanged), then `pictureStep` — outside the band, no up held and outside the turntable's cone it returns the
@@ -17,7 +17,7 @@
 import type { Vec3 } from "../core/vec";
 import { followStart, followTopTarget, headingOf } from "../input/camera_follow";
 import { upSquareToView } from "../input/camera_frame";
-import { blendShare, holdAtCrossing, squareTurning, tiltDir, type CamFrame, type CamPose } from "../input/orbit_tilt";
+import { blendShare, squareTurning, tiltDir, type CamFrame, type CamPose } from "../input/orbit_tilt";
 import { orbitDir } from "../input/assembly_orbit";
 import { poseTurnAngle } from "../input/roll_follow";
 import { changeSeen, holdSeen } from "../input/upright";
@@ -38,8 +38,7 @@ function changeResolve(st: SceneState, eye: Vec3, look: Vec3, up: Vec3): ChangeL
   const ask = st.asmChange;
   if (ask === null) return CHANGE_NONE;
   if (followActive(st) && !st.orbitPiecePlaced) {
-    const top = st.cfg.followTop === 1;
-    changeApply(st, ask, false, top ? undefined : ask.hold !== undefined ? holdAtCrossing(ask.hold) : undefined);
+    changeApply(st, ask, false, undefined); // ⛔ (R6) the detour's hold here (`followTop` 0: `holdAtCrossing`) deleted
     return CHANGE_NONE;
   }
   const view: Vec3 = [look[0] - eye[0], look[1] - eye[1], look[2] - eye[2]];
@@ -66,19 +65,8 @@ function publishDrawn(st: SceneState, cam: CamFrame | null): void {
   st.asmCamDrawn = cam ?? st.asmCamLogic;
 }
 
-/** ⭐ The one picture draws here: the switch on and the follower's switch on (the band is the follower's); else today's line exactly. */
-export function pictureOn(st: SceneState): boolean {
-  return st.cfg.pictureOne === 1 && st.cfg.cameraFollower === 1;
-}
-
-/** ⭐ (R3b) TODAY'S LINE, exactly (`pictureOne` 0, or the follower off): the follower, else the close drawer — the change resolved once before, the facts read after. */
-function pictureLegacy(st: SceneState, pp: Vec3, foot: Vec3, eye: Vec3, look: Vec3, up: Vec3, gapM: number, off: { readonly yawRad: number; readonly pitchRad: number }, dtMs: number): CamPose {
-  const left = changeResolve(st, eye, look, up);
-  const zp = followFrame(st, pp, foot, eye, look, up, gapM, off, dtMs) ?? rollPictureFrame(st, pp, eye, look, up, dtMs, left);
-  pictureEventsRead(st, zp.ev);
-  publishDrawn(st, zp.cam);
-  return zp;
-}
+/* ⛔ (2026-11-22, `PICTURE_REBUILD.md` §8.6 — R6) `pictureOn` and TODAY'S LINE (`pictureLegacy`: `pictureOne` 0 or `cameraFollower` 0 — `followFrame ??
+ * rollPictureFrame`) deleted with their switches: the one picture draws at every distance. */
 
 /**
  * ⭐⭐⭐ ONE FRAME OF THE PICTURE: the pose drawn (`eye`, `look`, `up`) — the camera's stage squares the up. `eye`, `look`, `up`: the logic's pose (the
@@ -96,7 +84,6 @@ export function pictureFrame(
   dtMs: number,
   dvPerMm: number,
 ): CamPose {
-  if (!pictureOn(st)) return pictureLegacy(st, pp, foot, eye, look, up, gapM, off, dtMs);
   const left = changeResolve(st, eye, look, up);
   const was = st.asmPicture;
   const s0 = was?.s ?? PICTURE_REST;
@@ -173,18 +160,14 @@ export function pictureFrame(
 
 /**
  * ⭐⭐⭐ (O-3, D-P5) THE FOLLOWER PARKED while G draws: at rest ON its own far target — the top's rule: the levelled reading, else the heading carried `psi`
- * (the turntable's, set from the drawn up), the asked height capped; the detour's: the direction asked — its top state at the gizmo's facet and the orbit's
- * place now. So when far begins again it goes on from where its target is: no restart on the drawn direction, no drift by time, no spin.
+ * (the turntable's, set from the drawn up), the asked height capped — its top state at the gizmo's facet and the orbit's place now (⛔ R6: the detour's,
+ * `followTop` 0, deleted). So when far begins again it goes on from where its target is: no restart on the drawn direction, no drift by time, no spin.
  */
 function followPark(st: SceneState, psi: number | null): Vec3 | null {
   const ask = st.asmAsk;
   if (ask === null) return null;
   const was = st.asmFollow;
   const rec = { on: 0, pic: 1 };
-  if (st.cfg.followTop !== 1) {
-    st.asmFollow = { state: followStart(ask), piece: null, rec };
-    return ask;
-  }
   const L = st.asmAskLevel ?? psi ?? headingOf(ask) ?? was?.top?.psiT ?? 0;
   const T = followTopTarget(L, ask, st.cfg.followPoleDeg);
   const orbitW = tiltDir(dirFrame(st), orbitDir(st.orbit.yaw, st.orbit.elevation));

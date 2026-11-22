@@ -108,7 +108,7 @@ function carriedFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Ve
   // turn, the holds as they are. ⛔ (`28a29ca`) the carry took back the change's roll alone: the piece leapt to where the new pose frames it, in one frame
   const shown = change && was !== null && was.one !== undefined && was.picture ? framingFrom(was.picture, was.piece, line, r.phi) : null;
   const ft = framingStep(was?.one?.framing ?? null, change, shown, freed, r.halfStart, dtMs, st.cfg.uprightMaxDegS, kappa);
-  const fd = ft === null ? null : framedPose(ft, G, piece, st.asmTiltAuto, st.cfg.pictureOne); // ⭐⭐⭐ (R2) born close in: about the piece (`turnPose`)
+  const fd = ft === null ? null : framedPose(ft, G, piece, st.asmTiltAuto); // ⭐⭐⭐ (R2) born close in: about the piece (`turnPose`)
   const D = fd === null ? P : poseRolled(fd.pose, line, r.phi);
   // ⭐⭐⭐ (R3b) published: the logic's own hold code writes it (`pictureEventsRead`: `carriedHold`)
   const ev: PictureEvents = change && crossed !== undefined ? { carried: { halfStart: r.halfStart, crossed } } : NO_EVENTS;

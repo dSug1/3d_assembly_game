@@ -62,10 +62,10 @@ describe("R3b — the holds and the rebase: the logic's own writers, the drawers
       expect(raw(f), f).not.toContain("seamRebase(");
     }
     const p = raw("render/picture_wiring.ts");
-    expect(p.match(/pictureEventsRead\(st, /g)?.length).toBe(4); // ⭐ (R3-FIX) + the far path's: the close drawer's facts where it runs for the logic
+    expect(p.match(/pictureEventsRead\(st, /g)?.length).toBe(3); // ⭐ (R3-FIX) + the far path's: the close drawer's facts where it runs for the logic — ⛔ (2026-11-22, R6) − today's line's (`pictureLegacy`)
     expect(p).toContain("pictureEventsRead(st, fp.ev); publishDrawn(st, fp.cam);");
     expect(p).toContain("const G = rollPictureFrame(st, pp, eye, look, up, dtMs, left); pictureEventsRead(st, G.ev);");
-    expect(p).toContain("pictureEventsRead(st, zp.ev); publishDrawn(st, zp.cam);");
+    expect(p).not.toContain("pictureEventsRead(st, zp.ev);"); // ⛔ (2026-11-22, R6) today's line (`pictureLegacy`) deleted
   });
 
   it("the reader: the follower's crossing's hold (it replaces any), the carried up's (⛔ R6: law U's `lawHalf` deleted)", () => {
@@ -88,7 +88,7 @@ describe("R3b — ONE resolver of the change asked (RB1's one place)", () => {
     const p = raw("render/picture_wiring.ts");
     expect(raw("render/camera_follow_wiring.ts")).not.toContain("changeApply(");
     expect(raw("render/roll_shadow.ts")).not.toMatch(/changeApply\(st|changeSeen\(\{|st\.asmChange\b/);
-    expect(p.match(/const left = changeResolve\(st, eye, look, up\);/g)?.length).toBe(2);
+    expect(p.match(/const left = changeResolve\(st, eye, look, up\);/g)?.length).toBe(1); // ⛔ (2026-11-22, R6) − today's line's (`pictureLegacy`)
     expect(p.indexOf("const left = changeResolve(st, eye, look, up); const was = st.asmPicture;")).toBeGreaterThan(0);
     // where the follower draws, at once (its predicate the follower's own); else close in's rule
     expect(fn(p, "function changeResolve(", "function publishDrawn(")).toContain("if (followActive(st) && !st.orbitPiecePlaced) {");

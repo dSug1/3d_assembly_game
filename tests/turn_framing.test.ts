@@ -42,11 +42,11 @@ interface Turn {
   axis: Vec3 | null;
 }
 /** a turn drawn along the approach through the one rule, its state carried as `zoneMixPose` carries it; `closeIn` the predicate frame by frame */
-function walk(closeIn: (i: number) => boolean, pictureOne: number, aimToGizmo: boolean, ys: readonly number[] = YS): CamPose[] {
+function walk(closeIn: (i: number) => boolean, aimToGizmo: boolean, ys: readonly number[] = YS): CamPose[] {
   const zm: Turn = { rule: 0, keep: null, axis: null };
   return ys.map((y, i) => {
     const { A, b } = frameAt(y, i / (ys.length - 1), aimToGizmo);
-    const d = turnPose(START, b, A, 0, zm, zm.axis, closeIn(i), pictureOne);
+    const d = turnPose(START, b, A, 0, zm, zm.axis, closeIn(i));
     zm.axis = d.about.axis ?? zm.axis ?? [0, 1, 0];
     zm.rule = d.rule;
     zm.keep = d.keep;
@@ -87,14 +87,14 @@ describe("R2 — the fixture is R1's reproduction (the two-target rule on the ap
   });
 });
 
-describe("R2 — close in, `pictureOne` 1: the turn about the piece for its whole life (`turnPose`)", () => {
+describe("R2 — close in: the turn about the piece for its whole life (`turnPose`)", () => {
   it("along the approach, close in: no frame's view step over 3° (the two-target rule: 7.1°, 20.3°, then 40.2°) — aim to the gizmo or held", () => {
-    for (const aimToGizmo of [true, false]) expect(Math.max(...steps(walk(ALWAYS, 1, aimToGizmo)))).toBeLessThanOrEqual(3);
+    for (const aimToGizmo of [true, false]) expect(Math.max(...steps(walk(ALWAYS, aimToGizmo)))).toBeLessThanOrEqual(3);
   });
   it("the piece's place on the glass held within 0.02 half-glass all along (a dolly: the orientation kept, the piece moving along the view)", () => {
     const g0 = onGlass(START, PIECE0, FOV_Y, ASPECT);
     for (const aimToGizmo of [true, false]) {
-      walk(ALWAYS, 1, aimToGizmo).forEach((p, i) => {
+      walk(ALWAYS, aimToGizmo).forEach((p, i) => {
         const g = onGlass(p, [PIECE0[0], YS[i]!, PIECE0[2]], FOV_Y, ASPECT);
         expect(Math.hypot(g[0] - g0[0], g[1] - g0[1])).toBeLessThan(0.02);
       });
@@ -102,47 +102,39 @@ describe("R2 — close in, `pictureOne` 1: the turn about the piece for its whol
   });
   it("chosen at the turn's FIRST frame and kept: born close in, the latch dropping while it runs (backing out) — still about the piece, no step over 3°", () => {
     const back = [...YS].reverse();
-    const ps = walk((i) => i === 0, 1, true, back);
+    const ps = walk((i) => i === 0, true, back);
     expect(Math.max(...steps(ps))).toBeLessThanOrEqual(3);
     // …and born far out, latching while it runs: the framing kept, the 620f227 poses exactly
-    expect(walk((i) => i > 0, 1, true)).toEqual(walkOld(true));
+    expect(walk((i) => i > 0, true)).toEqual(walkOld(true));
   });
 });
 
 describe("R2 — everything else exactly as at `620f227`", () => {
-  it("`pictureOne` 0: the old poses exactly, close in or far out", () => {
-    for (const aimToGizmo of [true, false]) {
-      expect(walk(ALWAYS, 0, aimToGizmo)).toEqual(walkOld(aimToGizmo));
-      expect(walk(NEVER, 0, aimToGizmo)).toEqual(walkOld(aimToGizmo));
-    }
-  });
-  it("far out (not close in), `pictureOne` 1: the framing's pose exactly (the assembly kept on the glass, 2026-11-14)", () => {
-    for (const aimToGizmo of [true, false]) expect(walk(NEVER, 1, aimToGizmo)).toEqual(walkOld(aimToGizmo));
+  // ⛔ (2026-11-22, PICTURE_REBUILD.md §8.6 — R6) `pictureOne` 0 (the old poses close in) deleted with its switch, and its vector
+  it("far out (not close in): the framing's pose exactly (the assembly kept on the glass, 2026-11-14) — `poseFramingTwo` on the kept path", () => {
+    for (const aimToGizmo of [true, false]) expect(walk(NEVER, aimToGizmo)).toEqual(walkOld(aimToGizmo));
     const { A, b } = frameAt(YS[3]!, 0, false);
-    expect(turnPose(START, b, A, 0.4, { rule: 0, keep: null }, null, false, 1).pose).toEqual(poseFramingTwo(START, b, A, 0.4, null)!.pose);
+    expect(turnPose(START, b, A, 0.4, { rule: 0, keep: null }, null, false).pose).toEqual(poseFramingTwo(START, b, A, 0.4, null)!.pose);
   });
-  it("the rule's table: born close in with the switch on — about the piece (2); else not yet (0, the framing tried); a rule made is kept", () => {
-    expect(turnFraming(0, true, 1)).toBe(2);
-    expect(turnFraming(0, false, 1)).toBe(0);
-    expect(turnFraming(0, true, 0)).toBe(0);
-    expect(turnFraming(1, true, 1)).toBe(1);
-    expect(turnFraming(2, false, 1)).toBe(2);
-    expect(turnFraming(2, false, 0)).toBe(2);
+  it("the rule's table: born close in — about the piece (2); else not yet (0, the framing tried); a rule made is kept", () => {
+    expect(turnFraming(0, true)).toBe(2);
+    expect(turnFraming(0, false)).toBe(0);
+    expect(turnFraming(1, true)).toBe(1);
+    expect(turnFraming(2, false)).toBe(2);
   });
 });
 
 const raw = (p: string): string => readFileSync(p, "utf8");
 describe("R2 — the switch and the wiring: every turn's drawer through the one rule", () => {
-  it("`pictureOne` 1 by default, 0 / 1 only, its slider in ORBIT › CAMERA FOLLOWER", () => {
-    expect(DEFAULT_CONFIG.pictureOne).toBe(1);
-    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, pictureOne: 2 })).toThrow();
-    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, pictureOne: 0 })).not.toThrow();
-    expect(raw("src/render/tuning_menu.ts")).toContain('"pictureOne", 0, 1, 1)');
+  it("⛔ (2026-11-22, R6) the switch `pictureOne` deleted (no value, no slider): the rule always on", () => {
+    expect("pictureOne" in DEFAULT_CONFIG).toBe(false);
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG })).not.toThrow();
+    expect(raw("src/render/tuning_menu.ts")).not.toContain('"pictureOne"');
   });
   it("the zone's turn (`zoneMixPose`) and the framing turn (`framedPose`) through `turnPose`, the predicate the automatic tilt's latch; no other caller of either pose", () => {
-    expect(raw("src/render/assembly_wiring.ts")).toContain("const d = turnPose(zm.from, to, piece, zm.k, zm, zm.axis, st.asmTiltAuto || (st.cfg.pictureOne === 1 && st.cfg.cameraFollower === 1 && approachBand(st) > 0), st.cfg.pictureOne);");
-    expect(raw("src/input/upright.ts")).toContain("const d = turnPose(f.from, to, piece, k, f, f.axis, closeIn, pictureOne);");
-    expect(raw("src/render/roll_shadow.ts")).toContain("framedPose(ft, G, piece, st.asmTiltAuto, st.cfg.pictureOne)");
+    expect(raw("src/render/assembly_wiring.ts")).toContain("const d = turnPose(zm.from, to, piece, zm.k, zm, zm.axis, st.asmTiltAuto || approachBand(st) > 0);");
+    expect(raw("src/input/upright.ts")).toContain("const d = turnPose(f.from, to, piece, k, f, f.axis, closeIn);");
+    expect(raw("src/render/roll_shadow.ts")).toContain("framedPose(ft, G, piece, st.asmTiltAuto)");
     const files = (d: string): string[] => readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? files(`${d}/${e.name}`) : e.name.endsWith(".ts") ? [`${d}/${e.name}`] : []));
     const callers = files("src").filter((f) => /poseFramingTwo\(|poseAboutPiece\(/.test(raw(f)));
     expect(callers).toEqual(["src/input/orbit_tilt.ts"]);

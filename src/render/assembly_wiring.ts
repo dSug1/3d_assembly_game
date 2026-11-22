@@ -317,11 +317,11 @@ export function levelledAsked(st: SceneState, yaw: number, v: number): number | 
 
 /**
  * ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §4.7 R5 — `TOP_BOTTOM_STUDY.md` §3, §6) THE FAR TARGET'S TOP RULE AS DECIDED (D-H13 – D-H19): the one picture
- * (`pictureOne` 1 with the follower) and the top's rule on. Else H2 / H3 exactly (`pictureOne` 0: `620f227`).
+ * (⛔ R6: `pictureOne`, `cameraFollower`, `followTop` deleted — always on). Else (`pictureFarTop` 0) H2 / H3 exactly.
  */
 export function farTopDecided(st: SceneState): boolean {
   // ⭐⭐⭐ (2026-11-21 night, `PICTURE_REBUILD.md` §4.3a item 7 — R3-FIX) behind its own switch `pictureFarTop` (⭐ 1 by default since 2026-11-22, the owner's word; 0 before: R5's gates unfinished)
-  return st.cfg.pictureFarTop === 1 && st.cfg.pictureOne === 1 && st.cfg.cameraFollower === 1 && st.cfg.followTop === 1;
+  return st.cfg.pictureFarTop === 1;
 }
 
 /**
@@ -1635,7 +1635,7 @@ export function zoneMixPose(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, 
   // ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` D-P2 — packet R2, `pictureOne` 1) a turn born CLOSE IN (the automatic tilt latched) about the piece for its whole
   // life (`turnPose` → `turnFraming`, the one rule): the approach brought the piece along the view onto its aim — the solve swung, then had none (32 – 48°)
   // ⭐⭐⭐ (R3a, §4.4) …and the way out, born in the band (w > 0: at the unlatch w is whole), about the piece too
-  const d = turnPose(zm.from, to, piece, zm.k, zm, zm.axis, st.asmTiltAuto || (st.cfg.pictureOne === 1 && st.cfg.cameraFollower === 1 && approachBand(st) > 0), st.cfg.pictureOne);
+  const d = turnPose(zm.from, to, piece, zm.k, zm, zm.axis, st.asmTiltAuto || approachBand(st) > 0);
   const r = d.about;
   zm.axis = r.axis ?? zm.axis ?? [0, 1, 0]; // ⭐ the angle read (a turn of nothing has no axis of its own: done at once — never held for ever)
   zm.rad = r.angle;
@@ -1661,9 +1661,9 @@ export interface PictureEvents {
   readonly carried?: { readonly halfStart: number; readonly crossed: 1 | -1 | 0 };
 }
 
-/** ⭐⭐⭐ (H3, F-3 = D-H11) a turn started far out sets every angle state to the map's place at the gizmo (`followTurnRebase`; the map's place shown) */
+/** ⭐⭐⭐ (H3, F-3 = D-H11) a turn started far out sets every angle state to the map's place at the gizmo (the map's place shown; ⛔ R6: `followTurnRebase` deleted) */
 export function followRebaseAsked(st: SceneState, started: boolean): boolean {
-  return started && st.cfg.followTurnRebase === 1 && st.asmShown !== null;
+  return started && st.asmShown !== null;
 }
 
 /**
@@ -1685,7 +1685,7 @@ function poseShown(st: SceneState): CamPose {
   // ⭐⭐⭐ (2026-11-21 night, `PICTURE_REBUILD.md` §4.3a rule 3 — R3-FIX) under the one picture a turn started AT THE LATCH starts from the pose DRAWN: last frame
   // drawn by the far path (not latched), the latch on now — after a frame the follower drew through a logic turn the record below is the close drawer's
   // (the logic's pose), not the one on the glass. Every other turn as before (its start the logic's, its angle and its clock unchanged)
-  if (st.asmTiltAuto && st.asmPicture?.far === true && st.cfg.pictureOne === 1 && st.cfg.cameraFollower === 1) return drawnPose(st);
+  if (st.asmTiltAuto && st.asmPicture?.far === true) return drawnPose(st);
   // ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md`) the carried up: a turn (close in) starts from the logic's last pose — the picture is that pose turned by φ
   // (⛔ R6: law U's own line, the same, deleted with it)
   const sh = st.asmRollShadow;

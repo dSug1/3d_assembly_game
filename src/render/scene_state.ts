@@ -509,7 +509,7 @@ export interface SceneState {
   asmAskCalm: import("../input/orbit_calm").CalmState | null;
   /** ⭐⭐⭐ (F1) THE DIRECTION ASKED this frame (`askedDir` at the rig's solved angles) — the follower's target; recorded; `null`: none yet */
   asmAsk: import("../core/vec").Vec3 | null;
-  /** ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §15 — H2) THE CALM'S LEVELLED READING this frame at the same angles (`levelledAsked`, `followTop` 1): the follower's heading target far out (rad); `null`: carried, or the switch 0 */
+  /** ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §15 — H2) THE CALM'S LEVELLED READING this frame at the same angles (`levelledAsked`, `followTop` 1): the follower's heading target far out (rad); `null`: carried (⛔ R6: the switch `followTop` deleted) */
   asmAskLevel: number | null;
   /** ⭐⭐⭐ (2026-11-21, R5, D-H15 — `farTopDecided`) the calm asked kept a frame IN THE WORLD (`calmWorld`; `null`: none kept), and LAST frame's calm's far
    *  reading at this frame's angles (`farJumpRead`; `psi` `null`: carried — a level face; the field `null`: none kept) — the jump read by geometry */

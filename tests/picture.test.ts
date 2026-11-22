@@ -256,20 +256,19 @@ describe("R3a — a restart at a near-vertical view (the f480 case): the up from
 
 describe("R3a — the wiring (source)", () => {
   const raw = (f: string): string => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8").replace(/\s+/g, " ");
-  it("the camera's stage: the one picture under `pictureOne` 1 with the follower; today's line exactly otherwise", () => {
+  it("the camera's stage: the one picture at every distance (⛔ (2026-11-22, PICTURE_REBUILD.md §8.6 — R6) today's line, `pictureOne` / `cameraFollower` 0, deleted)", () => {
     const g = raw("render/green_box_wiring.ts");
     expect(g).toContain("const zp = pictureFrame(st, pp, [c0.x, c0.y, c0.z], camAt, lookAt, camFrame.up, gapFull, off, dtSec * 1000, orbitDvPerMm(st));");
     const p = raw("render/picture_wiring.ts");
-    expect(p).toContain("return st.cfg.pictureOne === 1 && st.cfg.cameraFollower === 1;");
-    expect(p).toContain("if (!pictureOn(st)) return pictureLegacy(st, pp, foot, eye, look, up, gapM, off, dtMs);");
-    expect(p).toContain("const zp = followFrame(st, pp, foot, eye, look, up, gapM, off, dtMs) ?? rollPictureFrame(st, pp, eye, look, up, dtMs, left);");
+    expect(p).not.toMatch(/function pictureOn\(|function pictureLegacy\(|cfg\.pictureOne|cfg\.cameraFollower|\) \?\? rollPictureFrame\(/);
+    expect(p).toContain("dvPerMm: number, ): CamPose { const left = changeResolve(st, eye, look, up);");
   });
 
   it("far: the follower's own step and pose, then the picture (the same functions, the same order); its state never dropped under the picture", () => {
     const w = raw("render/camera_follow_wiring.ts");
     expect(w).toContain("const P0 = followPose(s.dir, look, foot, hang, gapM, off.yawRad, off.pitchRad);");
-    expect(w).toContain("const P = pic === undefined ? P0 : pic(P0, s.dir, hang,");
-    expect(w).toContain("if (pic === undefined) st.asmFollow = was === null ? null : { state: null, piece: null, rec: { on: 0 } }; return null;");
+    expect(w).toContain("const P = pic(P0, s.dir, hang,");
+    expect(w).not.toContain("pic === undefined"); // ⛔ (2026-11-22, PICTURE_REBUILD.md §8.6 — R6) today's line's drop deleted
     const p = raw("render/picture_wiring.ts");
     expect(p).toContain("const G = rollPictureFrame(st, pp, eye, look, up, dtMs, left);");
     expect(p).toContain("const dFar = followPark(st, psiPark) ?? us;");
@@ -277,7 +276,7 @@ describe("R3a — the wiring (source)", () => {
     expect(p).not.toMatch(/followStart\(\s*us|followStart\(hang/);
   });
 
-  it("the way out born in the band (w > 0) turned about the piece, with the switch and the follower on only", () => {
-    expect(raw("render/assembly_wiring.ts")).toContain("st.asmTiltAuto || (st.cfg.pictureOne === 1 && st.cfg.cameraFollower === 1 && approachBand(st) > 0)");
+  it("the way out born in the band (w > 0) turned about the piece (⛔ (2026-11-22, PICTURE_REBUILD.md §8.6 — R6) the switches deleted: always)", () => {
+    expect(raw("render/assembly_wiring.ts")).toContain("st.asmTiltAuto || approachBand(st) > 0);");
   });
 });

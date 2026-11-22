@@ -24,7 +24,7 @@ const nrm = (a: V): V => {
   return [a[0] / l, a[1] / l, a[2] / l];
 };
 const H2: FollowTopKnobs = { tauMs: 120, poleDeg: 30, minDeg: 10, rollDegS: 360, paceShare: 1 };
-const H3: FollowTopKnobs = { ...H2, onJump: true, finger: true, degPerMm: 5, maxDegS: 520 };
+const H3: FollowTopKnobs = { ...H2, degPerMm: 5, maxDegS: 520 }; // ⛔ (2026-11-22, R6) `onJump`, `finger` deleted: always on
 const SA: V = [0, 0, 1]; // a side of `Scene_1`'s cube
 const SB: V = [1, 0, 0]; // the next side round (a vertical edge between them)
 const TOP: V = [0, 1, 0];
@@ -51,11 +51,7 @@ describe("H3 F-1 — a turn only where the levelled reading ITSELF jumps (D-H9)"
     const same = followTopStep(s, top, { ...inp, nW: SA }, 7, H3);
     expect(r.s.d).toEqual(same.s.d);
     expect(r.s.v).toEqual(same.s.v);
-    // H2 (from the heading drawn): the lag paid as a turn with the gizmo waiting
-    const h2 = followTopStep(s, top, inp, 7, H2);
-    expect(Math.abs(h2.delta!) / D).toBeCloseTo(22, 6);
-    expect(h2.started).toBe(true);
-    expect(followTurnHoldsGizmo(h2.top.turn)).toBe(true);
+    // ⛔ (2026-11-22, R6) H2's rule (the switches `followTurnOnJump` / `followTurnFinger` 0) deleted: its contrast vector with it
   });
 
   it("a real jump (over the top: the reading 0° → 180°), the camera 30° off it: the turn is the JUMP (180°) from the heading drawn — the lag kept for the spring", () => {
@@ -69,9 +65,7 @@ describe("H3 F-1 — a turn only where the levelled reading ITSELF jumps (D-H9)"
     for (let i = 0; i < 200 && r.top.turn !== null; i++) r = followTopStep(r.s, r.top, inp, 7, H3);
     // whole: 30° + 180° = 210° (the lag of 30° left to the spring, never paid at the turn's speed)
     expect(Math.abs(wrap(headingOf(r.s.dir)! - 210 * D)) / D).toBeLessThan(0.01);
-    // H2: the turn from the heading drawn to the reading — 150°, the lag folded in
-    const h2 = followTopStep(s, top, inp, 7, H2);
-    expect(Math.abs(h2.top.turn!.delta) / D).toBeCloseTo(150, 6);
+    // ⛔ (2026-11-22, R6) H2's rule (the switches `followTurnOnJump` / `followTurnFinger` 0) deleted: its contrast vector with it
   });
 
   it("the dy hold (D-H8) read on the JUMP: a 70° jump with the camera 50° behind holds nothing (H2 read 120° and held the dy)", () => {
@@ -80,9 +74,7 @@ describe("H3 F-1 — a turn only where the levelled reading ITSELF jumps (D-H9)"
     const r = followTopStep(s, top, inp, 7, H3);
     expect(r.started).toBe(true);
     expect(r.hold).toBe(0);
-    const h2 = followTopStep(s, top, inp, 7, H2);
-    expect(Math.abs(h2.delta!) / D).toBeCloseTo(120, 6);
-    expect(h2.hold).toBe(1);
+    // ⛔ (2026-11-22, R6) H2's rule (the switches `followTurnOnJump` / `followTurnFinger` 0) deleted: its contrast vector with it
   });
 
   it("inside a running turn: a facet change under the band leaves it running (no new start); a new jump over the band starts one, the rest carried", () => {
@@ -143,7 +135,7 @@ describe("H3 F-2 — the turn's speed: his FINGER's pace, floored at close in's,
 
   it("a half turn at a crossing: his finger at 450°/s → 400 ms, whatever the orbit's direction sweeps (H2: 3 000°/s → 60 ms)", () => {
     expect(half(H3, (450 / 5) * 0.007).top.turn!.durMs).toBeCloseTo(400, 3);
-    expect(half(H2, (450 / 5) * 0.007).top.turn!.durMs).toBeCloseTo(60, 0);
+    // ⛔ (2026-11-22, R6) H2's rule (the switches `followTurnOnJump` / `followTurnFinger` 0) deleted: its contrast vector with it
   });
 
   it("the finger still: close in's 360°/s (a half turn 500 ms); the finger fast (1 500°/s): the clamp's 520°/s (346 ms); the clamp 0: his 1 500°/s (120 ms)", () => {
