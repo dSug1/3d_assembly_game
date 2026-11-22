@@ -1075,8 +1075,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // ⭐⭐⭐ (2026-11-14) a polar zone's turn (its switch, the spit's crossing): the camera turned ABOUT THE PIECE from the pose on the glass (`zoneMixPose`)
   if (assemblyOn(st)) {
     // ⭐⭐⭐ (2026-11-18, `FAST_ORBIT.md` §12.6 S0, §14 S1) THE PICTURE A FOLLOWER OF THE LOGIC (`roll_shadow.ts`): the changes of frame under
-    // `freeTurnMaxDeg` free, the roll about the line through the piece and its look point eased (`rollFollowMs`) — `freeTurnMaxDeg` 0: the shadow only and
-    // today's `zoneMixPose`
+    // `freeTurnMaxDeg` free (⛔ R6: the roll follower and the shadow deleted)
     // ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §13 — F1) the direction ASKED this frame (the calm before its ease, at the rig's solved angles): recorded
     st.asmAsk = askedDir(st, rig.yaw, rig.v);
     // ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §15 — H2) …and the calm's LEVELLED reading at the same angles: the follower's heading far out (`followTop` 1)

@@ -20,7 +20,7 @@ import { upSquareToView } from "../input/camera_frame";
 import { blendShare, holdAtCrossing, squareTurning, tiltDir, type CamFrame, type CamPose } from "../input/orbit_tilt";
 import { orbitDir } from "../input/assembly_orbit";
 import { poseTurnAngle } from "../input/roll_follow";
-import { changeSeen, holdSeen, uprightWeight, viewFromVertical } from "../input/upright";
+import { changeSeen, holdSeen } from "../input/upright";
 import { PICTURE_CONE_DEG, PICTURE_REST, pictureStep, type PictureIn, type PicturePose } from "../input/picture";
 import { followActive, followFrame, type FollowPicture } from "./camera_follow_wiring";
 import { CHANGE_NONE, rollPictureFrame, type ChangeLeft } from "./roll_shadow";
@@ -30,8 +30,9 @@ import type { SceneState } from "./scene_state";
 /**
  * ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §4.4 — R3b, RB1's one place) THE ONE RESOLVER of the change of frame the logic asks (`asmChange`), before any drawer:
  * where the follower draws, AT ONCE with the dy hold of the logic's crossing (OP8; under the top's rule none — D-H8, D-F4); elsewhere close in's rule
- * (`changeSeen`: a timed turn, or at once with the carried up's hold to come — C6; law U's own under `uprightCarried` 0) — each moved here AS WRITTEN from
- * `followFrame`, `carriedFrame`, `uprightPictureFrame`, at the same moment of the frame (nothing between reads what they change).
+ * (`changeSeen`: a timed turn, or at once with the carried up's hold to come — C6) — each moved here AS WRITTEN from `followFrame`, `carriedFrame`, at
+ * the same moment of the frame (nothing between reads what they change). ⛔ (2026-11-22, `PICTURE_REBUILD.md` §8.6 — R6) law U's own rule
+ * (`uprightCarried` 0), the square camera's share under `uprightCloseIn` 1 and the guard of the shadow (`freeTurnMaxDeg` 0, `uprightPicture` 0) deleted.
  */
 function changeResolve(st: SceneState, eye: Vec3, look: Vec3, up: Vec3): ChangeLeft {
   const ask = st.asmChange;
@@ -41,7 +42,6 @@ function changeResolve(st: SceneState, eye: Vec3, look: Vec3, up: Vec3): ChangeL
     changeApply(st, ask, false, top ? undefined : ask.hold !== undefined ? holdAtCrossing(ask.hold) : undefined);
     return CHANGE_NONE;
   }
-  if (!(st.cfg.freeTurnMaxDeg > 0) || st.cfg.uprightPicture !== 1) return CHANGE_NONE;
   const view: Vec3 = [look[0] - eye[0], look[1] - eye[1], look[2] - eye[2]];
   const ghost: CamPose = { eye, look, up: upSquareToView(up, view) };
   const was = st.asmRollShadow;
@@ -50,27 +50,15 @@ function changeResolve(st: SceneState, eye: Vec3, look: Vec3, up: Vec3): ChangeL
   const tl = st.asmTilt;
   const tiltHold = tl !== null && (tl.exit || tl.off);
   const share = sq.n === null || !(sq.q > 0) ? 0 : sq.q;
-  if (st.cfg.uprightCarried === 1) {
-    // the carried up's rule (packet E, `carriedFrame` as at `620f227`)
-    const kappa = st.cfg.uprightCloseIn === 1 ? 1 : 1 - share;
-    const drawn = was !== null && was.drawn && was.one !== undefined;
-    const turnRad = drawn ? poseTurnAngle(was.ghost, ghost) : Number.NaN;
-    const stays = !drawn || was.turn !== null || ask.paced || ask.byMm || ask.tilt || sqTurning || tiltHold;
-    const seen = changeSeen({ stays, wBefore: drawn ? was.one!.kappa : 0, wAfter: kappa, turnRad, freeMaxDeg: st.cfg.freeTurnMaxDeg });
-    changeApply(st, ask, seen.timed, seen.timed && ask.hold !== undefined ? holdSeen(seen, ask.hold, null, null) : undefined);
-    if (seen.timed) return CHANGE_NONE;
-    return { change: true, ...(ask.hold !== undefined ? { crossed: ask.hold } : {}), freed: turnRad > 0 ? turnRad : Number.MIN_VALUE };
-  }
-  // law U's rule (`uprightPictureFrame` as at `620f227`, §12 RB1 – RB2)
-  const scale = st.cfg.uprightCloseIn === 1 ? 1 : 1 - share;
-  const drawn = was !== null && was.drawn && was.upright !== undefined;
+  // the carried up's rule (packet E, `carriedFrame` as at `620f227`)
+  const kappa = 1 - share;
+  const drawn = was !== null && was.drawn && was.one !== undefined;
   const turnRad = drawn ? poseTurnAngle(was.ghost, ghost) : Number.NaN;
   const stays = !drawn || was.turn !== null || ask.paced || ask.byMm || ask.tilt || sqTurning || tiltHold;
-  const wAfter = uprightWeight(viewFromVertical(ghost), st.cfg.uprightFromDeg, st.cfg.uprightFullDeg) * scale;
-  const seen = changeSeen({ stays, wBefore: drawn ? was.upright!.w : 0, wAfter, turnRad, freeMaxDeg: st.cfg.freeTurnMaxDeg });
-  const hold = ask.hold === undefined ? undefined : holdSeen(seen, ask.hold, drawn ? was.picture : null, drawn ? was.ghost : null);
-  changeApply(st, ask, seen.timed, hold);
-  return seen.timed ? CHANGE_NONE : { change: false, freed: turnRad > 0 ? turnRad : Number.MIN_VALUE };
+  const seen = changeSeen({ stays, wBefore: drawn ? was.one!.kappa : 0, wAfter: kappa, turnRad, freeMaxDeg: st.cfg.freeTurnMaxDeg });
+  changeApply(st, ask, seen.timed, seen.timed && ask.hold !== undefined ? holdSeen(seen, ask.hold) : undefined);
+  if (seen.timed) return CHANGE_NONE;
+  return { change: true, ...(ask.hold !== undefined ? { crossed: ask.hold } : {}), freed: turnRad > 0 ? turnRad : Number.MIN_VALUE };
 }
 
 /** ⭐⭐⭐ (R3b, D-P6) THE FRAME DRAWN, published here only (`asmCamDrawn`): the drawer's own, else the logic's (exactly what `asmCamLast` held after the stage). */

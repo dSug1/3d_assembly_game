@@ -371,7 +371,7 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): the carried headin
     expect(raw(W).match(/freeFaceFrame\(st, /g)?.length).toBe(1);
   });
   it("⭐ the entry and the exit: each ONE camera turn from the pose shown (`asmZoneMix` from `poseShown`, as `spitStep`'s); the exit the side afresh, the coast stopped, the hold on the dy that pushed over the side (`exitHoldSign`, D-T4)", () => {
-    const turn = "turnBegin(st, { paced: false, byMm: false, noCamNull: false, uWas: null, carry: true, tilt: false, stopCoast: false });"; // ⭐ (2026-11-19, RB1) through the one starter
+    const turn = "turnBegin(st, { paced: false, byMm: false, uWas: null, carry: true, tilt: false, stopCoast: false });"; // ⭐ (2026-11-19, RB1) through the one starter
     const f = fnCode(W, "function freeFaceFrame(");
     expect(f).toContain("const z = spitZone(st);");
     expect(f).toContain("if (z === null || map === null || B === null || at === null) { st.asmFree = null; return; }");
@@ -394,8 +394,8 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): the carried headin
     expect(x).toContain("st.asmFree = null; st.asmSpitSide = 0; st.asmSpitU = null; crossTurn(st, { at: null, uWas: null, carry: true, paced: false, hold: held });");
     expect(x).not.toContain("crossingHold(");
     const c = fnCode(W, "function crossTurn(");
-    expect(c).toContain("turnBegin(st, { paced: c.paced, byMm: false, noCamNull: false, uWas: c.uWas, carry: c.carry, tilt: c.tilt === true, stopCoast: true, hold: c.hold });"); // ⭐ (2026-11-19, RB1) through the one starter
-    expect(fnCode(W, "function turnBegin(")).toContain("if (uprightDecides(st)) changeAsk(st, a); else { const mixWas = st.asmZoneMix; if (a.paced) seamOutStart(st); else if (a.noCamNull || st.asmCamLogic !== null) seamTurnStart(st, a.byMm); if (a.uWas !== null) seamEase(st, a.uWas); else if (a.carry) easeCarry(st, mixWas); if (a.tilt && st.asmZoneMix !== null) st.asmZoneMix.tilt = true; } if (a.stopCoast) st.orbitInertia.stop(); if (a.hold !== undefined && !uprightDecides(st)) st.asmEdgeHold = holdAtCrossing(a.hold);");
+    expect(c).toContain("turnBegin(st, { paced: c.paced, byMm: false, uWas: c.uWas, carry: c.carry, tilt: c.tilt === true, stopCoast: true, hold: c.hold });"); // ⭐ (2026-11-19, RB1) through the one starter
+    expect(fnCode(W, "function turnBegin(")).toContain("changeAsk(st, a); if (a.stopCoast) st.orbitInertia.stop(); }"); // ⛔ (2026-11-22, R6) law U off's own turn here deleted: every change asked, resolved once (`changeApply`)
     // ⛔ the sway: nothing drawn, picked or seen by the camera decides — the pose shown and the up shown only continue the picture
     for (const s of [f, x]) expect(s).not.toMatch(/getBoundingInfo|pickWithRay|absolutePosition|computeWorldMatrix|cameraPrev|modelCast|gizmoNormal/);
     const cf = fnCode(W, "function contourOfFacet(");

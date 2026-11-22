@@ -408,13 +408,8 @@ export interface GestureConfig {
    * the piece and its look point takes to catch up the logic's (critically damped; 60 – 600) */
   rollFollowMs: number;
   /** ⭐⭐⭐ (FO3 S1) a change of frame whose whole angle is under this (deg, less `FREE_TURN_TOL_DEG`) makes no timed turn: the gizmo free, the picture
-   * follows; 90 or more: today's timed turn. 0: every change today's turn and no follower — today's game, bit for bit (0 – 90) */
+   * follows; 90 or more: today's timed turn (over 0 – 90). ⛔ (R6) its 0 (the shadow, no follower) deleted with its path */
   freeTurnMaxDeg: number;
-  /** ⭐⭐⭐ (2026-11-18, `UPRIGHT_PICTURE.md` §2 — law U, UD1) THE UPRIGHT PICTURE: the logic's pose turned about the line through the piece and its look
-   * point so that gravity is on the glass's vertical (1); 0: FO3 S1's follower (the build the owner looked at, less S2). Acts only with `freeTurnMaxDeg` > 0 */
-  uprightPicture: number;
-  /** ⭐ (UD3) law U under the close-in square camera too (1); 0: not while the square camera holds the picture (its share) — his rule T1 wins */
-  uprightCloseIn: number;
   /** ⭐ (UD1) within this of the vertical (deg) the picture is the logic's pose — gravity has no direction on the glass there (0 – 45) */
   uprightFromDeg: number;
   /** ⭐ (UD1) from this off the vertical (deg) the picture fully upright; a smoothstep between (0 – 60; at or under `uprightFromDeg`: a step there) */
@@ -422,15 +417,10 @@ export interface GestureConfig {
   /** ⭐ (UD6b, fix round 1) the pace of the picture's REST toward upright, everywhere (deg a second; 0 = at once: law U as first built); the carry of the
    * logic's own roll is at once whatever this is (0 – 2 880) */
   uprightMaxDegS: number;
-  /** ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` — packet E) ONE CARRIED UP (1): the picture turns only by what the finger asks; 0: law U as at `1f62928`.
-   *  Acts only with `freeTurnMaxDeg` > 0 and `uprightPicture` 1 */
-  uprightCarried: number;
   /** ⭐ (C4) the carried up's alignment a dx pays near the vertical (deg of the picture's turn per mm of finger dx) (0 – 20) */
   uprightAlignDegPerMm: number;
   /** ⭐ (C7) the carried up: the gizmo still for the whole half turn (1); 0: never held by it */
   uprightHalfHold: number;
-  /** ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` §8 — packet J) a change applied at once drawn from the pose shown, the piece carried straight on the glass (1); 0: at once (`28a29ca`) */
-  uprightFraming: number;
   /** ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §13 — F2) THE CAMERA FOLLOWER far out: a simple polar orbit (world up) following the direction asked (1); 0: the carried up, frame for frame (`461eeb2`) */
   cameraFollower: number;
   /** ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §4.7 — the picture's rebuild, R2 – R6) THE REBUILD'S ONE SWITCH (1); 0: `620f227` frame for frame. R2: a camera turn born close in turned about the piece for its whole life */
@@ -920,16 +910,12 @@ export const DEFAULT_CONFIG: GestureConfig = {
   assemblyLockDistM: 0.3, // ⭐ (2026-10-28) the look at the gizmo within 30 cm (the lock deleted 2026-11-04)
   orbitShellOffsetMm: 60, // ⭐⭐⭐ (2026-11-04, Step 2) the shell's offset
   rollFollowMs: ROLL_FOLLOW_MS, // ⭐⭐⭐ (2026-11-18, FO3 S1) 160 ms — the owner's word on the deployed build (`UPRIGHT_PICTURE.md` §0, UD7); 200 before
-  freeTurnMaxDeg: FREE_TURN_MAX_DEG, // ⭐⭐⭐ (FO3 S1) 90: the changes under 90° free (R6); 0 = today's game
-  uprightPicture: 1, // ⭐⭐⭐ (2026-11-18, `UPRIGHT_PICTURE.md` UD1) law U on; 0 = FO3 S1's follower
-  uprightCloseIn: 0, // ⭐ (UD3) the square camera's T1 wins close in
+  freeTurnMaxDeg: FREE_TURN_MAX_DEG, // ⭐⭐⭐ (FO3 S1) 90: the changes under 90° free (R6); ⛔ (2026-11-22, R6 the deletions) its 0 (the shadow) deleted
   uprightFromDeg: UPRIGHT_FROM_DEG, // ⭐ (UD1; the owner 2026-11-19) 15°
   uprightFullDeg: UPRIGHT_FULL_DEG, // ⭐ (UD1; the owner 2026-11-19) 50°
   uprightMaxDegS: UPRIGHT_MAX_DEG_S, // ⭐ (UD6b; the owner 2026-11-20) 520° a second, everywhere (720 on 2026-11-19)
-  uprightCarried: 1, // ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md`, packet E) the carried up on this branch; 0 = law U (`1f62928`)
   uprightAlignDegPerMm: UPRIGHT_ALIGN_DEG_PER_MM, // ⭐ (C4) 3° a mm of dx
   uprightHalfHold: 1, // ⭐ (C7) the gizmo still for the whole half turn
-  uprightFraming: 1, // ⭐⭐⭐ (packet J) a change's framing carried from the pose shown
   cameraFollower: 1, // ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §13 — F2) the follower draws far out on this branch; 0 = the live build (`461eeb2`)
   pictureOne: 1, // ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` D-P2 — packet R2) close in's turns about the piece on this branch; 0 = `620f227` frame for frame
   pictureFarTop: 1, // ⭐⭐⭐ (2026-11-22, the owner: *"set the slider default to 1"*) R5 ON by default; 0 = the far top rule of `98ac680` (H2 / H3). ⚠ Its far strokes on `Scene_0bis` pin the gizmo at a pole (`runs_str5/r5_farmix`), not studied. (2026-11-21 night, R3-FIX — the lead: 0, its gates unfinished)
@@ -1123,16 +1109,12 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.zoneExitMm >= 0 && cfg.zoneExitMm <= 200)) throw new Error(`zoneExitMm (${cfg.zoneExitMm}) must be in [0, 200] mm.`);
   if (cfg.freeFaceSquare !== 0 && cfg.freeFaceSquare !== 1) throw new Error(`freeFaceSquare (${cfg.freeFaceSquare}) must be 0 or 1.`);
   if (!(cfg.rollFollowMs >= 60 && cfg.rollFollowMs <= 600)) throw new Error(`rollFollowMs (${cfg.rollFollowMs}) must be in [60, 600] ms.`);
-  if (!(cfg.freeTurnMaxDeg >= 0 && cfg.freeTurnMaxDeg <= 90)) throw new Error(`freeTurnMaxDeg (${cfg.freeTurnMaxDeg}) must be in [0, 90] deg.`);
-  if (cfg.uprightPicture !== 0 && cfg.uprightPicture !== 1) throw new Error(`uprightPicture (${cfg.uprightPicture}) must be 0 or 1.`);
-  if (cfg.uprightCloseIn !== 0 && cfg.uprightCloseIn !== 1) throw new Error(`uprightCloseIn (${cfg.uprightCloseIn}) must be 0 or 1.`);
+  if (!(cfg.freeTurnMaxDeg > 0 && cfg.freeTurnMaxDeg <= 90)) throw new Error(`freeTurnMaxDeg (${cfg.freeTurnMaxDeg}) must be in (0, 90] deg.`);
   if (!(cfg.uprightFromDeg >= 0 && cfg.uprightFromDeg <= 45)) throw new Error(`uprightFromDeg (${cfg.uprightFromDeg}) must be in [0, 45] deg.`);
   if (!(cfg.uprightFullDeg >= 0 && cfg.uprightFullDeg <= 60)) throw new Error(`uprightFullDeg (${cfg.uprightFullDeg}) must be in [0, 60] deg (at or under \`uprightFromDeg\`: a step there).`);
   if (!(cfg.uprightMaxDegS >= 0 && cfg.uprightMaxDegS <= 2880)) throw new Error(`uprightMaxDegS (${cfg.uprightMaxDegS}) must be in [0, 2880] deg a second.`);
-  if (cfg.uprightCarried !== 0 && cfg.uprightCarried !== 1) throw new Error(`uprightCarried (${cfg.uprightCarried}) must be 0 or 1.`);
   if (!(cfg.uprightAlignDegPerMm >= 0 && cfg.uprightAlignDegPerMm <= 20)) throw new Error(`uprightAlignDegPerMm (${cfg.uprightAlignDegPerMm}) must be in [0, 20] deg a mm.`);
   if (cfg.uprightHalfHold !== 0 && cfg.uprightHalfHold !== 1) throw new Error(`uprightHalfHold (${cfg.uprightHalfHold}) must be 0 or 1.`);
-  if (cfg.uprightFraming !== 0 && cfg.uprightFraming !== 1) throw new Error(`uprightFraming (${cfg.uprightFraming}) must be 0 or 1.`);
   if (cfg.cameraFollower !== 0 && cfg.cameraFollower !== 1) throw new Error(`cameraFollower (${cfg.cameraFollower}) must be 0 or 1.`);
   if (cfg.pictureOne !== 0 && cfg.pictureOne !== 1) throw new Error(`pictureOne (${cfg.pictureOne}) must be 0 or 1.`);
   if (cfg.pictureFarTop !== 0 && cfg.pictureFarTop !== 1) throw new Error(`pictureFarTop (${cfg.pictureFarTop}) must be 0 or 1.`);

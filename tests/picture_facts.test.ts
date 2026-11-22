@@ -37,7 +37,7 @@ describe("R3b — the two frames, each one writer", () => {
     const a = raw("render/assembly_wiring.ts");
     // the null checks: a turn's start, a turn asked, the ease's gap, a timed change (all after `assemblyCameraFrame` or reading only "a frame exists")
     expect(a).toContain("st.asmZoneMix = st.asmCamLogic === null ? null : { from: poseShown(st),");
-    expect(a).toContain("else if (a.noCamNull || st.asmCamLogic !== null) seamTurnStart(st, a.byMm);");
+    expect(a).not.toContain("a.noCamNull"); // ⛔ (2026-11-22, R6) law U off's own turn (`turnBegin`) deleted
     expect(a).toContain("const gap = st.asmCamLogic === null ? null : dirGap(a.uWas, drawnDir(st));");
     expect(a).toContain("if (timed && st.asmCamLogic !== null) {");
     // read in the logic's frame BEFORE the stage: last frame's drawn
@@ -49,7 +49,7 @@ describe("R3b — the two frames, each one writer", () => {
 
   it("no drawer returns without its frame: each hands it back (`cam`) instead of writing it", () => {
     const rs = raw("render/roll_shadow.ts");
-    expect(rs.match(/return \{ eye: [A-Za-z0-9.]+, look: [A-Za-z0-9.]+, up: [A-Za-z0-9.]+, cam[,:]/g)?.length).toBe(4);
+    expect(rs.match(/return \{ eye: [A-Za-z0-9.]+, look: [A-Za-z0-9.]+, up: [A-Za-z0-9.]+, cam[,:]/g)?.length).toBe(1); // ⛔ (2026-11-22, R6) the shadow's, FO3 S1's and law U's returns deleted: the carried up's alone
     expect(raw("render/camera_follow_wiring.ts")).toContain("return { eye: P.eye, look: P.look, up: P.up, cam, ev };");
     expect(fn(raw("render/assembly_wiring.ts"), "export function zoneMixPose(", "export function zoneMixCam(")).not.toMatch(/asmCam\w*\s*=[^=]/);
   });
@@ -68,7 +68,7 @@ describe("R3b — the holds and the rebase: the logic's own writers, the drawers
     expect(p).toContain("pictureEventsRead(st, zp.ev); publishDrawn(st, zp.cam);");
   });
 
-  it("the reader: the follower's crossing's hold (it replaces any), the carried up's, law U's only where none is on", () => {
+  it("the reader: the follower's crossing's hold (it replaces any), the carried up's (⛔ R6: law U's `lawHalf` deleted)", () => {
     const mk = (): SceneState => ({ asmEdgeHold: null, asmShown: null, asmDxSign: 1, asmDySign: -1, asmG: [0, 0, 0], cfg: { followTurnRebase: 1 } }) as unknown as SceneState;
     const a = mk();
     pictureEventsRead(a, { followStarted: true, followHold: -1 });
@@ -77,11 +77,6 @@ describe("R3b — the holds and the rebase: the logic's own writers, the drawers
     (b as { asmEdgeHold: unknown }).asmEdgeHold = { sign: 1, back: 3 };
     pictureEventsRead(b, { followHold: 0 });
     expect(b.asmEdgeHold).toEqual(holdAtCrossing(0));
-    const c = mk();
-    (c as { asmEdgeHold: unknown }).asmEdgeHold = { sign: 1, back: 3 };
-    const P = { eye: [1, 1, 1] as [number, number, number], look: [0, 0, 0] as [number, number, number], up: [0, 1, 0] as [number, number, number] };
-    pictureEventsRead(c, { lawHalf: { rad: 3, picture: P, ghost: P } });
-    expect(c.asmEdgeHold).toEqual({ sign: 1, back: 3 });
     const d = mk();
     pictureEventsRead(d, {});
     expect(d.asmEdgeHold).toBeNull();

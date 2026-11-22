@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import type { Vec3 } from "../src/core/vec";
 import { rotateAbout, type CamPose } from "../src/input/orbit_tilt";
-import { followStep, framedLine, GAP_ZERO, gapStep, gapTake, onGlass, poseAxes, poseRolled, ROLL_LINE_MIN_M, twistAbout, type RollGap } from "../src/input/roll_follow";
+import { framedLine, GAP_ZERO, gapStep, onGlass, poseAxes, poseRolled, ROLL_LINE_MIN_M, twistAbout, type RollGap } from "../src/input/roll_follow";
 
 const DEG = Math.PI / 180;
 const sub = (a: Vec3, b: Vec3): Vec3 => [a[0]! - b[0]!, a[1]! - b[1]!, a[2]! - b[2]!];
@@ -29,13 +29,13 @@ const inCam = (p: CamPose, x: Vec3): Vec3 => {
 const piece: Vec3 = [0.21, 0.32, 0.18];
 const ghost: CamPose = { eye: [1.1, 0.9, 1.3], look: [0, 0.229, 0.191], up: unit([0.1, 1, -0.2]) };
 
-/** run the follower: a twist `tw[i]` arriving at frame i, `n` frames at `hz` frames a second; the gap's value after each frame (deg) */
-function run(tw: (i: number) => number, n: number, hz: number, ms = 200): number[] {
-  let g: RollGap = GAP_ZERO;
-  const out: number[] = [];
-  // (the values read back by `A`)
-  for (let i = 0; i < n; i++) {
-    g = followStep(g, tw(i), 1000 / hz, ms, "TAKE");
+/** ⛔ (2026-11-22, R6) the roll follower (`followStep`, `gapTake`) deleted with FO3 S1's path: the gap's ease (`gapStep`, kept — the piece's shown
+ *  direction's rest, `asmDirEase.own`) run from a gap of `-51°` at frame 0 (what the follower took then), `n` frames at `hz` a second (deg) */
+function run(n: number, hz: number, ms = 200): number[] {
+  let g: RollGap = { gap: -51 * DEG, speed: 0 };
+  const out: number[] = [g.gap / DEG];
+  for (let i = 1; i < n; i++) {
+    g = gapStep(g, 1000 / hz, ms);
     out.push(g.gap / DEG);
   }
   return out;
@@ -128,7 +128,7 @@ describe("the ghost's twist (swing and twist)", () => {
 
 describe("the gap: the critically damped follower (rollFollowMs 200)", () => {
   it("a change of 51° is within 5° after 0.39 s, within 1° after 0.58 s, at 188° a second at most, and never overshoots", () => {
-    const g = run((i) => (i === 0 ? 51 * DEG : 0), 120, 60);
+    const g = run(120, 60);
     // the picture holds on the change's frame: the gap is the whole change
     expect(g[0]!).toBeCloseTo(-51, 9);
     const at = (s: number): number => g[Math.round(s * 60) - 1 + 1]!;
@@ -145,52 +145,23 @@ describe("the gap: the critically damped follower (rollFollowMs 200)", () => {
     expect(peak).toBeGreaterThan(170);
   });
   it("at rest the ghost: exactly 0 within 1.5 s (R5), and 0 stays 0", () => {
-    const g = run((i) => (i === 0 ? 51 * DEG : 0), 91, 60);
+    const g = run(91, 60);
     expect(g[90]!).toBe(0);
     expect(gapStep(GAP_ZERO, 16.7, 200)).toBe(GAP_ZERO);
-    // a gap closing while a turn that stays draws (SKIP): exactly 0 too
+    // a gap closing on its own: exactly 0 too
     let k: RollGap = { gap: 51 * DEG, speed: 0 };
-    for (let i = 0; i < 90; i++) k = followStep(k, 0, 1000 / 60, 200, "SKIP");
+    for (let i = 0; i < 90; i++) k = gapStep(k, 1000 / 60, 200);
     expect(k).toBe(GAP_ZERO);
   });
   it("the same picture at 60 and at 143 frames a second (the closed form: exact over any step)", () => {
-    const g60 = run((i) => (i === 0 ? 51 * DEG : 0), 61, 60);
-    const g143 = run((i) => (i === 0 ? 51 * DEG : 0), 144, 143);
+    const g60 = run(61, 60);
+    const g143 = run(144, 143);
     expect(Math.abs(g60[60]! - g143[143]!)).toBeLessThan(1e-9); // both at 1 s
-    const h60 = run((i) => (i === 0 ? 51 * DEG : 0), 12, 60); // 0.2 s
-    const h143 = run((i) => (i === 0 ? 51 * DEG : 0), 143, 143);
+    const h60 = run(12, 60); // 0.2 s
+    const h143 = run(143, 143);
     // the change at t 0 in both: 0.2 s after it is frame 12 at 60 and frame 28.6 at 143 — read at 1 s instead, and at 0.2 s by the closed form
     expect(h60[11]!).toBeCloseTo(-51 * (1 + 10 * (11 / 60)) * Math.exp(-10 * (11 / 60)), 9);
     expect(h143[28]!).toBeCloseTo(-51 * (1 + 10 * (28 / 143)) * Math.exp(-10 * (28 / 143)), 9);
   });
-  it("a twist and its opposite within a few frames show almost nothing", () => {
-    for (const n of [1, 2, 4]) {
-      const g = run((i) => (i === 0 ? 40 * DEG : i === n ? -40 * DEG : 0), 90, 60);
-      let after = 0;
-      for (let i = n; i < g.length; i++) after = Math.max(after, Math.abs(g[i]!));
-      expect(after).toBeLessThan(n === 4 ? 12 : 6);
-    }
-    // two frames: the picture moves under 5° in all
-    const g2 = run((i) => (i === 0 ? 40 * DEG : i === 2 ? -40 * DEG : 0), 90, 60);
-    let most = 0;
-    for (let i = 2; i < g2.length; i++) most = Math.max(most, Math.abs(g2[i]!));
-    expect(most).toBeLessThan(5); // measured 4.9°: a 40° change and its undo two frames later (0.033 s)
-  });
-  it("at rest the ghost's own rounding (a twist of 1e-16 – 1e-7 rad a frame, measured on the shadow) leaves the gap exactly 0 (R5)", () => {
-    let g: RollGap = GAP_ZERO;
-    for (let i = 0; i < 200; i++) {
-      g = followStep(g, (i % 2 ? -1 : 1) * 1e-7 + 3e-16, 1000 / 60, 200, "TAKE");
-      expect(g).toBe(GAP_ZERO);
-    }
-  });
-  it("a twist taken the short way round; the speed kept (the newest target wins)", () => {
-    const a = gapTake({ gap: 170 * DEG, speed: 3 }, -20 * DEG);
-    expect(a.gap / DEG).toBeCloseTo(-170, 9);
-    expect(a.speed).toBe(3);
-  });
-  it("SKIP closes without taking; ZERO is the gap 0 (a turn that stays, a reset)", () => {
-    const g: RollGap = { gap: 30 * DEG, speed: 0 };
-    expect(followStep(g, 10 * DEG, 16.7, 200, "SKIP").gap).toBeCloseTo(gapStep(g, 16.7, 200).gap, 15);
-    expect(followStep(g, 10 * DEG, 16.7, 200, "ZERO")).toBe(GAP_ZERO);
-  });
+  // ⛔ (2026-11-22, R6) the follower's own vectors (a twist and its undo, the rounding taken at rest, `gapTake`'s short way, SKIP / ZERO) deleted with it
 });

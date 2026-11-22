@@ -89,33 +89,26 @@ describe("restShare — the piece's shown direction's rest on its own clock (O3)
   });
 });
 
-describe("the two sliders (FO3 S1): rollFollowMs 160 — the owner's word, UPRIGHT_PICTURE.md UD7 — (60 – 600), freeTurnMaxDeg 90 (0 – 90)", () => {
+describe("the two sliders (FO3 S1): rollFollowMs 160 — the owner's word, UPRIGHT_PICTURE.md UD7 — (60 – 600), freeTurnMaxDeg 90 (over 0 – 90: ⛔ R6, its 0 — the shadow — deleted)", () => {
   it("the defaults and the bounds", () => {
     expect(DEFAULT_CONFIG.rollFollowMs).toBe(160);
     expect(DEFAULT_CONFIG.freeTurnMaxDeg).toBe(90);
     for (const v of [60, 600]) expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, rollFollowMs: v })).not.toThrow();
     for (const v of [59, 601, Number.NaN]) expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, rollFollowMs: v })).toThrow();
-    for (const v of [0, 45, 90]) expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, freeTurnMaxDeg: v })).not.toThrow();
-    for (const v of [-1, 91, Number.NaN]) expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, freeTurnMaxDeg: v })).toThrow();
+    for (const v of [1, 45, 90]) expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, freeTurnMaxDeg: v })).not.toThrow();
+    for (const v of [0, -1, 91, Number.NaN]) expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, freeTurnMaxDeg: v })).toThrow();
   });
 });
 
 describe("the wiring (`roll_shadow.ts` rollPictureFrame) — read in the source", () => {
   const rs = readFileSync("src/render/roll_shadow.ts", "utf8");
   const aw = readFileSync("src/render/assembly_wiring.ts", "utf8");
-  it("freeTurnMaxDeg 0: the shadow and today's zoneMixPose, nothing else (R10)", () => {
-    // ⭐⭐⭐ (2026-11-21, R3b) …its turn's camera frame handed back (`cam`) for the picture to publish, no write
-    expect(rs).toMatch(/if \(!\(maxDeg > 0\)\) \{\n\s*rollShadowFrame\(st, piece, \{ eye, look, up \}, dtMs\);\n\s*const zmOn = st\.asmZoneMix !== null;\n\s*const zp0 = zoneMixPose\(st, piece, eye, look, up\);\n\s*return \{ eye: zp0\.eye, look: zp0\.look, up: zp0\.up, cam: zoneCam\(zmOn, zp0\), ev: NO_EVENTS \};\n\s*\}/);
-  });
-  it("a turn made free only at its first frame, none of the kinds that stay, nothing that stays drawn last frame, on its whole angle", () => {
-    expect(rs).toContain("if (zm !== null && fresh && was !== null && was.drawn && was.turn === null && zm.byMm !== true && zm.out === undefined && zm.tilt !== true && !sq && !tiltHold) {");
-    expect(rs).toContain("const whole = poseTurnAngle(was.ghost, ghost);");
-    expect(rs).toContain("if (turnIsFree(whole, maxDeg)) {"); // ⭐ (2026-11-19, UPRIGHT_PICTURE.md §12 RB1) law U returns before: its changes are decided once (`changeSeen`)
-    expect(rs).toContain('const mode: FollowMode = was === null || !was.drawn || was.upright !== undefined || zm !== null || afterStay ? "ZERO" : gizmoFree ? "TAKE" : "SKIP";');
-    expect(rs).toContain("const g = followStep(was?.free ?? GAP_ZERO, tw, dtMs, st.cfg.rollFollowMs, mode);");
+  it("⛔ (2026-11-22, PICTURE_REBUILD.md §8.6 — R6) the shadow (`freeTurnMaxDeg` 0) and FO3 S1's own gap (law U off: a turn made free, the roll follower) deleted; `freeTurnMaxDeg` read by the carried up's change (`changeSeen`)", () => {
+    expect(rs).not.toMatch(/rollShadowFrame\(|maxDeg > 0|followStep\(|turnIsFree\(|: FollowMode|cfg\.rollFollowMs/);
+    expect(readFileSync("src/render/picture_wiring.ts", "utf8")).toContain("freeMaxDeg: st.cfg.freeTurnMaxDeg });");
   });
   it("the tilt's turns tagged to stay (its entry, its exit — through the one starter, RB1); the direction's rest on its own clock, stepped before it is read", () => {
-    expect(aw.match(/st\.asmZoneMix\.tilt = true;/g)?.length).toBe(2); // ⭐ (RB1) `turnBegin` and `changeApply`
+    expect(aw.match(/st\.asmZoneMix\.tilt = true;/g)?.length).toBe(1); // ⭐ (RB1) `changeApply` (⛔ R6: `turnBegin`'s own, law U off, deleted)
     expect(aw.match(/tilt: true, stopCoast: false \}\);|hold: held, tilt: true \}\);/g)?.length).toBe(3);
     expect(aw).toContain("return easedDir(s, e, e.own !== undefined ? restShare(e.own, e.angle) : e.mix === st.asmZoneMix && st.asmZoneMix !== null ? st.asmZoneMix.k : st.asmChange !== null && e.mix === st.asmChange.tok ? 0 : 1);");
     expect(aw).toContain("const r = gapStep(de.own, dtMs, st.cfg.rollFollowMs);");

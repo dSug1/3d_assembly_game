@@ -7,7 +7,7 @@
  * * `α` (`uprightAngle`): the turn about `L` that puts world-down on the glass's down — closed form (below), the root nearest 0.
  * * `w` (`uprightWeight`): `smoothstep((ν − from)/(full − from))` — 0 within `from` of the vertical (where gravity has no direction on the glass), 1 from
  *   `full`; times the square camera's complement at the call (UD3).
- * * `φ = w·ᾱ` (`uprightStep`): `ᾱ` = `α` unwrapped while `0 < w < 1` (continuous across ±180°), wrapped at `w = 1` (a turn of 2π is the same pose), none at
+ * * `φ = w·ᾱ` (`uprightStep` — ⛔ R6: deleted with law U, §8.6 of `PICTURE_REBUILD.md`): `ᾱ` = `α` unwrapped while `0 < w < 1` (continuous across ±180°), wrapped at `w = 1` (a turn of 2π is the same pose), none at
  *   `w = 0` (`maxDegS` 0: at once — law U as first built). ⭐ Fix round 1 (§6, UD6b): with `maxDegS` > 0 the law in time (`uprightPaced`). The picture `P = poseRolled(G, L, φ)` —
  *   the piece and the look point keep their places on the glass (a turn about the line through both); `φ = 0`: `G` itself, the same object.
  *
@@ -21,7 +21,7 @@
  */
 import { cross, dot, type Vec3 } from "../core/vec";
 import { holdAtCrossing, rotateAbout, turnPose, type CamPose, type EdgeHold, type FramingKeep } from "./orbit_tilt";
-import { fingerOnLogic, poseAxes, poseRolled, turnIsFree, twistAbout, type FramedLine } from "./roll_follow";
+import { poseAxes, poseRolled, turnIsFree, twistAbout, type FramedLine } from "./roll_follow";
 
 /** ⭐ within this of the vertical (deg) the picture is the logic's pose (`w` 0) — the slider `uprightFromDeg` */
 export const UPRIGHT_FROM_DEG = 15; // ⭐ (2026-11-19, the owner's trial: "Changing both together is much better") — 5° before
@@ -86,59 +86,8 @@ export function uprightAngle(pose: CamPose, line: FramedLine): number | null {
   return best;
 }
 
-/** ⭐ The law's state: `ᾱ` unwrapped (null: none — `w` 0; law U at once only), the last `φ`, the last `α` read and the last `w` (the carry's). */
-export interface UprightState {
-  readonly au: number | null;
-  readonly phi: number;
-  readonly ap: number | null;
-  readonly wp?: number;
-  /** ⭐ (fix round 3, UD6c) the logic's pose last frame — the carry is its twist about the framed line over this frame (`twistAbout`) */
-  readonly gp?: CamPose;
-  /** ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §12 RB3) THE LAW'S OWN HALF TURN UNDER WAY: a rest of 90° or more opened and not yet closed (`lawHalfTurn`) */
-  readonly half?: boolean;
-}
-export const UPRIGHT_REST: UprightState = Object.freeze({ au: null, phi: 0, ap: null });
-
-export interface UprightKnobs {
-  readonly fromDeg: number;
-  readonly fullDeg: number;
-  /** THE REST's pace, deg a second; 0 (or less): at once (law U as first built) */
-  readonly maxDegS: number;
-}
-
-export interface UprightFrame {
-  readonly state: UprightState;
-  /** the turn about the framed line drawn (rad); exactly 0 where `w` is 0 */
-  readonly phi: number;
-  readonly w: number;
-  readonly nu: number;
-  readonly alpha: number | null;
-  /** ⭐ (fix round 2, UD11) nothing left to close: `phi` is this frame's target (the rest closed, or no pace) */
-  readonly closed: boolean;
-  /** ⭐⭐⭐ (RB3) this frame the rest the law has to close reached 90° or more (not under way before): a turn the player SEES — its size (rad); 0: none */
-  readonly halfStart: number;
-}
-
-/**
- * ⭐⭐⭐ ONE FRAME OF LAW U: `φ` for the logic's pose `pose` about `line` (`scale` in [0, 1] multiplies `w` — the square camera's complement, UD3).
- * `w` 0: `φ` exactly 0 (no cap) and the state at rest. `w` 1: `φ = α` exactly. Between: `w·ᾱ`, its change capped at `maxDegS` × `dtMs` if `maxDegS` > 0
- * (the carry `w·Δα` first, so a rigid roll of the logic is followed exactly).
- */
-export function uprightStep(s: UprightState, pose: CamPose, line: FramedLine, dtMs: number, knobs: UprightKnobs, scale = 1, whole = false): UprightFrame {
-  const nu = viewFromVertical(pose);
-  const sc = Math.min(1, Math.max(0, Number.isFinite(scale) ? scale : 0));
-  const w = uprightWeight(nu, knobs.fromDeg, knobs.fullDeg) * sc;
-  if (knobs.maxDegS > 0) return uprightPaced(s, pose, line, dtMs, knobs.maxDegS, w, nu, whole);
-  const alpha = w > 0 ? uprightAngle(pose, line) : null;
-  let au: number | null;
-  if (!(w > 0)) au = null;
-  else if (alpha === null) au = s.au;
-  else if (s.au === null || w >= 1) au = wrapPi(alpha);
-  else au = s.au + wrapPi(alpha - s.au);
-  const phi = au === null ? 0 : w * au;
-  const state: UprightState = phi === 0 && au === null ? UPRIGHT_REST : { au, phi, ap: w > 0 ? alpha : null };
-  return { state, phi, w, nu, alpha, closed: true, halfStart: 0 };
-}
+/* ⛔ (2026-11-22, `PICTURE_REBUILD.md` §8.6 — R6) LAW U's own step (`uprightStep`, `uprightPaced`, `UprightState`, `UPRIGHT_REST`) deleted with its path
+ * (`uprightPictureFrame`, `uprightCarried` 0): the game no longer took it. `viewFromVertical`, `uprightWeight`, `uprightAngle`: the carried up reads them. */
 
 /** ⭐ The change of frame as the decision reads it (RB1). */
 export interface ChangeIn {
@@ -184,53 +133,14 @@ export function lawHalfTurn(s: { readonly half?: boolean } | undefined): boolean
 export const SEEN_HOLD_DEG = 90;
 
 /**
- * ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §12 RB2) THE PUSH HELD, AS THE PLAYER SEES IT: THE DY OF THE GLASS HE SEES, of the sign the logic's dy of `sign`
- * takes there (`[0, sign]` on the logic's glass `ghost` turned onto the glass of the picture drawn with it, `picture` — its up or its down). The picture the
- * logic's pose: `[0, sign]` exactly (today's dy hold). ⛔ (first build, measured on the hold walks: `z_far` s1 held 2 frames where `1.0.147-` held 104,
- * the gizmo 37 mm along the axis) the logic's dy axis itself turned onto his glass: on a picture rolled from the logic's pose his straight push had a part
- * across that axis, which passed — the gizmo slid along the edge.
- */
-export function holdOnPicture(sign: 1 | -1, picture: CamPose, ghost: CamPose): readonly [number, number] {
-  const m = fingerOnLogic(0, sign, ghost, picture);
-  return [0, m.fdy > 0 ? 1 : m.fdy < 0 ? -1 : sign];
-}
-
-/**
  * ⭐⭐⭐ (RB2) THE HOLD A CHANGE SETS — ONLY a turn the player sees of `SEEN_HOLD_DEG` or more (`changeSeen`'s answer: timed, and its share seen): the sign that
- * crossed (`crossingEvent`, `exitHoldSign`, `crossingHold`: the logic's geometry), held as the push he made (`holdOnPicture`, last frame's picture and
- * logic's pose — the conversion the finger used when it crossed). Any other change: none (it replaces a hold still on, as every crossing does).
+ * crossed (`crossingEvent`, `exitHoldSign`, `crossingHold`: the logic's geometry), held as the dy of the logic's glass (`[0, sign]`). Any other change:
+ * none (it replaces a hold still on, as every crossing does). ⛔ (2026-11-22, R6) law U's push held on the picture (`holdOnPicture`) deleted with law U.
  * ⛔ (fix rounds 2 – 3) `uprightHoldKept`: the hold set at every crossing, then DROPPED at the camera's stage when the change was freed.
  */
-export function holdSeen(seen: ChangeSeen, sign: 1 | -1 | 0, picture: CamPose | null, ghost: CamPose | null): EdgeHold | null {
+export function holdSeen(seen: ChangeSeen, sign: 1 | -1 | 0): EdgeHold | null {
   if (sign === 0 || !seen.timed || !(seen.seenRad >= (SEEN_HOLD_DEG * Math.PI) / 180)) return null;
-  return { sign, back: 0, dir: picture === null || ghost === null ? [0, sign] : holdOnPicture(sign, picture, ghost) };
-}
-
-/**
- * ⭐⭐⭐ (2026-11-18, `UPRIGHT_PICTURE.md` §6 — UD6b, UD4b; fix round 1) LAW U IN TIME: `φ` moves in two parts each frame.
- * (1) THE CARRY, at once — ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §10 UD6c, fix round 3) the logic's TWIST UNDONE: `φ − c·τ`, `τ` the twist of the
- *     logic's pose about the framed line over this frame (`twistAbout`, defined everywhere), `c = min(w, w_prev)`; `c` 1 (`whole`) on a freed frame
- *     and on a timed turn's first frame (round 1's F2 and F3 as one rule). A rigid roll of the logic is undone exactly; the upright's OWN swing (the
- *     view passing near the vertical) is left to the rest, so it goes through the cap. ⛔ (fix rounds 1 – 2) `φ + c·wrap(α − α_prev)`: `α` has no
- *     meaning at the vertical, so a `Δα` read across a frame where the view crosses the band was not a roll — the 98° frame (`ilmj_39s` f629).
- * (2) THE REST: what is left to the target `w·α` (`α` the root nearest 0; none: held), the short way, closed at `maxDegS` × `dtMs` at most. No unwrap.
- * At the vertical with nothing open: `φ` exactly 0 (the picture is the logic's pose) — the logic's own continuous spin there opens no rest.
- */
-function uprightPaced(s: UprightState, pose: CamPose, line: FramedLine, dtMs: number, maxDegS: number, w: number, nu: number, whole: boolean): UprightFrame {
-  const alpha = w > 0 ? uprightAngle(pose, line) : null;
-  const c = whole ? 1 : Math.min(w, s.wp ?? 0);
-  const tau = s.gp !== undefined ? twistAbout(s.gp, pose, line.dir) : 0;
-  const pc = c > 0 && Number.isFinite(tau) && tau !== 0 ? wrapPi(s.phi - c * tau) : s.phi;
-  const target = !(w > 0) ? 0 : alpha !== null ? w * alpha : pc;
-  const e = wrapPi(target - pc);
-  const cap = dtMs > 0 ? ((maxDegS * Math.PI) / 180) * (dtMs / 1000) : 0;
-  const phi = Math.abs(e) <= cap ? target : wrapPi(pc + Math.sign(e) * cap);
-  // ⭐⭐⭐ (2026-11-19, §12 RB3) THE LAW'S OWN HALF TURN: a rest of 90° or more (after a pass over the vertical) is a turn the player sees — under way
-  // until it closes (`half`: the gizmo held meanwhile, T5's one reader); its start reported (`halfStart`: the push that was on held after it, RB2)
-  const big = Math.abs(e) >= Math.PI / 2;
-  const half = (big || s.half === true) && phi !== target;
-  const state: UprightState = { au: null, phi, ap: alpha, wp: w, gp: pose, ...(half ? { half: true } : {}) };
-  return { state, phi, w, nu, alpha, closed: phi === target, halfStart: big && s.half !== true ? Math.abs(e) : 0 };
+  return { sign, back: 0, dir: [0, sign] };
 }
 
 /* ⭐⭐⭐ (2026-11-20, `Claude/40_RENDER_SCENE/spec/UPRIGHT_CARRIED_UP.md` — packet E, `uprightCarried` 1) ONE CARRIED UP: the picture's up turned only by what the

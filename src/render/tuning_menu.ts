@@ -194,7 +194,7 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "lag: the orbit's angles (spring, ms; 0 at once)", "orbitSpringMs", 0, 500, 5),
             // ⭐⭐⭐ (2026-11-18, `FAST_ORBIT.md` §14 — FO3 S1) the picture a follower of the logic: its roll's time; the changes of frame it frees
             tunable(st, "lag: the camera's roll behind the orbit's (ms)", "rollFollowMs", 60, 600, 10),
-            tunable(st, "a change of frame under this angle makes no timed turn (deg; 0 = today's turns)", "freeTurnMaxDeg", 0, 90, 5),
+            tunable(st, "a change of frame under this angle makes no timed turn (deg)", "freeTurnMaxDeg", 5, 90, 5), // ⛔ (2026-11-22, R6) its 0 (the shadow) deleted
             // ⭐ The TIME LAG on top of the leash (0 = none).
             tunable(st, "camera catch-up after release, from rest (ms)", "cameraCatchUpMs", 20, 1000, 10),
           ],
@@ -203,17 +203,12 @@ export function installTuningMenu(st: SceneState): void {
         {
           title: "UPRIGHT PICTURE",
           sliders: [
-            tunable(st, "upright picture: gravity on the screen's vertical (1 on, 0 = the roll follower)", "uprightPicture", 0, 1, 1),
-            tunable(st, "upright close in under the square camera too (1 on, 0 = its layout wins)", "uprightCloseIn", 0, 1, 1),
             tunable(st, "upright: none within this of the vertical (deg)", "uprightFromDeg", 0, 45, 1),
             tunable(st, "upright: in full from this off the vertical (deg)", "uprightFullDeg", 0, 60, 1),
             tunable(st, "upright: the rest to upright, its pace (deg a second; 0 = at once)", "uprightMaxDegS", 0, 2880, 40), // ⭐ (2026-11-20) step 40 so his 520 is on the grid
             // ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` — packet E) the carried up
-            tunable(st, "carried up: the picture turns only by what the finger asks (1 on, 0 = law U)", "uprightCarried", 0, 1, 1),
             tunable(st, "carried up: the alignment a dx pays near the vertical (deg a mm)", "uprightAlignDegPerMm", 0, 20, 0.5),
             tunable(st, "carried up: the gizmo still for the whole half turn (1; 0 = never)", "uprightHalfHold", 0, 1, 1),
-            // ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` §8 — packet J) the piece no longer leaps at a change: drawn from the pose shown
-            tunable(st, "carried up: a change drawn from the pose shown, the piece carried straight on the glass (1; 0 = at once)", "uprightFraming", 0, 1, 1),
           ],
         },
         // ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §13 — F2) far out the camera a simple polar orbit following the direction asked

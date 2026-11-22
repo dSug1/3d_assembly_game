@@ -8,14 +8,15 @@
  * * **The ghost's twist** (`twistAbout`): the rotation from last frame's ghost to this frame's, split in two about this frame's line (swing and twist —
  *   Shoemake, Graphics Gems IV, 1994): the SWING (about an axis square to the line: the orbit itself, shown at once); the TWIST, a turn about the line,
  *   signed, the short way.
- * * **The gap** (`gapTake`, `gapStep`): how far the picture is rolled back from the ghost. A twist adds to it (`gap − twist`, the short way); it closes to 0
+ * * **The gap** (`gapStep`): how far the picture is rolled back from the ghost; it closes to 0
  *   by the critically damped ease (its state the gap and its speed; its time `followMs`: ω = 2 / time — the closed form, exact at any frame rate; Game
  *   Programming Gems 4, 2004). Under `GAP_REST_DEG` and slower than `GAP_REST_DEG_S`: exactly 0.
  * * **The picture** (`poseRolled`): the ghost turned about the framed line by the gap. Gap 0: the ghost itself, the same object.
  *
  * ⛔ ENGINE-FREE. Rodrigues' formula, a quaternion's swing and twist, a critically damped spring — textbook, decades old; no licence, no patent.
- * ⚠ S0 (the shadow): computed and recorded, never drawn. ⭐ S1 (`FAST_ORBIT.md` §14): DRAWN — the sliders `rollFollowMs` and `freeTurnMaxDeg`
- * (`gestureConfig.ts`; the two defaults below), a change judged free on its whole angle (`turnIsFree`),.
+ * ⭐ S1 (`FAST_ORBIT.md` §14): the sliders `rollFollowMs` and `freeTurnMaxDeg` (`gestureConfig.ts`; the two defaults below), a change judged free on its
+ * whole angle (`turnIsFree`). ⛔ (2026-11-22, `PICTURE_REBUILD.md` §8.6 — R6) the roll follower (`followStep`, `gapTake`, `FollowMode`) and the shadow
+ * deleted with their paths: `gapStep` now steps the piece's shown direction's rest alone (`asmDirEase.own`, at `rollFollowMs`).
  */
 import { cross, dot, type Vec3 } from "../core/vec";
 import { rotateAbout, type CamPose } from "./orbit_tilt";
@@ -131,12 +132,6 @@ export interface RollGap {
 }
 export const GAP_ZERO: RollGap = { gap: 0, speed: 0 };
 
-/** ⭐ A twist taken by the gap: the picture holds, the gap grows by it the other way (the short way round); its speed kept (the newest target wins). */
-export function gapTake(g: RollGap, twist: number): RollGap {
-  if (twist === 0) return g;
-  return { gap: wrapPi(g.gap - twist), speed: g.speed };
-}
-
 /** ⭐ One step of the gap toward 0 by the critically damped ease (exact over `dtMs`; ω = 2 / `followMs`); at rest (R5): exactly 0. */
 export function gapStep(g: RollGap, dtMs: number, followMs: number): RollGap {
   if (g.gap === 0 && g.speed === 0) return g;
@@ -150,20 +145,6 @@ export function gapStep(g: RollGap, dtMs: number, followMs: number): RollGap {
   const speed = (g.speed - w * c * t) * e;
   if (Math.abs(gap) < GAP_REST_DEG * DEG && Math.abs(speed) < GAP_REST_DEG_S * DEG) return GAP_ZERO;
   return { gap, speed };
-}
-
-/** ⭐ What a frame does to the gap: `TAKE` the ghost's twist (the gizmo free), `SKIP` it (a turn that stays draws the picture — a gap open goes on
- *  closing), `ZERO` (a turn that stays starts from the pose shown, or a reset: the gap 0, the follower idle — O5, O11). */
-export type FollowMode = "TAKE" | "SKIP" | "ZERO";
-
-/** ⭐ One frame of the follower: the gap stepped over `dtMs`, then this frame's twist taken (the newest target wins) — or skipped, or zeroed. */
-export function followStep(g: RollGap, twist: number, dtMs: number, followMs: number, mode: FollowMode): RollGap {
-  if (mode === "ZERO") return GAP_ZERO;
-  const s = gapStep(g, dtMs, followMs);
-  if (mode !== "TAKE") return s;
-  const t = gapTake(s, twist);
-  // ⭐ (FO3 S0, measured: the ghost at rest still reads a twist of 1e-16 – 1e-7 rad a frame, its own rounding) at rest after the take too: exactly 0 (R5)
-  return Math.abs(t.gap) < GAP_REST_DEG * DEG && Math.abs(t.speed) < GAP_REST_DEG_S * DEG ? GAP_ZERO : t;
 }
 
 /** ⭐ A point's place on the glass (x, y in half-glasses, the centre 0) seen from a pose: `fovY` the vertical field (rad), `aspect` width / height. */
@@ -191,39 +172,8 @@ export function turnIsFree(angleRad: number, maxDeg: number): boolean {
   return Number.isFinite(angleRad) && angleRad < (maxDeg - FREE_TURN_TOL_DEG) * DEG;
 }
 
-/**
- * ⭐⭐⭐ (FO3 S2 at `48ae89c`, reverted; back 2026-11-18 for law U — `UPRIGHT_PICTURE.md` §2 step 3, UD8) THE FINGER READ OFF THE PICTURE DRAWN: a move
- * on the glass (`dx` right, `dy` up, any unit) seen on `picture` and read on `ghost`'s glass (the logic's) — the same world move, its length kept. The
- * picture the ghost itself (the same object, or the same axes): the move as it is, bit for bit.
- */
-export function fingerOnGhost(dx: number, dy: number, picture: CamPose, ghost: CamPose): { readonly dx: number; readonly dy: number } {
-  if (picture === ghost || (dx === 0 && dy === 0)) return { dx, dy };
-  const [, uP, sP] = poseAxes(picture);
-  const [, uG, sG] = poseAxes(ghost);
-  if (uP[0] === uG[0] && uP[1] === uG[1] && uP[2] === uG[2] && sP[0] === sG[0] && sP[1] === sG[1] && sP[2] === sG[2]) return { dx, dy };
-  // ⭐⭐⭐ (2026-11-19, fix round 2) the glass's RIGHT is `up × forward` (Babylon's left-handed axes, as `fingerInFrame`) = −`poseAxes`' third axis
-  // (`forward × up`). ⛔ (FO3 S2, law U until fix round 2) `+s`: the finger's dx mirrored — the move turned by −φ instead of φ (right only at 0° and 180°)
-  const w: Vec3 = [-dx * sP[0] + dy * uP[0], -dx * sP[1] + dy * uP[1], -dx * sP[2] + dy * uP[2]];
-  const ox = -dot(w, sG);
-  const oy = dot(w, uG);
-  const l = Math.hypot(ox, oy);
-  if (!(l > 1e-12)) return { dx, dy };
-  const k = Math.hypot(dx, dy) / l;
-  return { dx: ox * k, dy: oy * k };
-}
-
-/**
- * ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §8 UD8b — fix round 2) THE FINGER AT THE ENTRY, ONCE: the orbit finger's step (`dx` right, `fdy` up — `orbitDy`'s
- * sign: finger up positive) turned from the picture drawn onto the LOGIC's glass (`fingerOnGhost`) BEFORE anything reads it — the dy the hold pushes
- * with (`dySignPushing`), the hold itself (`edgeHoldDy`, `edgeHoldFinger`), the spit's frame (`zoneFinger`, then on the logic's own frame). After it the
- * logic reads a finger drawn on its own glass, as in `1.0.147-`. No picture (`null`, law U off) or the picture the logic's pose: the move as it is, bit for
- * bit. ⛔ (fix round 1) the hold read the RAW glass dy while the move was read off the picture later: with the two 143° apart the opposite sign.
- */
-export function fingerOnLogic(dx: number, fdy: number, picture: CamPose | null, ghost: CamPose | null): { readonly dx: number; readonly fdy: number } {
-  if (picture === null || ghost === null || picture === ghost) return { dx, fdy };
-  const f = fingerOnGhost(dx, fdy, picture, ghost);
-  return { dx: f.dx, fdy: f.dy };
-}
+/* ⛔ (2026-11-22, `PICTURE_REBUILD.md` §8.6 — R6) THE FINGER READ OFF THE PICTURE (`fingerOnGhost`, `fingerOnLogic`) deleted with law U: no picture turned
+ * from the logic's pose is read by the finger any more (`fingerAtEntry`, `holdOnPicture` gone). */
 
 /**
  * ⭐⭐⭐ (FO3 S1, O3) THE PIECE'S SHOWN DIRECTION'S REST ON A CLOCK OF ITS OWN (no timed turn carries it): the rest angle (rad) closed by the same
