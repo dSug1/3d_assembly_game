@@ -865,7 +865,7 @@ By URL too. All three switches 0 = `ba369aa` frame for frame; `followTop` 0 = `d
 
 ⭐ **The study after this last round (packet H4, 2026-11-21) — PROPOSED, nothing built**: O-c's root is the logic's up read by the follower's hold, O-d's the depth glide restarted every frame, G3 counted his own motion; the design (two followers, a leash, the jump by geometry) and D-H13 – D-H18 → [`TOP_BOTTOM_STUDY.md`](TOP_BOTTOM_STUDY.md).
 
-## 19. THE TURN AIMED WHERE THE GIZMO WAITS — his back and forth at a facet change far out (2026-11-22, branch `1.0.155-Camera_back_and_forth_at_the_cap_edge`, switch `followTurnAtGizmo`)
+## 19. THE TURN AIMED WHERE THE GIZMO WAITS — his back and forth at a facet change far out (2026-11-22, branch `1.0.155-Orbits-finalized` — named `1.0.155-Camera_back_and_forth_at_the_cap_edge` until his rename — switch `followTurnAtGizmo`)
 
 **His words** (on live `4dbd704`, the iPhone): *"In scene 0bis, half of the times when the gizmo passes from one rectangle face to one triangle face or
 vice versa there is a short camera back and forth … I don't know why it does it sometimes and why it doesn't other times. Check."* — then *"Same happens
@@ -929,3 +929,7 @@ starts only when that frame's jump is ≥ 10°; the miss grows with his pace (�
   presets 1 against 0: `close` and `farft0` identical, `far` / `band` / `bandmix` the frames over 5° 31 / 31 / 176 (37 / 37 / 195 at 0), the gizmo still
   304 / 304 / 596 frames (312 / 312 / 595), the view's and up's p90 unchanged.
 * **DEPLOYED** (his word *"Deploy"*, 2026-11-22 11:11Z): LIVE main `40b8095` = `b21b667`. ⛔ Not done: his look on the device (rule 5); close in's own turns not measured.
+
+### 19.6 HIS VERDICT (2026-11-22) — the orbit CLOSED
+*"Record that the orbit charts and camera follow work is closed and this is the best implementation so far. We will then move to the orbit surface work."* LIVE main `40b8095` = `b21b667` (`1.0.155-Orbits-finalized`) is the reference (`UPRIGHT_LESSONS.md` §3); the camera follower is closed — what
+§19.4 left out (close in's own turns) is a future improvement, on his word. Next: the orbit surface work (`ORBIT_SURFACE.md`).
