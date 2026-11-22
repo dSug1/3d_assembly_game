@@ -22,13 +22,11 @@ const count = (s: string, sub: string): number => s.split(sub).length - 1;
 
 describe("the carried up's wiring — read in the source", () => {
   const cf = body(rs, "function carriedFrame(");
-  it("the switch: `uprightCarried` 1 takes the camera's stage before law U; 0 leaves law U as it was", () => {
-    const a = rs.indexOf("if (st.cfg.uprightPicture === 1 && st.cfg.uprightCarried === 1) return carriedFrame(st, piece, eye, look, up, dtMs, sq, tiltHold, left);");
-    const b = rs.indexOf("if (st.cfg.uprightPicture === 1) return uprightPictureFrame(st, piece, eye, look, up, dtMs, sq, tiltHold, left);");
-    // ⭐⭐⭐ (R3b) the resolver the same switch: the carried up's rule first, law U's after
-    expect(pic.indexOf("if (st.cfg.uprightCarried === 1) {")).toBeGreaterThan(0);
-    expect(a).toBeGreaterThan(0);
-    expect(b).toBeGreaterThan(a);
+  it("the camera's stage the carried up's alone (⛔ 2026-11-22, R6: the switch `uprightCarried` and law U deleted), in the drawer and the resolver", () => {
+    expect(body(rs, "export function rollPictureFrame(")).toContain("return carriedFrame(st, piece, eye, look, up, dtMs, sq, tiltHold, left);");
+    expect(rs).not.toMatch(/uprightPictureFrame\(|cfg\.uprightCarried|cfg\.uprightPicture/);
+    expect(pic).not.toMatch(/cfg\.uprightCarried|cfg\.uprightCloseIn|uprightWeight/);
+    expect(pic).toContain("// the carried up's rule (packet E, `carriedFrame` as at `620f227`)");
   });
   it("ONE writer of the up: `upCarried` once, the picture rolled from its φ once", () => {
     expect(count(cf, "upCarried(")).toBe(1);
@@ -39,9 +37,9 @@ describe("the carried up's wiring — read in the source", () => {
   it("no camera turn far out but the half turn: a change resolved by the square camera's authority κ (far out applied at once)", () => {
     // ⭐⭐⭐ (R3b) resolved ONCE before the drawer, the rule moved as written (`changeResolve`); the drawer reads what it left (`left`)
     expect(pic).toContain("const seen = changeSeen({ stays, wBefore: drawn ? was.one!.kappa : 0, wAfter: kappa, turnRad, freeMaxDeg: st.cfg.freeTurnMaxDeg });");
-    expect(pic).toContain("const kappa = st.cfg.uprightCloseIn === 1 ? 1 : 1 - share;");
+    expect(pic).toContain("const kappa = 1 - share;"); // ⛔ (R6) `uprightCloseIn` 1 deleted
     expect(cf).toContain("const { freed, change, crossed } = left;");
-    expect(cf).toContain("const kappa = st.cfg.uprightCloseIn === 1 ? 1 : 1 - share;");
+    expect(cf).toContain("const kappa = 1 - share;");
     expect(cf).not.toContain("changeSeen(");
   });
   it("the turn asked: the drawn orbit's yaw step about its pole axis, none across a change of the logic's frame", () => {
@@ -67,25 +65,22 @@ describe("the carried up's wiring — read in the source", () => {
     expect(gb.indexOf("springOrbit(st.boxSpring, rig", freeze)).toBeGreaterThan(freeze);
   });
   it("the sliders: the carried up on by default on this branch, the gizmo held the whole turn, 3° a mm of dx; out of range refused", () => {
-    expect(DEFAULT_CONFIG.uprightCarried).toBe(1);
     expect(DEFAULT_CONFIG.uprightHalfHold).toBe(1);
     expect(DEFAULT_CONFIG.uprightAlignDegPerMm).toBe(3);
-    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, uprightCarried: 2 })).toThrow();
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, uprightAlignDegPerMm: 21 })).toThrow();
   });
 });
 
-// ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` §8 — packet J) THE FRAMING CARRIED FROM THE POSE SHOWN, read in the source: behind `uprightFraming` (1 by
-// default; 0: the picture `P` as at `28a29ca`); opened only by a change applied at once, from the picture shown turned back by the same φ; the pose drawn
+// ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` §8 — packet J) THE FRAMING CARRIED FROM THE POSE SHOWN, read in the source (⛔ 2026-11-22, R6: its switch
+// `uprightFraming` and its 0 — the picture `P` as at `28a29ca` — deleted); opened only by a change applied at once, from the picture shown turned back by the same φ; the pose drawn
 // is the one read (the finger's glass, the next frame's pose shown) and the one returned; φ, the half turn and the holds untouched.
 describe("the framing carried from the pose shown — read in the source (packet J)", () => {
   const cf = body(rs, "function carriedFrame(");
-  it("the switch: `uprightFraming` 1 by default (a slider 0 / 1); 0 draws the carried picture `P` as before", () => {
-    expect(DEFAULT_CONFIG.uprightFraming).toBe(1);
-    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, uprightFraming: 2 })).toThrow();
-    expect(cf).toContain("const ft = st.cfg.uprightFraming === 1 ? framingStep(was?.one?.framing ?? null, change, shown, freed, r.halfStart, dtMs, st.cfg.uprightMaxDegS, kappa) : null;");
+  it("always on (⛔ R6: the switch `uprightFraming` deleted, no slider)", () => {
+    expect("uprightFraming" in DEFAULT_CONFIG).toBe(false);
+    expect(cf).toContain("const ft = framingStep(was?.one?.framing ?? null, change, shown, freed, r.halfStart, dtMs, st.cfg.uprightMaxDegS, kappa);");
     expect(cf).toContain("const D = fd === null ? P : poseRolled(fd.pose, line, r.phi);");
-    expect(raw("src/render/tuning_menu.ts")).toContain('"uprightFraming", 0, 1, 1)');
+    expect(raw("src/render/tuning_menu.ts")).not.toContain('"uprightFraming"');
   });
   it("opened only by a change applied at once, from the picture shown last frame turned back by this frame's φ (the piece's place then)", () => {
     expect(cf).toContain("const shown = change && was !== null && was.one !== undefined && was.picture ? framingFrom(was.picture, was.piece, line, r.phi) : null;");

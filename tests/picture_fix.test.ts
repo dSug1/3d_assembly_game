@@ -226,6 +226,6 @@ describe("R3-FIX — the wiring (source)", () => {
   });
 
   it("rule 3: a turn started at the latch starts from the pose DRAWN (last frame drawn far, the latch on now)", () => {
-    expect(raw("render/assembly_wiring.ts")).toContain("if (st.asmTiltAuto && st.asmPicture?.far === true && st.cfg.pictureOne === 1 && st.cfg.cameraFollower === 1) return drawnPose(st);");
+    expect(raw("render/assembly_wiring.ts")).toContain("if (st.asmTiltAuto && st.asmPicture?.far === true) return drawnPose(st);"); // ⛔ (2026-11-22, PICTURE_REBUILD.md §8.6 — R6) the switches deleted
   });
 });

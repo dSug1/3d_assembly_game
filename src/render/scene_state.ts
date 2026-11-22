@@ -406,10 +406,10 @@ export interface SceneState {
   /** ⭐⭐⭐ (D-Z7; 2026-11-14 about the piece) the camera's turn into a zone's frame (or out): the POSE on the glass at the switch, the share, the turn's
    *  angle, its axis kept frame to frame (`null`: not yet) */
   asmZoneMix: { readonly from: import("../input/orbit_tilt").CamPose; k: number; rad: number; axis: import("../core/vec").Vec3 | null; /** (2026-11-14) the turn's rule, chosen at its first frame and kept: 0 not yet, 1 the two framed (`poseFramingTwo`), 2 about the piece alone */ rule: 0 | 1 | 2; /** (2026-11-14) the two's angles carried frame to frame (`FramingKeep`; null: not yet) */ keep: import("../input/orbit_tilt").FramingKeep | null; /** (2026-11-14) the angle turned so far (rad) — the turn's progress at one speed */ done: number; /** ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4c) the automatic tilt's entry made with the camera PENDING: paced as its swing was (`seamTurnPace`: held while pending, then by the finger's travel, then by time); absent: by time */ byMm?: boolean; /** ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §8, step C3 — `tiltOutBlendMm` > 0 only) THE WAY OUT OF CLOSE IN paced by the finger (`seamOutPaced`): its progress `p` (never back; `k` its smooth share, `seamOutShare`), the approach finger's travel OUTWARD and the orbit finger's travel (mm on the glass) since it started — counted only while it is alive (`seamOutFeed`); absent: by time or `byMm` */ out?: { p: number; outMm: number; orbitMm: number }; /** ⭐⭐⭐ (2026-11-18, FO3 S1, §13.7 (d)) a tilt's turn (its entry, its exit): it stays today's timed turn whatever its angle — kept by its KIND */ tilt?: true } | null;
-  /** ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §12 RB1 — law U only: `uprightPicture` 1, `freeTurnMaxDeg` over 0) A CHANGE OF FRAME ASKED, resolved ONCE at the
+  /** ⭐⭐⭐ (2026-11-19, `UPRIGHT_PICTURE.md` §12 RB1; ⭐ R6: every change of frame) A CHANGE OF FRAME ASKED, resolved ONCE at the
    *  camera's stage (`resolveChange`, `changeSeen`) where its angle and the weights are known: `tok` the clock the piece's shown direction's ease waits on
-   *  meanwhile (its share 0); `paced` the way out (`seamOutStart`), `byMm` the tilt's paced entry, `tilt` a tilt's turn, `noCamNull` (the switch, the tilt's
-   *  entry) no camera yet: no turn; `hold` the sign that crossed (absent: the hold left as it is) */
+   *  meanwhile (its share 0); `paced` the way out (`seamOutStart`), `byMm` the tilt's paced entry, `tilt` a tilt's turn (no camera frame yet:
+   *  no turn); `hold` the sign that crossed (absent: the hold left as it is) */
   asmChange: { readonly tok: object; readonly paced: boolean; readonly byMm: boolean; readonly tilt: boolean; readonly hold?: 1 | -1 | 0 } | null;
   /** ⭐ (2026-11-14) where the piece was drawn last frame around the assembly (a zone's turn starts from the piece's place on the glass then) */
   asmPieceDrawn: import("../core/vec").Vec3 | null;
@@ -441,14 +441,10 @@ export interface SceneState {
     readonly freshTurn: boolean;
     readonly picture: import("../input/orbit_tilt").CamPose;
     readonly a2: number;
-    /** ⭐⭐⭐ (FO3 S1) the picture DRAWN (`freeTurnMaxDeg` over 0); false: the shadow only (S0's, `freeTurnMaxDeg` 0 — the finger read as it is) */
+    /** ⭐⭐⭐ (FO3 S1) the picture DRAWN — always since R6 (the shadow, `freeTurnMaxDeg` 0, deleted) */
     readonly drawn: boolean;
     /** ⭐ (FO3 S1) this frame's change of frame made free (no timed turn) — its whole angle (rad); 0: none */
     readonly freed: number;
-    /** ⭐⭐⭐ (2026-11-18, `UPRIGHT_PICTURE.md` §2 — law U, `uprightPicture` 1) the picture drawn by law U: `ghost` is then the LOGIC's pose `G` (the pose
-     *  `zoneMixPose` gives — a turn that stays included), `picture` = `G` turned by `phi` about the framed line; the law's state (`upright.ts`), its weight
-     *  `w` (the square camera's complement included) and `phi` (rad); absent: FO3 S1's follower or the shadow */
-    readonly upright?: { readonly state: import("../input/upright").UprightState; readonly w: number; readonly phi: number };
     /** ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` — packet E, `uprightCarried` 1) THE CARRIED UP (the field's name `one` kept for the probes' readers): `ghost` the
      *  logic's pose `G`, `picture` the pose drawn AND read; the state (`upCarried`), its weight `w`, `phi` (rad), the square camera's complement `kappa`, this
      *  frame's half turn opened (`halfStart`, rad), the gizmo held (`holding`), a logic change applied at once (`change`); absent: law U, FO3 or the shadow */
@@ -513,7 +509,7 @@ export interface SceneState {
   asmAskCalm: import("../input/orbit_calm").CalmState | null;
   /** ⭐⭐⭐ (F1) THE DIRECTION ASKED this frame (`askedDir` at the rig's solved angles) — the follower's target; recorded; `null`: none yet */
   asmAsk: import("../core/vec").Vec3 | null;
-  /** ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §15 — H2) THE CALM'S LEVELLED READING this frame at the same angles (`levelledAsked`, `followTop` 1): the follower's heading target far out (rad); `null`: carried, or the switch 0 */
+  /** ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §15 — H2) THE CALM'S LEVELLED READING this frame at the same angles (`levelledAsked`, `followTop` 1): the follower's heading target far out (rad); `null`: carried (⛔ R6: the switch `followTop` deleted) */
   asmAskLevel: number | null;
   /** ⭐⭐⭐ (2026-11-21, R5, D-H15 — `farTopDecided`) the calm asked kept a frame IN THE WORLD (`calmWorld`; `null`: none kept), and LAST frame's calm's far
    *  reading at this frame's angles (`farJumpRead`; `psi` `null`: carried — a level face; the field `null`: none kept) — the jump read by geometry */

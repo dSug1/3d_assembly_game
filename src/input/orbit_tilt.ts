@@ -634,16 +634,16 @@ export const FRAMING_SEP_MIN = 1e-3;
 
 /**
  * ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §3 O-1, §4.4, D-P2 — packet R2, the switch `pictureOne`) THE RULE A CAMERA TURN IS DRAWN BY, chosen at its FIRST
- * frame (`rule` 0) and kept: 1 the two framed (`poseFramingTwo`), 2 about the piece (`poseAboutPiece`). `pictureOne` 1: a turn born CLOSE IN (`closeIn` —
+ * frame (`rule` 0) and kept: 1 the two framed (`poseFramingTwo`), 2 about the piece (`poseAboutPiece`). A turn born CLOSE IN (`closeIn` —
  * the automatic tilt's latch, the approach within `tiltAutoM` of the gizmo) is turned about the piece for its WHOLE life: close in the aim is the gizmo by
  * the piece, and the approach brings the piece along the view onto it — the two-target solve swung the camera round the piece (7°, 20° a frame), then had
  * none and the turn about the piece took over (32 – 48° in one frame; 35° backing out, the solve back). A held orientation with the piece moving along the
- * view is a dolly: what the turn about the piece draws at k 0. Otherwise (far out: the assembly kept on the glass, 2026-11-14; or `pictureOne` 0 —
- * `620f227`): 0 until the framing is tried (its first frame null: 2). Pure.
+ * view is a dolly: what the turn about the piece draws at k 0. Otherwise (far out: the assembly kept on the glass, 2026-11-14): 0 until the framing is
+ * tried (its first frame null: 2). Pure. ⛔ (2026-11-22, R6) the switch `pictureOne` and its 0 (`620f227`: never 2 close in) deleted.
  */
-export function turnFraming(rule: 0 | 1 | 2, closeIn: boolean, pictureOne: number): 0 | 1 | 2 {
+export function turnFraming(rule: 0 | 1 | 2, closeIn: boolean): 0 | 1 | 2 {
   if (rule !== 0) return rule;
-  return pictureOne === 1 && closeIn ? 2 : 0;
+  return closeIn ? 2 : 0;
 }
 
 /**
@@ -660,9 +660,8 @@ export function turnPose(
   turn: { readonly rule: 0 | 1 | 2; readonly keep: FramingKeep | null },
   hint: Vec3 | null,
   closeIn: boolean,
-  pictureOne: number,
 ): { readonly pose: CamPose; readonly rule: 1 | 2; readonly keep: FramingKeep | null; readonly framed: boolean; readonly about: { readonly pose: CamPose; readonly axis: Vec3 | null; readonly angle: number } } {
-  const rule = turnFraming(turn.rule, closeIn, pictureOne);
+  const rule = turnFraming(turn.rule, closeIn);
   const about = poseAboutPiece(a, b, piece, k, hint);
   const t = rule === 2 ? null : poseFramingTwo(a, b, piece, k, turn.keep);
   if (t !== null) return { pose: t.pose, rule: 1, keep: t.keep, framed: true, about };

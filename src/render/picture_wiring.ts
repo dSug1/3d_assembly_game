@@ -1,6 +1,6 @@
 /**
- * ⭐⭐⭐ (2026-11-21, `Claude/40_RENDER_SCENE/spec/PICTURE_REBUILD.md` §4.1 – §4.4 — packet R3a, `pictureOne` 1 with `cameraFollower` 1) THE ONE PICTURE AT THE
- * CAMERA'S STAGE: the state and the one call in place of `followFrame ?? rollPictureFrame`. The rules are pure (`input/picture.ts`, `pictureStep`).
+ * ⭐⭐⭐ (2026-11-21, `Claude/40_RENDER_SCENE/spec/PICTURE_REBUILD.md` §4.1 – §4.4 — packet R3a; ⛔ R6: its switches `pictureOne`, `cameraFollower` deleted)
+ * THE ONE PICTURE AT THE CAMERA'S STAGE: the state and the one call in place of `followFrame ?? rollPictureFrame`. The rules are pure (`input/picture.ts`, `pictureStep`).
  *
  * * FAR (the follower draws — `followActive`, as today): `followFrame` with the picture's hook: the follower's own step and pose (`followTopStep` /
  *   `followStep`, `followPose`, their turns — unchanged), then `pictureStep` — outside the band, no up held and outside the turntable's cone it returns the
@@ -17,10 +17,10 @@
 import type { Vec3 } from "../core/vec";
 import { followStart, followTopTarget, headingOf } from "../input/camera_follow";
 import { upSquareToView } from "../input/camera_frame";
-import { blendShare, holdAtCrossing, squareTurning, tiltDir, type CamFrame, type CamPose } from "../input/orbit_tilt";
+import { blendShare, squareTurning, tiltDir, type CamFrame, type CamPose } from "../input/orbit_tilt";
 import { orbitDir } from "../input/assembly_orbit";
 import { poseTurnAngle } from "../input/roll_follow";
-import { changeSeen, holdSeen, uprightWeight, viewFromVertical } from "../input/upright";
+import { changeSeen, holdSeen } from "../input/upright";
 import { PICTURE_CONE_DEG, PICTURE_REST, pictureStep, type PictureIn, type PicturePose } from "../input/picture";
 import { followActive, followFrame, type FollowPicture } from "./camera_follow_wiring";
 import { CHANGE_NONE, rollPictureFrame, type ChangeLeft } from "./roll_shadow";
@@ -30,18 +30,17 @@ import type { SceneState } from "./scene_state";
 /**
  * ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §4.4 — R3b, RB1's one place) THE ONE RESOLVER of the change of frame the logic asks (`asmChange`), before any drawer:
  * where the follower draws, AT ONCE with the dy hold of the logic's crossing (OP8; under the top's rule none — D-H8, D-F4); elsewhere close in's rule
- * (`changeSeen`: a timed turn, or at once with the carried up's hold to come — C6; law U's own under `uprightCarried` 0) — each moved here AS WRITTEN from
- * `followFrame`, `carriedFrame`, `uprightPictureFrame`, at the same moment of the frame (nothing between reads what they change).
+ * (`changeSeen`: a timed turn, or at once with the carried up's hold to come — C6) — each moved here AS WRITTEN from `followFrame`, `carriedFrame`, at
+ * the same moment of the frame (nothing between reads what they change). ⛔ (2026-11-22, `PICTURE_REBUILD.md` §8.6 — R6) law U's own rule
+ * (`uprightCarried` 0), the square camera's share under `uprightCloseIn` 1 and the guard of the shadow (`freeTurnMaxDeg` 0, `uprightPicture` 0) deleted.
  */
 function changeResolve(st: SceneState, eye: Vec3, look: Vec3, up: Vec3): ChangeLeft {
   const ask = st.asmChange;
   if (ask === null) return CHANGE_NONE;
   if (followActive(st) && !st.orbitPiecePlaced) {
-    const top = st.cfg.followTop === 1;
-    changeApply(st, ask, false, top ? undefined : ask.hold !== undefined ? holdAtCrossing(ask.hold) : undefined);
+    changeApply(st, ask, false, undefined); // ⛔ (R6) the detour's hold here (`followTop` 0: `holdAtCrossing`) deleted
     return CHANGE_NONE;
   }
-  if (!(st.cfg.freeTurnMaxDeg > 0) || st.cfg.uprightPicture !== 1) return CHANGE_NONE;
   const view: Vec3 = [look[0] - eye[0], look[1] - eye[1], look[2] - eye[2]];
   const ghost: CamPose = { eye, look, up: upSquareToView(up, view) };
   const was = st.asmRollShadow;
@@ -50,27 +49,15 @@ function changeResolve(st: SceneState, eye: Vec3, look: Vec3, up: Vec3): ChangeL
   const tl = st.asmTilt;
   const tiltHold = tl !== null && (tl.exit || tl.off);
   const share = sq.n === null || !(sq.q > 0) ? 0 : sq.q;
-  if (st.cfg.uprightCarried === 1) {
-    // the carried up's rule (packet E, `carriedFrame` as at `620f227`)
-    const kappa = st.cfg.uprightCloseIn === 1 ? 1 : 1 - share;
-    const drawn = was !== null && was.drawn && was.one !== undefined;
-    const turnRad = drawn ? poseTurnAngle(was.ghost, ghost) : Number.NaN;
-    const stays = !drawn || was.turn !== null || ask.paced || ask.byMm || ask.tilt || sqTurning || tiltHold;
-    const seen = changeSeen({ stays, wBefore: drawn ? was.one!.kappa : 0, wAfter: kappa, turnRad, freeMaxDeg: st.cfg.freeTurnMaxDeg });
-    changeApply(st, ask, seen.timed, seen.timed && ask.hold !== undefined ? holdSeen(seen, ask.hold, null, null) : undefined);
-    if (seen.timed) return CHANGE_NONE;
-    return { change: true, ...(ask.hold !== undefined ? { crossed: ask.hold } : {}), freed: turnRad > 0 ? turnRad : Number.MIN_VALUE };
-  }
-  // law U's rule (`uprightPictureFrame` as at `620f227`, §12 RB1 – RB2)
-  const scale = st.cfg.uprightCloseIn === 1 ? 1 : 1 - share;
-  const drawn = was !== null && was.drawn && was.upright !== undefined;
+  // the carried up's rule (packet E, `carriedFrame` as at `620f227`)
+  const kappa = 1 - share;
+  const drawn = was !== null && was.drawn && was.one !== undefined;
   const turnRad = drawn ? poseTurnAngle(was.ghost, ghost) : Number.NaN;
   const stays = !drawn || was.turn !== null || ask.paced || ask.byMm || ask.tilt || sqTurning || tiltHold;
-  const wAfter = uprightWeight(viewFromVertical(ghost), st.cfg.uprightFromDeg, st.cfg.uprightFullDeg) * scale;
-  const seen = changeSeen({ stays, wBefore: drawn ? was.upright!.w : 0, wAfter, turnRad, freeMaxDeg: st.cfg.freeTurnMaxDeg });
-  const hold = ask.hold === undefined ? undefined : holdSeen(seen, ask.hold, drawn ? was.picture : null, drawn ? was.ghost : null);
-  changeApply(st, ask, seen.timed, hold);
-  return seen.timed ? CHANGE_NONE : { change: false, freed: turnRad > 0 ? turnRad : Number.MIN_VALUE };
+  const seen = changeSeen({ stays, wBefore: drawn ? was.one!.kappa : 0, wAfter: kappa, turnRad, freeMaxDeg: st.cfg.freeTurnMaxDeg });
+  changeApply(st, ask, seen.timed, seen.timed && ask.hold !== undefined ? holdSeen(seen, ask.hold) : undefined);
+  if (seen.timed) return CHANGE_NONE;
+  return { change: true, ...(ask.hold !== undefined ? { crossed: ask.hold } : {}), freed: turnRad > 0 ? turnRad : Number.MIN_VALUE };
 }
 
 /** ⭐⭐⭐ (R3b, D-P6) THE FRAME DRAWN, published here only (`asmCamDrawn`): the drawer's own, else the logic's (exactly what `asmCamLast` held after the stage). */
@@ -78,19 +65,8 @@ function publishDrawn(st: SceneState, cam: CamFrame | null): void {
   st.asmCamDrawn = cam ?? st.asmCamLogic;
 }
 
-/** ⭐ The one picture draws here: the switch on and the follower's switch on (the band is the follower's); else today's line exactly. */
-export function pictureOn(st: SceneState): boolean {
-  return st.cfg.pictureOne === 1 && st.cfg.cameraFollower === 1;
-}
-
-/** ⭐ (R3b) TODAY'S LINE, exactly (`pictureOne` 0, or the follower off): the follower, else the close drawer — the change resolved once before, the facts read after. */
-function pictureLegacy(st: SceneState, pp: Vec3, foot: Vec3, eye: Vec3, look: Vec3, up: Vec3, gapM: number, off: { readonly yawRad: number; readonly pitchRad: number }, dtMs: number): CamPose {
-  const left = changeResolve(st, eye, look, up);
-  const zp = followFrame(st, pp, foot, eye, look, up, gapM, off, dtMs) ?? rollPictureFrame(st, pp, eye, look, up, dtMs, left);
-  pictureEventsRead(st, zp.ev);
-  publishDrawn(st, zp.cam);
-  return zp;
-}
+/* ⛔ (2026-11-22, `PICTURE_REBUILD.md` §8.6 — R6) `pictureOn` and TODAY'S LINE (`pictureLegacy`: `pictureOne` 0 or `cameraFollower` 0 — `followFrame ??
+ * rollPictureFrame`) deleted with their switches: the one picture draws at every distance. */
 
 /**
  * ⭐⭐⭐ ONE FRAME OF THE PICTURE: the pose drawn (`eye`, `look`, `up`) — the camera's stage squares the up. `eye`, `look`, `up`: the logic's pose (the
@@ -108,7 +84,6 @@ export function pictureFrame(
   dtMs: number,
   dvPerMm: number,
 ): CamPose {
-  if (!pictureOn(st)) return pictureLegacy(st, pp, foot, eye, look, up, gapM, off, dtMs);
   const left = changeResolve(st, eye, look, up);
   const was = st.asmPicture;
   const s0 = was?.s ?? PICTURE_REST;
@@ -185,18 +160,14 @@ export function pictureFrame(
 
 /**
  * ⭐⭐⭐ (O-3, D-P5) THE FOLLOWER PARKED while G draws: at rest ON its own far target — the top's rule: the levelled reading, else the heading carried `psi`
- * (the turntable's, set from the drawn up), the asked height capped; the detour's: the direction asked — its top state at the gizmo's facet and the orbit's
- * place now. So when far begins again it goes on from where its target is: no restart on the drawn direction, no drift by time, no spin.
+ * (the turntable's, set from the drawn up), the asked height capped — its top state at the gizmo's facet and the orbit's place now (⛔ R6: the detour's,
+ * `followTop` 0, deleted). So when far begins again it goes on from where its target is: no restart on the drawn direction, no drift by time, no spin.
  */
 function followPark(st: SceneState, psi: number | null): Vec3 | null {
   const ask = st.asmAsk;
   if (ask === null) return null;
   const was = st.asmFollow;
   const rec = { on: 0, pic: 1 };
-  if (st.cfg.followTop !== 1) {
-    st.asmFollow = { state: followStart(ask), piece: null, rec };
-    return ask;
-  }
   const L = st.asmAskLevel ?? psi ?? headingOf(ask) ?? was?.top?.psiT ?? 0;
   const T = followTopTarget(L, ask, st.cfg.followPoleDeg);
   const orbitW = tiltDir(dirFrame(st), orbitDir(st.orbit.yaw, st.orbit.elevation));

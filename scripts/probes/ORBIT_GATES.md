@@ -589,3 +589,15 @@ node scripts/probes/gravity_read.mjs <rec.json> ...          # JSON=1: one objec
   windows containing the exit frame, and the 33 ms before it); `rd_h3b.sh id|side|s1|hand|f143|walks|hold|close|clamp|turns` (with `rd_h3.mjs`,
   `his.mjs`, `jr.mjs`, `hold_tab.mjs`, `same.mjs`; against `runs_h2` = `ba369aa` and `runs_g2` / `runs_h1` = `de4a10e`). The mutants: `mut_h3.mjs`
   with `mut_h3_pure.json` (17) and `mut_h3_wiring.json` (10).
+
+## 17. R6 — the old picture's switches deleted (2026-11-22, `Claude/40_RENDER_SCENE/spec/PICTURE_REBUILD.md` §8.6)
+
+* ⛔ **§12 – §16's comparisons cannot be re-run on this branch as written**: the switches they pass are gone — `pictureOne`, `cameraFollower`,
+  `followTop`, `followFromDeg`, `followMaxDegS`, `followTurnOnJump`, `followTurnFinger`, `followTurnRebase`, `uprightPicture`, `uprightCloseIn`,
+  `uprightCarried`, `uprightFraming`; `freeTurnMaxDeg` stays but its 0 is refused (`(0, 90]`). `config_override.ts` reports an unknown key; the kit's
+  older drivers (`follow/r2` … `r5`, `h*`, `rebuild_d`, `rebuild_e`) still pass them — they are the record, not a runbook.
+* ⭐ **An identity run now** serves another checkout with `REPO=` (§ the library's header): a detached worktree at the build to compare against —
+  R6's own gate (kit `follow/r6/drv_r6.sh TAG`, `cmp_r6.mjs <base> <new>`) served `2c8ad70` from `../picture_repro` for the base and this branch's
+  tip for the new, the same probes from this folder; 27 recordings, every one identical frame for frame or within the replay's known noise.
+* ⚠ `Scene_0bis`'s replay (`?sceneIndex=4`, the defaults) differs from ITSELF run to run: 551 frames (3 – 556) up to 2.34e-9 m, then exact — the same
+  code twice gives the same pattern; judge it against a repeat of the same code, not against zero.

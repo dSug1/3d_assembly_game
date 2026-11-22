@@ -311,6 +311,9 @@ make close in gravity-upright near the vertical (P17); shorten the waits (45 % o
 D-H13 – D-H19 (`TOP_BOTTOM_STUDY.md` §6) enter at R5 — ⭐ DECIDED 2026-11-21 by his rule *"Do what minimize the camera movements while maintaining the
 key rules (calm, etc.)"*: D-H13 – D-H17 yes (D-H14 tied), D-H18 (a) left as is, D-H19 yes, D-H21 yes (`TOP_BOTTOM_STUDY.md` §6); D-H22 is answered by D-P3.
 ⭐ **His word (2026-11-21): *"go ahead"* — D-P1 – D-P8 DECIDED as recommended**, R2 first; the owed runs (§7) one batch at a time when he frees the PC.
+⭐ **His word (2026-11-22)** on the handover's list: R5 ON — `pictureFarTop` **1 by default** (*"set the slider default to 1"*; its far pole pin on
+`Scene_0bis` not studied, §4.7's R5 row); **R6: *"proceed"*** (§8.6); D-R1 (`TOP_BOTTOM_STUDY.md` §10) kept as a future improvement, not built; then a
+deploy, and the merge into the main folder prepared for his word.
 
 ## 7. Owed runs (none run: no headless run while he tests) — from `../camera_follow`, one batch at a time
 1. **The approach cycle** (R2, R3, R4), each build and `&pictureOne=0` (the identity to `620f227`): the kit's `follow/h5/drv_h5c.sh` line —
@@ -489,3 +492,51 @@ the latch and the unlatch the pose drawn is held and his finger closes the gap: 
 * **Owed** (none run). §7 items 1 – 3 with `&pictureOne=0` as the identity. His three videos' strokes on `Scene_0bis` (kit `follow/r3fix`:
   `walk_h.mjs`, `rd_stuck.mjs`), the band's dy near the left tip (R3: 0.22 m along the axis; `pictureOne` 0: 0.05). The approach cycle on `Scene_1`'s
   top. The spit's latch and its way out (the heading paid by the mm). The dy hold walks (the follower's own holds now drawn through logic turns).
+### 8.6 R6 — the deletions (his word of 2026-11-22: *"proceed"*; ⛔ as briefed, not yet built)
+* **What goes** (§4.6's order of deletion): every path the game no longer takes with the defaults — `pictureOne` 0 (`pictureLegacy`, `620f227`'s line),
+  `cameraFollower` 0, `followTop` 0 (the detour: `poleDetour`, `polarStep`, `followCeiling`, `followFromDeg`, `followMaxDegS`), H3's 0 paths
+  (`followTurnOnJump`, `followTurnFinger`, `followTurnRebase`), law U (`uprightPictureFrame`, `uprightPicture`, `uprightCloseIn`), FO3 S1's gap and the
+  shadow (`freeTurnMaxDeg`, `rollFollowMs`, `rollShadowFrame`), `poseFramingTwo` (`zm.rule` 1), the 0 paths of `uprightCarried` and `uprightFraming` —
+  each with its switch, its slider and its vectors. A name goes only once a trace shows nothing on the kept path reads it.
+* **What stays**: the one picture (`pictureStep`, `picture_wiring.ts`); close in's target (C1, C4, J's `framingStep` and what it uses); the logic's
+  targets and clocks (§4.6's last row); `pictureFarTop` (**1**; 0 = `98ac680`'s far top rule, H2 / H3, kept until his look on R5), `pictureBandMm`,
+  `followMs`, `followTurnMaxDegS`.
+* **The gate** (kit `follow/r6/drv_r6.sh`, one batch each side, the same probes): the baseline commit (`pictureFarTop` 1) served from
+  `../picture_repro`, R6's tip from `../camera_follow`. The replay probe on `Scene_1`, `Scene_0`, `Scene_0bis` with `pictureFarTop` 1 and 0; his
+  `Scene_0bis` free strokes (band, band 11, far, far with `pictureFarTop` 0, the mix, close); `Scene_1`'s approach cycle at 5 / 9.5 / 8.4 px; the spit's
+  latch near the left tip; his two close stretches; the dy hold walks. Every recording identical (`Scene_0bis`'s first ~30 frames to 1e-6, the replay
+  probe's known noise), the `moved:` line read.
+* **As built** (2026-11-22, the builder; ⛔ no headless run, no device look: the lead's batch `drv_r6.sh` is the gate). Two code commits, §4.6's order
+  merged where the same files carried the steps: `53f00b5` (FO3 S1 and the shadow, law U, `uprightFraming` 0) and `3014e53` (the detour, `cameraFollower`
+  0 with `pictureOne` 0, H3's 0 paths). **Switches and sliders removed (12; 144 → 132):** `uprightPicture`, `uprightCloseIn`, `uprightCarried`,
+  `uprightFraming`, `cameraFollower`, `pictureOne`, `followFromDeg`, `followMaxDegS`, `followTop`, `followTurnOnJump`, `followTurnFinger`,
+  `followTurnRebase`. **Deleted with them:** `rollShadowFrame`, FO3 S1's gap in `rollPictureFrame`, `uprightPictureFrame`, `roll_follow.followStep` /
+  `gapTake` / `FollowMode`, `fingerOnGhost` / `fingerOnLogic`, `upright.ts` `uprightStep` / `uprightPaced` / `UprightState` / `UPRIGHT_REST` /
+  `holdOnPicture`, the `lawHalf` event, the record's `upright` field and its three readers, `fingerAtEntry` (the identity once law U is gone), `turnBegin`'s
+  own turn (`uprightDecides`, `seamEase`, `easeCarry`, `TurnAsk.noCamNull`), `pictureOn` / `pictureLegacy`, `followFrame`'s drop without a hook,
+  `camera_follow.ts` `FollowKnobs` / `FOLLOW_CAP_DEG` / `poleDetour` / `followCeiling` / `polarStep` / `followStep`, `followPark`'s detour branch, the
+  `pictureOne` parameter of `turnFraming` / `turnPose` / `framedPose`, the knobs `onJump` / `finger` and H2's branches in `followTopStep` /
+  `followFarStep`. **Lines (src, deleted / added):** step 1 — `roll_shadow.ts` 173 / 17, `upright.ts` 98 / 8, `assembly_wiring.ts` 76 / 18,
+  `roll_follow.ts` 56 / 6, `picture_wiring.ts` 23 / 11, `gestureConfig.ts` 21 / 3, `pointer_wiring.ts` 8 / 6, `scene_state.ts` 8 / 4, `tuning_menu.ts`
+  6 / 1, `green_box_wiring.ts` 2 / 1; step 2 — `camera_follow.ts` 142 / 26, `camera_follow_wiring.ts` 46 / 38, `gestureConfig.ts` 34 / 2,
+  `picture_wiring.ts` 25 / 8, `tuning_menu.ts` 11 / 3, `orbit_tilt.ts` 7 / 6, `green_box_wiring.ts` 6 / 6, `assembly_wiring.ts` 6 / 6, the rest ≤ 3.
+  **Vectors:** 2327 → 2289 (step 1) → 2278 (step 2).
+* **Kept, read on the kept path** (the trace: kit `follow/r6/CHECKPOINT_R6.md`): `poseFramingTwo` — a turn far out or outside the band is `rule` 0
+  (`turnFraming(0, false)`), the framing tried: its pose is G, read by `upCarried`, the record's ghost and `zm.rule` (the recorder's `mix.rule`);
+  `freeTurnMaxDeg` — its value feeds `changeSeen` (the carried up's timed / at once), only its 0 (the shadow) deleted: the validator now `(0, 90]`, the
+  slider 5 – 90; `rollFollowMs` — the clock of the piece's shown direction's rest (`asmDirEase.own`, written by `changeApply` at once); `followPoleDeg`;
+  `FollowDetour` and `FollowState.det` (the record `asmFollow.rec` reads `side`, `det`: `followStart`'s rest); `src/render/roll_shadow.ts` (it holds the
+  close drawer `carriedFrame` and the record; its name kept for the recorders); `poseTurnAngle`, `turnIsFree`, `gapStep`, `restShare`. ⚠ Left as dead data
+  (not removed, for the lead's word): `FollowTop.orbitWas` and `FollowTopIn.orbit` (H2's pace was their only reader; ~25 test literals carry them), the
+  record's `drawn` (always true now), `rollFollowMs`' slider label (it names the deleted roll follower).
+* **For the lead (probes and URLs, not touched):** `turn_rec.mjs`'s `SHADOW_REC` keeps every field it reads (`s.upright` is now always absent: its own
+  fallback `s.one`, as with the defaults before); `drv_r6.sh` passes none of the deleted switches. The older kit drivers do (`freeTurnMaxDeg=0` ×36,
+  `uprightPicture=0` ×30, `pictureOne=0` ×16, `followTop=0` ×13, `cameraFollower=0` ×7, `uprightCarried=0` ×7, H3's three ×3, `uprightFraming=0` ×1 —
+  `follow/r2` … `r5`, `h*`, `rebuild_d`, `rebuild_e`): an unknown key is now reported by `config_override.ts`, and `freeTurnMaxDeg=0` refused.
+  `scripts/probes/ORBIT_GATES.md` lines 492 – 583 cite the same switches.
+* ⭐ **The gate RUN, PASS** (2026-11-22, the lead; kit `follow/r6`: `drv_r6.sh`, `cmp_r6.mjs` — checked first on a planted 1e-4 m difference, caught):
+  `runs_base` = `2c8ad70` served from `../picture_repro`, `runs_r6` = `6221bf0` from `../camera_follow`, the same probes. **27 recordings: 26 identical
+  frame for frame**, the 27th (`Scene_0bis`'s replay, the defaults) 551 frames (3 – 556) within 2.34e-9 m — the same R6 code run twice gives the same
+  551 frames at 2.34e-9, and the base against that repeat differs in **0** frames: the scene's own boot noise (`ORBIT_GATES.md` §17). Every replay moved
+  (`Scene_0bis`: the camera 412 m, the gizmo 19 m); his strokes, the approach cycle at three paces, the spit's latch, his two close stretches and the
+  six dy hold walks identical, `pictureFarTop` 1 and 0. `npm run verify` **2278** (the lead). ⛔ No device look on R6 nor on R5 at 1.

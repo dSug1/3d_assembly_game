@@ -322,7 +322,7 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`)", () => {
       "const m = mapGizmo(st, mq.yaw, mq.pitch);",
       "if (Math.hypot(v[0], v[1], v[2]) > 1e-6) st.asmGOff = { v, left: 1, timeMs: 0, durMs: rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS) };",
       "st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch }; faceBandRead(st, m.t);",
-      "turnBegin(st, { paced: c.paced, byMm: false, noCamNull: false, uWas: c.uWas, carry: c.carry, tilt: c.tilt === true, stopCoast: true, hold: c.hold });", // ⭐ (2026-11-19, RB1) the turn, the ease, the coast and the hold through the one starter
+      "turnBegin(st, { paced: c.paced, byMm: false, uWas: c.uWas, carry: c.carry, tilt: c.tilt === true, stopCoast: true, hold: c.hold });", // ⭐ (2026-11-19, RB1) the turn, the ease, the coast and the hold through the one starter
     ];
     let at2 = -1;
     for (const s of order2) {
@@ -340,7 +340,7 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`)", () => {
   it("⭐ the gizmo held while the turn runs: `tiltClampStep` refuses an orbit step while `asmZoneMix` is short of whole (no second hold added)", () => {
     const h = fnSource(W, "export function tiltClampStep(");
     // ⭐ (2026-11-15, step 2.4c) a turn not paced (`byMm` — the automatic tilt's entry made pending, `chartLayout` 1 only) is held while short of whole, as before
-    expect(h).toContain("const zoneTurning = (zm !== null && turnHoldsGizmo(zm.out !== undefined, zm.byMm === true, st.asmTiltPending, st.asmBlend !== null, zm.k)) || lawHalfTurn(st.asmRollShadow?.upright?.state ?? st.asmRollShadow?.one?.state) || followTurnHoldsGizmo(st.asmFollow?.top?.turn ?? null);"); // ⭐ (2026-11-16, step C3) the rule in `turnHoldsGizmo`: as before for every turn but the way out paced by the finger
+    expect(h).toContain("const zoneTurning = (zm !== null && turnHoldsGizmo(zm.out !== undefined, zm.byMm === true, st.asmTiltPending, st.asmBlend !== null, zm.k)) || lawHalfTurn(st.asmRollShadow?.one?.state) || followTurnHoldsGizmo(st.asmFollow?.top?.turn ?? null);"); // ⭐ (2026-11-16, step C3) the rule in `turnHoldsGizmo`: as before for every turn but the way out paced by the finger
     expect(h).toContain("if (zoneTurning && (st.orbit.yaw !== yaw0 || st.orbit.elevation !== v0)) { st.orbit.reset(yaw0, v0); return true; }");
   });
 });

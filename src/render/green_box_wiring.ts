@@ -1075,21 +1075,20 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // ⭐⭐⭐ (2026-11-14) a polar zone's turn (its switch, the spit's crossing): the camera turned ABOUT THE PIECE from the pose on the glass (`zoneMixPose`)
   if (assemblyOn(st)) {
     // ⭐⭐⭐ (2026-11-18, `FAST_ORBIT.md` §12.6 S0, §14 S1) THE PICTURE A FOLLOWER OF THE LOGIC (`roll_shadow.ts`): the changes of frame under
-    // `freeTurnMaxDeg` free, the roll about the line through the piece and its look point eased (`rollFollowMs`) — `freeTurnMaxDeg` 0: the shadow only and
-    // today's `zoneMixPose`
+    // `freeTurnMaxDeg` free (⛔ R6: the roll follower and the shadow deleted)
     // ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §13 — F1) the direction ASKED this frame (the calm before its ease, at the rig's solved angles): recorded
     st.asmAsk = askedDir(st, rig.yaw, rig.v);
-    // ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §15 — H2) …and the calm's LEVELLED reading at the same angles: the follower's heading far out (`followTop` 1)
+    // ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §15 — H2) …and the calm's LEVELLED reading at the same angles: the follower's heading far out (⛔ R6: `followTop` deleted)
     // ⭐⭐⭐ (2026-11-21, R5, D-H19) …under the far rule as decided (`farTopDecided`) THE FAR READING: the calm asked's own world heading below 50° of the
     // orbit's world elevation, the levelled reading from 60°, a level face carried (`farAsked`); else H2's exactly
-    st.asmAskLevel = st.cfg.followTop !== 1 ? null : farTopDecided(st) ? farAsked(st, rig.yaw, rig.v, st.asmAskCalm) : levelledAsked(st, rig.yaw, rig.v);
+    st.asmAskLevel = farTopDecided(st) ? farAsked(st, rig.yaw, rig.v, st.asmAskCalm) : levelledAsked(st, rig.yaw, rig.v);
     // ⭐⭐⭐ (R5, D-H15) …and LAST frame's calm read at the same angles: the far reading's jump by geometry (none kept off the far rule as decided)
     farJumpRead(st, rig.yaw, rig.v);
-    // ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §13 — F2) FAR OUT THE CAMERA FOLLOWER (`cameraFollower` 1): a simple polar orbit (world up) about the look
-    // point following the direction asked, the piece hung along the same direction (`followFrame`); `null` close in or with the switch 0: the picture below
+    // ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §13 — F2) FAR OUT THE CAMERA FOLLOWER: a simple polar orbit (world up) about the look
+    // point following the direction asked, the piece hung along the same direction (`followFrame`); close in: the picture below
     const c0 = st.orbitCentreM;
-    // ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §4.1, §4.4 — R3a, R3b) THE PICTURE, one call (`picture_wiring.ts`): the one picture at every distance (`pictureOne` 1
-    // with `cameraFollower` 1), else today's line exactly (`followFrame ?? rollPictureFrame`) — the change asked resolved once, the frame drawn published there
+    // ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §4.1, §4.4 — R3a, R3b) THE PICTURE, one call (`picture_wiring.ts`): the one picture at every distance (⛔ R6:
+    // today's line, `pictureOne` 0 / `cameraFollower` 0, deleted) — the change asked resolved once, the frame drawn published there
     const zp = pictureFrame(st, pp, [c0.x, c0.y, c0.z], camAt, lookAt, camFrame.up, gapFull, off, dtSec * 1000, orbitDvPerMm(st));
     camAt = [zp.eye[0], zp.eye[1], zp.eye[2]];
     lookAt = [zp.look[0], zp.look[1], zp.look[2]];

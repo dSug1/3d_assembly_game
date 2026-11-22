@@ -1,5 +1,5 @@
 /**
- * ⭐⭐⭐ (2026-11-21, `Claude/40_RENDER_SCENE/spec/PICTURE_REBUILD.md` §4.1 – §4.3 — packet R3a, switch `pictureOne`) THE ONE PICTURE — pure rules, no engine.
+ * ⭐⭐⭐ (2026-11-21, `Claude/40_RENDER_SCENE/spec/PICTURE_REBUILD.md` §4.1 – §4.3 — packet R3a; ⛔ R6: its switch `pictureOne` deleted) THE ONE PICTURE — pure rules, no engine.
  *
  * ONE picture at every distance (D-P1), its state never dropped: far out the follower's pose, close in the logic's pose G (close in's own turns, square
  * camera, carried up and J — read, never reopened). Between them a change of TARGET by the approach's PLACE (D-P3 (a)): the band, the last
@@ -26,7 +26,7 @@ import { rotateAbout, TILT_AUTO_HYST_M } from "./orbit_tilt";
  * ⭐ The turntable's cone round the vertical (deg): outside it the up is the world's (the view's own heading); in its inner half the up's heading is the
  * CARRIED ψ whole; between, blended by place. 20°: the far cap (60°, `followPoleDeg` 30, with the owner's 2° pitch offset 62°) stays 8° outside it — far
  * out bit for bit — and a near-vertical view (the f480 case: 3.4° off it) is in its inner half, its residue's heading never read; on the approach
- * cycle the up's step through the cone stays under 3° at 0.5 mm a frame (10° wide: 6.7°). ⚠ The detour (`followTop` 0, to 80°) enters it.
+ * cycle the up's step through the cone stays under 3° at 0.5 mm a frame (10° wide: 6.7°). (⛔ R6: the detour, `followTop` 0, to 80°, deleted.)
  */
 export const PICTURE_CONE_DEG = 20;
 /** ⭐ The world's up — far out the turntable's up outside the cone, as the follower drew it (`followPose`). */
