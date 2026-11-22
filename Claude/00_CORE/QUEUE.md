@@ -14,10 +14,10 @@ record. **A status changes in BOTH places or neither.**
 
 ---
 
-## ⭐⭐⭐ YOU ARE HERE (2026-11-22, branch `1.0.153-Picture_rebuild` in `../camera_follow`, live main `98ac680` = `4bf5c31`)
+## ⭐⭐⭐ YOU ARE HERE (2026-11-22, branch `1.0.154from1.0.145-Merged-with-camera-follow-worktree` in the MAIN folder, live main `6fc1f5d` = `ba3f4aa`)
 
-⭐⭐⭐ **LIVE** (deployed 2026-11-22 ~00:45 on his word *"deploy so I can test tomorrow morning"*): main `98ac680` = `4bf5c31` — the picture's rebuild R2 + R3 + R3-FIX rounds 1 + 2 (one heading owner; his `Scene_0bis` finding of 2026-11-21 night). ⛔ No device look yet on R3-FIX. His reference: `ae456df` (R2 + R3) — *"the best implementation of the orbit so far"*. **2327 vectors**. Switches: `pictureOne` 1 (0 = the build before), `pictureFarTop` 0 (1 = R5) → [`PICTURE_REBUILD.md`](../40_RENDER_SCENE/spec/PICTURE_REBUILD.md).
-⭐ **NEXT** (each on his word): his look on `98ac680`; D-R1 the zenith crossing near the tips (`TOP_BOTTOM_STUDY.md` §10, proposed); R5's far pole pin (study); R6; the merge into the main folder when the charts are done → ⭐ **read [`HANDOVER_2026-11-22.md`](queue_notes/HANDOVER_2026-11-22.md) first**.
+⭐⭐⭐ **LIVE** (deployed 2026-11-22 morning on his word): main `6fc1f5d` = `ba3f4aa` — the picture's rebuild R2 + R3 + R3-FIX + **R5 ON** (`pictureFarTop` 1, *"set the slider default to 1"*; 0 = `98ac680`'s far top rule) + **R6** (the old picture's paths deleted: 12 switches, 132 sliders; bit for bit against `2c8ad70` on 27 recordings). ⛔ No device look yet on R3-FIX, R5 at 1, R6. His reference: `ae456df` — *"the best implementation of the orbit so far"*. **2278 vectors** → [`PICTURE_REBUILD.md`](../40_RENDER_SCENE/spec/PICTURE_REBUILD.md) §8.6.
+⭐⭐⭐ **MERGED (2026-11-22, his word)** — the main folder is the workfront: `1.0.154from1.0.145-Merged-with-camera-follow-worktree` = `63a95d4` + `1.0.146s-` (the orbit surface spec) + `1.0.146b-` (RND6's diagnosis); `1.0.145-` stays at `510bbd8` (the record); every other worktree removed, the unmerged lines kept as pushed `archive/*` tags (the clean-up, `HANDOVER_2026-11-22.md` §4); **2302 vectors**. ⭐ **NEXT** (each on his word): ⭐ the ORBIT SURFACE work ([`ORBIT_SURFACE_BUILD.md`](../40_RENDER_SCENE/spec/ORBIT_SURFACE_BUILD.md)); then RND6; his look on `6fc1f5d`; R5's far pole pin (study). ⛔ D-R1 tried and FAILED, not deployed — a study of the re-crossing a future improvement (`TOP_BOTTOM_STUDY.md` §10) → read [`HANDOVER_2026-11-22.md`](queue_notes/HANDOVER_2026-11-22.md) §0 first.
 ⭐ The lines of 2026-11-19 (LIVE `675ec23`, the upright law U, option 3) moved → [`history/2026-11-22_queue_status_moved.md`](history/2026-11-22_queue_status_moved.md).
 ⭐ The lines of 2026-11-18 (LIVE `4eabab8`, FO3, the upright study, NEXT) moved → [`history/2026-11-18_queue_status_moved.md`](history/2026-11-18_queue_status_moved.md).
 ⭐⭐⭐ **`12dc4b6` is the best orbit before the charts** (the owner, 2026-11-12). The status lines of 2026-11-12 to 2026-11-14 (the slide's rebuild, no zoom, the cleaned sliders, the pick-up flow, the browser guards) moved → [`history/2026-11-18_queue_status_moved.md`](history/2026-11-18_queue_status_moved.md).
@@ -299,6 +299,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | RND3 | Anchor ring during two-touchpoint gestures (§4) | RND | render | queued | IN2 |
 | RND4 | Off-screen target indication — Halo / Wedge | RND | render | queued. ⭐ Not general polish: **6ter needs BOTH objects selected**, and at close zoom the partner is routinely off-frame, so the gesture becomes unreachable with nothing to say why. Curvature (Halo) or a tapered wedge encodes direction AND distance without a camera snap. ⚠ Audience includes youth — cap the indicator count. Prior art: Baudisch & Rosenholtz CHI 2003; Gustafson et al. CHI 2008 | 3D1, IN4 |
 | RND5 | ⭐ Orbit on charts | RND | feature | steps 1.1 - 2.5, C0 - C5, (A) LIVE; DH, silent entry v7 built, no device look; owed: step 3, FO3, step B → `queue_notes/RND5.md` | — |
+| RND6 | ⛔ Black canvas on iPhone: WebGL context lost, never restored; Safari dead until force-quit | RND | defect | diagnosed to `Scene_2`'s loads (≈ 4th reload); mechanism probable; ⛔ no fix built — the owner's instruction; ⏸ worked on AFTER the orbit surface work (2026-11-22) → `queue_notes/RND6.md` | — |
 
 ## Phase DEP — build and deployment
 

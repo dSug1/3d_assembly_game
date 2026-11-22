@@ -365,3 +365,15 @@ yet"*. D-R1 stays a proposal: his 2026-11-13 zenith rule (one timed 180° turn o
 (one pass per gesture) stand unchanged along the whole ridge, the tips included. When it is taken up: the proposal and the gates above; the baseline to
 beat is the same in the old build and today (the gizmo still 100 – 114 of 120 frames of a dy stroke near the left tip, `rd_stuck.mjs` on `runs_str`);
 his word first, since it bends both rules.
+⛔⛔ **D-R1 TAKEN UP AND FAILED (2026-11-22) — NOT DEPLOYED, NOT MERGED.** His word: *"do D-R1 and deploy in another branch … so i can revert to
+6fc1f5d if not successful"*. Built on `1.0.154-Zenith_crossing_by_place` (`../camera_follow`, the full record there: `ae0ed63`, `9a08cef`, `b2a6ae1`,
+`1a914b1`, `ce980cb`; kit `follow/dr1`): the place by the ring's radius could not part the near-tip crossings (on the prism's ridge, the ring
+the prism's own) from mid-body's; by the orbit's map pitch toward the pole, close in near the tip the hold went (76 → 0 frames) but **14 one-frame up
+flips over 90° (max 178°)** and 8 side changes came in its place. ⭐ **Root:** close in the square camera passes straight over the axis on the
+prism's ridge near its end exactly as at mid-body — the heading flips ≈ 180° whatever the weight (a timed half turn and the hold, or a one-frame
+spin). ⭐ **What makes it stuck there is a RE-CROSSING**: a first side change at the slanted view (28° toward the tip), a turn growing to 90° with
+no hold, the finger's mapping turned with it mid-dy, the same dy brought back over the axis — the half turn and the 76 frames of hold.
+⏸ **A FUTURE POTENTIAL IMPROVEMENT, NOT STARTED** (his word, 2026-11-22: *"Capture that in the md files"*, the merge made without it): a study first
+(his four parts) of the RE-CROSSING — e.g. the dy's sense kept over a turn the same gesture made (D-H8's one pass per gesture, applied to the
+finger's mapping), which bends his 2026-11-14 rule (*"the finger's mapping turned with the side"*); his word first.
+⭐ (2026-11-22, the clean-up) D-R1's record: the pushed tag `archive/1.0.154-Zenith_crossing_by_place` (`ce980cb`); its worktree `../camera_follow` removed.

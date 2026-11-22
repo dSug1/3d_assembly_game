@@ -601,3 +601,5 @@ node scripts/probes/gravity_read.mjs <rec.json> ...          # JSON=1: one objec
   tip for the new, the same probes from this folder; 27 recordings, every one identical frame for frame or within the replay's known noise.
 * ⚠ `Scene_0bis`'s replay (`?sceneIndex=4`, the defaults) differs from ITSELF run to run: 551 frames (3 – 556) up to 2.34e-9 m, then exact — the same
   code twice gives the same pattern; judge it against a repeat of the same code, not against zero.
+  ⭐ (2026-11-22, the clean-up) `../picture_repro` and `../camera_follow` are removed: for an identity run re-create a checkout
+  (`git worktree add --detach ../picture_repro <commit>`, its own `npm ci`) and pass `REPO=`; the kit's closed folders are `.tar.gz` (`fo3/ARCHIVED.md`).
