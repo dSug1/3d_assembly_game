@@ -50,8 +50,9 @@ npm run build       # production bundle into dist/
 ⭐ When the orbit charts are completed, everything is merged into the `3d_assembly_game` worktree.
 The earlier status moved → [`Claude/00_CORE/history/2026-11-20_claude_md_status_moved.md`](Claude/00_CORE/history/2026-11-20_claude_md_status_moved.md), [`Claude/00_CORE/history/2026-11-18_queue_status_moved.md`](Claude/00_CORE/history/2026-11-18_queue_status_moved.md).
 
-**Read first:** [`Claude/00_CORE/queue_notes/HANDOVER_2026-11-18.md`](Claude/00_CORE/queue_notes/HANDOVER_2026-11-18.md) — what is next, in the
-owner's order, and the working rules (the usage limit, the chains, the deploy).
+**Read first:** ⭐ [`Claude/00_CORE/queue_notes/HANDOVER_2026-11-22.md`](Claude/00_CORE/queue_notes/HANDOVER_2026-11-22.md) — where the picture's
+rebuild stands (LIVE `98ac680`), what is next in the owner's order, where to open a session, the working rules, the kit and the worktrees; the
+older [`HANDOVER_2026-11-18.md`](Claude/00_CORE/queue_notes/HANDOVER_2026-11-18.md) (the lean audit's shape, the older kit).
 
 | the subject | where |
 |---|---|
