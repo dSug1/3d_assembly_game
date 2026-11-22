@@ -247,6 +247,10 @@ where the level's pitch is the two faces' bisector. Share of the face seen more 
 The view a function of the gizmo's place alone (the normal of the shape with its edges rounded): the only reading that fixes `Scene_0`'s end faces
 (0 % / 0 %), smoother (0.41°/mm against 0.96), and a change of chart then never moves the view. ⛔ Not ready: worse than today on a blade and a thin
 plate; it moves `Scene_1`'s calm by 4° on average. Its own offline round first (the owner: agreed).
+⚠ **(2026-11-22 evening) Before step B is wired** — it belongs to the surface work (`RND7`): the far follower's jump (D-H23, LIVE `3b7a479`) keys the
+calm's source on its NORMAL; a normal that varies continuously makes every moving frame a change of source and runs the crossing search every frame.
+Re-key the source (the facet, the band) or bound the search first → [`ORBIT_SURFACE_BUILD.md`](ORBIT_SURFACE_BUILD.md) §9,
+[`CAMERA_FOLLOWS_GIZMO.md`](CAMERA_FOLLOWS_GIZMO.md) §20.12.
 
 ## 6. WHAT THE PROTOTYPE MEASURED
 

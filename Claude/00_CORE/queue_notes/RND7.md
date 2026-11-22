@@ -19,6 +19,10 @@
 * The gates: his PC play records replayed headless (the kit's `walk_r.mjs` — [`CAMERA_FOLLOWS_GIZMO.md`](../../40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md)
   §20); every finding about a scene becomes a check in the scene workflow
   ([`SCENE_WORKFLOW.md`](../../20_GAME_RULES/spec/SCENE_WORKFLOW.md) §8 – §9).
+* ⚠ Before the charts' step B is wired (the normal with its edges rounded — part of this work): D-H23 keys the calm's source on its normal, so a
+  continuous normal runs its crossing search every frame — re-key the source or bound the search first
+  ([`ORBIT_SURFACE_BUILD.md`](../../40_RENDER_SCENE/spec/ORBIT_SURFACE_BUILD.md) §9,
+  [`CAMERA_FOLLOWS_GIZMO.md`](../../40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md) §20.12).
 * Its handed findings (F17, the mouth's lip, the drop into a slot): [`RND8.md`](RND8.md).
 
 ## Dated entries
