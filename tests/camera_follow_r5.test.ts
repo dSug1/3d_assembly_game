@@ -298,7 +298,8 @@ describe("R5 D-H15 — wired", () => {
     expect(between(a, "type OrbitStateStart = Pick<", ">;")).toContain('"asmAskCalmWas" | "asmAskLevelWas"');
     const w = code("render/camera_follow_wiring.ts");
     expect(w).toContain("const r = farTopDecided(st) ? followFarStep(s0, was?.top ?? null, { ask: st.asmAsk!, orbit: orbitW, psiL: st.asmAskLevel, nW: gizmoFacetW(st),");
-    expect(w).toContain("...(st.asmAskLevelWas !== null ? { psiLWas: st.asmAskLevelWas.psi } : {}) }, dtMs, kt)");
+    // ⭐ (2026-11-22, `CAMERA_FOLLOWS_GIZMO.md` §19 D-H20) + the reading where the gizmo waits, after it (`follow_turn_at_gizmo.test.ts`)
+    expect(w).toContain("...(st.asmAskLevelWas !== null ? { psiLWas: st.asmAskLevelWas.psi } : {}), ...(psiLAt !== undefined ? { psiLAt } : {}) }, dtMs, kt)");
   });
 });
 
