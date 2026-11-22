@@ -1,7 +1,7 @@
 # THE READOUT — the landing map beside today's depth on `Scene_1` (package S2, designed 2026-11-22)
 
-> **STATUS** · ⭐ **DESIGNED 2026-11-22; his word *"proceed"* (2026-11-22): §10's three choices as proposed — BUILDING** (branch
-> `1.0.158from1.0.157-Orbit_surface`, worktree `../orbit_surface`).
+> **STATUS** · ⭐ **DESIGNED 2026-11-22; his word *"proceed"* (2026-11-22): §10's three choices as proposed — BUILT 2026-11-22 (P1 `dfeb7ef9`,
+> P2 `fafbde6b`, §13); the gates G1 – G3, the auditor's read and his look OWED** (branch `1.0.158from1.0.157-Orbit_surface`, worktree `../orbit_surface`).
 > **OWNS** · S2's design: what the readout shows, what it reads, where it hooks, its switch, its cost readout, its vectors and gates.
 > **READ WITH** · [ORBIT_SURFACE.md](ORBIT_SURFACE.md) §2.2 P2 and §6 (the build list, item 1); [ORBIT_SURFACE_LANDING_MAP.md](ORBIT_SURFACE_LANDING_MAP.md)
 > §10.6 (what the wiring must know), §10.9 (the representation); [ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md) §2bis (his answers), §9 (the terms
@@ -115,3 +115,100 @@ that fails, if it is about a scene's shape.
 Lean packets (the working rules, `HANDOVER_2026-11-22.md` §3): (1) `src/core` — `prepareLanding`, `readoutAt`, `readoutKey` and V1 – V3, each red
 first; (2) the render module, the switch, the HUD line, the marker, V4; (3) G0 – G3, then an independent auditor's read of the diff against this
 design. Commits by path on this branch; nothing pushed or deployed before his word.
+
+## 13. As built (2026-11-22, the builder — G1 – G3, the auditor's read and his look OWED)
+
+### 13.1 The files
+
+**P1 — `dfeb7ef9`, the pure part.** `src/core/units.ts`: `LANDING_STEP_MM`, its one home (`landing_map.ts` re-exports the same binding).
+`src/core/landing_map.ts`: `prepareLanding(placed, held, axes) → { frame, refused, landingAt }` — the sums with no grid; it and `buildLandingMap` share
+ONE preparation (`prepareSums`) and ONE exact evaluation (`exactOf`), so they cannot drift; `readoutAt(prep, place, today)` → `land` (P2's level, Δ,
+the part, the point at P2's level) or `nothing` (no depth; its point the place, on the facet's plane); `readoutKey(...)`; and two helpers so the
+design's mutants have a pure place to bite — `landingAxes(n, t, b, R)` (the facet turned into the world, origin 0) and `heldPiece(points, q, rc)`
+(`qRotate(q, p − rc)`). `tests/landing_readout.test.ts`: V1 – V3, 12 tests. ⭐ **Δ is in METRES** in `src/core` (`Readout.delta`), in millimetres to
+0.1 on the HUD.
+
+**P2 — `fafbde6b`, the wiring.** `src/render/landing_readout.ts` (new): the state `st.landing`, the call `landingReadoutFrame`, the ring
+`landingMarkerFrame`, the line `landingLine`. `src/render/assembly_wiring.ts`: `mapGizmo` split into `rawGizmo` + `gizmoOf` (the same operations in
+the same order) so the frame's own call keeps `rawGizmo`'s point (today's level, before the blend); the hook right after it; `READOUT_SOURCE` (the
+face map, its frame, the placed bodies — the module cannot import this file, which imports it); `placedParts` keeps each body's part id (`ids`,
+parallel, the same key). `src/render/green_box_wiring.ts`: the ring's frame at the end of `greenBoxFrame`. `src/render/hud.ts`, `hud_paint.ts`: the
+`landing` line after `green`, none at 0. `src/render/scene_state.ts`, `scene.ts`: `landing`, `landingMarker`, `asmParts.ids`.
+`src/input/gestureConfig.ts`, `src/render/tuning_menu.ts`: `landingReadout` (0 / 1, default 1, validated; GIZMO & SECTIONS 7 → 8, the menu 135 → 136).
+Tests: `tests/landing_readout_switch.test.ts` (V4, V4b — 9 tests, with D1's), `tests/menu_layout.test.ts`, `tests/unwired_debt.test.ts`.
+
+**What it reads, frame by frame** (at 1): the facet `map.facets[t.stack]` (its `t`, `b`) with `rawGizmo`'s `t.normal`, turned by `mapFrame`
+(`landingAxes`); the place `R·t.surface`; today's point `R·rawGizmo.point`; the held piece's `shape.points`, its MODEL orientation
+(`worldPlacementOf`), its `restingCentre`; the placed bodies of `placedParts` (MODEL pose) with their part ids. The cache's key: a number per face
+map object (a `WeakMap`), the map's frame, `placedParts`' key, the held piece's id and orientation — every number exact. Only the frame's facet is
+prepared, when the gizmo reaches it: at most one preparation a frame by construction. On `Scene_1` only (§13.4 D1).
+
+### 13.2 The vectors, each RED on its mutant first (`CLAUDE.md` rule 2) — one mutant at a time on the built code, the file run, reverted
+
+| # | the vector | the mutant | its red line |
+|---|---|---|---|
+| V1 | `prepareLanding`'s `landingAt` = the map's samples (its own `gather` loop) and its `landingAt`, bit for bit (`Object.is`): L01 – Q10, every studied facet, pieces A and B — 65 300 places; and a two-piece held body read from five depths — 2 420 | one piece's sums dropped from the exact evaluation (`exactOf`: `pieceSums.slice(1)`) | `20267 of 65300 differ` (and 4 of V2's tests red) |
+| V2 | `readoutAt`, a piece turned 90° about x (100 × 20 × 40 mm, its reference its resting face's centre): a plate — Δ 0; within half a piece of a 41 mm block — Δ 41, past it 0, the sign (−41 from the block's top beside it); a 15 mm slot across its 20 mm — the rims (Δ +20 from the floor), a 30 mm slot its floor; a hole right through, 120 × 40 — `nothing`, no depth; the whole scene turned by R — the same Δ to 1e-12 m | the normal flipped (`landingAxes`: −R·n) | `(0, 0): expected 80 to be +0` (5 of 5 red) |
+| | | the piece not centred on its resting face (`qRotate(q, p)`) | `expected 20 to be +0`, `expected 61 to be 41` (5 red) |
+| | | the piece not turned (`p − rc` as is) | `expected 10 to be +0`; the hole: `expected { kind: 'land', level: 0.05, … } to deeply equal { kind: 'nothing', … }` (5 red) |
+| | | (of its own) Δ's sign (`level − depth`) | `expected -41 to be 41` (3 red) |
+| | | (of its own) the map's frame transposed (`Rᵀ`) | `x 0: expected 0.10070755957602062 to be less than 1e-12` (1 red) |
+| V3 | `readoutKey`: the same inputs rebuilt → the same key; a turn (even 1e-9 rad), a seat, another map, another piece, a frame change → another | the orientation left out of the key | `expected 'm3…' not to be 'm3…'` (the turn's test) |
+| V4 | the switch: 1 by default, 0 / 1 only; ⛔ at 0 nothing of the state, the gizmo or the source read (a state that throws at any read but `cfg`) — not vacuous: at 1 the same state IS read; the three entry points read the switch first; the hook once, right after the frame's gizmo; in GIZMO & SECTIONS; ⛔ no module but its own touches `st.landing` | the switch read after the state is made | `expected [Function] to not throw an error but 'Error: st.landing read' was thrown` (2 red) |
+| V4b | at 1 on a stub frame: Δ +41 and the part at the gizmo's place, `band` when the drawn gizmo is off today's point, the HUD line in §2's form; the cache — the same key keeps the preparation, another facet a second one, a turn of the piece clears them | the cache not cleared on a new key | `expected 2 to be 1` |
+| | | the band never set | `expected false to be true` |
+| | (§13.4 D1) on another scene at 1: nothing prepared, no readout, the line `— (Scene_1 only)` | the scene gate removed from the frame | `expected { frame: 7, readout: { …(5) }, …(2) } to be null` |
+
+`tests/landing_map.test.ts` passes UNCHANGED (24 tests).
+
+### 13.3 Departures from the design — each where its intent was unambiguous
+
+1. ⚠ **`buildLandingMap`'s `PENDING` line STAYS in `tests/unwired_debt.test.ts`, its reason rewritten** (§4 said it leaves). The readout calls
+   `prepareLanding` (no grid — his answer, `ORBIT_SURFACE_BUILD.md` §2bis), so nothing in the product calls the GRID; the test asserts its list exact
+   both ways, and deleting the line turns it red. Its reason now says why the grid is unwired (`ORBIT_SURFACE_LANDING_MAP.md` §10.9).
+2. `buildLandingMap` does not call the exported `prepareLanding`: both call one internal preparation and one exact evaluation (the map needs the
+   parts' polytopes for its own layers, which `prepareLanding` does not expose). One code, as §4 asks; V1 proves it at every sample.
+3. Two pure helpers beyond the three named (`landingAxes`, `heldPiece`): §7 names V2's mutants (the normal, the centring, the turn), not where they
+   live — in `src/core`, so the vectors reach them.
+4. `readoutAt` takes points (the facet's place, today's point), both in the world: (u, v) = the place's (§3: `sf·t`, `sf·b`), today's level =
+   today's point along n — §3 written as points.
+5. The ring's frame is the LAST line of `greenBoxFrame`, not the line after `pinkRingFrame`: a vector (`proto_resting_face.test.ts`) pins the lines
+   after `pinkRingFrame`; nothing between them moves the camera or the gizmo's lag.
+
+### 13.4 Decisions made during the build (owner asleep, 2026-11-22)
+
+His word of the evening, relayed: *proceed without questions, every decision in the md files*. Where the design left a choice open, the most
+conservative one that keeps its intent (⛔ nothing in the frame reads the readout; 0 = `3b7a479` frame for frame) — each for his review:
+
+* **D1 — `Scene_1` ONLY** (`READOUT_SCENE`, `render/landing_readout.ts`). §1 shows the readout on `Scene_1` and §9 leaves `Scene_2` out, but the
+  switch alone would have run it on every scene: on `Scene_2` `placedParts` hulls whole meshes (not its `UCX_` pieces), so its Δ would not be P2's,
+  at an unmeasured preparation cost on a phone. Elsewhere at 1: nothing prepared, no ring, the line `— (Scene_1 only)` (vectored, V4b).
+  To undo: one constant.
+* **D2 — the ring follows the gizmo's drawing path, its LAG** (`gizmoShownAt`), not the gizmo's depth glide (`asmGOff`) nor a mouth's hold: those
+  move the gizmo's own point, not its drawing; P2 is shown where it is. During a glide the ring may stand apart from the drawn gizmo by the glide's
+  rest where the depths agree — read the HUD's Δ, not the gap on the glass, in those 125 ms.
+* **D3 — no readout while the piece is placed** (`orbitPiecePlaced`, as `supportFrame`): the design reads the held piece AS HELD; a seated piece
+  is not held.
+* **D4 — the cache key is EXACT on the orientation** (no rounding): never a preparation for a pose the piece no longer has. Its price — a piece
+  whose model orientation changes every frame is prepared every frame — is visible on the HUD (`prep` moving, `facets 1`), never hidden.
+* **D5 — the line names a piece left out for no volume** (` · ⛔refused …`, `ORBIT_SURFACE_LANDING_MAP.md` §10.6 *"look at it"*), and reads `—`
+  when the readout did not run the frame before (no piece held, no map): an absent readout is said, never left stale.
+
+### 13.5 Not done, not checked, known limits
+
+* **G1 – G3 NOT run** (one heavy job at a time: they run after the build), no auditor's read, no device look (rule 5).
+* ⚠ **The query's µs on a phone**: `performance.now()` is coarsened in browsers (Safari: about a millisecond) — a 4 µs query reads 0 most frames and
+  a whole tick rarely; the 30-frame mean is unbiased but noisy there. The preparation's milliseconds are reliable.
+* `Scene_2` and every scene but `Scene_1`: no readout (D1) — the `UCX_` pieces' reading is later (§9).
+* The key is exact on the orientation: a piece whose model orientation changes every frame (a turn under way) is prepared every frame — the HUD shows
+  it (`prep` moving, `facets 1`).
+
+### 13.6 The gate G0
+
+`npm run verify` once at the end of the build (on `d21a4826`, the code as committed; this document after it): ✅ **190 files, 2342 tests, green**, the typecheck clean. The base (`35d407ea`): 2321 vectors — + 12 (V1 – V3) + 9 (V4, V4b).
+
+### 13.7 Lessons → rules (§11)
+
+Nothing measured yet that teaches a rule: C2's budget waits for G2 and his phone. One candidate from the build itself, for his word: the readout
+(and the footprint support) read each placed part's mesh as ONE convex body — true on `Scene_1`, false for a non-convex part; a scene check *"every
+placed body the orbit reads is convex (its hull's volume = its mesh's)"* would make that assumption a check (`SCENE_WORKFLOW.md` §10, not written).
