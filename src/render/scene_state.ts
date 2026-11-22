@@ -454,6 +454,9 @@ export interface SceneState {
   asmSpitSide: number;
   /** ⭐⭐⭐ (2026-11-14) the camera's direction the spit's side was last read at (world) — the crossing read on the path from it (`crossingPitch`) */
   asmSpitU: import("../core/vec").Vec3 | null;
+  /** ⭐⭐⭐ (2026-11-22, `TOP_BOTTOM_STUDY.md` §10 — D-R1) THE PLACE ALONG THE SPIT'S AXIS this frame (`spitPlaceShare` at the map's pitch, 0 … 1), written
+   *  once a frame by `spitStep` alone and read by every reader of the spit camera's heading; null: no spit, no map place, or `spitTurnByPlace` 0 */
+  asmSpitW: number | null;
   /** ⭐⭐⭐ (2026-11-18, `LEVEL_FACE_ENTRY.md` §16 — ES) the spit's camera frame built THIS frame, before the owner's offsets (its direction, its up) — and
    *  the one of the frame before (`…Was`, moved at `assemblyFrame`'s start): a free face's entry continues that picture (`transportUp`); null: none */
   asmSpitPic: { readonly u: import("../core/vec").Vec3; readonly up: import("../core/vec").Vec3 } | null;

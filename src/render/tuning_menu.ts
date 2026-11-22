@@ -280,6 +280,17 @@ export function installTuningMenu(st: SceneState): void {
             // ⭐⭐⭐ (2026-11-18, `LEVEL_FACE_ENTRY.md` §15, §16 — ES) the entry of a level face, the two for the owner's comparison on the phone
             tunable(st, "a level face's entry: the edge's layout at once (0) / the picture kept, the layout by the face's middle (1)", "freeEntryUpright", 0, 1, 1),
           ],
+          subsections: [
+            {
+              // ⭐⭐⭐ (2026-11-22, `TOP_BOTTOM_STUDY.md` §10 — D-R1) the spit's zenith crossing by place: the side's half turn mid-axis, none toward a tip
+              title: "THE SPIT'S CROSSING",
+              sliders: [
+                tunable(st, "a spit's zenith crossing: its turn by place along the axis (1) / the half turn everywhere (0)", "spitTurnByPlace", 0, 1, 1),
+                tunable(st, "…the half turn whole up to this map pitch toward the pole (deg)", "spitPlaceFromDeg", 0, 90, 1),
+                tunable(st, "…and none from this one on — the side changes silently (deg)", "spitPlaceToDeg", 0, 90, 1),
+              ],
+            },
+          ],
         },
       ],
     },

@@ -470,6 +470,14 @@ export interface GestureConfig {
    * face) entered over an edge: 0 — the entry edge's layout at once (as before); 1 — the picture kept at the entry, turned to the layout by the face's
    * middle, at most the tilts' one speed a frame (the default) (0 or 1) */
   freeEntryUpright: number;
+  /** ⭐⭐⭐ (2026-11-22, `TOP_BOTTOM_STUDY.md` §10 — D-R1) THE SPIT'S ZENITH CROSSING BY PLACE: 1 — the side's bias in the spit camera's heading weighted by
+   * the place along the axis (`spitPlaceShare`: the orbit's map pitch toward the pole), a side change silent where it is 0 (as round a tip); 0 — today's
+   * code path (the half turn and the hold along the whole ridge, the tips included) (0 or 1) */
+  spitTurnByPlace: number;
+  /** ⭐⭐⭐ (D-R1.1) …the place's weight whole (1) up to this map pitch toward the pole (deg) … */
+  spitPlaceFromDeg: number;
+  /** ⭐⭐⭐ (D-R1.1) …and none (0) from this one on (deg; at or under `spitPlaceFromDeg`: a step there) */
+  spitPlaceToDeg: number;
   /** ⭐⭐⭐ (2026-11-12, CLOSE_IN_CONTACT.md step 3) THE CLOSE-IN GAIN (`closeInGain`): the orbit's full gain from this distance of the piece to the gizmo out (m),
    * falling linearly to the contact's */
   orbitGainFullM: number;
@@ -919,6 +927,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   zoneExitMm: 10, // ⭐⭐⭐ (D-Z7) a guess with a slider
   freeFaceSquare: 0, // ⭐⭐⭐ (2026-11-16, step C4) N2, the calm kept, until the owner judges the two on the device
   freeEntryUpright: 1, // ⭐⭐⭐ (2026-11-18, ES; the owner's order of 2026-11-17) the silent entry; 0 to compare with the entry before on the phone
+  spitTurnByPlace: 1, // ⭐⭐⭐ (2026-11-22, D-R1 — his word: *"do D-R1 and deploy in another branch … so i can revert to 6fc1f5d if not successful"*) on; 0 = `6fc1f5d`'s crossing
+  spitPlaceFromDeg: 12, // ⭐⭐⭐ (D-R1.1) his near-tip crossings at −28° of map pitch, mid-body −7 … +9° (`r6/runs_r6`)
+  spitPlaceToDeg: 25, // ⭐⭐⭐ (D-R1.1)
   edgeHoldMm: 8, // ⭐⭐⭐ (2026-11-12, §8, the owner's hysteresis: *"until a certain band is reached in the face beyond"*) ⭐⭐⭐ (2026-11-18, `DY_HOLD_REVERSAL.md` §6) 30 → 8 mm of finger, a true hysteresis: over a ±2.5 mm wobble's 5 mm swing by 3 mm (30 mm far out was 1.3 – 1.8 faces of surface)
   orbitGainFullM: 0.6, // ⭐⭐⭐ (2026-11-12, step 3) a guess with a slider: the automatic tilt's distance (`tiltAutoM`)
   orbitContactMmPerMm: 4, // ⭐⭐⭐ (2026-11-12, step 3; the owner on the device: "set ... to 4 mm" — 1 was the slide's 1 : 1)
@@ -1099,6 +1110,9 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.followTurnPace >= 0 && cfg.followTurnPace <= 1)) throw new Error(`followTurnPace (${cfg.followTurnPace}) must be in [0, 1].`);
   if (!(cfg.followTurnMaxDegS >= 0 && cfg.followTurnMaxDegS <= 2000)) throw new Error(`followTurnMaxDegS (${cfg.followTurnMaxDegS}) must be in [0, 2000] deg/s.`);
   if (cfg.freeEntryUpright !== 0 && cfg.freeEntryUpright !== 1) throw new Error(`freeEntryUpright (${cfg.freeEntryUpright}) must be 0 or 1.`);
+  if (cfg.spitTurnByPlace !== 0 && cfg.spitTurnByPlace !== 1) throw new Error(`spitTurnByPlace (${cfg.spitTurnByPlace}) must be 0 or 1.`);
+  if (!(cfg.spitPlaceFromDeg >= 0 && cfg.spitPlaceFromDeg <= 90)) throw new Error(`spitPlaceFromDeg (${cfg.spitPlaceFromDeg}) must be in [0, 90] deg.`);
+  if (!(cfg.spitPlaceToDeg >= 0 && cfg.spitPlaceToDeg <= 90)) throw new Error(`spitPlaceToDeg (${cfg.spitPlaceToDeg}) must be in [0, 90] deg (at or under \`spitPlaceFromDeg\`: a step there).`);
   if (!(cfg.edgeHoldMm >= 0 && cfg.edgeHoldMm <= 200)) throw new Error(`edgeHoldMm (${cfg.edgeHoldMm}) must be in [0, 200] mm.`);
   if (!(cfg.approachPinchGain > 0 && cfg.approachPinchGain <= 10)) throw new Error(`approachPinchGain (${cfg.approachPinchGain}) must be in (0, 10].`);
   if (!(cfg.orbitGainFullM > 0 && cfg.orbitGainFullM <= 6)) throw new Error(`orbitGainFullM (${cfg.orbitGainFullM}) must be in (0, 6] m.`);

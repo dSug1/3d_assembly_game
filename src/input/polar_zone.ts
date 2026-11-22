@@ -210,16 +210,35 @@ export const SPIT_SIDE_BIAS = 0.3;
  * frames); level (round a tip) `u`'s own wins, and there the heading hardly turns the picture (`offsetFrame` weighs it by the view's sine). ⛔ Two readings
  * blended by the pitch (`Scene_0`'s 50° / 60°): near a tip they part by up to 80° — the picture rolled 70° in one finger event.
  */
-export function spitCameraHeading(u: Vec3, a: Vec3, side: number): number {
+export function spitCameraHeading(u: Vec3, a: Vec3, side: number, w?: number): number {
   const r = spitSideRef(a);
   // ⭐ (2026-11-14, the walks: 105 – 112 ROLL events, the camera standing 5 – 17° off upright for hundreds of frames at mid height) the bias faded in
   // from `SPIT_BIAS_FROM_RAD` (60°) to `SPIT_BIAS_FULL_RAD` (75°) of the view's pitch: below, the camera plainly upright (its own direction's heading)
   const p = Math.asin(Math.min(1, Math.abs(u[1]) / Math.max(1e-12, len(u))));
   const x = Math.min(1, Math.max(0, (p - SPIT_BIAS_FROM_RAD) / (SPIT_BIAS_FULL_RAD - SPIT_BIAS_FROM_RAD)));
-  const b = SPIT_SIDE_BIAS * x * x * (3 - 2 * x);
+  const b0 = SPIT_SIDE_BIAS * x * x * (3 - 2 * x);
+  // ⭐⭐⭐ (2026-11-22, `TOP_BOTTOM_STUDY.md` §10 — D-R1.2) THE TURN BY PLACE: the side's bias weighted by the place along the axis (`w`, `spitPlaceShare`) —
+  // 1 mid-axis (the side's half turn at the zenith as before), 0 toward a tip (the side changes, the heading does not jump: one smooth yaw round the tip).
+  // ⭐ `w` absent (`spitTurnByPlace` 0): the bias as it stood, this line's own path
+  const b = w === undefined ? b0 : w * b0;
   const hx = u[0] + side * b * r[0];
   const hz = u[2] + side * b * r[2];
   return Math.hypot(hx, hz) > 1e-9 ? Math.atan2(hz, hx) : spitHeading(a, side);
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-22, `TOP_BOTTOM_STUDY.md` §10 — D-R1.1 as amended, `9a08cef`) THE PLACE ALONG THE SPIT'S AXIS: `w` = 1 − smoothstep(|`pitchRad`|) from
+ * `fromDeg` to `toDeg`, `pitchRad` the orbit's MAP pitch toward the pole (F's elevation, `asmMapQ.pitch`): 1 mid-axis (his 2026-11-13 zenith rule: the
+ * side's half turn, the hold), 0 from `toDeg` on (no turn; a side change there silent, as round a tip — `spitStep`), partial between. ⛔ The ring's
+ * radius at the gizmo (as first briefed): his near-tip crossings close in lie on the prism's ridge, its ring the mid-body's (share 0.957 / 0.986 against
+ * 0.961 – 0.983) — their map pitch parts them (−28° against +5°). `toDeg` ≤ `fromDeg`: a step at `fromDeg`. Not a number: 1.
+ */
+export function spitPlaceShare(pitchRad: number, fromDeg: number, toDeg: number): number {
+  const p = Math.abs(pitchRad) / D;
+  if (!(p >= 0)) return 1;
+  if (!(toDeg > fromDeg)) return p < fromDeg ? 1 : 0;
+  const x = Math.min(1, Math.max(0, (p - fromDeg) / (toDeg - fromDeg)));
+  return 1 - x * x * (3 - 2 * x);
 }
 
 /** ⭐ The side's bias faded in from this pitch of the view … */

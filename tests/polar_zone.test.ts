@@ -210,7 +210,8 @@ describe("the spit's crossing: over or under the axis (overAxisPitch)", async ()
   it("wired: a crossing only when the orbit passes over / under the axis; a silent change ends the crossing's hold", async () => {
     const { readFileSync } = await import("node:fs");
     const aw = readFileSync("src/render/assembly_wiring.ts", "utf8");
-    expect(aw).toContain("if (crossingPitch(u0, u, z.axis) < SPIT_CROSSING_PITCH_RAD) {\n    st.asmEdgeHold = null;\n    return;\n  }");
+    // ⭐ (2026-11-22, D-R1.3) …or toward a tip, the place along the axis 0 (`asmSpitW`): silent too (`spit_turn_by_place.test.ts`)
+    expect(aw.replace(/\r\n/g, "\n")).toContain("if (crossingPitch(u0, u, z.axis) < SPIT_CROSSING_PITCH_RAD || st.asmSpitW === 0) {\n    st.asmEdgeHold = null;\n    return;\n  }");
   });
 });
 

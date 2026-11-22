@@ -37,7 +37,7 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { crossingHold, crossingPitch, distanceToFacets, fingerInFrame, fingerSwapped, SPIT_CROSSING_PITCH_RAD, spitCameraHeading, spitSide, zoneAt, type PolarZone } from "../input/polar_zone";
+import { crossingHold, crossingPitch, distanceToFacets, fingerInFrame, fingerSwapped, SPIT_CROSSING_PITCH_RAD, spitCameraHeading, spitPlaceShare, spitSide, zoneAt, type PolarZone } from "../input/polar_zone";
 import { assignCharts, capTiltHeading, chartContour, chartZones, DEFAULT_CHART_OPTS, type ChartAssignment, type ChartFace } from "../input/orbit_charts";
 import { holdAtCrossing, turnPose, type CamFrame, type CamPose, type EdgeHold } from "../input/orbit_tilt";
 import { approachOutMm, bandShare } from "../input/picture";
@@ -112,7 +112,7 @@ export function ensureAssembly(st: SceneState): void {
 type OrbitStateStart = Pick<
   SceneState,
   | "asmGizmo" | "asmSupport" | "asmSupportLevel" | "pieceHold" | "pieceHoldPrev" | "asmLook" | "asmFacePoint" | "asmG" | "asmPrevQ" | "asmShown" | "asmFaceBand" | "asmFree" | "asmPlaceWas" | "asmMapQ"
-  | "asmEdgeHold" | "asmZone" | "asmZoneMix" | "asmChange" | "asmPieceDrawn" | "asmDirEase" | "asmCamLogic" | "asmCamDrawn" | "asmRollShadow" | "asmSpitSide" | "asmSpitU" | "asmSpitPic" | "asmSpitPicWas" | "asmZoneAlpha" | "asmDySign" | "asmFingerDxMm" | "asmDxSign" | "asmCarriedYaw" | "asmHeadO"
+  | "asmEdgeHold" | "asmZone" | "asmZoneMix" | "asmChange" | "asmPieceDrawn" | "asmDirEase" | "asmCamLogic" | "asmCamDrawn" | "asmRollShadow" | "asmSpitSide" | "asmSpitU" | "asmSpitW" | "asmSpitPic" | "asmSpitPicWas" | "asmZoneAlpha" | "asmDySign" | "asmFingerDxMm" | "asmDxSign" | "asmCarriedYaw" | "asmHeadO"
   | "asmHeadW" | "asmHeadYaw" | "asmTilt" | "asmGOff" | "asmTiltAuto" | "asmTiltPending" | "asmOrbitMm" | "asmFrameMm" | "asmBlend" | "asmCalmWhole" | "asmCalmWholeV"
   | "asmSquare" | "asmCalm" | "asmMouth" | "asmRawPrev" | "asmGizmoAt" | "asmGizmoLag" | "asmAskCalm" | "asmAsk" | "asmAskLevel" | "asmAskCalmWas" | "asmAskLevelWas" | "asmFollow" | "asmPicture"
 >;
@@ -151,6 +151,7 @@ export function orbitStateStart(): OrbitStateStart {
     asmRollShadow: null,
     asmSpitSide: 0,
     asmSpitU: null,
+    asmSpitW: null,
     asmSpitPic: null,
     asmSpitPicWas: null,
     asmZoneAlpha: 0,
@@ -1724,7 +1725,8 @@ function assemblyCameraFrameRaw(st: SceneState, cam: OrbitAt, off?: CameraAngleO
     const side = st.asmSpitSide !== 0 ? st.asmSpitSide : spitSide(uW, st.asmZone!.zone.axis, 0);
     // ⭐⭐⭐ (2026-11-18, ES — the silent entry) the heading SHOWN: entered over an edge, the picture the bound face's camera would show kept, turned to the
     // layout by the face's middle at most the tilts' one speed a frame (`freeShownHeading`)
-    const hS = st.asmFree !== null ? freeHeadingAngle(freeShownHeading(st, uW, side, dtMs), uW) : spitCameraHeading(uW, st.asmZone!.zone.axis, side);
+    // ⭐⭐⭐ (2026-11-22, D-R1.2) the side's bias weighted by the place along the axis (`asmSpitW`, `spitStep`'s) — absent: as it stood
+    const hS = st.asmFree !== null ? freeHeadingAngle(freeShownHeading(st, uW, side, dtMs), uW) : spitCameraHeading(uW, st.asmZone!.zone.axis, side, st.asmSpitW ?? undefined);
     st.asmSpitPic = { u: uW, up: offsetFrame(uW, hS, 0, 0).up }; // ⭐ (ES) this frame's picture before the offsets (the next entry continues it)
     return offsetFrame(uW, hS, o.yawRad, o.pitchRad);
   }
@@ -2472,7 +2474,7 @@ function freeShownHeading(st: SceneState, uW: Vec3, side: number, dtMs: number |
   const side0 = fr.offset === null ? side : fr.side;
   // the TARGET: the picture the ENTRY side's bound camera shows HERE (its offset read THIS frame — an exit back over the entry edge, anywhere along it,
   // meets it), the layout by the face's middle
-  const offB = pictureOffset(uW, offsetFrame(uW, spitCameraHeading(uW, st.asmZone!.zone.axis, side0), 0, 0).up);
+  const offB = pictureOffset(uW, offsetFrame(uW, spitCameraHeading(uW, st.asmZone!.zone.axis, side0, st.asmSpitW ?? undefined), 0, 0).up); // ⭐ (D-R1.2) the same weighted heading
   const target = entryBlendHeading(viewLevelTurned(uW, offB), fr.layout, fr.depth, fr.entry.centreDepth, share, st.cfg.freeEntryUpright);
   let h: Vec3;
   if (fr.offset === null) {
@@ -2560,8 +2562,14 @@ export function spitStep(st: SceneState, cp: OrbitAt): void {
   if (z === null) {
     st.asmSpitSide = 0;
     st.asmSpitU = null;
+    st.asmSpitW = null;
     return;
   }
+  // ⭐⭐⭐ (2026-11-22, `TOP_BOTTOM_STUDY.md` §10 — D-R1.1, as amended) THE PLACE ALONG THE AXIS, once a frame, here alone: the orbit's map pitch toward the
+  // pole (`asmMapQ`, F's elevation — the assembly's step set it this frame) → `w` (`spitPlaceShare`), read by every reader of the spit camera's heading
+  // (the frame, the free face's entry; the finger's mapping through the frame drawn). ⛔ The ring's radius at the gizmo: his near-tip crossings are on
+  // the prism's ridge, the mid-body's ring. Null under the switch 0: today's code path everywhere
+  st.asmSpitW = st.cfg.spitTurnByPlace === 1 && st.asmMapQ !== null ? spitPlaceShare(st.asmMapQ.pitch, st.cfg.spitPlaceFromDeg, st.cfg.spitPlaceToDeg) : null;
   // ⭐⭐⭐ (2026-11-16, step C4) on a free face no side: no side change, no crossing, no hold in the middle of the face — its exit is the turn
   // (`freeFaceFrame`, which reads the side afresh there)
   if (st.asmFree !== null) return;
@@ -2588,7 +2596,11 @@ export function spitStep(st: SceneState, cp: OrbitAt): void {
   // the gizmo has now left round the body: the finger's mapping turned with the side)
   // ⭐⭐⭐ (2026-11-14, the owner's records) read on the camera's PATH this frame (`crossingPitch`) — ⛔ at its end alone: a fast finger passed straight under
   // the body and was read 70° beyond, "round a tip" — the side flipped with no turn: 100 – 170° in one frame
-  if (crossingPitch(u0, u, z.axis) < SPIT_CROSSING_PITCH_RAD) {
+  // ⭐⭐⭐ (2026-11-22, D-R1.3) …and toward a tip (`asmSpitW` 0: no bias, the heading did not turn) silent too, as round a tip — no turn, no hold, the
+  // last edge's hold ended (⛔ there, near the left tip, a first change of 7° made no hold, the finger's mapping turned with the picture, the same dy drove
+  // the orbit back over the axis: a second change, the half turn, 76 frames of hold). Between 0 and 1: the one event as before, the camera's stage
+  // deciding timed / free and the hold by the turn seen (`changeSeen`, `holdSeen`)
+  if (crossingPitch(u0, u, z.axis) < SPIT_CROSSING_PITCH_RAD || st.asmSpitW === 0) {
     st.asmEdgeHold = null;
     return;
   }
