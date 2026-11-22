@@ -11,6 +11,11 @@ still hold).
   carries) is **the best implementation so far** — the reference that must never regress
   ([`UPRIGHT_LESSONS.md`](../../40_RENDER_SCENE/spec/UPRIGHT_LESSONS.md) §3). Its last change: D-H20, the far turn aimed where the gizmo waits
   ([`CAMERA_FOLLOWS_GIZMO.md`](../../40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md) §19). **2308 vectors.**
+* ⚠ **His amendment (2026-11-22 ~15:00, on `40b8095`)**: the camera's back and forth is still seen on `Scene_0bis`'s faces "on the opposite side of the
+  assembly", and on `Scene_1`'s vertical edges at a fast polar orbit (*"not here in previous branches builds … not seen at low orbit speed"*).
+  **Not reproduced headless**: with D-H20 on, no back and forth at any pace tried (3 – 30 px a frame, 60 and 50 fps); off, many (kit
+  `follow/cap/CHECKPOINT_CAP.md`, last section). Owed from him: the same gesture with `followTurnAtGizmo` 0 and 1, a screen recording. The orbit's
+  closure stands on his word; this is open until then.
 * **The workfront:** the MAIN folder `3d_assembly_game` (the only worktree), branch **`1.0.156-Orbit-surface`**, made from `1.0.155-Orbits-finalized`
   (local, not pushed — start from `1.0.155-Orbits-finalized` elsewhere).
 * **No longer owed** (closed with the orbit — future improvements only, on his word): FO3's open points ([`FAST_ORBIT.md`](../../40_RENDER_SCENE/spec/FAST_ORBIT.md)
