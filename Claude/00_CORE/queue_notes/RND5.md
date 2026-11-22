@@ -802,3 +802,6 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   tests without asking me questions"*): six play records on his PC (the dev server, `#rec`) show the back and forth as a far turn with the gizmo waiting at
   the edge, every face, every distance; R5's D-H15 as built reads the jump between two places — a pace threshold. D-H23 (the jump read at one place,
   `followJumpAtPlace`) on `1.0.156-Orbit-surface`, local → [`CAMERA_FOLLOWS_GIZMO.md`](../../40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md) §20.
+* **2026-11-22 evening — D-H23 + D-H24 DEPLOYED** (his word *"update the md files, deploy"*, 2026-11-22 16:49Z): LIVE main `3b7a479` = `2cd1be34`; his four
+  records replayed: far turns 43 → 1, the gizmo's waits 325 → 145 frames; his device look owed
+  ([`CAMERA_FOLLOWS_GIZMO.md`](../../40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md) §20.9 – §20.10).
