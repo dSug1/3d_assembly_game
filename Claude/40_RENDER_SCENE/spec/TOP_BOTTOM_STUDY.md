@@ -365,3 +365,21 @@ yet"*. D-R1 stays a proposal: his 2026-11-13 zenith rule (one timed 180° turn o
 (one pass per gesture) stand unchanged along the whole ridge, the tips included. When it is taken up: the proposal and the gates above; the baseline to
 beat is the same in the old build and today (the gizmo still 100 – 114 of 120 frames of a dy stroke near the left tip, `rd_stuck.mjs` on `runs_str`);
 his word first, since it bends both rules.
+▶ **TAKEN UP — his word (2026-11-22), VERBATIM:** *"Before the merge, do D-R1 and deploy in another branch in the current camera_follow worktree so i
+can revert to 6fc1f5d if not successful. If successful i will instruct you for the merge."* — branch `1.0.154-Zenith_crossing_by_place` (from `63a95d4`, in
+`../camera_follow`); `1.0.153-Picture_rebuild` and LIVE `6fc1f5d` stay the fallback. ⭐ **Measured first** (R6's own runs of his strokes, today's code):
+close in his U stroke near the left tip — the gizmo still 100 of 120 frames: one side change at x −0.21 m, 45 frames of turn (the gizmo held), then 76
+of hold; the mid-body strokes D / U2 (x ≈ 0.04 m): still 88 / 160, 106 / 160 — his 11-13 rule as meant. Close in the hold already needs a turn SEEN of
+90° (`holdSeen`, RB2) and a change under 90° is free (`freeTurnMaxDeg`): near the tip the turn asked IS a half turn, because the spit camera's heading
+flips with the side (`spitCameraHeading`'s side bias, read by the view's pitch, not by the place). **The step as briefed (D-R1.1 – D-R1.4):**
+* **D-R1.1 the place** — `w` in [0, 1]: the ring's radius at the gizmo (its distance from the spit zone's axis, in the MODEL's space: `asmG`, the
+  zone's axis and poles) as a share of the zone's widest ring; a smoothstep between two fractions (sliders, the builder calibrates them on `Scene_0bis`).
+* **D-R1.2 the turn by place, at its one source** — the side bias in the spit camera's heading weighted by `w`: where the ring is wide the half turn
+  as today; toward the tip a partial one; near the apex none (the side changes, the heading does not jump: one smooth yaw round the tip). ⛔ No later
+  stage cancelling a turn or a hold (no undo layer over the logic).
+* **D-R1.3 the hold only after a real turn** — close in by the rule already there (`holdSeen`: a turn seen ≥ 90°); where `w` is 0 the side change
+  is silent, as round a tip (no turn, the last edge's hold ended). Far out the follower's own rule (D-H8, D-H19) is unchanged.
+* **D-R1.4 behind a switch** — `spitTurnByPlace` (ORBIT, default 1; 0 = `6fc1f5d` frame for frame), the two fractions with it. Gates (the lead's,
+  headless): the switch at 0 — R6's batch identical; at 1 — `Scene_1`, `Scene_0` identical (no spit zone), his strokes near the tip: the gizmo still
+  ≤ the mid-body's share, the turns near the apex 0, the view's and up's frame steps not above today's (no spin of the view looking down), the dy hold
+  walks no new trap; `npm run verify`. ⛔ A device look closes it (rule 5); if it fails, main goes back to `6fc1f5d` on his word.
