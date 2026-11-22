@@ -534,3 +534,9 @@ the latch and the unlatch the pose drawn is held and his finger closes the gap: 
   `uprightPicture=0` ×30, `pictureOne=0` ×16, `followTop=0` ×13, `cameraFollower=0` ×7, `uprightCarried=0` ×7, H3's three ×3, `uprightFraming=0` ×1 —
   `follow/r2` … `r5`, `h*`, `rebuild_d`, `rebuild_e`): an unknown key is now reported by `config_override.ts`, and `freeTurnMaxDeg=0` refused.
   `scripts/probes/ORBIT_GATES.md` lines 492 – 583 cite the same switches.
+* ⭐ **The gate RUN, PASS** (2026-11-22, the lead; kit `follow/r6`: `drv_r6.sh`, `cmp_r6.mjs` — checked first on a planted 1e-4 m difference, caught):
+  `runs_base` = `2c8ad70` served from `../picture_repro`, `runs_r6` = `6221bf0` from `../camera_follow`, the same probes. **27 recordings: 26 identical
+  frame for frame**, the 27th (`Scene_0bis`'s replay, the defaults) 551 frames (3 – 556) within 2.34e-9 m — the same R6 code run twice gives the same
+  551 frames at 2.34e-9, and the base against that repeat differs in **0** frames: the scene's own boot noise (`ORBIT_GATES.md` §17). Every replay moved
+  (`Scene_0bis`: the camera 412 m, the gizmo 19 m); his strokes, the approach cycle at three paces, the spit's latch, his two close stretches and the
+  six dy hold walks identical, `pictureFarTop` 1 and 0. `npm run verify` **2278** (the lead). ⛔ No device look on R6 nor on R5 at 1.
