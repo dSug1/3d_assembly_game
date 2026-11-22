@@ -413,3 +413,15 @@ gates measure the far presets (one rule for every frame; if the far picture is w
   dy back over the ridge 12 frames later: a re-crossing LOOP at `w` 0 itself. ⛔ So `w` alone cannot give *no turn, no hold* near the tip AND *no spin
   looking down*: stopped there (the brief's rule), no second mechanism, no re-calibration run. ⚠ **Do not deploy `b2a6ae1` at its default 1;** at 0 it
   is `6fc1f5d`'s crossing frame for frame. The lead's / the owner's word next.
+⛔⛔ **THE LEAD'S VERDICT (2026-11-22): D-R1 FAILED ITS GATE — NOT DEPLOYED; LIVE stays `6fc1f5d`.** Checked on the builder's runs (kit
+`follow/dr1/runs_dr1a`, switch 1, against R6's `runs_r6`): close in, his U stroke near the left tip — the gizmo still 100 → 72 / 120 and its hold 76 → 0,
+but 8 side changes where there were 2, **14 one-frame up flips over 90° (max 178°)**, frames over 5° 214 → 375; the far presets and the switch at 0
+frame for frame R6's. ⭐ **The spec questioned (the root):** close in the camera's direction is the SQUARE camera's — on the prism's ridge near its end it
+passes straight over the axis exactly as at mid-body, and there the heading flips ≈ 180° whatever the weight: a timed half turn and the hold (today),
+or, weighted out, a one-frame spin and a loop. D-R1's premise (near a tip the ridge's ring is narrow, the crossing slanted) holds on the pyramid's own
+faces and far out, not on the prism's ridge close in, where his strokes cross. ⭐ **What makes it stuck there** is not the size of the half turn but a
+RE-CROSSING: the first side change at the slanted view (28° toward the tip), a turn growing to 90° with no hold, the finger's mapping turned with it
+mid-dy, the same dy brought back over the axis — the half turn and the 76 frames of hold. ⏸ **For his word:** (a) D-R1 dropped, the near-tip stuck as
+today (the branch `1.0.154-Zenith_crossing_by_place` kept as the record: `b2a6ae1` the code, `1a914b1` its as built — never to be deployed at 1); (b) a
+study first (his four parts) of the RE-CROSSING — e.g. the dy's sense kept over a turn the same gesture made (D-H8's one pass per gesture, applied to
+the finger's mapping) — which bends his 2026-11-14 rule (*"the finger's mapping turned with the side"*); nothing built before his word.
