@@ -928,4 +928,4 @@ starts only when that frame's jump is ≥ 10°; the miss grows with his pace (�
   (8.67°; 7.92° before, when the spring's pull back slowed the turn), the piece's largest step on the glass 3.02° (3.94° before); the six `Scene_0bis`
   presets 1 against 0: `close` and `farft0` identical, `far` / `band` / `bandmix` the frames over 5° 31 / 31 / 176 (37 / 37 / 195 at 0), the gizmo still
   304 / 304 / 596 frames (312 / 312 / 595), the view's and up's p90 unchanged.
-* ⛔ Not done: his look on the device (rule 5); close in's own turns not measured. Not deployed (his word).
+* **DEPLOYED** (his word *"Deploy"*, 2026-11-22 11:11Z): LIVE main `40b8095` = `b21b667`. ⛔ Not done: his look on the device (rule 5); close in's own turns not measured.
