@@ -864,3 +864,50 @@ speed) · **`followTurnMaxDegS` 520°/s — "the 180° realignment's top speed"*
 By URL too. All three switches 0 = `ba369aa` frame for frame; `followTop` 0 = `de4a10e`.
 
 ⭐ **The study after this last round (packet H4, 2026-11-21) — PROPOSED, nothing built**: O-c's root is the logic's up read by the follower's hold, O-d's the depth glide restarted every frame, G3 counted his own motion; the design (two followers, a leash, the jump by geometry) and D-H13 – D-H18 → [`TOP_BOTTOM_STUDY.md`](TOP_BOTTOM_STUDY.md).
+
+## 19. THE TURN AIMED WHERE THE GIZMO WAITS — his back and forth at a facet change far out (2026-11-22, branch `1.0.155-Camera_back_and_forth_at_the_cap_edge`, switch `followTurnAtGizmo`)
+
+**His words** (on live `4dbd704`, the iPhone): *"In scene 0bis, half of the times when the gizmo passes from one rectangle face to one triangle face or
+vice versa there is a short camera back and forth … I don't know why it does it sometimes and why it doesn't other times. Check."* — then *"Same happens
+when i orbit the gizmo close to the poles (onto the level faces) in scene 1 polar orbit."* — then, on the fix proposed: *"Make sure that the proposed fix is
+in line with the rules we have already defined and does not contradict any of them. If in line with previous rules, proceed with the fix."*
+
+### 19.1 Reproduced (headless, open-loop strokes, far out; the kit `follow/cap/`, `CHECKPOINT_CAP.md`)
+* `Scene_0bis`, the camera settled before each stroke (`runs_set`): the camera's out-and-back ≥ 2° at a body ↔ cap change — 0 of 26 at 3 px/frame, 5 of 16
+  at his pace (9 px/frame; 3.8 – 7.6°), each with a far turn started within a few frames.
+* `Scene_1`, sideways on the top face near its edge (`runs_edge`): at 9 px/frame **12 of 12** strokes start a ±60° turn, the camera back 6.3 – 7.9°; at
+  5 px/frame 13 turns, back 3.5 – 6.4°. Straight up onto the top face and back: no turn, no back and forth (a level face carries the heading).
+
+### 19.2 The root
+The far follower's step (`followFarStep`) reads the far reading at the FINGER's angles, sees its geometric jump (D-H15, ≥ `followTurnMinDeg`) and plans
+the turn on that reading — the whole gap from the heading drawn. AFTER the step, F-3 (D-H11, §18) sets every angle to the map's place SHOWN
+(`seamRebase(asmShown)`), which trails a fast finger, and the gizmo waits there. From the next frame the reading is the one at the place shown — 5 – 15°
+back at his pace (the miss, `rd_miss.mjs`: 4.6 – 9.6° on `Scene_1`, up to 75° on `Scene_0bis`). The step folds that change into the follower's reading
+(`c` steps back), the spring lags it, the turn lands past the reading and the spring takes the camera back: **the back and forth**. *Sometimes*: a turn
+starts only when that frame's jump is ≥ 10°; the miss grows with his pace (≈ 0 at rest); a finger carried on the same way after the turn hides the way back.
+
+### 19.3 The rules it is read against (none contradicted)
+* `UPRIGHT_LESSONS.md` §1 (no new tie to time or the view: the turn's trigger, pace and hold unchanged), §2 rows 2 and 6 (no layer undoing a decision — the
+  turn is planned ONCE, on the right reading; a back and forth is a failure he named), row 8 (the gate counts HIS symptom), §3 (the gizmo's travel, the
+  dy hold OP8 / D-H8, the entries and exits, close in, his settings — untouched), §4 (no roll: a heading only; the pace his finger's, D-H6), §5.4 (one
+  switch, 0 = the build before frame for frame).
+* D-H11 / F-3 (the rebase, the held gizmo really holds) — kept as is; root (c) *"a held turn's target is not still"* — the turn now aims at that still
+  target. D-H13 / D-H14 (the two followers, the leash) — unchanged. **D-H15** — its trigger (the jump by geometry) and *"the whole gap from the heading
+  drawn"* kept; *"the reading"* read where the gizmo waits — which is what makes its own last clause true: *"the follower at rest on the reading when the
+  gizmo moves on"* (today it is not: `c` steps back). D-H16 – D-H19 — unchanged.
+* `PICTURE_REBUILD.md` §4.3a (one heading owner — the follower's, unchanged; the follower draws through every logic turn) and his rule *"minimize the
+  camera movements while maintaining the key rules"*. Patent-free; no solver query (the reading is pure arithmetic on the calm already asked); the MODEL's
+  space (`dirFrame`).
+
+### 19.4 The decision (D-H20) and the step as briefed
+* **D-H20 — the turn aimed where the gizmo waits.** The frame a far turn starts, its angle is the whole gap from the heading drawn to the far reading AT
+  THE PLACE THE GIZMO WILL WAIT — F-3's place (`asmShown`'s yaw, `vOfPitch(pitch)`), this frame's calm asked, the band read at that place — and that
+  reading is the one carried (`psiT`), so the next frame's reading there moves nothing. Unchanged: the trigger, the pace and its clamp, the dy hold, the
+  rebase, the gizmo's wait. No place shown (no rebase) or no reading there (a level face, carried): the reading as today.
+* **Code**: `followFarStep` takes the reading where the gizmo waits (`psiLAt`, optional) and uses it only when a turn starts; the wiring computes it
+  (`farAskedWhereHeld`) under the far rule as decided. **Switch** `followTurnAtGizmo` (ORBIT › CAMERA FOLLOWER › THE EDGE'S TURN, **1** by default;
+  0 = `4dbd704` frame for frame).
+* **Gates** (his pace and the slow one, the kit's strokes): G1 identity at 0 against the runs on `4dbd704` (`runs_set`, `runs_edge`); G2 his symptom at
+  1 — the miss and the camera's way back ≤ 1° on both scenes (`rd_miss.mjs`), no crossing's out-and-back ≥ 2° (`rd_cls.mjs`); G3 nothing worse — the
+  view / up / piece steps (`rd_jumps.mjs`), the stuck reader on the six `Scene_0bis` presets (`rd_stuck.mjs`), at 1 against 0.
+* ⛔ Not in this step: close in's own turns (`crossTurn` with the logic's rebase) — not reported, not measured.
