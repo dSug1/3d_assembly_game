@@ -99,7 +99,7 @@ describe("⭐⭐ V4b — the module AT 1 on a stub frame: the readout into `st.l
     const objects = new Map<string, unknown>();
     const hold = (q: Quat) => objects.set("g", { id: "g", parent: null, local: { position: [0, 0.2, 0], orientation: q }, shape: { points: LOCAL } });
     hold(qFromAxisAngle([1, 0, 0], Math.PI / 2));
-    const st = { cfg: { landingReadout: 1 }, landing: null, greenBox, world: { objects }, orbitPieces: [{ mesh: greenBox, restingCentre: RC }], orbitPiecePlaced: false, frames: 7 } as unknown as SceneState;
+    const st = { cfg: { landingReadout: 1 }, landing: null, greenBox, world: { objects }, orbitPieces: [{ mesh: greenBox, restingCentre: RC }], orbitPiecePlaced: false, frames: 7, sceneSpec: { id: "Scene_1" } } as unknown as SceneState;
     const map = { facets: [{ n: [0, 1, 0], t: [1, 0, 0], b: [0, 0, 1] }, { n: [1, 0, 0], t: [0, 0, -1], b: [0, 1, 0] }] } as unknown as FaceMap;
     const src: ReadoutSource = { map: () => map, frame: () => null, placed: () => ({ key: "plate|block", parts: placed.map((p) => p.points), ids: placed.map((p) => p.id) }) };
     return { st, src, hold };
@@ -139,6 +139,15 @@ describe("⭐⭐ V4b — the module AT 1 on a stub frame: the readout into `st.l
     landingReadoutFrame(st, at(0, 40), at(0, 40), src);
     expect(st.landing!.prepared.size).toBe(1);
     expect(st.landing!.prepared.get(0)).not.toBe(p0);
+  });
+
+  it("⭐ (§13.4 D1) `Scene_1` ONLY: on another scene at 1 nothing is prepared, no readout, the line says so", () => {
+    const { st, src } = make();
+    (st as { sceneSpec: { id: string } }).sceneSpec = { id: "Scene_2" };
+    landingReadoutFrame(st, at(11, 40), at(11, 40), src);
+    expect(st.landing!.shown).toBeNull();
+    expect(st.landing!.prepared.size).toBe(0);
+    expect(landingLine(st)).toBe("— (Scene_1 only)");
   });
 
   it("no piece held / the piece placed / no gizmo: no readout (`—`), nothing prepared", () => {

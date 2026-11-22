@@ -23,6 +23,9 @@ import type { FaceMap } from "../input/face_map";
 import { mulM } from "../input/orbit_tilt";
 import { GIZMO_RING_PX, RING_POINTS, type SceneState } from "./scene_state";
 
+/** ⭐ (§1, §9; §13.4 D1 — a decision of the build, the owner asleep) the one scene the readout runs on: `Scene_1` (each placed part one convex body). ⛔ Not
+ *  `Scene_2` (its `UCX_` pieces later — §9): there `placedParts` hulls whole meshes, so its Δ would not be P2's, at an unmeasured cost. */
+const READOUT_SCENE = "Scene_1";
 /** ⭐ (§10 choice 1, his word *"proceed"*) the ring's size: the gizmo's × this. */
 const LANDING_RING_SHARE = 0.7;
 /** ⭐ the HUD's query time: an exponential mean over this many frames (the `solver` field's). */
@@ -92,7 +95,7 @@ export function landingReadoutFrame(st: SceneState, raw: GizmoRead | null, drawn
 
 /** the frame's readout into `s.shown` (none: no piece held, no map); the preparation's time this frame (ms; 0: none) */
 function readFrame(st: SceneState, s: LandingReadoutState, raw: GizmoRead | null, drawn: GizmoRead | null, src: ReadoutSource): number {
-  if (raw === null || drawn === null || st.orbitPiecePlaced) return 0;
+  if (st.sceneSpec.id !== READOUT_SCENE || raw === null || drawn === null || st.orbitPiecePlaced) return 0;
   // ⭐ the held piece as `supportFrame` poses it: its local points, its MODEL orientation, its resting face's centre
   const id = st.greenBox?.name;
   const local = id === undefined ? undefined : st.world.objects.get(id)?.shape?.points;
@@ -180,6 +183,7 @@ function makeRing(st: SceneState): LinesMesh {
  */
 export function landingLine(st: SceneState): string {
   if (st.cfg.landingReadout !== 1) return "";
+  if (st.sceneSpec.id !== READOUT_SCENE) return `— (${READOUT_SCENE} only)`;
   const s = st.landing;
   if (s === null) return "—";
   // ⭐ the HUD paints before the frame's readout: the last one is the frame before's
