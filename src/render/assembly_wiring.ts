@@ -46,6 +46,7 @@ import { gapStep, restShare } from "../input/roll_follow";
 import { carriedHold, lawHalfTurn } from "../input/upright";
 import { dirGap, easedDir, easeRest, poleYawKept, seamOutPaced, seamOutShare, seamOutStep, seamOutTarget, seamTurnPace, seamTurnStep, seamWholeRad, tiltLeavesNow, turnHoldsGizmo } from "../input/seam_turn";
 import { bandedFacet } from "../input/face_band";
+import { landingReadoutFrame, type ReadoutSource } from "./landing_readout";
 import { contourFaceAt, crossingEvent, entryBlendHeading, entryDepth, entryEdgeOf, exitHoldSign, headingStep, pictureOffset, transportUp, viewLevelTurned, exitTurnRad, faceOwnUp, freeEdges, freeEntryHeading, freeHeadingAngle, isFreeFace } from "../input/free_face";
 import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, capTilt, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, swingEase, tiltAutoLatch, frameBox, tiltDir, tiltFaces, onTiltedFacet, type Mat3 } from "../input/orbit_tilt";
 
@@ -963,12 +964,14 @@ function reachOf(st: SceneState, u: Vec3): number {
 /**
  * ⭐ The placed parts' world vertices on their MODEL pose (each a convex body — a box, a frustum) and each mesh's model-space box, cached for the placed set
  * (they do not move). ⭐ (2026-11-04, the audit) the set's KEY read once a frame (`placedKey`) — ⛔ rebuilt (every mesh, sorted, joined) on every call:
- * ~1300 times a drag frame (every solver query's foot, every section sample).
+ * ~1300 times a drag frame (every solver query's foot, every section sample). ⭐ (2026-11-22, S2 — `ORBIT_SURFACE_READOUT.md` §3) each body's part id
+ * beside it (`ids`, parallel to `parts`, the same key): the readout's `ConvexPiece`s.
  */
 function placedParts(st: SceneState): PlacedParts {
   const { key, meshes } = placedKey(st);
   if (st.asmParts !== null && st.asmParts.key === key) return st.asmParts;
   const parts: Vec3[][] = [];
+  const ids: string[] = [];
   const boxes = new Map<AbstractMesh, Box3>();
   for (const m of meshes) {
     const pos = m.getVerticesData(VertexBuffer.PositionKind);
@@ -987,10 +990,11 @@ function placedParts(st: SceneState): PlacedParts {
     }
     if (vs.length === 0) continue;
     parts.push(vs);
+    ids.push(st.idOf.get(m) ?? m.name);
     const b = boxOf(vs);
     if (b !== null) boxes.set(m, b);
   }
-  st.asmParts = { key, parts, boxes };
+  st.asmParts = { key, parts, ids, boxes };
   return st.asmParts;
 }
 
@@ -1010,6 +1014,16 @@ function placedKey(st: SceneState): { readonly key: string; readonly meshes: rea
   st.asmKey = { frame: st.frames, world: st.world, count: st.goalCommit.count, key: ids.sort().join("|"), meshes };
   return st.asmKey;
 }
+
+/**
+ * ⭐⭐⭐ (2026-11-22, S2 — `ORBIT_SURFACE_READOUT.md` §3) WHAT THE READOUT READS FROM HERE (`render/landing_readout.ts`, which this file imports): the frame's
+ * face map and its frame, the placed bodies on their model pose with their ids — each a cache already filled by the frame's gizmo (`rawGizmo`).
+ */
+const READOUT_SOURCE: ReadoutSource = {
+  map: (st) => faceMapOf(st),
+  frame: (st) => mapFrame(st),
+  placed: (st) => placedParts(st),
+};
 
 /** ⭐ (2026-11-10) the face map's knobs: no slow stretch through an edge (the owner: *"remove it"*). */
 const MAP_OPTS: MapOpts = { edgeMm: 0, edgeDeg: 0 };
@@ -1104,7 +1118,7 @@ function heldFoot(st: SceneState): readonly [number, number] | undefined {
  * a closed void with NO floor under the point is bridged; one with a floor is `inside` here — the cast lands on its floor (the top's channel: the red along
  * its floor, the green down and across it) — unless the held piece cannot enter it.
  */
-function rawGizmo(st: SceneState, yaw: number, pitch: number): { readonly hit: GizmoHit; readonly t: MapTarget; readonly mouth?: { readonly lo: boolean; readonly hi: boolean } } | null {
+function rawGizmo(st: SceneState, yaw: number, pitch: number): MapGizmo | null {
   const map = faceMapOf(st);
   if (map === null) return null;
   const t = mapTarget(map, yaw, pitch, mapOpts(st));
@@ -1140,8 +1154,18 @@ function rawGizmo(st: SceneState, yaw: number, pitch: number): { readonly hit: G
  * ⭐⭐⭐ (Step 4c-bis) THE GIZMO, THROUGH AN EDGE WITHOUT A JUMP: in an edge band, the facet's gizmo (`rawGizmo`) blended toward the next facet's first one —
  * ⭐ (Step 5) the rule in `input/face_map.ts` (`blendThroughEdges`, `edgeBlend`), vectored on a non-box contour. Its normal, host and place: the facet's own.
  */
-export function mapGizmo(st: SceneState, yaw: number, pitch: number): { readonly hit: GizmoHit; readonly t: MapTarget; readonly mouth?: { readonly lo: boolean; readonly hi: boolean } } | null {
-  const here = rawGizmo(st, yaw, pitch);
+export function mapGizmo(st: SceneState, yaw: number, pitch: number): MapGizmo | null {
+  return gizmoOf(st, yaw, pitch, rawGizmo(st, yaw, pitch));
+}
+
+/** ⭐ A gizmo of the map: its hit (point, normal, host), its place (`t`), a void's mouth. */
+type MapGizmo = { readonly hit: GizmoHit; readonly t: MapTarget; readonly mouth?: { readonly lo: boolean; readonly hi: boolean } };
+
+/**
+ * ⭐ `mapGizmo`'s body on `rawGizmo`'s result `here` (the edge blend, the map's frame) — ⭐ (2026-11-22, S2) split out so the frame's own call keeps
+ * `rawGizmo`'s point for the readout (`landingReadoutFrame`: today's level, before the blend); the same operations in the same order, nothing else.
+ */
+function gizmoOf(st: SceneState, yaw: number, pitch: number, here: MapGizmo | null): MapGizmo | null {
   const map = faceMapOf(st);
   if (here === null || map === null) return null;
   const p = blendThroughEdges(map, yaw, pitch, mapOpts(st), here.hit.point, (y, q) => rawGizmo(st, y, q)?.hit.point ?? null, (q, nb, reach) => blendCast(st, q, nb, reach));
@@ -1367,7 +1391,13 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     const mqs = mapAnglesStep(m0, { yaw: q.yaw, pitch }, { yaw: Math.atan2(Math.sin(q.yaw - prev.yaw), Math.cos(q.yaw - prev.yaw)), pitch: pitch - pitchOfV(prev.v) + beyond }, MAP_CATCH_UP, (y, p) => mapGizmo(st, y, p)?.hit.point ?? null);
     const mq = { yaw: mqs.yaw, pitch: Math.max(-ORBIT_PITCH_MAX_RAD, Math.min(ORBIT_PITCH_MAX_RAD, mqs.pitch)) };
     st.asmMapQ = mq;
-    const m0g = mapGizmo(st, mq.yaw, mq.pitch);
+    // ⭐⭐⭐ (2026-11-22, S2) the frame's gizmo as `mapGizmo` makes it (`rawGizmo`, then `gizmoOf`), `rawGizmo`'s own result kept for the readout
+    const mr0 = rawGizmo(st, mq.yaw, mq.pitch);
+    const m0g = gizmoOf(st, mq.yaw, mq.pitch, mr0);
+    // ⭐⭐⭐ (2026-11-22, `ORBIT_SURFACE_READOUT.md` §4 — S2) THE READOUT, ONCE A FRAME, for the frame's own gizmo only (⛔ never in the sections' samples, the
+    // edge blend's or the solver's queries): P2 beside today's depth — ⛔ NOTHING READS IT BACK (the gizmo, the piece, the calm, the camera untouched);
+    // at `landingReadout` 0 it returns before any computation
+    landingReadoutFrame(st, mr0, m0g, READOUT_SOURCE);
     if (m0g !== null) {
       // ⭐⭐⭐ (2026-11-10, the owner: *"the tilt shall happen when the red section reaches the edge at the bottom of the mouth"* → *"build b"*) A VOID'S MOUTH:
       // a dy toward its open end HOLDS the gizmo where it last was — the void's floor edge, the red's end there (`mouthHold`) — and hands over: the automatic

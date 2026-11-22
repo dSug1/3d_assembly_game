@@ -507,6 +507,9 @@ export interface GestureConfig {
   gizmoEdgeMarginMm: number;
   /** ⭐ (2026-10-28, the optional) the sections the gizmo travels along drawn — green the horizontal one, red the yaw plane's (1 on, 0 off). */
   sectionLines: number;
+  /** ⭐⭐⭐ (2026-11-22, `ORBIT_SURFACE_READOUT.md` §5 — package S2) THE READOUT: the landing map's P2 beside today's depth at the gizmo's place — a second
+   *  ring (white: land, magenta: nothing to land on) and the HUD's `landing` line (1); 0 = nothing computed, nothing drawn, no line: `3b7a479` frame for frame */
+  landingReadout: number;
   orbitTurnCapDegMm: number;
   /** ⭐⭐ (2026-10-19) …and on any other curve (a vertical face, no face): the view between rings 2 and 3 slowed to this (°/mm). */
   orbitTurnCapVerticalDegMm: number;
@@ -948,6 +951,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   faceSpanZoneMinVCm: 3,
   gizmoEdgeMarginMm: 5, // ⭐ (2026-10-28) the face's switch 5 mm past an edge
   sectionLines: 1, // ⭐ (2026-10-28) the sections drawn
+  landingReadout: 1, // ⭐⭐⭐ (2026-11-22, S2 — his word *"proceed"* on `ORBIT_SURFACE_READOUT.md` §10: default 1 on this branch, his look needs it) 0 = `3b7a479`: no readout
   orbitTurnCapDegMm: 12.5, // ⭐ (2026-10-19, the owner: *"set the turn governor horizontal face to 12.5"*; first 40) the horizontal face's turn over the top (96°/mm at the shipped gains, view and roll) capped
   orbitTurnCapVerticalDegMm: 12.5, // ⭐ (2026-10-19, the owner: *"same for vertical faces"* — 12.5; first 10) the vertical face's view between rings 2 and 3 (20°/mm at the shipped gains) slowed
   // ⛔ (2026-10-12) the pink highlights' hold / fade (`highlightHoldMs`, `highlightFadeMs`) deleted with the pink face from a part
@@ -1125,6 +1129,7 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   for (const k of ["faceSpanZoneMinHCm", "faceSpanZoneMinVCm"] as const) if (!(cfg[k] >= 0 && cfg[k] <= 30)) throw new Error(`${k} (${cfg[k]}) must be in [0, 30] cm.`);
   if (cfg.faceSpanShareVOn !== 0 && cfg.faceSpanShareVOn !== 1) throw new Error(`faceSpanShareVOn (${cfg.faceSpanShareVOn}) must be 0 or 1.`);
   if (cfg.sectionLines !== 0 && cfg.sectionLines !== 1) throw new Error(`sectionLines (${cfg.sectionLines}) must be 0 or 1.`);
+  if (cfg.landingReadout !== 0 && cfg.landingReadout !== 1) throw new Error(`landingReadout (${cfg.landingReadout}) must be 0 or 1.`);
   if (!(cfg.gizmoEdgeMarginMm >= 0 && cfg.gizmoEdgeMarginMm <= 20)) throw new Error(`gizmoEdgeMarginMm (${cfg.gizmoEdgeMarginMm}) must be in [0, 20] mm.`);
   if (!(cfg.orbitTurnCapDegMm >= 5 && cfg.orbitTurnCapDegMm <= 300)) throw new Error(`orbitTurnCapDegMm (${cfg.orbitTurnCapDegMm}) must be in [5, 300]°/mm.`);
   if (!(cfg.orbitTurnCapVerticalDegMm >= 5 && cfg.orbitTurnCapVerticalDegMm <= 300)) throw new Error(`orbitTurnCapVerticalDegMm (${cfg.orbitTurnCapVerticalDegMm}) must be in [5, 300]°/mm.`);

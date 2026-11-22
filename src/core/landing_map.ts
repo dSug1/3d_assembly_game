@@ -1,6 +1,7 @@
 /**
  * ⭐⭐⭐ **THE LANDING MAP — layer L2, principle P2** (`ORBIT_SURFACE.md` §2.2, §5.1; the design: `ORBIT_SURFACE_LANDING_MAP.md`; package S1 of
- * `ORBIT_SURFACE_BUILD.md`, 2026-11-17 — the owner accepted the six layers, to be tested). ⛔ NOT WIRED: nothing in the game calls it yet.
+ * `ORBIT_SURFACE_BUILD.md`, 2026-11-17 — the owner accepted the six layers, to be tested). ⭐ (2026-11-22, S2) WIRED AS A READOUT ONLY: its sums with no
+ * grid (`prepareLanding`) read once a frame beside today's depth (`render/landing_readout.ts`) — driving nothing; the grid (`buildLandingMap`) unwired.
  *
  * For one facet direction (a plane, its outward normal `n`, a region of the plane) and the held piece AS HELD, per place of a grid: the placed
  * parts' LAYERS along `n` (each stretch inside a part, outermost first) and the held piece's layers — the depths at which the piece, its reference
