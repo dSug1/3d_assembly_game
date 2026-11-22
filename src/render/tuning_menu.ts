@@ -232,6 +232,8 @@ export function installTuningMenu(st: SceneState): void {
                 tunable(st, "follower: the edge's turn at his pace (1) … close in's speed (0)", "followTurnPace", 0, 1, 0.05),
                 // ⛔ (2026-11-22, R6) `followTurnOnJump`, `followTurnFinger`, `followTurnRebase` deleted with their 0 paths (`ba369aa`)
                 tunable(st, "the 180° realignment's top speed (deg a second; 0 = none)", "followTurnMaxDegS", 0, 2000, 10),
+                // ⭐⭐⭐ (2026-11-22, `CAMERA_FOLLOWS_GIZMO.md` §19, D-H20) his back and forth at a facet change far out
+                tunable(st, "follower: the edge's turn aimed where the gizmo waits (1; 0 = 4dbd704)", "followTurnAtGizmo", 0, 1, 1),
               ],
             },
           ],

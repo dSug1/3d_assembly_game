@@ -451,6 +451,11 @@ export function farJump(psiL: number | null, psiLWas: number | null | undefined,
 export interface FollowFarIn extends FollowTopIn {
   /** ⭐ (D-H15) last frame's calm asked read at THIS frame's angles (`farReading`): `null` carried (a level face); absent: none kept (no jump read) */
   readonly psiLWas?: number | null;
+  /**
+   * ⭐⭐⭐ (2026-11-22, `CAMERA_FOLLOWS_GIZMO.md` §19, D-H20 — `followTurnAtGizmo`) the far reading AT THE PLACE THE GIZMO WILL WAIT if a turn starts this
+   * frame (F-3's place: the map's place shown, this frame's calm asked): the turn is aimed there and it is the reading carried. Absent or `null`: `psiL`.
+   */
+  readonly psiLAt?: number | null;
 }
 
 /**
@@ -534,6 +539,8 @@ export function followFarStep(
     hold = followTurnHold(jump, crossHold);
   }
   const big = Math.abs(jump) >= Math.max(0, k.minDeg) * DEG && Math.abs(jump) > 0;
+  // the reading carried to the next frame: this frame's (as before), or where the gizmo waits when a turn starts aimed there (D-H20)
+  let psiCarry = psiL;
   // the continuous reading: the reading's own motion this frame, unwrapped (a jump a turn takes removed; under the band the follower pays it)
   const c = hd0.c + wrapPi(psiL - (big ? jump : 0) - t0.psiT);
   let h = hd0.h;
@@ -544,8 +551,13 @@ export function followFarStep(
     off = drawn - c;
     h = c;
     hv = 0;
-    turn = followTurnStart(off, followTurnDelta(drawn, psiL, t0.step), 0, followTurnDegS(pace, k.rollDegS, k.paceShare, k.maxDegS ?? 0));
+    // ⭐⭐⭐ (2026-11-22, `CAMERA_FOLLOWS_GIZMO.md` §19, D-H20) AIMED WHERE THE GIZMO WAITS: F-3 sets the gizmo's angles to the map's place shown right after
+    // this step, so the reading there is the one the next frames read — the turn planned once on it, and carried (⛔ aimed at the finger's reading: the
+    // turn landed past the reading by the gap between the two places, 5 – 15° at his pace, and the spring took the camera back — his back and forth)
+    const aim = inp.psiLAt ?? psiL;
+    turn = followTurnStart(off, followTurnDelta(drawn, aim, t0.step), 0, followTurnDegS(pace, k.rollDegS, k.paceShare, k.maxDegS ?? 0));
     started = turn !== null;
+    if (started) psiCarry = aim;
   }
   // D-H13 / D-H14: the heading's follower on `c`, never more than the leash behind — taut, it moves with `c` (his finger's pace), at the leash's speed
   let f = spring1(h, hv, c, dtS, tauS);
@@ -575,8 +587,8 @@ export function followFarStep(
   const paceS = Math.max(len3(v), dtS > 0 ? angleOf(s0.d, dir) / dtS : 0);
   const tg = dirAtHeading(c + (turn !== null ? turn.psi0 + turn.delta : off), eT);
   return {
-    s: { d: dir, v, tWas: tg, pace: paceS, det: s0.det, psi: wrapPi(psi), psiT: psiL, azWas: s0.azWas, psiStep: step, dir },
-    top: { psiT: psiL, nW: inp.nW ?? t0.nW, turn, step, orbitWas: inp.orbit, pace, hd: { c, h: f.x, hv: f.v, e, ev, off } },
+    s: { d: dir, v, tWas: tg, pace: paceS, det: s0.det, psi: wrapPi(psi), psiT: psiCarry, azWas: s0.azWas, psiStep: step, dir },
+    top: { psiT: psiCarry, nW: inp.nW ?? t0.nW, turn, step, orbitWas: inp.orbit, pace, hd: { c, h: f.x, hv: f.v, e, ev, off } },
     ...(hold !== undefined ? { hold } : {}),
     // the geometric jump every frame it is read (the record's `x`; `null`: none kept)
     delta: inp.psiLWas === undefined ? null : jump,

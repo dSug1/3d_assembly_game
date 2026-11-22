@@ -334,6 +334,19 @@ export function farAsked(st: SceneState, yaw: number, v: number, c: CalmState | 
 }
 
 /**
+ * ⭐⭐⭐ (2026-11-22, `CAMERA_FOLLOWS_GIZMO.md` §19, D-H20) THE FAR READING WHERE THE GIZMO WILL WAIT: at the map's place shown (`asmShown` — the place F-3's
+ * `seamRebase` sets every angle to when a far turn starts: its yaw, `vOfPitch(pitch)`), this frame's calm asked (`asmAskCalm`), the band read on the orbit's
+ * direction AT that place (where the orbit stands after the rebase). `undefined`: no place shown (no rebase follows); `null`: carried. The MODEL's space.
+ */
+export function farAskedWhereHeld(st: SceneState): number | null | undefined {
+  const sh = st.asmShown;
+  if (sh === null) return undefined;
+  const v = vOfPitch(sh.pitch);
+  const R = dirFrame(st);
+  return farReading(sh.yaw, v, st.asmAskCalm, R, st.cfg.followPoleDeg, tiltDir(R, orbitDir(sh.yaw, v)));
+}
+
+/**
  * ⭐⭐⭐ (R5, D-H15 — `TOP_BOTTOM_STUDY.md` §3 H-3) THE JUMP'S SECOND READING, at the rig's angles `yaw`, `v` beside the first (`farAsked` of this frame's
  * calm): LAST frame's calm asked, kept in the world, read in this frame's F at these angles (`asmAskLevelWas`) — then this frame's calm kept. Off the far
  * rule as decided: none kept. The MODEL's space.

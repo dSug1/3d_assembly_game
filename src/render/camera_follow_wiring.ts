@@ -26,7 +26,7 @@ import { followFarStep, followPose, followStart, followTopStep, type FollowState
 import { tiltDir, type CamFrame } from "../input/orbit_tilt";
 import { approachDistance, closeInGain, orbitDir } from "../input/assembly_orbit";
 import { orbitDegPerMm } from "../input/follow_camera";
-import { dirFrame, farTopDecided, followRebaseAsked, gizmoFacetW, spitZone, type PictureEvents } from "./assembly_wiring";
+import { dirFrame, farAskedWhereHeld, farTopDecided, followRebaseAsked, gizmoFacetW, spitZone, type PictureEvents } from "./assembly_wiring";
 import { upSquareToView } from "../input/camera_frame";
 import type { SceneState } from "./scene_state";
 
@@ -87,8 +87,10 @@ export function followFrame(
   // ⭐⭐⭐ (2026-11-21, R5 — `TOP_BOTTOM_STUDY.md` §3, §6) under the far rule as decided (`farTopDecided`: `pictureFarTop` 1) `followFarStep`: the far reading
   // (D-H19, `asmAskLevel`), its jump by GEOMETRY (D-H15: last frame's calm at these angles, `asmAskLevelWas`), the dy hold on the up HE sees (D-H16: the
   // picture's own frame drawn last frame, `asmCamDrawn` — ⛔ `asmCamLogic`, the logic's, written this frame just before); else H2 / H3 exactly
+  // ⭐⭐⭐ (2026-11-22, `CAMERA_FOLLOWS_GIZMO.md` §19, D-H20 — `followTurnAtGizmo` 1) the far reading where the gizmo will wait if a turn starts (F-3's place)
+  const psiLAt = farTopDecided(st) && st.cfg.followTurnAtGizmo === 1 ? farAskedWhereHeld(st) : undefined;
   const r = farTopDecided(st)
-    ? followFarStep(s0, was?.top ?? null, { ask: st.asmAsk!, orbit: orbitW, psiL: st.asmAskLevel, nW: gizmoFacetW(st), upShown: st.asmCamDrawn?.up ?? null, dySign: st.asmDySign, fingerMm: st.asmFrameMm, ...(st.asmAskLevelWas !== null ? { psiLWas: st.asmAskLevelWas.psi } : {}) }, dtMs, kt)
+    ? followFarStep(s0, was?.top ?? null, { ask: st.asmAsk!, orbit: orbitW, psiL: st.asmAskLevel, nW: gizmoFacetW(st), upShown: st.asmCamDrawn?.up ?? null, dySign: st.asmDySign, fingerMm: st.asmFrameMm, ...(st.asmAskLevelWas !== null ? { psiLWas: st.asmAskLevelWas.psi } : {}), ...(psiLAt !== undefined ? { psiLAt } : {}) }, dtMs, kt)
     : followTopStep(s0, was?.top ?? null, { ask: st.asmAsk!, orbit: orbitW, psiL: st.asmAskLevel, nW: gizmoFacetW(st), upShown: st.asmCamLogic?.up ?? null, dySign: st.asmDySign, fingerMm: st.asmFrameMm }, dtMs, kt);
   s = r.s;
   topS = r.top;
@@ -100,7 +102,7 @@ export function followFrame(
   ev = { followStarted: r.started, ...(r.hold !== undefined ? { followHold: r.hold } : {}) };
   const rb = followRebaseAsked(st, r.started);
   const t = topS.turn;
-  topRec = { L: st.asmAskLevel, T: topS.psiT, k: t === null ? -1 : t.k, dl: t === null ? null : t.delta, dur: t === null ? 0 : t.durMs, x: r.delta, h: r.hold ?? null, p: topS.pace, s: r.started ? 1 : 0, rb: rb ? 1 : 0 };
+  topRec = { L: st.asmAskLevel, T: topS.psiT, k: t === null ? -1 : t.k, dl: t === null ? null : t.delta, dur: t === null ? 0 : t.durMs, x: r.delta, h: r.hold ?? null, p: topS.pace, s: r.started ? 1 : 0, rb: rb ? 1 : 0, ...(psiLAt !== undefined ? { A: psiLAt } : {}) };
   const P0 = followPose(s.dir, look, foot, hang, gapM, off.yawRad, off.pitchRad);
   // ⭐⭐⭐ (R3a) THE ONE PICTURE draws (`pictureStep`): w 0 and no up held — `P0` itself, the same objects (far out bit for bit)
   const P = pic(P0, s.dir, hang, hang > 1e-9 ? [(pp[0] - foot[0]) / hang, (pp[1] - foot[1]) / hang, (pp[2] - foot[2]) / hang] : st.asmAsk!);
