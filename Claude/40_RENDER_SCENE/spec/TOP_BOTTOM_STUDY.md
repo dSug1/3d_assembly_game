@@ -376,3 +376,4 @@ no hold, the finger's mapping turned with it mid-dy, the same dy brought back ov
 ⏸ **A FUTURE POTENTIAL IMPROVEMENT, NOT STARTED** (his word, 2026-11-22: *"Capture that in the md files"*, the merge made without it): a study first
 (his four parts) of the RE-CROSSING — e.g. the dy's sense kept over a turn the same gesture made (D-H8's one pass per gesture, applied to the
 finger's mapping), which bends his 2026-11-14 rule (*"the finger's mapping turned with the side"*); his word first.
+⭐ (2026-11-22, the clean-up) D-R1's record: the pushed tag `archive/1.0.154-Zenith_crossing_by_place` (`ce980cb`); its worktree `../camera_follow` removed.
