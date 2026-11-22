@@ -2,7 +2,7 @@
 
 > ⭐⭐⭐ **2026-11-22 — THE SURFACE WORK STARTS (his word: *"We will then move to the orbit surface work"*).** The condition below is MET: the orbit
 > charts are CLOSED (LIVE `3b7a479`, `1.0.156-Orbits_with_camera_follow_final`, the best so far) and this branch is merged (`1.0.154-`, 2026-11-22). The workfront: `1.0.157-Orbit_surface`.
-> First: ask him again what §8 (its end) keeps for this moment → [`HANDOVER_2026-11-22_orbit_surface.md`](../../00_CORE/queue_notes/HANDOVER_2026-11-22_orbit_surface.md).
+> First: ask him again what §8 (its end) keeps for this moment → [`HANDOVER_2026-11-22_orbit_surface.md`](../../00_CORE/queue_notes/HANDOVER_2026-11-22_orbit_surface.md). ✅ **Asked 2026-11-22 evening, all four answered** → [ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md) §2bis.
 > ⭐⭐ **2026-11-22 evening — WHAT CHANGED SINCE THIS SPECIFICATION WAS WRITTEN (11-16 / 17) — read before building** ([ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md) §9).
 > (1) Its code references were read on `30f7bb3` / `1190db2`; since then step 2.5 deleted the old detectors, `chartLayout` / `chartCalm` and the legacy
 > zones (§3.3's T3 row, the audit's WS17); the camera became a FOLLOWER far out and ONE PICTURE at every distance (11-20 – 11-22; R6 deleted twelve
@@ -490,7 +490,7 @@ Sizes (from `scene_*.ts`, `SCENE_2_ASSEMBLY.md`): every scene is held near the c
 
 ### 3.0 How the catalogue is derived — so that it does not rest on the shapes met so far *(review)*
 
-[PROPOSED] The classes C1 – C24 of §3.1 are the ones the scenes and the probes have met. To cover what they have not, every feature of a
+[ACCEPTED by the owner 2026-11-22 — to be tested] The classes C1 – C24 of §3.1 are the ones the scenes and the probes have met. To cover what they have not, every feature of a
 surface is read on the grid below; a class is one cell of it, and a shape nobody has drawn yet falls in a cell too. §3.1b lists the cells
 the pipeline has not met.
 
@@ -618,7 +618,7 @@ still reaches only the first). Where a scene's parts are boxes, frusta and prism
 
 ### 5.2 The table SINGULARITY → PRINCIPLE → EVENT
 
-[PROPOSED] "Nothing to land on" = no contact along the facet's direction: the gizmo on the facet's plane, marked. "Approached" = reached by
+[ACCEPTED by the owner 2026-11-22 — to be tested] "Nothing to land on" = no contact along the facet's direction: the gizmo on the facet's plane, marked. "Approached" = reached by
 A + dy or a plunge. "⏳ open" = no principle answers it yet.
 
 | class | answered by | what it gives | event at its border |
@@ -785,7 +785,7 @@ round's decisions each answered: [ORBIT_SURFACE_AUDIT.md](ORBIT_SURFACE_AUDIT.md
 question in the md file and ask again when we work on the orbit surface later on."*
 1. **A goal's way in: is "a free direction exists" enough, or must the player be able to get there?** Check B4 answers *"can this part slide into its seat along at least one direction without touching a placed part?"* Not yet *"can the player bring the piece to where that slide starts?"* Example: a seat open only from under an overhang — the slide upward is free, but the gizmo may never reach a place under the overhang (no face there is a place of the orbit). Accept a level only when, for every goal, a free direction starts at a place the gizmo reaches (needs the landing map B3 and the coverage B5 first; §2.5 already writes it so) — or is the first test enough for now? ✅ **2026-11-17: the first test is enough for now; the second once the landing map exists.**
 2. **The entry-set check was run on boxes only** (the study's shapes): run it on the real parts' collision pieces (`UCX_`, `Scene_2`) before the first surface build? ✅ **2026-11-17: yes — package S0.**
-3. Still [PROPOSED], his word owed: §3.0 the catalogue derived from a grid of questions; §5.1 the six layers L0 – L5; §5.2 "nothing to land on" (the gizmo on the facet's plane, marked) and "approached". ✅ **2026-11-17: the six layers ACCEPTED, to be tested; the catalogue's grid and §5.2's two words still owed.**
+3. Still [PROPOSED], his word owed: §3.0 the catalogue derived from a grid of questions; §5.1 the six layers L0 – L5; §5.2 "nothing to land on" (the gizmo on the facet's plane, marked) and "approached". ✅ **2026-11-17: the six layers ACCEPTED, to be tested; the catalogue's grid and §5.2's two words still owed.** ✅ **2026-11-22: the catalogue's grid and §5.2's two words ACCEPTED, to be tested** ([ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md) §2bis).
 4. Still ⏳ open (§5.2): C22 very long flat shapes; a piece wider than its facet (C24); C38 free-form; the layout's events at a pole (C41).
 
 ---

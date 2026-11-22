@@ -21,8 +21,8 @@ still hold).
   docs → `9e82618a` **D-H24** (the taut leash at his finger's pace, `followLeashPace`, 0 = `9147bd2e` bit for bit) → the as-built docs. On his records
   replayed: far turns 43 → 1, the gizmo's waits 325 → 145 frames, the camera never faster than his finger (§20.9). verify **2321**. ⭐ His verdict: the best so
   far (above); open: the waits left, a cap at 520°/s over his own spins (his word).
-* **The workfront:** the MAIN folder `3d_assembly_game` (the only worktree), branch **`1.0.157-Orbit_surface`**, made from `1.0.156-Orbits_with_camera_follow_final`
-  (local, not pushed — start from `1.0.156-Orbits_with_camera_follow_final` elsewhere).
+* **The workfront:** ⭐ since 2026-11-22 evening the worktree `../orbit_surface`, branch **`1.0.158from1.0.157-Orbit_surface`**, made from
+  **`1.0.157-Orbit_surface`** (pushed; made from `1.0.156-Orbits_with_camera_follow_final`; the main folder `3d_assembly_game` stays on it).
 * **No longer owed** (closed with the orbit — future improvements only, on his word): FO3's open points ([`FAST_ORBIT.md`](../../40_RENDER_SCENE/spec/FAST_ORBIT.md)
   §12), the lean audit, D-R1's re-crossing study ([`TOP_BOTTOM_STUDY.md`](../../40_RENDER_SCENE/spec/TOP_BOTTOM_STUDY.md) §10), close in's own turns
   (`CAMERA_FOLLOWS_GIZMO.md` §19.4), R5's far strokes pinning the gizmo at a pole ([`PICTURE_REBUILD.md`](../../40_RENDER_SCENE/spec/PICTURE_REBUILD.md)).
@@ -45,7 +45,7 @@ still hold).
 5. The scene workflow's checks: [`SCENE_WORKFLOW.md`](../../20_GAME_RULES/spec/SCENE_WORKFLOW.md) §8 – §9 (the reach check
    `check_parts_reach_their_seat.ts`; every surface finding about a scene becomes a check).
 
-**His words still owed** (the ledger's review): the catalogue's grid (`ORBIT_SURFACE.md` §3.0) and §5.2's two words; the thresholds NARROW (10°) and
+✅ **ASKED 2026-11-22 evening, all answered** → [`ORBIT_SURFACE_BUILD.md`](../../40_RENDER_SCENE/spec/ORBIT_SURFACE_BUILD.md) §2bis. **His words still owed** (the ledger's review): the catalogue's grid (`ORBIT_SURFACE.md` §3.0) and §5.2's two words; the thresholds NARROW (10°) and
 BESIDE (10 mm), with B4; the map's representation (no grid — one phone measurement first, at the wiring step); the ghosts and markers against the
 collision pieces (one measurement before the plunge is built); the frozen plinth of `Scene_2` (does a held part pass through it in the pick-up flow?).
 **The charts' step B** (`ORBIT_CHARTS.md` §5.3 — the normal of the shape with its edges rounded, at the gizmo's place) belongs to this work
@@ -56,6 +56,9 @@ collision pieces (one measurement before the plunge is built); the frozen plinth
 * The working rules, unchanged → [`HANDOVER_2026-11-22.md`](HANDOVER_2026-11-22.md) §3: lean packets; ONE headless job at a time; never read drive E:;
   deploy only on his word (the recipe there — push the CURRENT branch, not `1.0.153-`); commits by path; docs before build; root cause before patch;
   one switch per change, 0 = the build before frame for frame.
+* ⛔ **Every lesson of this work → a RULE of construction or drawing, written for a script, then its check** (the owner, 2026-11-22 — to automate
+  the scene's construction and the parts' drawing in Blender later): [`SCENE_WORKFLOW.md`](../../20_GAME_RULES/spec/SCENE_WORKFLOW.md) §10,
+  [`PART_AUTHORING.md`](../../30_OBJECTS_3D/spec/PART_AUTHORING.md) §6.4, the ledger `ORBIT_SURFACE_BUILD.md` §8.
 * ⛔ **The orbit is closed**: never reopen what drives the gizmo and the piece's orbit, nor the camera. Anything the surface work changes in the picture is
   read against `UPRIGHT_LESSONS.md` row by row and compared with `40b8095` through a switch.
 * The kit (outside the repo): `C:/Users/sugit/Documents/_scripts_persos/_Persos/_saved_patches/orbit_chain_2026-11-18/fo3/` — `follow/cap/` the last

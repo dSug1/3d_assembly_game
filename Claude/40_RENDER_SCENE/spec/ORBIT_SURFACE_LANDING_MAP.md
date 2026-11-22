@@ -303,3 +303,5 @@ lookup's error (§6 (a) – (c) fall away). A tile round the gizmo (the third op
 ⚠ To settle at the wiring step, after ONE measurement on a phone (none exists). The specification's sentence "one height map per facet
 direction … each frame a lookup" (§2.2 P2, its cost) is rewritten then; the rule P2 does not change. The grid and `landing` (the lookup) would
 then serve the vectors and the offline comparison only.
+✅ **2026-11-22, the owner: no grid for the readout, its cost timed on the HUD** — the phone measurement is taken by the readout itself
+([ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md) §2bis).

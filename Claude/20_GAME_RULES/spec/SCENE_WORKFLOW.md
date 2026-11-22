@@ -6,6 +6,8 @@
 > **LAST VERIFIED** · 2026-11-12 (branch `1.0.124from1.0.121-Added_scene_2`) · ⭐ §7 (the playability amendments) APPROVED 2026-11-16, to be tested
 > ⭐ §8 — the check *can every part reach its seat?* — ✅ BUILT 2026-11-17 as a script for ANY scene's `.glb`, run on `Scene_2`
 > ⭐ §9 — ⛔ THE RULE (the owner, 2026-11-17): what the orbit's surface rebuild teaches about a scene becomes a CHECK run in this workflow
+> ⭐ §10 — ⛔ THE RULE (the owner, 2026-11-22): every lesson of the surface work becomes a RULE of construction (§10.3) or of drawing
+> (`PART_AUTHORING.md` §6.4), written so a script can apply it — the input of the scene's and the parts' automated construction
 
 > *"I think we first need to draft an assembly plan how the player would build the assembly. That will determine how to geometrize the parts, how to
 > draw them and their supporting surfaces in blender, etc. Propose a workflow which could be adopted for any new scene and which will be captured in
@@ -452,6 +454,7 @@ the owner's look on the device — is not left as a sentence in a document. For 
 
 It is §6.3 item 3 (*every finding the owner makes that a check missed → a new check and a planted control*) widened from the Blender
 build's own checks to everything the surface rebuild learns.
+⭐ (2026-11-22) §10 adds the step BEFORE the check: the lesson's RULE of construction or drawing, in a form a script applies.
 
 ### 9.2 What counts — read as follows (Claude's reading, to correct)
 
@@ -469,3 +472,56 @@ The owner left both ways open (above): a script for all the surface's findings, 
 **Proposed (Claude), his word owed when the second check is built:** ONE command to run at the gate, giving one verdict for the scene; behind it
 each check stays its own file, named after the question it answers — as he asked for the first (*"so we know what the script is about when we
 re-use it later on"*) — so widening the scope does not make that name untrue. Until then the gate runs §8's command.
+
+## 10. ⛔ THE RULE — EVERY LESSON OF THE ORBIT'S SURFACE WORK BECOMES A RULE OF CONSTRUCTION OR OF DRAWING, WRITTEN SO A SCRIPT CAN APPLY IT (2026-11-22)
+
+> *"also, make sure that you capture in the md files that any lesson learned in this orbit's surface work is captured for the scene construction workflow or the blender drawing workflow, so that later on I can automate the construction of the scene and the drawing of the parts in blender with rules which have incorporated those lessons learned."* — the owner, 2026-11-22.
+
+⭐ §9 makes a lesson a CHECK: it proves that a scene was built right. This section makes it a RULE: it says how to build it right — the input of
+the generator he means to write (the scene constructed, the parts drawn in Blender, by scripts). A check without its rule finds the fault after
+the drawing; a rule without its check is a wish (`LESSONS_CARRIED.md` §2). Each lesson gets both.
+
+### 10.1 The rule
+
+For every lesson the orbit's surface work learns — from a study, a package, a walk, a replay of his play records, or his look on the device:
+
+1. **A RULE in its workflow**, by what it governs:
+   * **construction** — what a scene is made of and in which order: the plan's steps and stages, what is pre-placed or frozen, what a scene may
+     cost (its pieces, its budgets), where the parts boot → this file, §10.3 (beside §2.3's rules for a plan);
+   * **drawing** — what a part's geometry carries: its collision pieces, face proxies, ghosts, seat markers, its entry, its sizes against the
+     pieces it meets → `PART_AUTHORING.md` §6.4 (beside §6.3's checklist);
+   * both, when the lesson binds both.
+2. **In the form of §10.2**, so that a script can apply it without a person reading the prose.
+3. **Its check** by §9 (the proof that a scene obeys the rule), and its row in THE LEDGER — `ORBIT_SURFACE_BUILD.md` §8, whose column *its
+   rule* names it.
+4. **In the same change as the lesson's record.** ⛔ A lesson whose rule cannot be written yet (a threshold undecided, a behaviour not yet seen
+   in the game) is listed OWED in its register, never dropped. A rule the testing reverses is marked REVERSED and kept — the record
+   (`METHOD.md`: *retractions are kept on purpose*).
+5. **Every package's brief ends with it** (as §9's does): *"what did this teach about how a scene must be built or a part drawn? → its rule
+   (§10), its check, its control, its ledger row"*; a builder with nothing to add says so.
+
+### 10.2 The form of a rule — what a generator needs
+
+| field | what it says |
+|---|---|
+| **id** | `C`n (construction, §10.3) or `D`n (drawing, `PART_AUTHORING.md` §6.4); never renumbered |
+| **lesson** | what was learned, and where (the package, the finding, the ledger row) |
+| **stage** | where it applies: W1 (the plan), W2 (the geometry sheet), W3 (the Blender build), W5 (the level data) |
+| **reads** | the data it applies to — the plan's fields, the playability brief (§7.1), the parts' `UCX_` pieces, proxies, markers |
+| **parameters** | each with its unit and its ONE home — a game constant READ from the game's files (`units.ts`, `gestureConfig.ts`), never retyped (as B6 reads its thresholds, `PART_AUTHORING.md` §6.1); a value not yet decided is marked PROVISIONAL, with whose word it waits for |
+| **the rule** | in the imperative, testable: what the generator must produce, or must never produce, and the tolerance of "produced" |
+| **its check** | the §9 check that proves it, and its planted control |
+| **status** | OWED (the lesson recorded, the rule not written) · WRITTEN (here, in this form) · APPLIED (a build script follows it) · AUTOMATED (the generator derives it with no hand step) · REVERSED |
+
+⛔ A judgement no script can make (*"reads well on the glass"*) is not a rule: it is written as a question for the owner's look (W3's review,
+`PART_AUTHORING.md` §4.3), with what a script can measure beside it.
+⭐ §7's playability amendments (2026-11-16) and `PART_AUTHORING.md` §6.3's checklist are the first lessons of this kind, written before this
+rule; each line is put into this form when a build script first applies it.
+
+### 10.3 The construction rules — the register
+
+| id | lesson (where) | stage | reads | parameters (unit, home) | the rule | its check | status |
+|---|---|---|---|---|---|---|---|
+| **C1** | A part placed after what closes its seat cannot be placed (S0; `Scene_2`'s first plan slid the pistons in sideways; ledger row 1) | W1, W5 | the plan's order (each part's `step`; the frozen parts pre-placed); the parts' `UCX_` at their goals | the sphere's sampling (`ENTRY_SPHERE_N`, the study's, `scripts/probes/surface_study/`); the contact skin (`collisionSkinMm`, `gestureConfig.ts`, mm on the glass, converted as `collision_wiring.ts` does) | order the steps so that at each part's stage its goal's entry set is not empty and contains the way in the plan names; a part that closes another's seat comes after it | `check_parts_reach_their_seat.ts` — FAIL: SHUT, way in BLOCKED (control: a head before its pistons) | WRITTEN (= §2.3 rule 2); checked |
+| **C2** | The landing map's cost grows with the placed parts' convex pieces (S1: 36 – 270 ms a direction for a whole map on `Scene_1`; ledger row 7) | W2, W5 | the placed set's convex pieces, per stage | ⏳ a budget per scene, from the readout's cost on the phone (`ORBIT_SURFACE_BUILD.md` §2bis) | ⏳ keep the placed set's convex pieces within the budget at every stage | ⏳ none yet (B3 runs the game's own function) | OWED — after the readout's phone measurement |
+| **C3** | The orbited piece's collision ignores every FROZEN body, and `Scene_2`'s plinth is frozen (read in the code at the S1 review; ledger row 6) | W1, W5 | the plan's frozen parts | — | ⏳ to write once seen in the game: only the floor frozen, or the game's rule changed | ⏳ none yet | OWED — later, with `Scene_2` (`ORBIT_SURFACE_BUILD.md` §2bis) |
