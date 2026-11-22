@@ -1,7 +1,7 @@
 # THE ORBIT'S SURFACE — what it aims at, its rules and principles, its singularities, its obstacles, what the rebuild must specify (2026-11-16)
 
 > ⭐⭐⭐ **2026-11-22 — THE SURFACE WORK STARTS (his word: *"We will then move to the orbit surface work"*).** The condition below is MET: the orbit
-> charts are CLOSED (LIVE `40b8095`, the best so far) and this branch is merged (`1.0.154-`, 2026-11-22). The workfront: `1.0.156-Orbit-surface`.
+> charts are CLOSED (LIVE `3b7a479`, `1.0.156-Orbits_with_camera_follow_final`, the best so far) and this branch is merged (`1.0.154-`, 2026-11-22). The workfront: `1.0.157-Orbit_surface`.
 > First: ask him again what §8 (its end) keeps for this moment → [`HANDOVER_2026-11-22_orbit_surface.md`](../../00_CORE/queue_notes/HANDOVER_2026-11-22_orbit_surface.md).
 
 > ⛔⛔ **THE OWNER'S DECISIONS OF 2026-11-16 ARE RECORDED (§8) — PROVISIONAL: TO BE TESTED, AND MAY BE REVERSED BY THE TESTING. NOTHING BUILT, NO GAME

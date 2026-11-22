@@ -805,3 +805,6 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
 * **2026-11-22 evening — D-H23 + D-H24 DEPLOYED** (his word *"update the md files, deploy"*, 2026-11-22 16:49Z): LIVE main `3b7a479` = `2cd1be34`; his four
   records replayed: far turns 43 → 1, the gizmo's waits 325 → 145 frames; his device look owed
   ([`CAMERA_FOLLOWS_GIZMO.md`](../../40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md) §20.9 – §20.10).
+* **2026-11-22 evening — HIS VERDICT: THE BEST IMPLEMENTATION OF THE ORBIT SO FAR** — branch `1.0.156-Orbits_with_camera_follow_final` (renamed from `1.0.156-Orbit-surface`),
+  LIVE main `3b7a479` = `2cd1be34`; `40b8095`'s branch renamed `1.0.155-Orbits_with_camera_follow_1`; the workfront `1.0.157-Orbit_surface`
+  ([`CAMERA_FOLLOWS_GIZMO.md`](../../40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md) §20.11).

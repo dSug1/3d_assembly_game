@@ -5,24 +5,24 @@ still hold).
 
 ## 0. Where it stands
 
-* ⭐⭐⭐ **The owner, 2026-11-22:** *"Record that the orbit charts and camera follow work is closed and this is the best implementation so far. We will
-  then move to the orbit surface work."* → **the orbit on charts and the camera follower are CLOSED.** LIVE main **`40b8095`** = **`b21b667`** on
-  branch **`1.0.155-Orbits-finalized`** (pushed; renamed on his word from `1.0.155-Camera_back_and_forth_at_the_cap_edge`, the name the deploy commit
-  carries) is **the best implementation so far** — the reference that must never regress
-  ([`UPRIGHT_LESSONS.md`](../../40_RENDER_SCENE/spec/UPRIGHT_LESSONS.md) §3). Its last change: D-H20, the far turn aimed where the gizmo waits
-  ([`CAMERA_FOLLOWS_GIZMO.md`](../../40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md) §19). **2308 vectors.**
+* ⭐⭐⭐⭐ **The owner, 2026-11-22 evening:** *"rename branch 1.0.155-Orbits-finalized to 1.0.155-Orbits_with_camera_follow_1 in remote and local. rename branch 1.0.156-Orbit-surface to 1.0.156-Orbits_with_camera_follow_final in remote and local. Mark in the md files that this branch is the best implementation of the orbit so far. then create branch 1.0.157-Orbit_surface and move to this new branch."* → branch **`1.0.156-Orbits_with_camera_follow_final`** (pushed; renamed from `1.0.156-Orbit-surface`),
+  LIVE main **`3b7a479`** = **`2cd1be34`**, is **the best implementation of the orbit so far** — the reference that must never regress
+  ([`UPRIGHT_LESSONS.md`](../../40_RENDER_SCENE/spec/UPRIGHT_LESSONS.md) §3): the orbit on charts and the camera follower CLOSED this afternoon (*"Record
+  that the orbit charts and camera follow work is closed and this is the best implementation so far"*; LIVE `40b8095` = `b21b667`, its branch now
+  **`1.0.155-Orbits_with_camera_follow_1`**, renamed from `1.0.155-Orbits-finalized`; its last change D-H20,
+  [`CAMERA_FOLLOWS_GIZMO.md`](../../40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md) §19) + D-H23 and D-H24 (below, §20). **2321 vectors.**
 * ⚠ **His amendment (2026-11-22 ~15:00, on `40b8095`) — ROOT FOUND the same evening on his PC play records** (six, `.recordings/`, 33 marks): the back
   and forth he still saw (`Scene_0bis`'s faces, `Scene_1`'s vertical edges at a fast orbit — *"not here in previous branches builds … not seen at low
   orbit speed"*) is a far turn with the gizmo WAITING at the edge, on every face and at every distance (his first impression of the back being worse set
   aside on his word). The root: R5's D-H15 as built reads the jump between two PLACES (last frame's calm), so the calm's share ramp crossed in one big
   step reads as a jump — a pace threshold, §18.4's Root 1 again ([`CAMERA_FOLLOWS_GIZMO.md`](../../40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md) §20).
-  ⭐ On his order (*"proceed with the fix and tests without asking me questions"*), on `1.0.156-Orbit-surface` (pushed; ⭐ DEPLOYED on his word *"update the md files, deploy"*, 2026-11-22 16:49Z: LIVE main `3b7a479` = `2cd1be34`):
+  ⭐ On his order (*"proceed with the fix and tests without asking me questions"*), on `1.0.156-Orbit-surface` (now `1.0.156-Orbits_with_camera_follow_final`; ⭐ DEPLOYED on his word *"update the md files, deploy"*, 2026-11-22 16:49Z: LIVE main `3b7a479` = `2cd1be34`):
   `ea3a28a1` docs (the revert point) → `9147bd2e` **D-H23** (the jump read at ONE place, `followJumpAtPlace`, 0 = `40b8095` bit for bit) → `e53b3c39`
   docs → `9e82618a` **D-H24** (the taut leash at his finger's pace, `followLeashPace`, 0 = `9147bd2e` bit for bit) → the as-built docs. On his records
-  replayed: far turns 43 → 1, the gizmo's waits 325 → 145 frames, the camera never faster than his finger (§20.9). verify **2321**. Owed: his device
-  look (`40b8095` stays the reference until his verdict); open: the waits left, a cap at 520°/s over his own spins (his word).
-* **The workfront:** the MAIN folder `3d_assembly_game` (the only worktree), branch **`1.0.156-Orbit-surface`**, made from `1.0.155-Orbits-finalized`
-  (local, not pushed — start from `1.0.155-Orbits-finalized` elsewhere).
+  replayed: far turns 43 → 1, the gizmo's waits 325 → 145 frames, the camera never faster than his finger (§20.9). verify **2321**. ⭐ His verdict: the best so
+  far (above); open: the waits left, a cap at 520°/s over his own spins (his word).
+* **The workfront:** the MAIN folder `3d_assembly_game` (the only worktree), branch **`1.0.157-Orbit_surface`**, made from `1.0.156-Orbits_with_camera_follow_final`
+  (local, not pushed — start from `1.0.156-Orbits_with_camera_follow_final` elsewhere).
 * **No longer owed** (closed with the orbit — future improvements only, on his word): FO3's open points ([`FAST_ORBIT.md`](../../40_RENDER_SCENE/spec/FAST_ORBIT.md)
   §12), the lean audit, D-R1's re-crossing study ([`TOP_BOTTOM_STUDY.md`](../../40_RENDER_SCENE/spec/TOP_BOTTOM_STUDY.md) §10), close in's own turns
   (`CAMERA_FOLLOWS_GIZMO.md` §19.4), R5's far strokes pinning the gizmo at a pole ([`PICTURE_REBUILD.md`](../../40_RENDER_SCENE/spec/PICTURE_REBUILD.md)).

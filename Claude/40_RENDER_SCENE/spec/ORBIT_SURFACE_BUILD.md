@@ -1,7 +1,7 @@
 # THE ORBIT'S SURFACE — THE BUILD, STARTED IN PARALLEL (2026-11-17)
 
 > ⭐⭐⭐ **2026-11-22:** §4's merges DONE (the charts and this branch merged into `1.0.154-`, `1.0.146b-` too); the orbit charts and the camera follower
-> CLOSED (his word; LIVE `40b8095`); the surface work starts on `1.0.156-Orbit-surface` — S0 and S1 built offline, the landing map NOT wired yet.
+> CLOSED (his word; LIVE `3b7a479`, the best so far); the surface work starts on `1.0.157-Orbit_surface` — S0 and S1 built offline, the landing map NOT wired yet.
 
 > **STATUS** · ⭐ **S0 and S1 LAUNCHED 2026-11-17** (Opus agents, a builder then an independent auditor each; local commits; **nothing wired, no existing
 > game file changed**). **OWNS** · the record of the surface build: the owner's words, the parallel rule, the merge order, each package as briefed and

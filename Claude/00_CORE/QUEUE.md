@@ -14,13 +14,11 @@ record. **A status changes in BOTH places or neither.**
 
 ---
 
-## ⭐⭐⭐ YOU ARE HERE (2026-11-22, branch `1.0.156-Orbit-surface` in the MAIN folder, live main `3b7a479` = `2cd1be34`)
+## ⭐⭐⭐ YOU ARE HERE (2026-11-22 evening, branch `1.0.157-Orbit_surface` in the MAIN folder, live main `3b7a479` = `2cd1be34`)
 
-⭐⭐⭐ **THE ORBIT CLOSED (2026-11-22, his word)** — *"the orbit charts and camera follow work is closed and this is the best implementation so far"*: LIVE main `40b8095` = `b21b667` (`1.0.155-Orbits-finalized`; its last change D-H20 → [`CAMERA_FOLLOWS_GIZMO.md`](../40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md) §19) — the reference never to regress; **2308 vectors**; what was still listed for the orbit is no longer owed.
-⭐⭐⭐ **2026-11-22 evening — his amendment's ROOT on his PC records** (the gizmo waiting at the edges: R5's jump read between two places, a pace threshold) →
-D-H23 (the jump at one place) + D-H24 (the taut leash at his pace) built, gated, DEPLOYED (his word): LIVE main `3b7a479` = `2cd1be34`; his device look owed; the switches at 0 give `40b8095` back → [`CAMERA_FOLLOWS_GIZMO.md`](../40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md) §20.
-⭐⭐⭐ **NEXT: THE ORBIT SURFACE WORK** on `1.0.156-Orbit-surface` (the main folder, the only worktree) → [`queue_notes/HANDOVER_2026-11-22_orbit_surface.md`](queue_notes/HANDOVER_2026-11-22_orbit_surface.md) — ask him `ORBIT_SURFACE.md` §8's questions again first; then RND6.
-⭐ The lines of 2026-11-22 morning (the merge, D-H20 built and deployed) moved → [`history/2026-11-22_queue_orbit_closed_moved.md`](history/2026-11-22_queue_orbit_closed_moved.md).
+⭐⭐⭐⭐ **THE BEST IMPLEMENTATION OF THE ORBIT SO FAR (2026-11-22 evening, his word)** — branch `1.0.156-Orbits_with_camera_follow_final`, LIVE main `3b7a479` = `2cd1be34`: the orbit closed this afternoon (`40b8095`, branch `1.0.155-Orbits_with_camera_follow_1`) + D-H23 + D-H24 → [`CAMERA_FOLLOWS_GIZMO.md`](../40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md) §20 — the reference never to regress; **2321 vectors**.
+⭐⭐⭐ **NEXT: THE ORBIT SURFACE WORK** on `1.0.157-Orbit_surface` (the main folder, the only worktree) → [`queue_notes/HANDOVER_2026-11-22_orbit_surface.md`](queue_notes/HANDOVER_2026-11-22_orbit_surface.md) — ask him `ORBIT_SURFACE.md` §8's questions again first; then RND6.
+⭐ The lines of 2026-11-22 (the merge, D-H20; the orbit closed; D-H23 + D-H24) moved → [`history/2026-11-22_queue_orbit_closed_moved.md`](history/2026-11-22_queue_orbit_closed_moved.md), [`history/2026-11-22_queue_evening_moved.md`](history/2026-11-22_queue_evening_moved.md).
 ⭐ The lines of 2026-11-19 (LIVE `675ec23`, the upright law U, option 3) moved → [`history/2026-11-22_queue_status_moved.md`](history/2026-11-22_queue_status_moved.md).
 ⭐ The lines of 2026-11-18 (LIVE `4eabab8`, FO3, the upright study, NEXT) moved → [`history/2026-11-18_queue_status_moved.md`](history/2026-11-18_queue_status_moved.md).
 ⭐⭐⭐ **`12dc4b6` is the best orbit before the charts** (the owner, 2026-11-12). The status lines of 2026-11-12 to 2026-11-14 (the slide's rebuild, no zoom, the cleaned sliders, the pick-up flow, the browser guards) moved → [`history/2026-11-18_queue_status_moved.md`](history/2026-11-18_queue_status_moved.md).
