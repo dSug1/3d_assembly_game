@@ -46,8 +46,9 @@ switch; at 0, `3b7a479` frame for frame.
   `readoutAt(...)` gives the kind, Δ and the part; a pure `readoutKey(...)` gives the cache key.
 * **State and call in a new render module**, `src/render/landing_readout.ts`: called in `assemblyFrame` right after `mapGizmo` for the frame's own
   gizmo — ⛔ never inside the section samples, the edge blend's samples or the solver's 24 queries.
-* **The cache**: one preparation per facet, keyed by the map's identity and frame, the placed set's key, the held piece's id and orientation —
-  rebuilt at a pick-up, a turn of the piece, a seat, a frame change (`ORBIT_SURFACE_LANDING_MAP.md` §10.6). At most ONE preparation a frame: a
+* **The cache**: one preparation per facet (⭐ and normal — §13.4 D6), keyed by the map's identity and frame, the placed set's key, the held piece's
+  id, points, orientation and ⭐ resting face's centre — rebuilt at a pick-up, a turn of the piece, ⭐ a change of resting face (a tapped face moves
+  the reference point with no turn — §13.7, the audit's finding 1), a seat, a frame change (`ORBIT_SURFACE_LANDING_MAP.md` §10.6). At most ONE preparation a frame: a
   turn mid-gesture prepares the current facet first, the others as the gizmo reaches them (the specification's warning: rebuilding 10 – 20 maps
   in one frame may hitch an iPhone).
 * ⛔ **Nothing in the frame reads its result.** The gizmo, the piece, the calm and the camera are untouched — none of §9's chain (`asmShown` →
@@ -140,8 +141,9 @@ Tests: `tests/landing_readout_switch.test.ts` (V4, V4b — 9 tests, with D1's), 
 **What it reads, frame by frame** (at 1): the facet `map.facets[t.stack]` (its `t`, `b`) with `rawGizmo`'s `t.normal`, turned by `mapFrame`
 (`landingAxes`); the place `R·t.surface`; today's point `R·rawGizmo.point`; the held piece's `shape.points`, its MODEL orientation
 (`worldPlacementOf`), its `restingCentre`; the placed bodies of `placedParts` (MODEL pose) with their part ids. The cache's key: a number per face
-map object (a `WeakMap`), the map's frame, `placedParts`' key, the held piece's id and orientation — every number exact. Only the frame's facet is
-prepared, when the gizmo reaches it: at most one preparation a frame by construction. On `Scene_1` only (§13.4 D1).
+map object (a `WeakMap`), the map's frame, `placedParts`' key, the held piece's id, ⭐ its points' identity, its orientation and ⭐ its resting face's
+centre (fix round 1, §13.7) — every number exact. Each facet's entry: its index and ⭐ the exact normal it was prepared for (D6). Only the frame's
+facet is prepared, when the gizmo reaches it: at most one preparation a frame by construction. On `Scene_1` only (§13.4 D1).
 
 ### 13.2 The vectors, each RED on its mutant first (`CLAUDE.md` rule 2) — one mutant at a time on the built code, the file run, reverted
 
@@ -193,6 +195,9 @@ conservative one that keeps its intent (⛔ nothing in the frame reads the reado
   whose model orientation changes every frame is prepared every frame — is visible on the HUD (`prep` moving, `facets 1`), never hidden.
 * **D5 — the line names a piece left out for no volume** (` · ⛔refused …`, `ORBIT_SURFACE_LANDING_MAP.md` §10.6 *"look at it"*), and reads `—`
   when the readout did not run the frame before (no piece held, no map): an absent readout is said, never left stale.
+* **D6 — one preparation per facet AND NORMAL** (the coordinator's decision in fix round 1, §13.7): the per-facet entry is keyed `stack:n0,n1,n2` on
+  the exact normal the sums were prepared for (`rawGizmo`'s `t.normal`) — never switched to the facet's `f.n` (a cap's normal may differ from its
+  facet's), so the entry and its preparation cannot disagree by construction.
 
 ### 13.5 Not done, not checked, known limits
 
@@ -207,7 +212,36 @@ conservative one that keeps its intent (⛔ nothing in the frame reads the reado
 
 `npm run verify` once at the end of the build (on `d21a4826`, the code as committed; this document after it): ✅ **190 files, 2342 tests, green**, the typecheck clean. The base (`35d407ea`): 2321 vectors — + 12 (V1 – V3) + 9 (V4, V4b).
 
-### 13.7 Lessons → rules (§11)
+### 13.7 Audit (independent, 2026-11-22) and fix round 1
+
+An independent auditor read the diff `35d407ea..d21a4826`. Its four findings, and what was done (the owner asleep: no questions; commit `e91d3e82`,
+code only — nothing outside the readout's own state changed):
+
+1. ⚠ **CONFIRMED defect — the cache key left out the held piece's reference point.** `readoutKey` held the map, its frame, the placed key, the held
+   id and orientation, but the preparation reads `heldPiece(local, q, rc)`. A tapped face (`selectRestingFace` → `restOnTappedFace`) replaces the
+   orbit piece's `restingCentre` before `alignRestingFace`, which may leave the orientation as it was (a turn refused — `blockedBy` — or no target):
+   the old preparations survived with the old reference point, Δ off by tens of mm. **Fixed**: `ReadoutKeyOf` gains `restingCentre` and `shape`
+   (the held points' identity — a respawned shape is a new key); §4's list of rebuild events and `ORBIT_SURFACE_LANDING_MAP.md` §10.6 gain *a change
+   of resting face*. Vectors: V3 *"a change of resting face with the same orientation changes the key; a new shape changes it"*; V4b *"a change of
+   resting face with the same orientation → prepared anew"* (the piece's −z face up: P2 read from it, Δ +40).
+   RED on the resting centre left out of the key: V3 `expected 'm3|Rworld|PPiece1/Piece1|Piece44/Piec…' not to be …`, V4b
+   `expected { frame: { …(4) }, refused: [], …(1) } not to be …` (the old preparation reused).
+2. **Not vectored — the tilted / zoned path in the module** (V4b's stub had `frame: () => null`). Vector V4b *"the map's frame, R a real rotation"*:
+   the parts and the held piece turned by R in the world, the facets not; Δ 41 and the point `R·(11, 81, 0)` mm as unturned; today's point higher on
+   the same line → Δ 21; another R under the same map object and placed key → prepared anew, its result a fresh state's. RED on each mutant:
+   `mulM(R, …)` dropped on the place — `point 0: expected 0.015909010135892056 to be less than 1e-12`; dropped on today's point —
+   `expected 12.031016775371135 to be less than 1e-9`; `null` passed to `landingAxes` instead of R — `expected 8.277061413626058 to be less than
+   1e-9`; R left out of the key — `expected { frame: { …(4) }, refused: [], …(1) } not to be …` (the R1 preparation reused under R2).
+3. **Fragile — the per-facet entry keyed by `t.stack`, prepared with `t.normal`.** Decision D6 (§13.4): the entry keyed on the stack AND the exact
+   normal. Vector V4b *"one preparation per facet and normal: the same stack with another normal prepares anew, its result a fresh state's"*. RED on
+   the normal left out of the entry: `expected 1 to be 2`.
+4. **G2 cannot be measured on the virtual-clock replays**: answered by an offline script — the coordinator's part (§14).
+
+G1 – G3: see §14.
+
+`npm run verify` after the fix round (on `e91d3e82`): ✅ **190 files, 2346 tests, green**, the typecheck clean (+ 4: one in V3, three in V4b).
+
+### 13.8 Lessons → rules (§11)
 
 Nothing measured yet that teaches a rule: C2's budget waits for G2 and his phone. One candidate from the build itself, for his word: the readout
 (and the footprint support) read each placed part's mesh as ONE convex body — true on `Scene_1`, false for a non-convex part; a scene check *"every
