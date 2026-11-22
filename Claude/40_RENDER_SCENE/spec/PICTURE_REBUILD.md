@@ -506,3 +506,31 @@ the latch and the unlatch the pose drawn is held and his finger closes the gap: 
   `Scene_0bis` free strokes (band, band 11, far, far with `pictureFarTop` 0, the mix, close); `Scene_1`'s approach cycle at 5 / 9.5 / 8.4 px; the spit's
   latch near the left tip; his two close stretches; the dy hold walks. Every recording identical (`Scene_0bis`'s first ~30 frames to 1e-6, the replay
   probe's known noise), the `moved:` line read.
+* **As built** (2026-11-22, the builder; ⛔ no headless run, no device look: the lead's batch `drv_r6.sh` is the gate). Two code commits, §4.6's order
+  merged where the same files carried the steps: `53f00b5` (FO3 S1 and the shadow, law U, `uprightFraming` 0) and `3014e53` (the detour, `cameraFollower`
+  0 with `pictureOne` 0, H3's 0 paths). **Switches and sliders removed (12; 144 → 132):** `uprightPicture`, `uprightCloseIn`, `uprightCarried`,
+  `uprightFraming`, `cameraFollower`, `pictureOne`, `followFromDeg`, `followMaxDegS`, `followTop`, `followTurnOnJump`, `followTurnFinger`,
+  `followTurnRebase`. **Deleted with them:** `rollShadowFrame`, FO3 S1's gap in `rollPictureFrame`, `uprightPictureFrame`, `roll_follow.followStep` /
+  `gapTake` / `FollowMode`, `fingerOnGhost` / `fingerOnLogic`, `upright.ts` `uprightStep` / `uprightPaced` / `UprightState` / `UPRIGHT_REST` /
+  `holdOnPicture`, the `lawHalf` event, the record's `upright` field and its three readers, `fingerAtEntry` (the identity once law U is gone), `turnBegin`'s
+  own turn (`uprightDecides`, `seamEase`, `easeCarry`, `TurnAsk.noCamNull`), `pictureOn` / `pictureLegacy`, `followFrame`'s drop without a hook,
+  `camera_follow.ts` `FollowKnobs` / `FOLLOW_CAP_DEG` / `poleDetour` / `followCeiling` / `polarStep` / `followStep`, `followPark`'s detour branch, the
+  `pictureOne` parameter of `turnFraming` / `turnPose` / `framedPose`, the knobs `onJump` / `finger` and H2's branches in `followTopStep` /
+  `followFarStep`. **Lines (src, deleted / added):** step 1 — `roll_shadow.ts` 173 / 17, `upright.ts` 98 / 8, `assembly_wiring.ts` 76 / 18,
+  `roll_follow.ts` 56 / 6, `picture_wiring.ts` 23 / 11, `gestureConfig.ts` 21 / 3, `pointer_wiring.ts` 8 / 6, `scene_state.ts` 8 / 4, `tuning_menu.ts`
+  6 / 1, `green_box_wiring.ts` 2 / 1; step 2 — `camera_follow.ts` 142 / 26, `camera_follow_wiring.ts` 46 / 38, `gestureConfig.ts` 34 / 2,
+  `picture_wiring.ts` 25 / 8, `tuning_menu.ts` 11 / 3, `orbit_tilt.ts` 7 / 6, `green_box_wiring.ts` 6 / 6, `assembly_wiring.ts` 6 / 6, the rest ≤ 3.
+  **Vectors:** 2327 → 2289 (step 1) → 2278 (step 2).
+* **Kept, read on the kept path** (the trace: kit `follow/r6/CHECKPOINT_R6.md`): `poseFramingTwo` — a turn far out or outside the band is `rule` 0
+  (`turnFraming(0, false)`), the framing tried: its pose is G, read by `upCarried`, the record's ghost and `zm.rule` (the recorder's `mix.rule`);
+  `freeTurnMaxDeg` — its value feeds `changeSeen` (the carried up's timed / at once), only its 0 (the shadow) deleted: the validator now `(0, 90]`, the
+  slider 5 – 90; `rollFollowMs` — the clock of the piece's shown direction's rest (`asmDirEase.own`, written by `changeApply` at once); `followPoleDeg`;
+  `FollowDetour` and `FollowState.det` (the record `asmFollow.rec` reads `side`, `det`: `followStart`'s rest); `src/render/roll_shadow.ts` (it holds the
+  close drawer `carriedFrame` and the record; its name kept for the recorders); `poseTurnAngle`, `turnIsFree`, `gapStep`, `restShare`. ⚠ Left as dead data
+  (not removed, for the lead's word): `FollowTop.orbitWas` and `FollowTopIn.orbit` (H2's pace was their only reader; ~25 test literals carry them), the
+  record's `drawn` (always true now), `rollFollowMs`' slider label (it names the deleted roll follower).
+* **For the lead (probes and URLs, not touched):** `turn_rec.mjs`'s `SHADOW_REC` keeps every field it reads (`s.upright` is now always absent: its own
+  fallback `s.one`, as with the defaults before); `drv_r6.sh` passes none of the deleted switches. The older kit drivers do (`freeTurnMaxDeg=0` ×36,
+  `uprightPicture=0` ×30, `pictureOne=0` ×16, `followTop=0` ×13, `cameraFollower=0` ×7, `uprightCarried=0` ×7, H3's three ×3, `uprightFraming=0` ×1 —
+  `follow/r2` … `r5`, `h*`, `rebuild_d`, `rebuild_e`): an unknown key is now reported by `config_override.ts`, and `freeTurnMaxDeg=0` refused.
+  `scripts/probes/ORBIT_GATES.md` lines 492 – 583 cite the same switches.
