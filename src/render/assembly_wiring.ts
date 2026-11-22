@@ -320,7 +320,7 @@ export function levelledAsked(st: SceneState, yaw: number, v: number): number | 
  * (`pictureOne` 1 with the follower) and the top's rule on. Else H2 / H3 exactly (`pictureOne` 0: `620f227`).
  */
 export function farTopDecided(st: SceneState): boolean {
-  // ⭐⭐⭐ (2026-11-21 night, `PICTURE_REBUILD.md` §4.3a item 7 — R3-FIX) behind its own switch `pictureFarTop` (0 by default: R5's gates unfinished)
+  // ⭐⭐⭐ (2026-11-21 night, `PICTURE_REBUILD.md` §4.3a item 7 — R3-FIX) behind its own switch `pictureFarTop` (⭐ 1 by default since 2026-11-22, the owner's word; 0 before: R5's gates unfinished)
   return st.cfg.pictureFarTop === 1 && st.cfg.pictureOne === 1 && st.cfg.cameraFollower === 1 && st.cfg.followTop === 1;
 }
 

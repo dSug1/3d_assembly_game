@@ -391,14 +391,16 @@ describe("R5 D-H16 — the far dy hold on the drawn up", () => {
   });
 });
 
-// ⭐⭐⭐ (2026-11-21 night, `PICTURE_REBUILD.md` §4.3a item 7 — R3-FIX) R5 BEHIND ITS OWN SWITCH `pictureFarTop` (0 by default — the lead: its gates unfinished, its
+// ⭐⭐⭐ (2026-11-21 night, `PICTURE_REBUILD.md` §4.3a item 7 — R3-FIX) R5 BEHIND ITS OWN SWITCH `pictureFarTop` (⭐⭐⭐ 1 by default since 2026-11-22, the owner:
+// *"set the slider default to 1"*; 0 by default before — the lead: its gates unfinished, its
 // far strokes on `Scene_0bis` pin the gizmo at a pole): R5's vectors above are its pure rules and its wiring, read with the switch at 1. Red on the old code
 // (no switch: R5 on with `pictureOne`); mutant: the predicate without the switch.
 describe("R5's switch `pictureFarTop`", () => {
   const st = (o: Partial<typeof DEFAULT_CONFIG>) => ({ cfg: { ...DEFAULT_CONFIG, ...o } }) as unknown as SceneState;
-  it("0 by default: the far rule as decided OFF (H2 / H3 exactly); 1: R5 as built, only with the one picture, the follower and the top's rule", () => {
-    expect(DEFAULT_CONFIG.pictureFarTop).toBe(0);
-    expect(farTopDecided(st({}))).toBe(false);
+  it("1 by default (the owner, 2026-11-22): R5 as built, only with the one picture, the follower and the top's rule; 0: the far rule as decided OFF (H2 / H3 exactly)", () => {
+    expect(DEFAULT_CONFIG.pictureFarTop).toBe(1);
+    expect(farTopDecided(st({}))).toBe(true);
+    expect(farTopDecided(st({ pictureFarTop: 0 }))).toBe(false);
     expect(farTopDecided(st({ pictureFarTop: 1 }))).toBe(true);
     expect(farTopDecided(st({ pictureFarTop: 1, pictureOne: 0 }))).toBe(false);
     expect(farTopDecided(st({ pictureFarTop: 1, cameraFollower: 0 }))).toBe(false);

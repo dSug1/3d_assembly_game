@@ -932,7 +932,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   uprightFraming: 1, // ⭐⭐⭐ (packet J) a change's framing carried from the pose shown
   cameraFollower: 1, // ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §13 — F2) the follower draws far out on this branch; 0 = the live build (`461eeb2`)
   pictureOne: 1, // ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` D-P2 — packet R2) close in's turns about the piece on this branch; 0 = `620f227` frame for frame
-  pictureFarTop: 0, // ⭐⭐⭐ (2026-11-21 night, R3-FIX — the lead) R5 OFF by default: its gates unfinished, its far strokes on `Scene_0bis` pin the gizmo at a pole (`runs_str5/r5_farmix`), to be studied; 1 = R5 as built
+  pictureFarTop: 1, // ⭐⭐⭐ (2026-11-22, the owner: *"set the slider default to 1"*) R5 ON by default; 0 = the far top rule of `98ac680` (H2 / H3). ⚠ Its far strokes on `Scene_0bis` pin the gizmo at a pole (`runs_str5/r5_farmix`), not studied. (2026-11-21 night, R3-FIX — the lead: 0, its gates unfinished)
   pictureBandMm: 10, // ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §4.2 — R3a) the band: his `tiltBlendMm` figure, 10 mm of approach finger before 0.65 m; ⛔ 40 (the lead, reverted the same day): Scene_1's whole far approach is ≈ 30 mm, the far rest was blended
   followMs: 200, // ⭐ (2026-11-21, the owner tried the slider: *"at 200 ms is better at far out distance … set default to 200ms"*; 120 before) (F2, D-F6) the calm's own 120 ms it replaces — on the RAW target 50 ms (the prototype's D, tuned on the eased one) left 56 frames over 45° offline (`CAMERA_FOLLOWS_GIZMO.md` §13)
   followPoleDeg: 30, // ⭐ (F2) his D-F1: no nearer than 30° to straight above far out
