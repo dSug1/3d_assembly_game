@@ -515,6 +515,12 @@ export interface SceneState {
    *  reading at this frame's angles (`farJumpRead`; `psi` `null`: carried — a level face; the field `null`: none kept) — the jump read by geometry */
   asmAskCalmWas: { readonly c: import("../input/orbit_calm").CalmState | null } | null;
   asmAskLevelWas: { readonly psi: number | null } | null;
+  /** ⭐⭐⭐ (2026-11-22 evening, `CAMERA_FOLLOWS_GIZMO.md` §20, D-H23) THE FAR JUMP READ AT ONE PLACE this frame (`farJumpAtRead`): the far readings either
+   *  side of each crossing of the calm's source between last frame's place shown and this one, at this frame's angles; `[]` none crossed; `null` not read
+   *  (`followJumpAtPlace` 0, off the far rule, no place kept, the map changed, the tilt) — the jump as built */
+  asmJumpAt: readonly (readonly [number | null, number | null])[] | null;
+  /** ⭐⭐⭐ (D-H23) last frame's place shown on the map — its angles, the map it indexes, its calm's source (`calmSourceKey`): the crossing's other end */
+  asmJumpWas: { readonly yaw: number; readonly pitch: number; readonly map: import("../input/face_map").FaceMap; readonly key: string } | null;
   /** ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §13 — F2) THE CAMERA FOLLOWER (`render/camera_follow_wiring.ts`): its state while it draws far out (`null`
    *  where it does not: it restarts at rest), the piece drawn last frame, and the frame's record for the probes (`rec`); `null`: never drawn yet */
   /** ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §4.1 — R3a, `pictureOne` 1) THE ONE PICTURE's state (`render/picture_wiring.ts`, `input/picture.ts`): the turntable, the

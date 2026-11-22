@@ -35,7 +35,7 @@ import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, dot, length, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
 import { cameraFrameNow, retargetGizmo, rigNow, ringPlaceNow, syncCentre } from "./camera_rig";
-import { askedDir, assemblyFrame, assemblyOn, farAsked, farJumpRead, farTopDecided, levelledAsked, resetOrbitState, restDrawn, shownOffset, spitStep, tiltClampStep } from "./assembly_wiring";
+import { askedDir, assemblyFrame, assemblyOn, farAsked, farJumpAtRead, farJumpRead, farTopDecided, levelledAsked, resetOrbitState, restDrawn, shownOffset, spitStep, tiltClampStep } from "./assembly_wiring";
 import { lawHalfTurn } from "../input/upright";
 import { gizmoShownAt } from "../input/assembly_orbit";
 import { cameraOffsetAt, easeShare, gizmoBlendTravel, horizontalShare, rigSwingNeed } from "../input/orbit_rig";
@@ -1084,6 +1084,8 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     st.asmAskLevel = farTopDecided(st) ? farAsked(st, rig.yaw, rig.v, st.asmAskCalm) : levelledAsked(st, rig.yaw, rig.v);
     // ⭐⭐⭐ (R5, D-H15) …and LAST frame's calm read at the same angles: the far reading's jump by geometry (none kept off the far rule as decided)
     farJumpRead(st, rig.yaw, rig.v);
+    // ⭐⭐⭐ (2026-11-22 evening, D-H23) …and the jump read at ONE place (`followJumpAtPlace`)
+    farJumpAtRead(st, rig.yaw, rig.v);
     // ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §13 — F2) FAR OUT THE CAMERA FOLLOWER: a simple polar orbit (world up) about the look
     // point following the direction asked, the piece hung along the same direction (`followFrame`); close in: the picture below
     const c0 = st.orbitCentreM;

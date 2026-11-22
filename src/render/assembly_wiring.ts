@@ -27,7 +27,7 @@ import { orbitDvPerMm, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from ".
 import type { LineSample, SceneState } from "./scene_state";
 import { faceTrianglesWorld } from "./contact_wiring";
 import { calmHeading, calmLevelHeading, calmShown, calmStep as calmStepEase, calmTarget, cameraHeading, capEdgePitch, heldOffsetStep, poleWeight, type CalmKnobs, type CalmState } from "../input/orbit_calm";
-import { askedCalm, calmInFrame, calmWorld, farReading, followTurnHoldsGizmo, levelledHeading, type CalmAskTarget } from "../input/camera_follow";
+import { askedCalm, calmInFrame, calmWorld, farReading, followTurnHoldsGizmo, levelledHeading, placeCrossings, type CalmAskTarget } from "../input/camera_follow";
 import { facetFrame } from "../input/face_map";
 import { qRotate, type Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
@@ -114,7 +114,7 @@ type OrbitStateStart = Pick<
   | "asmGizmo" | "asmSupport" | "asmSupportLevel" | "pieceHold" | "pieceHoldPrev" | "asmLook" | "asmFacePoint" | "asmG" | "asmPrevQ" | "asmShown" | "asmFaceBand" | "asmFree" | "asmPlaceWas" | "asmMapQ"
   | "asmEdgeHold" | "asmZone" | "asmZoneMix" | "asmChange" | "asmPieceDrawn" | "asmDirEase" | "asmCamLogic" | "asmCamDrawn" | "asmRollShadow" | "asmSpitSide" | "asmSpitU" | "asmSpitPic" | "asmSpitPicWas" | "asmZoneAlpha" | "asmDySign" | "asmFingerDxMm" | "asmDxSign" | "asmCarriedYaw" | "asmHeadO"
   | "asmHeadW" | "asmHeadYaw" | "asmTilt" | "asmGOff" | "asmTiltAuto" | "asmTiltPending" | "asmOrbitMm" | "asmFrameMm" | "asmBlend" | "asmCalmWhole" | "asmCalmWholeV"
-  | "asmSquare" | "asmCalm" | "asmMouth" | "asmRawPrev" | "asmGizmoAt" | "asmGizmoLag" | "asmAskCalm" | "asmAsk" | "asmAskLevel" | "asmAskCalmWas" | "asmAskLevelWas" | "asmFollow" | "asmPicture"
+  | "asmSquare" | "asmCalm" | "asmMouth" | "asmRawPrev" | "asmGizmoAt" | "asmGizmoLag" | "asmAskCalm" | "asmAsk" | "asmAskLevel" | "asmAskCalmWas" | "asmAskLevelWas" | "asmJumpAt" | "asmJumpWas" | "asmFollow" | "asmPicture"
 >;
 
 /**
@@ -181,6 +181,8 @@ export function orbitStateStart(): OrbitStateStart {
     asmAskLevel: null,
     asmAskCalmWas: null,
     asmAskLevelWas: null,
+    asmJumpAt: null,
+    asmJumpWas: null,
     asmFollow: null,
     asmPicture: null,
   };
@@ -361,6 +363,62 @@ export function farJumpRead(st: SceneState, yaw: number, v: number): void {
   const was = st.asmAskCalmWas;
   st.asmAskLevelWas = was === null ? null : { psi: farAsked(st, yaw, v, calmInFrame(was.c, R)) };
   st.asmAskCalmWas = { c: calmWorld(st.asmAskCalm, R) };
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-22 evening, `CAMERA_FOLLOWS_GIZMO.md` §20, D-H23) THE CALM ASKED AT ANOTHER PLACE on the map — `calmTargets` ITSELF (one owner: the same
+ * rule that builds the camera's calm, never a copy — the bounce's and the charts' report 1's lesson: one reference, decided once), run on a shallow copy of
+ * the state with that place shown; its target and whole shares folded as `calmFrame` folds them (`askedCalm`). Nothing of `st` written.
+ */
+export function calmAskedAt(st: SceneState, place: { readonly t: MapTarget; readonly yaw: number; readonly pitch: number }): CalmState | null {
+  const p: SceneState = { ...st, asmShown: place };
+  const keep = calmAsked;
+  calmAsked = null;
+  calmTargets(p, 0);
+  const c = calmAsked === null ? null : askedCalm(calmAsked, p.asmCalmWhole, p.asmCalmWholeV);
+  calmAsked = keep;
+  return c;
+}
+
+/** ⭐⭐⭐ (D-H23) the calm's SOURCE as a key — its normal (a side's facet, or the side a cap reads at its edge), or none (a cap with no side to read) */
+function calmSourceKey(c: CalmState | null): string {
+  return c === null ? "none" : `${c.n[0].toFixed(6)},${c.n[1].toFixed(6)},${c.n[2].toFixed(6)}`;
+}
+
+/** ⭐ (D-H23) the step's samples and halvings: a crossing placed to 1 / (6 × 256) of the step (≤ 0.02° at 26°) */
+const FAR_JUMP_SAMPLES = 6;
+const FAR_JUMP_BISECT = 8;
+
+/**
+ * ⭐⭐⭐ (2026-11-22 evening, `CAMERA_FOLLOWS_GIZMO.md` §20, D-H23 — `followJumpAtPlace`) THE FAR JUMP READ AT ONE PLACE, at the rig's angles `yaw`, `v`
+ * (after `farJumpRead`): where the calm's SOURCE changed between last frame's place shown and this one, the crossing found on the map between the two
+ * (`placeCrossings`), the calm asked of the source left and of the source entered built THERE (`calmAskedAt`), both read at THIS frame's angles
+ * (`farAsked`) — `asmJumpAt`; the same source: `[]` (no jump — the share's ramp is the calm's own motion, the spring pays it); `null` (the jump as built):
+ * the switch 0, off the far rule, no place kept, the map changed (a zone, a tilt), the tilt close in. Then this frame's place kept. The MODEL's space.
+ */
+export function farJumpAtRead(st: SceneState, yaw: number, v: number): void {
+  if (!farTopDecided(st) || st.cfg.followJumpAtPlace !== 1) { st.asmJumpAt = null; st.asmJumpWas = null; return; }
+  const sh = st.asmShown;
+  const map = sh === null ? null : faceMapOf(st);
+  const was = st.asmJumpWas;
+  const key = calmSourceKey(st.asmAskCalm);
+  st.asmJumpAt = null;
+  if (sh !== null && map !== null && was !== null && was.map === map && st.asmTilt === null) {
+    if (key === was.key) st.asmJumpAt = [];
+    else {
+      const o = mapOpts(st);
+      const dY = Math.atan2(Math.sin(sh.yaw - was.yaw), Math.cos(sh.yaw - was.yaw));
+      const dP = sh.pitch - was.pitch;
+      const at = (s: number): { t: MapTarget; yaw: number; pitch: number } => {
+        const y = was.yaw + s * dY;
+        const q = was.pitch + s * dP;
+        return { t: mapTarget(map, y, q, o), yaw: y, pitch: q };
+      };
+      const cross = placeCrossings((s) => calmSourceKey(calmAskedAt(st, at(s))), FAR_JUMP_SAMPLES, FAR_JUMP_BISECT);
+      st.asmJumpAt = cross.map((x) => [farAsked(st, yaw, v, calmAskedAt(st, at(x.lo))), farAsked(st, yaw, v, calmAskedAt(st, at(x.hi)))] as const);
+    }
+  }
+  st.asmJumpWas = sh === null || map === null ? null : { yaw: sh.yaw, pitch: sh.pitch, map, key };
 }
 
 /** ⭐⭐⭐ (H2) THE GIZMO'S FACET NORMAL in the world — the face map's facet at the map's place (`asmShown`), turned out of its frame; the MODEL's (never a drawn mesh). `null`: no place. */

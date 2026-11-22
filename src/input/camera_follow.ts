@@ -447,6 +447,48 @@ export function farJump(psiL: number | null, psiLWas: number | null | undefined,
   return wrapPi((psiL ?? psiT) - (psiLWas ?? psiT));
 }
 
+/**
+ * ⭐⭐⭐ (2026-11-22 evening, `CAMERA_FOLLOWS_GIZMO.md` §20, D-H23) THE FAR JUMP READ AT ONE PLACE: for each crossing of the calm's SOURCE this frame, the
+ * far readings either side of it, both at THIS frame's angles (`[left, entered]`; `null`: a level face, the heading carried `psiT`) — their differences
+ * summed, wrapped; no crossing: 0. ⛔ D-H15 as built (`farJump`): last frame's calm — last frame's PLACE — so the calm's share ramp crossed in one big step
+ * read as a jump (10 – 40° on his records), a pace threshold (§18.4's Root 1 again). At one place a vertical edge reads 0 at any pace (the bounce's
+ * lesson: a side's normal cancels out with its horizontal share whole at its edge; step 2.4e: every face's share whole at its own edges).
+ */
+export function farJumpAcross(pairs: readonly (readonly [number | null, number | null])[], psiT: number): number {
+  let j = 0;
+  for (const [a, b] of pairs) j += wrapPi((b ?? psiT) - (a ?? psiT));
+  return wrapPi(j);
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-22 evening, §20, D-H23) WHERE A STEP CROSSES A CHANGE OF SOURCE: `id(s)` the source at the fraction `s` of the step (0 last frame's place, 1
+ * this frame's), sampled `samples` times; each change bracketed by `bisect` halvings (`lo` still the source before, `hi` the one after). Two changes
+ * between neighbouring samples are read as one (the first source left, the one found after). Pure: no engine, no clock.
+ */
+export function placeCrossings(id: (s: number) => string, samples: number, bisect: number): readonly { readonly lo: number; readonly hi: number }[] {
+  const n = Math.max(1, Math.floor(samples));
+  const out: { lo: number; hi: number }[] = [];
+  let s0 = 0;
+  let k0 = id(0);
+  for (let i = 1; i <= n; i++) {
+    const s1 = i / n;
+    const k1 = id(s1);
+    if (k1 !== k0) {
+      let lo = s0;
+      let hi = s1;
+      for (let j = 0; j < Math.max(0, Math.floor(bisect)); j++) {
+        const m = (lo + hi) / 2;
+        if (id(m) === k0) lo = m;
+        else hi = m;
+      }
+      out.push({ lo, hi });
+    }
+    s0 = s1;
+    k0 = k1;
+  }
+  return out;
+}
+
 /** ⭐ (R5) One frame's readings far out: the top's (`FollowTopIn`, `psiL` the far reading — `farReading`) and last frame's calm's at this frame's angles. */
 export interface FollowFarIn extends FollowTopIn {
   /** ⭐ (D-H15) last frame's calm asked read at THIS frame's angles (`farReading`): `null` carried (a level face); absent: none kept (no jump read) */
@@ -456,6 +498,11 @@ export interface FollowFarIn extends FollowTopIn {
    * frame (F-3's place: the map's place shown, this frame's calm asked): the turn is aimed there and it is the reading carried. Absent or `null`: `psiL`.
    */
   readonly psiLAt?: number | null;
+  /**
+   * ⭐⭐⭐ (2026-11-22 evening, `CAMERA_FOLLOWS_GIZMO.md` §20, D-H23 — `followJumpAtPlace`) THE JUMP READ AT ONE PLACE: the far readings either side of each
+   * crossing of the calm's source this frame, at this frame's angles (`farJumpAcross`); empty: none crossed, no jump. Absent: the jump as built (`psiLWas`).
+   */
+  readonly jumpAt?: readonly (readonly [number | null, number | null])[];
 }
 
 /**
@@ -526,7 +573,8 @@ export function followFarStep(
   const paceNow = followFingerPace(inp.fingerMm ?? 0, dtS, k.degPerMm ?? 0);
   const pace = Math.max(paceNow, k.tauMs > 0 ? t0.pace * Math.exp(-Math.max(0, dtMs) / k.tauMs) : 0);
   const psiL = inp.psiL ?? t0.psiT;
-  const jump = farJump(inp.psiL, inp.psiLWas, t0.psiT);
+  // ⭐⭐⭐ (2026-11-22 evening, §20, D-H23) the jump read at ONE place when handed (`jumpAt`); else as built (two places — a pace threshold)
+  const jump = inp.jumpAt !== undefined ? farJumpAcross(inp.jumpAt, t0.psiT) : farJump(inp.psiL, inp.psiLWas, t0.psiT);
   // D-H13: the two followers — started at rest on the drawn direction where none (a start; the follower parked close in), a turn of another rule not carried
   const hd0 = t0.hd ?? headStart(s0, t0.psiT);
   let turn = t0.hd !== undefined ? t0.turn : null;
@@ -591,7 +639,7 @@ export function followFarStep(
     top: { psiT: psiCarry, nW: inp.nW ?? t0.nW, turn, step, orbitWas: inp.orbit, pace, hd: { c, h: f.x, hv: f.v, e, ev, off } },
     ...(hold !== undefined ? { hold } : {}),
     // the geometric jump every frame it is read (the record's `x`; `null`: none kept)
-    delta: inp.psiLWas === undefined ? null : jump,
+    delta: inp.psiLWas === undefined && inp.jumpAt === undefined ? null : jump,
     started,
   };
 }

@@ -90,7 +90,7 @@ export function followFrame(
   // ⭐⭐⭐ (2026-11-22, `CAMERA_FOLLOWS_GIZMO.md` §19, D-H20 — `followTurnAtGizmo` 1) the far reading where the gizmo will wait if a turn starts (F-3's place)
   const psiLAt = farTopDecided(st) && st.cfg.followTurnAtGizmo === 1 ? farAskedWhereHeld(st) : undefined;
   const r = farTopDecided(st)
-    ? followFarStep(s0, was?.top ?? null, { ask: st.asmAsk!, orbit: orbitW, psiL: st.asmAskLevel, nW: gizmoFacetW(st), upShown: st.asmCamDrawn?.up ?? null, dySign: st.asmDySign, fingerMm: st.asmFrameMm, ...(st.asmAskLevelWas !== null ? { psiLWas: st.asmAskLevelWas.psi } : {}), ...(psiLAt !== undefined ? { psiLAt } : {}) }, dtMs, kt)
+    ? followFarStep(s0, was?.top ?? null, { ask: st.asmAsk!, orbit: orbitW, psiL: st.asmAskLevel, nW: gizmoFacetW(st), upShown: st.asmCamDrawn?.up ?? null, dySign: st.asmDySign, fingerMm: st.asmFrameMm, ...(st.asmAskLevelWas !== null ? { psiLWas: st.asmAskLevelWas.psi } : {}), ...(st.asmJumpAt !== null ? { jumpAt: st.asmJumpAt } : {}), ...(psiLAt !== undefined ? { psiLAt } : {}) }, dtMs, kt)
     : followTopStep(s0, was?.top ?? null, { ask: st.asmAsk!, orbit: orbitW, psiL: st.asmAskLevel, nW: gizmoFacetW(st), upShown: st.asmCamLogic?.up ?? null, dySign: st.asmDySign, fingerMm: st.asmFrameMm }, dtMs, kt);
   s = r.s;
   topS = r.top;
