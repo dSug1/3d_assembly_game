@@ -14,10 +14,10 @@ record. **A status changes in BOTH places or neither.**
 
 ---
 
-## ⭐⭐⭐ YOU ARE HERE (2026-11-22, branch `1.0.153-Picture_rebuild` in `../camera_follow`, live main `98ac680` = `4bf5c31`)
+## ⭐⭐⭐ YOU ARE HERE (2026-11-22, branch `1.0.153-Picture_rebuild` in `../camera_follow`, live main `6fc1f5d` = `ba3f4aa`)
 
-⭐⭐⭐ **LIVE** (deployed 2026-11-22 ~00:45 on his word *"deploy so I can test tomorrow morning"*): main `98ac680` = `4bf5c31` — the picture's rebuild R2 + R3 + R3-FIX rounds 1 + 2 (one heading owner; his `Scene_0bis` finding of 2026-11-21 night). ⛔ No device look yet on R3-FIX. His reference: `ae456df` (R2 + R3) — *"the best implementation of the orbit so far"*. **2327 vectors**. Switches: `pictureOne` 1 (0 = the build before), `pictureFarTop` 0 (1 = R5) → [`PICTURE_REBUILD.md`](../40_RENDER_SCENE/spec/PICTURE_REBUILD.md).
-⭐ **NEXT** (each on his word): his look on `98ac680`; D-R1 the zenith crossing near the tips (`TOP_BOTTOM_STUDY.md` §10, proposed); R5's far pole pin (study); R6; the merge into the main folder when the charts are done → ⭐ **read [`HANDOVER_2026-11-22.md`](queue_notes/HANDOVER_2026-11-22.md) first**.
+⭐⭐⭐ **LIVE** (deployed 2026-11-22 morning on his word): main `6fc1f5d` = `ba3f4aa` — the picture's rebuild R2 + R3 + R3-FIX + **R5 ON** (`pictureFarTop` 1, *"set the slider default to 1"*; 0 = `98ac680`'s far top rule) + **R6** (the old picture's paths deleted: 12 switches, 132 sliders; bit for bit against `2c8ad70` on 27 recordings). ⛔ No device look yet on R3-FIX, R5 at 1, R6. His reference: `ae456df` — *"the best implementation of the orbit so far"*. **2278 vectors** → [`PICTURE_REBUILD.md`](../40_RENDER_SCENE/spec/PICTURE_REBUILD.md) §8.6.
+⭐ **NEXT** (each on his word): his look on `6fc1f5d`; R5's far pole pin on `Scene_0bis` (study); D-R1 kept as a FUTURE IMPROVEMENT (`TOP_BOTTOM_STUDY.md` §10, not built); ⭐ **the merge into the main folder PREPARED** (a fast-forward of `1.0.145-` from `510bbd8`) → ⭐ **read [`HANDOVER_2026-11-22.md`](queue_notes/HANDOVER_2026-11-22.md) §0 first**.
 ⭐ The lines of 2026-11-19 (LIVE `675ec23`, the upright law U, option 3) moved → [`history/2026-11-22_queue_status_moved.md`](history/2026-11-22_queue_status_moved.md).
 ⭐ The lines of 2026-11-18 (LIVE `4eabab8`, FO3, the upright study, NEXT) moved → [`history/2026-11-18_queue_status_moved.md`](history/2026-11-18_queue_status_moved.md).
 ⭐⭐⭐ **`12dc4b6` is the best orbit before the charts** (the owner, 2026-11-12). The status lines of 2026-11-12 to 2026-11-14 (the slide's rebuild, no zoom, the cleaned sliders, the pick-up flow, the browser guards) moved → [`history/2026-11-18_queue_status_moved.md`](history/2026-11-18_queue_status_moved.md).
