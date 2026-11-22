@@ -115,6 +115,13 @@ const PENDING: Record<string, string> = {
   // product plays, and `d170_regenerate.test.ts` regenerates it to prove the data is still the generator's.
   generateDemoPlan: "build-time only — `scripts/gen_demo_plan.ts` writes `content/scene1_demo_plan.ts` (D170)",
   buildLandingMap: "S1 (`ORBIT_SURFACE_BUILD.md`) — the landing map L2, pure and vectored, NOT wired until orbit_charts is merged: first a readout beside today's depth on Scene_1",
+  // ⭐ (2026-11-22, S2 packet P1 — `ORBIT_SURFACE_READOUT.md`) the readout's pure part, built and vectored (`landing_readout.test.ts`) one packet ahead of its
+  // wiring (P2: `render/landing_readout.ts`) — these five lines leave with P2.
+  prepareLanding: "S2 P2 (`ORBIT_SURFACE_READOUT.md` §4) — the sums with no grid, read once a frame by the readout beside today's depth on Scene_1",
+  readoutAt: "S2 P2 (`ORBIT_SURFACE_READOUT.md` §2) — P2 beside today's level at the gizmo's place, read by the readout's render module",
+  readoutKey: "S2 P2 (`ORBIT_SURFACE_READOUT.md` §4) — the readout's cache key, read by the readout's render module",
+  landingAxes: "S2 P2 (`ORBIT_SURFACE_READOUT.md` §3) — the facet's direction turned into the world, read by the readout's render module",
+  heldPiece: "S2 P2 (`ORBIT_SURFACE_READOUT.md` §3) — the held piece as held relative to its resting face's centre, read by the readout's render module",
   // ✅ `qAngle` LEFT THIS LIST 2026-09-22 — `RotationFollower` reads it to decide a body has
   // ARRIVED at its detent, so it is wired and the guard reddened until this line was deleted.
   // ⭐ That is the second direction the list is asserted in: *a stale allowlist is the same lie

@@ -17,10 +17,11 @@
  * code unit), ties to the smaller id — the input's order never reaches the result. Engine-free (`tests/boundary.test.ts`).
  */
 import { convexHull3 } from "./hull3";
-import { cross, dot, type Vec3 } from "./vec";
+import { LANDING_STEP_MM } from "./units";
+import { cross, dot, qRotate, type Quat, type Vec3 } from "./vec";
 
-/** ⭐ The grid's step, millimetres (`ORBIT_SURFACE.md` §5.1). ⚠ Its home becomes `src/core/units.ts` when the map is wired (`ORBIT_SURFACE_BUILD.md` §6). */
-export const LANDING_STEP_MM = 4;
+/** ⭐ The grid's step, millimetres (`ORBIT_SURFACE.md` §5.1) — ⭐ (2026-11-22, S2) its one home is `src/core/units.ts` (`ORBIT_SURFACE_BUILD.md` §6), re-exported. */
+export { LANDING_STEP_MM };
 const M_PER_MM = 0.001;
 /** ⭐ Touching is not overlapping: a side must hold by more than this, a stretch be longer, to count (0.1 µm — the study's `1e-4 mm`). */
 const TOUCH_M = 1e-7;
@@ -43,6 +44,8 @@ export interface LandingFrame {
   readonly vMin: number;
   readonly vMax: number;
 }
+/** ⭐ (2026-11-22, S2) the facet direction alone — what the sums are prepared for (the region is the grid's only). */
+export type LandingAxes = Pick<LandingFrame, "origin" | "u" | "v" | "n">;
 /** A stretch of depth inside the obstacle along `n`: `top` where a ray from outside enters, `bottom` where it leaves (metres along `n`). */
 export interface Layer {
   readonly top: number;
@@ -78,6 +81,17 @@ export interface LandingMap {
   landingAt(u: number, v: number, from?: number): Landing;
   /** the two layer lists of the NEAREST sample (a tie: the lower index); `null` outside the region */
   layersNear(u: number, v: number): { readonly parts: readonly Layer[]; readonly piece: readonly Layer[] } | null;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-22, package S2 — `ORBIT_SURFACE_READOUT.md` §4) THE SUMS PREPARED, NO GRID: the held piece's sums with the placed parts over one facet
+ * direction and the EXACT landing at any place (one ray through them) — `buildLandingMap`'s own preparation and evaluation (`prepareSums`, `exactOf`),
+ * so the two cannot drift. `refused`: the pieces left out (no volume), named.
+ */
+export interface PreparedLanding {
+  readonly frame: LandingAxes;
+  readonly refused: readonly string[];
+  landingAt(u: number, v: number, from?: number): Landing;
 }
 
 interface Poly {
@@ -147,7 +161,7 @@ const support = (pts: readonly Vec3[], m: Vec3): number => {
 };
 
 /** ⭐ the sum P ⊕ (−H) prepared for the frame (`H` null: P alone — the placed parts' own layers) */
-function prepareSum(P: Poly, H: Poly | null, part: number, f: LandingFrame): Sum {
+function prepareSum(P: Poly, H: Poly | null, part: number, f: LandingAxes): Sum {
   const ms = new Map<string, Vec3>();
   for (const m of P.normals) ms.set(keyOf(m), m);
   if (H !== null) {
@@ -233,13 +247,16 @@ function better(a: Landing, b: Landing): Landing {
   return a;
 }
 
-/**
- * ⭐⭐⭐ BUILD THE LANDING MAP of the held piece over one facet direction. `placed`: the placed parts' convex collision pieces (model coordinates,
- * metres); `held`: the held piece's convex pieces AS HELD, each a list of points RELATIVE TO ITS REFERENCE POINT (the point the gizmo stands for: its
- * resting face's centre); `frame`: the facet direction and the region to cover; `stepMm`: the grid's step. Pure: keeps no state.
- */
-export function buildLandingMap(placed: readonly ConvexPiece[], held: readonly (readonly Vec3[])[], frame: LandingFrame, stepMm: number = LANDING_STEP_MM): LandingMap {
-  const stepM = stepMm * M_PER_MM;
+/** the preparation both readers share: the parts' ids (sorted), the pieces refused (named, sorted), the placed polytopes, the sums P ⊕ (−H) */
+interface Sums {
+  readonly ids: readonly string[];
+  readonly refused: readonly string[];
+  readonly P: readonly { readonly poly: Poly; readonly part: number }[];
+  readonly pieceSums: readonly Sum[];
+}
+
+/** ⭐ THE PREPARATION — the hulls, the ids, the refused, every pair's sum for the facet direction (`buildLandingMap`'s and `prepareLanding`'s, one code) */
+function prepareSums(placed: readonly ConvexPiece[], held: readonly (readonly Vec3[])[], frame: LandingAxes): Sums {
   const refused: string[] = [];
   const ids = [...new Set(placed.map((p) => p.id))].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
   const idx = new Map(ids.map((id, k) => [id, k] as const));
@@ -256,8 +273,40 @@ export function buildLandingMap(placed: readonly ConvexPiece[], held: readonly (
     else H.push(poly);
   });
   refused.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
-  const partSums = P.map((p) => prepareSum(p.poly, null, p.part, frame));
   const pieceSums = P.flatMap((p) => H.map((h) => prepareSum(p.poly, h, p.part, frame)));
+  return { ids, refused, P, pieceSums };
+}
+
+/** ⭐ THE EXACT EVALUATION — one ray at (u, v) through every prepared sum, merged, read from outside or from `from` (both readers' `landingAt`) */
+function exactOf(s: Sums): (u: number, v: number, from?: number) => Landing {
+  return (u, v, from) => {
+    const raw: number[] = [];
+    for (const x of s.pieceSums) castSum(x, u, v, raw);
+    return landOf(mergeLayers(raw, s.ids), from);
+  };
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-22, package S2 — `ORBIT_SURFACE_READOUT.md` §4; `ORBIT_SURFACE_LANDING_MAP.md` §10.9, his answer: no grid) PREPARE THE LANDING of the
+ * held piece over one facet direction, WITH NO GRID: the sums as `buildLandingMap` prepares them and its exact `landingAt` (one code). The inputs as
+ * `buildLandingMap`'s (`frame`: the direction alone — no region). Pure: keeps no state.
+ */
+export function prepareLanding(placed: readonly ConvexPiece[], held: readonly (readonly Vec3[])[], frame: LandingAxes): PreparedLanding {
+  const s = prepareSums(placed, held, frame);
+  return { frame, refused: s.refused, landingAt: exactOf(s) };
+}
+
+/**
+ * ⭐⭐⭐ BUILD THE LANDING MAP of the held piece over one facet direction. `placed`: the placed parts' convex collision pieces (model coordinates,
+ * metres); `held`: the held piece's convex pieces AS HELD, each a list of points RELATIVE TO ITS REFERENCE POINT (the point the gizmo stands for: its
+ * resting face's centre); `frame`: the facet direction and the region to cover; `stepMm`: the grid's step. Pure: keeps no state.
+ * ⭐ (2026-11-22, S2) its sums and its exact `landingAt` are `prepareLanding`'s (`prepareSums`, `exactOf`): the readout and the map cannot drift.
+ */
+export function buildLandingMap(placed: readonly ConvexPiece[], held: readonly (readonly Vec3[])[], frame: LandingFrame, stepMm: number = LANDING_STEP_MM): LandingMap {
+  const stepM = stepMm * M_PER_MM;
+  const sums = prepareSums(placed, held, frame);
+  const { ids, refused, pieceSums } = sums;
+  const partSums = sums.P.map((p) => prepareSum(p.poly, null, p.part, frame));
 
   const nu = Math.max(1, Math.floor((frame.uMax - frame.uMin) / stepM + 1e-9) + 1);
   const nv = Math.max(1, Math.floor((frame.vMax - frame.vMin) / stepM + 1e-9) + 1);
@@ -308,11 +357,7 @@ export function buildLandingMap(placed: readonly ConvexPiece[], held: readonly (
       for (const i of is) for (const j of js) best = better(best, at(i, j, from));
       return best;
     },
-    landingAt(u, v, from) {
-      const raw: number[] = [];
-      for (const s of pieceSums) castSum(s, u, v, raw);
-      return landOf(mergeLayers(raw, ids), from);
-    },
+    landingAt: exactOf(sums), // ⭐ (S2) `prepareLanding`'s own
     layersNear(u, v) {
       const slack = 1e-9 * stepM;
       if (u < frame.uMin - slack || v < frame.vMin - slack || u > uAt(nu - 1) + slack || v > vAt(nv - 1) + slack) return null;
@@ -322,4 +367,76 @@ export function buildLandingMap(placed: readonly ConvexPiece[], held: readonly (
       return { parts: partsL[i * nv + j]!, piece: pieceL[i * nv + j]! };
     },
   };
+}
+
+// ───────────────────────────── ⭐⭐⭐ THE READOUT (package S2, `ORBIT_SURFACE_READOUT.md`) — the pure part ─────────────────────────────
+
+/** ⭐ A turn F → world as three ROWS (`R · v` = the rows' dots: `input/orbit_tilt.ts`'s `mulM` convention); `null`: the world's own frame. */
+export type Turn = readonly [Vec3, Vec3, Vec3];
+const turnOf = (R: Turn | null, a: Vec3): Vec3 => (R === null ? a : [dot(R[0], a), dot(R[1], a), dot(R[2], a)]);
+
+/**
+ * ⭐⭐ (S2, §3) THE FACET'S DIRECTION IN THE WORLD — the map's facet (its outward normal `n`, its plane's axes `t`, `b`, in the map's frame) turned into the
+ * world by the map's frame `R` (tilted or zoned; `null`: the world's). The origin the world's: a depth is then `x · n` in the world, the facet's own
+ * level `p · n` in the map's frame (a turn keeps the dot).
+ */
+export function landingAxes(n: Vec3, t: Vec3, b: Vec3, R: Turn | null): LandingAxes {
+  return { origin: [0, 0, 0], u: turnOf(R, t), v: turnOf(R, b), n: turnOf(R, n) };
+}
+
+/**
+ * ⭐⭐ (S2, §3) THE HELD PIECE AS HELD, relative to its reference point (`ORBIT_SURFACE_LANDING_MAP.md` §3): its points (`local`, the body's own frame)
+ * less its RESTING FACE'S CENTRE (`restingCentre`, the same frame), turned by its model orientation `q` — `qRotate(q, p − rc)`, as `supportFrame` poses it.
+ */
+export function heldPiece(local: readonly Vec3[], q: Quat, restingCentre: Vec3): Vec3[] {
+  return local.map((p) => qRotate(q, [p[0] - restingCentre[0], p[1] - restingCentre[1], p[2] - restingCentre[2]]));
+}
+
+/**
+ * ⭐ (S2, §2) THE READOUT AT A PLACE. `land`: P2's level (metres along the facet's normal, `PreparedLanding.frame`), `delta` = P2's level − TODAY's level
+ * (METRES, signed: + = P2 farther out of the assembly), the part first touched, `point` — the place at P2's level (the place's two other coordinates
+ * kept). `nothing`: no depth (a kind), `point` the place itself, on the facet's plane (§5.2).
+ */
+export type Readout =
+  | { readonly kind: "land"; readonly level: number; readonly delta: number; readonly part: string; readonly point: Vec3 }
+  | { readonly kind: "nothing"; readonly point: Vec3 };
+
+/**
+ * ⭐⭐⭐ (S2, §2 – §3) THE READOUT — P2 beside today's depth, at the gizmo's place, READ FROM OUTSIDE: `place` the gizmo's place on its facet's plane,
+ * `today` today's gizmo point (`rawGizmo`'s, before the edge blend — on the same line along the normal), both in the frame `prep` was prepared in (the
+ * world's). (u, v) = the place's; today's level = `today`'s along the normal. Pure: drives nothing.
+ */
+export function readoutAt(prep: PreparedLanding, place: Vec3, today: Vec3): Readout {
+  const f = prep.frame;
+  const o = f.origin;
+  const d: Vec3 = [place[0] - o[0], place[1] - o[1], place[2] - o[2]];
+  const l = prep.landingAt(dot(d, f.u), dot(d, f.v));
+  // ⭐ from outside a landing is `land` or `nothing` (`landOf`); no other kind can come back here
+  if (l.kind !== "land") return { kind: "nothing", point: place };
+  const k = l.depth - dot(d, f.n);
+  const level = dot([today[0] - o[0], today[1] - o[1], today[2] - o[2]], f.n);
+  return { kind: "land", level: l.depth, delta: l.depth - level, part: l.part, point: [place[0] + f.n[0] * k, place[1] + f.n[1] * k, place[2] + f.n[2] * k] };
+}
+
+/** ⭐ (S2, §4) what the readout's cache is keyed by: the face map's identity and its frame, the placed set's key, the held piece's id and orientation. */
+export interface ReadoutKeyOf {
+  /** the face map's identity (a number the caller gives each map object) */
+  readonly map: number;
+  /** the map's frame (F → world); `null`: the world's */
+  readonly frame: Turn | null;
+  /** the placed set's key (`placedKey`) */
+  readonly placed: string;
+  /** the held piece's id */
+  readonly held: string;
+  /** its model orientation */
+  readonly orientation: Quat;
+}
+
+/**
+ * ⭐⭐ (S2, §4; `ORBIT_SURFACE_LANDING_MAP.md` §10.6 — rebuilt at a pick-up, a turn of the piece, a seat, a frame change) THE READOUT'S CACHE KEY: every
+ * number EXACT (its shortest round-trip text) — any turn of the piece, however small, is a new key; the same inputs, the same key. Pure.
+ */
+export function readoutKey(k: ReadoutKeyOf): string {
+  const R = k.frame === null ? "world" : k.frame.map((r) => r.join(",")).join(";");
+  return `m${k.map}|R${R}|P${k.placed}|H${k.held}|q${k.orientation.join(",")}`;
 }
