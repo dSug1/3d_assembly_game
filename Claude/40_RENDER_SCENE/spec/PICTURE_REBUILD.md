@@ -311,6 +311,9 @@ make close in gravity-upright near the vertical (P17); shorten the waits (45 % o
 D-H13 – D-H19 (`TOP_BOTTOM_STUDY.md` §6) enter at R5 — ⭐ DECIDED 2026-11-21 by his rule *"Do what minimize the camera movements while maintaining the
 key rules (calm, etc.)"*: D-H13 – D-H17 yes (D-H14 tied), D-H18 (a) left as is, D-H19 yes, D-H21 yes (`TOP_BOTTOM_STUDY.md` §6); D-H22 is answered by D-P3.
 ⭐ **His word (2026-11-21): *"go ahead"* — D-P1 – D-P8 DECIDED as recommended**, R2 first; the owed runs (§7) one batch at a time when he frees the PC.
+⭐ **His word (2026-11-22)** on the handover's list: R5 ON — `pictureFarTop` **1 by default** (*"set the slider default to 1"*; its far pole pin on
+`Scene_0bis` not studied, §4.7's R5 row); **R6: *"proceed"*** (§8.6); D-R1 (`TOP_BOTTOM_STUDY.md` §10) kept as a future improvement, not built; then a
+deploy, and the merge into the main folder prepared for his word.
 
 ## 7. Owed runs (none run: no headless run while he tests) — from `../camera_follow`, one batch at a time
 1. **The approach cycle** (R2, R3, R4), each build and `&pictureOne=0` (the identity to `620f227`): the kit's `follow/h5/drv_h5c.sh` line —
@@ -489,3 +492,17 @@ the latch and the unlatch the pose drawn is held and his finger closes the gap: 
 * **Owed** (none run). §7 items 1 – 3 with `&pictureOne=0` as the identity. His three videos' strokes on `Scene_0bis` (kit `follow/r3fix`:
   `walk_h.mjs`, `rd_stuck.mjs`), the band's dy near the left tip (R3: 0.22 m along the axis; `pictureOne` 0: 0.05). The approach cycle on `Scene_1`'s
   top. The spit's latch and its way out (the heading paid by the mm). The dy hold walks (the follower's own holds now drawn through logic turns).
+### 8.6 R6 — the deletions (his word of 2026-11-22: *"proceed"*; ⛔ as briefed, not yet built)
+* **What goes** (§4.6's order of deletion): every path the game no longer takes with the defaults — `pictureOne` 0 (`pictureLegacy`, `620f227`'s line),
+  `cameraFollower` 0, `followTop` 0 (the detour: `poleDetour`, `polarStep`, `followCeiling`, `followFromDeg`, `followMaxDegS`), H3's 0 paths
+  (`followTurnOnJump`, `followTurnFinger`, `followTurnRebase`), law U (`uprightPictureFrame`, `uprightPicture`, `uprightCloseIn`), FO3 S1's gap and the
+  shadow (`freeTurnMaxDeg`, `rollFollowMs`, `rollShadowFrame`), `poseFramingTwo` (`zm.rule` 1), the 0 paths of `uprightCarried` and `uprightFraming` —
+  each with its switch, its slider and its vectors. A name goes only once a trace shows nothing on the kept path reads it.
+* **What stays**: the one picture (`pictureStep`, `picture_wiring.ts`); close in's target (C1, C4, J's `framingStep` and what it uses); the logic's
+  targets and clocks (§4.6's last row); `pictureFarTop` (**1**; 0 = `98ac680`'s far top rule, H2 / H3, kept until his look on R5), `pictureBandMm`,
+  `followMs`, `followTurnMaxDegS`.
+* **The gate** (kit `follow/r6/drv_r6.sh`, one batch each side, the same probes): the baseline commit (`pictureFarTop` 1) served from
+  `../picture_repro`, R6's tip from `../camera_follow`. The replay probe on `Scene_1`, `Scene_0`, `Scene_0bis` with `pictureFarTop` 1 and 0; his
+  `Scene_0bis` free strokes (band, band 11, far, far with `pictureFarTop` 0, the mix, close); `Scene_1`'s approach cycle at 5 / 9.5 / 8.4 px; the spit's
+  latch near the left tip; his two close stretches; the dy hold walks. Every recording identical (`Scene_0bis`'s first ~30 frames to 1e-6, the replay
+  probe's known noise), the `moved:` line read.

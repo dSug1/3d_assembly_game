@@ -360,3 +360,8 @@ shall be the only way"*. ⭐ **Proposal (D-R1, for his word — it bends his 11-
 PLACE, as D-H19 (ii) already does far out — a half turn where the ring is wide (mid-axis), a partial one toward the tip end, none near the apex (one
 smooth yaw round the tip); the hold only after a real turn (R4's *"a hold only after a half turn"*), so near the apex a dy goes round with no stop. Gates:
 his free strokes (`drv_r3x.sh`'s), the gizmo still while a dy pushes ≤ the mid-body's share, the turns near the apex 0.
+⏸ **A FUTURE IMPROVEMENT, NOT BUILT — the owner's word (2026-11-22):** *"capture that in the md files for future potential improvement, don't build
+yet"*. D-R1 stays a proposal: his 2026-11-13 zenith rule (one timed 180° turn over the ridge, the gizmo held, then the dy that crossed held) and D-H8
+(one pass per gesture) stand unchanged along the whole ridge, the tips included. When it is taken up: the proposal and the gates above; the baseline to
+beat is the same in the old build and today (the gizmo still 100 – 114 of 120 frames of a dy stroke near the left tip, `rd_stuck.mjs` on `runs_str`);
+his word first, since it bends both rules.
