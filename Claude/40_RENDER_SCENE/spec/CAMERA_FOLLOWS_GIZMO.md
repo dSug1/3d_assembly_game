@@ -933,3 +933,105 @@ starts only when that frame's jump is ≥ 10°; the miss grows with his pace (�
 ### 19.6 HIS VERDICT (2026-11-22) — the orbit CLOSED
 *"Record that the orbit charts and camera follow work is closed and this is the best implementation so far. We will then move to the orbit surface work."* LIVE main `40b8095` = `b21b667` (`1.0.155-Orbits-finalized`) is the reference (`UPRIGHT_LESSONS.md` §3); the camera follower is closed — what
 §19.4 left out (close in's own turns) is a future improvement, on his word. Next: the orbit surface work (`ORBIT_SURFACE.md`).
+
+## 20. THE FAR JUMP READ AT ONE PLACE — the gizmo waiting at the edges (2026-11-22 evening, branch `1.0.156-Orbit-surface`, D-H23, switch `followJumpAtPlace`)
+
+**His words** (verbatim, in order, on live `40b8095`): *"the fix you have deployed for the back and forth seems to work on the rectangle and triangle
+faces under the front light but is still here on the rectangle and triangle faces on the opposite side of the assembly … Why such difference between
+faces?"* — *"when i orbit quickly in polar orbit in scene 1, there is also a back and forth when the gizmo crosses the vertical edges … It was not here
+in previous branches builds and is not seen at low orbit speed"* — *"When the slider follower: the edge's turn aimed where the gizmo wait is changed from
+1 to 0, there is no change"* — *"the same issue happens on my pc at 140 fps"* — *"it looks to me as the gizmo is waiting at the edge. Also, check previous
+branches where I said that the polar orbit with calm of the gizmo around the vertical edges of scene 1 was good and check the difference with current
+build to make sure we catch the deep root cause properly."* — *"my feeling that it was worse for back face was just an impression you can disregard and
+use the records as the true source of truth"* — and the order: *"update the md files and commit. make sure the fix captures the lessons learned you have
+checked in 1. "The bounce" … and 2. Report 1 of the charts … Then proceed with the fix so if it fails I can revert to the previous commit. I will be out
+for a couple of hours so proceed with the fix and tests without asking me questions."*
+
+### 20.1 His records — the source of truth
+Six play records on his PC (the dev server with `#rec`, `src/render/play_recorder.ts`; his mouse, 143 frames a second, 1536 × 742, dpr 1.25; files in
+`.recordings/`, git-ignored; ⚠ `?sceneIndex=1` is `Scene_1`, `4` is `Scene_0bis`), each moment he saw a back and forth marked (M):
+
+| record | scene | side | camera distance | frames | far turns | his marks |
+|---|---|---|---|---|---|---|
+| `8xj5` | `Scene_0bis` | back (+z) | far (~7.7 m) | 5 012 | 10 | 6 |
+| `nsa5` | `Scene_1` | back | far | 2 853 | 6 | 3 |
+| `b55k_r01` | `Scene_1` | back | 4.25 m | 2 917 | 8 | 4 |
+| `b55k_r02` | `Scene_1` | back | 2.25 m | 3 836 | 15 | 5 |
+| `cb4r` | `Scene_1` | front (−z) | 7.5 then 2.5 m | 6 035 | 11 | 6 |
+| `3uwd` | `Scene_0bis` | front | 7.5 then 2.5 m | 8 382 | 24 | 9 |
+
+* **The camera's heading never reverses inside a stroke** (no turning point ≥ 0.2° but at his own reversals): D-H20 holds.
+* **What he sees is a far turn with the gizmo held**: each of his 33 marks follows a far turn — 14 – 66° at 500 – 1 000°/s, the map's place FROZEN 3 – 13
+  frames while his mouse moves on — most by 0.3 – 0.6 s; the gizmo then jumps on, at an edge often two or three times in a row (`b55k_r02` f10271 /
+  f10278 / f10283). His pace there: 130 – 870 px a second, single frames of 4 – 9 px (the mouse's events reach the frames unevenly).
+* **Front and back alike, every distance, both scenes** — his impression of the back being worse is set aside on his word.
+
+### 20.2 The root (his records replayed — the kit's `walk_r.mjs`: his window and dpr, each frame at its recorded time, his events)
+* **D-H15 as built** (R5, `farJumpRead`, `farJump`): the jump = this frame's far reading minus LAST frame's calm asked read at this frame's angles; a turn
+  on ANY frame where it reaches `followTurnMinDeg` (10°). Last frame's calm is last frame's PLACE's. Inside a face the calm's horizontal share rises with
+  the place — 0.25 mid-face, whole within the edge zone (25 % of the run): a place stepping 6 – 26° in one frame changes the share by 0.25 – 0.75 in that
+  frame, and the "jump" reads 10 – 40°.
+* Replayed on his hand (`b55k_r01`): **10 of 12 turns start with the calm's normal UNCHANGED** — the same side, the same stack, only the share jumped
+  (f4645: sH 0.569 → 0.990, the place's step 10.8°, the jump −19.6°); 2 at a side change, the step landing inside the next face's ramp. Steady strokes
+  at 143 (`drv_x.sh`): the largest jump ≈ twice the place's step a frame (2.7° → 5.2°, 4.05° → 8.1°) — 10° from about 5° a frame: a PACE threshold,
+  reached in single frames by his mouse at moderate pace and by the iPhone at 60 frames a second (2.4 × the step at the same pace).
+* **It is §18.4's Root 1 again** (*"a band in degrees a FRAME is a pace threshold in disguise"*), moved from the reading into the calm. ⚠ The decided
+  D-H15 (`TOP_BOTTOM_STUDY.md` §6) reads *"both faces read at the same angles"* — two faces at ONE place; the build compares two PLACES (not listed among
+  its departures, `PICTURE_REBUILD.md` §8.4).
+
+### 20.3 Why the earlier builds did not show it (the builds compared, `git log`)
+| live build | the far rule at a side edge | his word on `Scene_1`'s sides |
+|---|---|---|
+| `de4a10e` (11-20) | no turn far out — the spring carries its lag through the edge | *"This is very good"* — his reference for point 1 (§17.1) |
+| `ba369aa` (11-21) | H2: a turn at EVERY facet change | *"more discontinuous than what it was in previous branch"* (§17) |
+| `f5e35c3` (H3) | F-1: a turn where the reading jumps by 10° in a frame at a facet change — none at 100 – 400 px a second, 3 at 1 200 | — |
+| `ae456df`, `98ac680` (11-21/22) | H3's (R5 built behind `pictureFarTop` 0) | *"the best implementation of the orbit so far"* |
+| `6fc1f5d` (11-22 06:51) | **R5 on by default** (his *"set the slider default to 1"*): D-H15 as built, a turn on any frame — its side gate never run (§8.4: *"gates owed"*) | — |
+| `4dbd704`, `40b8095` | the same (+ D-H20) | his amendment, this section |
+
+`pictureFarTop` 0 on his hand is not a clean way back: 2 turns instead of 6, but 3 catch-up surges of 27 – 40° at ≥ 300°/s (H3's Root 2, §18.4).
+
+### 20.4 The lessons of the archive — what the rule takes from them
+1. **The bounce** (2026-11-04, `TILTED_ORBIT_REBUILD_SCOPE.md`, *"it seems to bounce back when it reaches the vertical edges"*): the piece back 5 cm and
+   the camera 70 cm for ~12 frames under a pure dx — the calm's shares read on the wrong reference, three ways; cured by ONE reference per world side
+   (dx's run the side's, dy's the gizmo's height in the placed parts' box) and, at a corner, the HORIZONTAL share alone made whole — *"with it whole the
+   face's normal cancels out … the normal is taken at once"*. **Taken**: at a vertical edge the two sides' calms, read AT the edge, give the same reading
+   whatever their normals — a jump read there is 0 by construction, at any pace.
+2. **Report 1 of the charts** (2026-11-15, `ORBIT_CHARTS.md` §11 point 3, step 2.4e `e14a2f0`; *"it seems the calm unleashes and there is a very brief
+   acceleration of the camera orbit"*): the view computed from WHICH FACE the place is on with that face's own reference — a 20° step at the edge,
+   *"eased in 120 ms"*; cured by every face's share on its OWN run, whole at both its own edges, and the cap reading its edge side's calm (2026-11-11).
+   **Taken**: the calm is continuous across an edge BY DESIGN — a jump is only what is left of a discontinuity AT the crossing, never the calm's motion
+   with the place. ⚠ The cushion is gone: since F1 (11-20) the follower reads the calm ASKED (no 120 ms ease, D-F6: one ease), so any discontinuity or
+   steep ramp left in the calm reaches the camera directly — the jump must not add a second one.
+3. **Root 1** (11-21, §18.4) — met for the second time: **a jump is never a difference between two frames**; the same route at any pace gives the same
+   turns.
+
+### 20.5 The rules it is read against (none contradicted)
+* His point 1 (§17.1: a vertical edge between two sides — no turn, no wait, `de4a10e`'s transition) and R2 / O2 (the edge gives none / a quarter / a half
+  turn BY THE EDGE LEFT): met at every pace — today they hold only at a slow one.
+* D-H15 as decided (*"the reading's GEOMETRIC jump (both faces read at the same angles)"*, *"the follower at rest on the reading when the gizmo moves on"*):
+  this IS its reading. D-H13 / D-H14 (two followers, the leash): unchanged — the share's ramp goes into the continuous reading `c`, paid by the spring,
+  the leash bounding the lag. D-H8 / D-H16 (the dy hold, decided at the gizmo's facet change on the jump): unchanged — a level face's far edge still reads
+  its half turn at the crossing. D-H20 (the aim where the gizmo waits), F-2 (520°/s), F-3 (the rebase): unchanged, used when a turn starts.
+* `UPRIGHT_LESSONS.md` §1 (no new tie to time: the opposite — a tie to pace removed), §2 rows 2 / 6 (no layer undoing a decision: the trigger itself
+  corrected), §3 (the gizmo's travel, close in, his settings: untouched), §5.4 (one switch, 0 = `40b8095` frame for frame). Patent-free, no solver
+  query (the face map and the calm's own rules, pure arithmetic), the MODEL's space (the map's angles, `dirFrame`).
+
+### 20.6 The decision D-H23 (his *"proceed with the fix"*) and the step as briefed
+* **D-H23 — the far jump read at ONE place.** (i) A far turn's jump exists only where the calm's SOURCE changes between last frame's place shown and
+  this frame's — a side's facet, the side a cap reads at its edge (`capEdgePitch`), the band. (ii) It is read AT THE CROSSING: the crossing found on the
+  face map between the two places (sampled, then bisected); the calm asked of the source left and of the source entered, each built there by the calm's
+  own rules (`calmAskedAt` — `calmTargets`' far branches, nothing written); both read at THIS frame's angles (`farAsked`); several crossings in one frame
+  summed. (iii) Inside one source: no jump — the share's ramp is the calm's continuous motion, paid by the follower. Fallbacks (the jump as built): no
+  place kept (a start, a reset), the face map changed, the tilt close in.
+* **Code**: `assembly_wiring.ts` (`calmAskedAt`, the crossing and the jump in `farJumpRead`, the place kept in the orbit's state); `input/` a pure crossing
+  search; `camera_follow.ts` (`FollowFarIn.jumpAt`: used instead of the frame difference when handed); `camera_follow_wiring.ts` (handed under the far
+  rule as decided and the switch). **Switch** `followJumpAtPlace` (ORBIT › CAMERA FOLLOWER › THE EDGE'S TURN, **1** by default; 0 = `40b8095` frame
+  for frame).
+* **Vectors** (each failing against the code before): `followFarStep` with the jump at one place 0 and a frame difference of 20° — no turn (before: a
+  turn); at the band — a turn as before; the crossing search; two sides' calms whole at their common edge read alike at any angles (lesson 1); the wiring.
+* **Gates** (his records replayed — the kit's `walk_r.mjs`, `drv_r.sh`): G0 `calmAskedAt` at the place shown = the calm asked, every frame; G1 identity
+  at 0 against the baselines replayed on `507b4024` (`Scene_1` back and front, `Scene_0bis` back and front); G2 his symptom at 1 — no far turn inside a
+  source, none at `Scene_1`'s side edges, the gizmo's frozen frames while his mouse moves; G3 the true flips kept — a level face's exits and its dy hold
+  as at 0 (the kit's pole walks); G4 nothing worse — no frame over 520°/s, the camera's lag after his strokes within the leash, the piece's steps.
+* ⛔ Not in this step: close in (its own turns, the tilt) — unchanged; a deploy — his word only.

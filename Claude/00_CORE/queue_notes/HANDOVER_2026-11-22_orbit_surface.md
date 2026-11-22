@@ -11,11 +11,13 @@ still hold).
   carries) is **the best implementation so far** — the reference that must never regress
   ([`UPRIGHT_LESSONS.md`](../../40_RENDER_SCENE/spec/UPRIGHT_LESSONS.md) §3). Its last change: D-H20, the far turn aimed where the gizmo waits
   ([`CAMERA_FOLLOWS_GIZMO.md`](../../40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md) §19). **2308 vectors.**
-* ⚠ **His amendment (2026-11-22 ~15:00, on `40b8095`)**: the camera's back and forth is still seen on `Scene_0bis`'s faces "on the opposite side of the
-  assembly", and on `Scene_1`'s vertical edges at a fast polar orbit (*"not here in previous branches builds … not seen at low orbit speed"*).
-  **Not reproduced headless**: with D-H20 on, no back and forth at any pace tried (3 – 30 px a frame, 60 and 50 fps); off, many (kit
-  `follow/cap/CHECKPOINT_CAP.md`, last section). ⭐ His device test: `followTurnAtGizmo` 0 or 1 — **no change**, the same back and forth on both scenes → a DIFFERENT mechanism from D-H20's (D-H20 stays: it removes a measured one). Owed: a screen recording; his A/B with `pictureFarTop` 0 (the far rule before R5) and `followTurnMinDeg` 45 (no edge turns) to locate it. The orbit's
-  closure stands on his word; this is open until then.
+* ⚠ **His amendment (2026-11-22 ~15:00, on `40b8095`) — ROOT FOUND the same evening on his PC play records** (six, `.recordings/`, 33 marks): the back
+  and forth he still saw (`Scene_0bis`'s faces, `Scene_1`'s vertical edges at a fast orbit — *"not here in previous branches builds … not seen at low
+  orbit speed"*) is a far turn with the gizmo WAITING at the edge, on every face and at every distance (his first impression of the back being worse set
+  aside on his word). The root: R5's D-H15 as built reads the jump between two PLACES (last frame's calm), so the calm's share ramp crossed in one big
+  step reads as a jump — a pace threshold, §18.4's Root 1 again ([`CAMERA_FOLLOWS_GIZMO.md`](../../40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md) §20).
+  ⭐ His order: the docs committed, then the fix **D-H23** (the jump read at one place, switch `followJumpAtPlace`, 0 = `40b8095`) built and gated on
+  `1.0.156-Orbit-surface` (local — a failure is reverted to the docs commit); not deployed (his word).
 * **The workfront:** the MAIN folder `3d_assembly_game` (the only worktree), branch **`1.0.156-Orbit-surface`**, made from `1.0.155-Orbits-finalized`
   (local, not pushed — start from `1.0.155-Orbits-finalized` elsewhere).
 * **No longer owed** (closed with the orbit — future improvements only, on his word): FO3's open points ([`FAST_ORBIT.md`](../../40_RENDER_SCENE/spec/FAST_ORBIT.md)
