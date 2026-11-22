@@ -383,3 +383,13 @@ flips with the side (`spitCameraHeading`'s side bias, read by the view's pitch, 
   headless): the switch at 0 — R6's batch identical; at 1 — `Scene_1`, `Scene_0` identical (no spit zone), his strokes near the tip: the gizmo still
   ≤ the mid-body's share, the turns near the apex 0, the view's and up's frame steps not above today's (no spin of the view looking down), the dy hold
   walks no new trap; `npm run verify`. ⛔ A device look closes it (rule 5); if it fails, main goes back to `6fc1f5d` on his word.
+⛔ **D-R1.1 AMENDED before any build (2026-11-22, the builder's trace, kit `follow/dr1/CHECKPOINT_DR1.md`) — the ring's radius cannot be the place:**
+`Scene_0bis`'s zone (axis x, poles at x −0.3625 / 0.3675 m, the widest ring 0.2541 m) — his near-tip crossings close in are on the PRISM's ridge, 27.5 mm
+short of its end, where the ring is the prism's own: share 0.957 / 0.986 against mid-body's 0.961 – 0.983; no fractions part them. ⭐ **What the record
+shows near the tip:** the first side change with the camera leaning 28° toward the tip — a turn from 7° growing to 90°, no hold; the finger's mapping
+turned with the picture, so the SAME dy drives the orbit's yaw back (−0.036 → +0.115 rad) — a second change straight over the axis: the half turn and
+the 76 frames of hold. The cost is a RE-CROSSING after a small first turn. ⭐ **The place is the orbit's own along the axis:** its map pitch toward the
+pole (F's elevation) — near-tip close in −28°, mid-body close in +5°, far −7° … +9°, the far tips 33° – 85°. So **`w` = 1 − smoothstep(|map pitch|)**
+between two angles (the builder's first reading 12° → 25°, calibrated on his strokes): mid-axis 1 (his 11-13 rule unchanged), toward the tip end
+partial, near the apex 0 — no turn, so no mapping flip and no re-crossing. D-R1.2 – D-R1.4 unchanged; ⚠ the far tips (33° – 85°) get `w` 0 too: the
+gates measure the far presets (one rule for every frame; if the far picture is worse, reported, not patched).
