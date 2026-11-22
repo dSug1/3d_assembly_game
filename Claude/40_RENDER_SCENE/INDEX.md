@@ -3,7 +3,7 @@
 > **STATUS** · ⭐ **SPLIT INTO MODULES 2026-09-26** · **OWNS** · the Babylon scene,
 > camera, picking, materials, the on-glass readout and the tuning menu
 > **READ IF** · you are drawing something, or wondering why the boundary exists
-> **LAST VERIFIED** · 2026-10-14
+> **LAST VERIFIED** · 2026-11-22
 
 ## The rule this folder exists to protect
 
@@ -57,7 +57,7 @@ boot** — a hand is owed. ⭐ Three essays moved to
 ## Where it stands
 
 ✅ **Scenes are DATA** (`src/content/`, `content/scenes.ts`; the level menu or `?sceneIndex=`). ⭐⭐ `Scene_0` is the HEPTAGON since
-2026-11-12 — the orbit on ANY shape, §9 the zenith roll → [`spec/ORBIT_ANY_SHAPE.md`](spec/ORBIT_ANY_SHAPE.md); zones `spec/POLAR_ZONES.md`; ⭐ the charts (✅ closed 11-22) → [`spec/ORBIT_CHARTS.md`](spec/ORBIT_CHARTS.md); close in on the tilted pole [`spec/TILTED_POLE_CLOSE_IN.md`](spec/TILTED_POLE_CLOSE_IN.md); a level face's entry [`spec/LEVEL_FACE_ENTRY.md`](spec/LEVEL_FACE_ENTRY.md); the dy hold [`spec/DY_HOLD_REVERSAL.md`](spec/DY_HOLD_REVERSAL.md); the fast orbit (aborted, not in the game; FO3 agreed, not built) `spec/FAST_ORBIT.md`; the upright picture (law U, live 2026-11-19: no roll of the scene on the screen) [`spec/UPRIGHT_PICTURE.md`](spec/UPRIGHT_PICTURE.md); the fast orbit's mitigations study `spec/FAST_ORBIT_MITIGATIONS.md`; package A's circle (reverted) `spec/BOTTOM_FACE_CIRCLE_REGRESSION.md`; the headless gates [`../../scripts/probes/ORBIT_GATES.md`](../../scripts/probes/ORBIT_GATES.md); the slide removed → `spec/CLOSE_IN_CONTACT.md` §10. · lessons [`spec/UPRIGHT_LESSONS.md`](spec/UPRIGHT_LESSONS.md) · the picture's rebuild (PROPOSED) [`spec/PICTURE_REBUILD.md`](spec/PICTURE_REBUILD.md)
+2026-11-12. ⭐⭐⭐ **THE ORBIT — the best implementation so far (his word, 2026-11-22): LIVE `3b7a479`, branch `1.0.156-Orbits_with_camera_follow_final`**: the gizmo on charts [`spec/ORBIT_CHARTS.md`](spec/ORBIT_CHARTS.md) (✅ closed); the camera follows it far out [`spec/CAMERA_FOLLOWS_GIZMO.md`](spec/CAMERA_FOLLOWS_GIZMO.md) (§20 the last fixes); one picture at every distance [`spec/PICTURE_REBUILD.md`](spec/PICTURE_REBUILD.md); the far top rule [`spec/TOP_BOTTOM_STUDY.md`](spec/TOP_BOTTOM_STUDY.md); close in [`spec/TILTED_POLE_CLOSE_IN.md`](spec/TILTED_POLE_CLOSE_IN.md); never to regress [`spec/UPRIGHT_LESSONS.md`](spec/UPRIGHT_LESSONS.md) §3; the gates [`../../scripts/probes/ORBIT_GATES.md`](../../scripts/probes/ORBIT_GATES.md). ⭐ **NEXT: the orbit's SURFACE** (`RND7`) [`spec/ORBIT_SURFACE.md`](spec/ORBIT_SURFACE.md), [`spec/ORBIT_SURFACE_BUILD.md`](spec/ORBIT_SURFACE_BUILD.md). The earlier orbit documents → [`history/2026-11-22_index_orbit_line_moved.md`](history/2026-11-22_index_orbit_line_moved.md).
 
 ✅ **Camera rules are REAL, not diagnostic.** `src/input/` owns the geometry; this
 folder only applies it.

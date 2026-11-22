@@ -1,5 +1,8 @@
 # THE ORBIT'S SURFACE — the audit of what is built, the errata, the prior art (companion of ORBIT_SURFACE.md, 2026-11-16)
 
+> ⚠ (2026-11-22) A record of the review of 2026-11-16, its code read on `30f7bb3` / `1190db2`: the legacy zones under `chartLayout 0` (WS17, §4) were
+> deleted at step 2.5 (2026-11-16); what changed since → [ORBIT_SURFACE.md](ORBIT_SURFACE.md)'s header.
+
 > ⛔⛔ **PROPOSED, FOR THE OWNER'S REVIEW. NOTHING BUILT, NO CODE CHANGED.** Moved out of [ORBIT_SURFACE.md](ORBIT_SURFACE.md) §7 and §9 at its
 > second revision (2026-11-16, the owner's feedback), so that the specification stays under its line budget. The weaknesses WS1 – WS25 keep
 > their numbers; the specification cites them. Code references are `file:line` on `1190db2` (the first version's reading).

@@ -31,7 +31,8 @@ with what was proposed to him (this record, then the landing map launched as an 
 * **Measured 2026-11-17:** this branch (`1.0.146s-Orbit-surface-spec`, from `1190db2`) and the charts' branch (`1.0.147-`) touch NO file in common, and
   a trial merge of the two (`git merge-tree`) is clean. This branch so far: its three documents, `scripts/probes/surface_study/` (new), and two
   workflow documents edited (`SCENE_WORKFLOW.md`, `PART_AUTHORING.md`).
-* ⛔ **THE RULE: until `orbit_charts` is merged into `3d_assembly_game`, this branch ADDS NEW FILES ONLY.** It edits no existing file but its own
+* ⛔ **THE RULE: until `orbit_charts` is merged into `3d_assembly_game`, this branch ADDS NEW FILES ONLY.** ✅ **LIFTED 2026-11-22** (the merges
+  done, §4): the wiring may now edit existing files — on the terms of §9. It edits no existing file but its own
   documents (`ORBIT_SURFACE*.md`). Where a test demands a one-line registration in an existing file, that line is the only exception, and it is
   listed in §6.
 * ⭐ **One exception, asked by the owner (2026-11-17)**: the check *can every part reach its seat?* kept as a permanent script and written into
@@ -162,3 +163,21 @@ marked? → its check, its control, its row in §8"*; a builder with nothing to 
 | 8 | The specification's own checks, from the shapes study: solids (B1), exposed per stage (B2), where each held piece first touches (B3), coverage (B5), features at a threshold (B6) | `PART_AUTHORING.md` §6.1, each with its pass rule | specified there | ⏳ not built — B1, B2 first; B3, B5 once the landing map is wired |
 
 ⭐ Rows are ADDED by each package and by each look of the owner; a row leaves only when its check is built AND has been seen failing.
+
+## 9. THE TERMS THE CLOSED ORBIT SETS FOR THE WIRING (2026-11-22 evening — read before any wiring)
+
+* **The reference**: LIVE `3b7a479` (`1.0.156-Orbits_with_camera_follow_final`), the best implementation of the orbit so far
+  ([`UPRIGHT_LESSONS.md`](UPRIGHT_LESSONS.md) §3). Every wired step behind its own switch, 0 = that build frame for frame. The queue: `RND7` (this work),
+  `RND8` (the study's handed findings).
+* **Where the surface reaches the camera** (the camera is not reopened — [`ORBIT_SURFACE.md`](ORBIT_SURFACE.md) §0's scope): the map's place shown
+  (`asmShown`) → the calm's target (`calmTargets`) → the calm asked (`asmAskCalm`) → the far reading (`farAsked`) → the far follower (`followFarStep`);
+  and the gizmo's facet (`gizmoFacetW`). A change of the map, of the facets or of the calm's runs changes the camera's path — measured, never assumed.
+* ⚠ **D-H23 keys the calm's source on its NORMAL** (`calmSourceKey`, `farJumpAtRead` — [`CAMERA_FOLLOWS_GIZMO.md`](CAMERA_FOLLOWS_GIZMO.md) §20.6): a
+  surface whose calm normal varies continuously — the charts' step B ([`ORBIT_CHARTS.md`](ORBIT_CHARTS.md) §5.3, the normal of the shape with its edges
+  rounded), which belongs to this work ([`ORBIT_SURFACE.md`](ORBIT_SURFACE.md) §1.1) — makes every moving frame a change of source: the crossing search
+  (6 samples, 8 halvings, each a `calmTargets` run) every frame. Re-key the source (the facet, the band) or bound the search BEFORE step B is wired.
+* **The gates**: his PC play records replayed headless (the kit's `walk_r.mjs` / `drv_r.sh`: his window, his frame times, his events; six records of
+  2026-11-22 in `.recordings/`, git-ignored) — the switch at 0 identical to `3b7a479`'s replays (G1), and his symptoms at 1; the method:
+  [`CAMERA_FOLLOWS_GIZMO.md`](CAMERA_FOLLOWS_GIZMO.md) §20.1 – §20.9. Every finding about a scene becomes a check (§8).
+* **The code references** here and in [`ORBIT_SURFACE.md`](ORBIT_SURFACE.md) were read on `30f7bb3` / `1190db2`: re-read on the branch before building on
+  any (step 2.5 deleted the legacy zones and `chartLayout`; R6 twelve picture switches).

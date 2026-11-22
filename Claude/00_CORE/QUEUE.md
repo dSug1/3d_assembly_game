@@ -38,7 +38,7 @@ md, commits, deploys only when asked; deploy = push the branch, merge `--no-ff` 
 3. ⚠ `D47`'s pull-apart break (`3D3`) and the approach (`3D2`) — specified, not built.
 4. ⚠ **Prototype `1.0.58b-`** → `DOUBLE_ORBIT_PROTOTYPE.md`; its demo path drives the box, `DEMO_SCENE.md` §7. ⭐ (2026-10-14) it IS the main line — see the block above.
 5. ⛔ **THE LAUNCH MESSAGES SHEET** — not built; its texts in `render/browser_guards.ts` → [`BROWSER_GUARDS.md`](../10_INPUT_TOUCH/spec/BROWSER_GUARDS.md) §3.
-6. ✅ **The orbit — CLOSED** (2026-11-22, his word; `40b8095` the best so far): what it still listed is no longer owed (future improvements, on his word); the surface work next, then RND6 → [`HANDOVER_2026-11-22_orbit_surface.md`](queue_notes/HANDOVER_2026-11-22_orbit_surface.md), [`RND5.md`](queue_notes/RND5.md).
+6. ✅ **The orbit — CLOSED** (2026-11-22, his word; the best so far `3b7a479`): what it still listed is no longer owed (future improvements, on his word); the surface work next (`RND7`), then RND6 → [`HANDOVER_2026-11-22_orbit_surface.md`](queue_notes/HANDOVER_2026-11-22_orbit_surface.md), [`RND5.md`](queue_notes/RND5.md).
 ⭐ The 2026-09-17 version of this list (white contours, shakes, two undos, `FOLLOW`) is spent → [`history/2026-09-27_queue_spent_blocks.md`](history/2026-09-27_queue_spent_blocks.md).
 
 ### ⛔⛔⛔ THE 2026-09-17 AUDIT — the first defects found by READING, and a device look is owed
@@ -299,8 +299,10 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | RND2 | Mate preview: ghost + drop line | RND | render | queued | 3D2 |
 | RND3 | Anchor ring during two-touchpoint gestures (§4) | RND | render | queued | IN2 |
 | RND4 | Off-screen target indication — Halo / Wedge | RND | render | queued. ⭐ Not general polish: **6ter needs BOTH objects selected**, and at close zoom the partner is routinely off-frame, so the gesture becomes unreachable with nothing to say why. Curvature (Halo) or a tapered wedge encodes direction AND distance without a camera snap. ⚠ Audience includes youth — cap the indicator count. Prior art: Baudisch & Rosenholtz CHI 2003; Gustafson et al. CHI 2008 | 3D1, IN4 |
-| RND5 | ✅ Orbit on charts | RND | feature | ✅ CLOSED 2026-11-22 (his word): the charts and the camera follower, LIVE `40b8095` the best so far; step 3, FO3 no longer owed; step B → the orbit surface work → `queue_notes/RND5.md` | — |
+| RND5 | ✅ Orbit on charts | RND | feature | ✅ CLOSED 2026-11-22 (his word): the charts and the camera follower; the best so far LIVE `3b7a479` (+ D-H23, D-H24); step 3, FO3 no longer owed; step B → `RND7` → `queue_notes/RND5.md` | — |
 | RND6 | ⛔ Black canvas on iPhone: WebGL context lost, never restored; Safari dead until force-quit | RND | defect | diagnosed to `Scene_2`'s loads (≈ 4th reload); mechanism probable; ⛔ no fix built — the owner's instruction; ⏸ worked on AFTER the orbit surface work (2026-11-22) → `queue_notes/RND6.md` | — |
+| RND7 | ⭐ The orbit's surface — where the gizmo travels (the landing map, the entry sets, the reach check) | RND | feature | ⏸ NEXT (2026-11-22): S0, S1 built offline, nothing wired; ask him `ORBIT_SURFACE.md` §8's end first; branch `1.0.157-Orbit_surface` → `queue_notes/RND7.md` | RND5 |
+| RND8 | ⛔ The surface study's findings handed over: F17 and the mouth's lip (the orbit's), the drop into a slot in contact range (the contact's) | RND | defect | open since 2026-11-16 (`ORBIT_SURFACE.md` §2.2 P1, P5); none decided — the orbit is closed: his word → `queue_notes/RND8.md` | RND7 |
 
 ## Phase DEP — build and deployment
 

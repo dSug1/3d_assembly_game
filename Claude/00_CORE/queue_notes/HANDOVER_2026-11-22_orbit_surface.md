@@ -30,6 +30,9 @@ still hold).
 
 ## 1. The orbit surface work — read in this order
 
+0. The queue rows [`RND7.md`](RND7.md) (this work) and [`RND8.md`](RND8.md) (its handed findings); [`ORBIT_SURFACE.md`](../../40_RENDER_SCENE/spec/ORBIT_SURFACE.md)'s
+   header — its 2026-11-22 evening block: what changed since it was written; [`ORBIT_SURFACE_BUILD.md`](../../40_RENDER_SCENE/spec/ORBIT_SURFACE_BUILD.md) §9 —
+   the terms the closed orbit sets for the wiring.
 1. [`ORBIT_SURFACE.md`](../../40_RENDER_SCENE/spec/ORBIT_SURFACE.md) §0 (one page): what the surface aims at. ⛔ Its decisions are PROVISIONAL — to be
    tested, and may be reversed by the testing (§8). Its header's condition (*nothing built before the charts are finished and merged*) is **MET**.
 2. `ORBIT_SURFACE.md` §8, its end: **what to ask him again when the surface work starts — ask before building anything.**
