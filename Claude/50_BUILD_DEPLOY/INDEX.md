@@ -2,7 +2,7 @@
 
 > **STATUS** · ⭐ active · **OWNS** · the toolchain and every shipping target
 > **READ IF** · you are changing the build, or adding a platform
-> **LAST VERIFIED** · 2026-09-13
+> **LAST VERIFIED** · 2026-11-22
 
 ## The decision, made on day one
 
@@ -16,7 +16,7 @@ and its router still reads *"no amount of building advances it."* See
 
 ⭐ **The full deploy procedure, and the troubleshooting table, are in**
 [`DEPLOY_GITHUB_PAGES.md`](DEPLOY_GITHUB_PAGES.md) — including the dark-page
-near-plane trap that cost the first deploy. ⭐ A prototype branch can be deployed BESIDE `main`, at `/proto/` (its §).
+near-plane trap that cost the first deploy. ⛔ Its `/proto/` build is retired (2026-10-10): one build, at the root.
 
 ✅ **The USB device loop WORKS, and the procedure is in**
 [`DEVICE_TESTING_USB.md`](DEVICE_TESTING_USB.md) — two commands, plus the three traps
@@ -27,7 +27,8 @@ that cost an evening: IPv6-only binding, a stuck ADB handshake that only the rea
 
 | | |
 |---|---|
-| `npm run dev -- --host` | dev server, reachable from a phone on the LAN |
+| `npm run dev:usb` | dev server on `127.0.0.1`, for `adb reverse` |
+| `npm run dev:lan` | dev server on the LAN — ⚠ `DEP1b` first |
 | `npm run verify` | typecheck + golden vectors. ⭐ **The gate before any commit** |
 | `npm run build` | typechecks, then bundles to `dist/` |
 | `npm run verify:quick` | ⭐ (2026-11-04) the gate without the two demo-plan generator vectors (~27 s, not ~125 s) — the local loop; CI runs the whole `verify` |
@@ -42,10 +43,10 @@ no tilt, no haptics. `METHOD` closes a change with a look on a real device and
 nothing else, so until a phone can load the dev server, **nothing built here can be
 closed** — it can only be written.
 
-⭐ Do it before `IN1`. The predecessor's most repeated failure was a build that
+⭐ The predecessor's most repeated failure was a build that
 passed every automated check and felt wrong the first time a human used it.
 
 ## Queued
 
 `DEP2` Capacitor shells (⚠ `/android/` and `/ios/` are git-ignored; `npx cap add`
-regenerates them) · `DEP3` Tauri desktop · `DEP4` CI running `npm run verify`.
+regenerates them) · `DEP3` Tauri desktop. ✅ `DEP4` (CI) rides in `pages.yml`.

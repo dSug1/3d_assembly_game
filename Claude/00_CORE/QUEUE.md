@@ -2,7 +2,7 @@
 
 > **STATUS** · live · **OWNS** · what gets built next, for the whole project
 > **READ IF** · you are starting any build, or wondering where an item stands
-> **LAST VERIFIED** · 2026-09-28
+> **LAST VERIFIED** · 2026-11-22 (YOU ARE HERE, `RND5`–`RND8`) · 2026-09-28 (the other rows)
 
 ⛔ **THIS IS THE ONLY QUEUE.** Do not start a second list anywhere else, and do not reorder it.
 
@@ -80,7 +80,7 @@ fork C."*
 
 ⭐ Its 2026-09-16 table (any tap flips the mode; a second finger picks roll *or* depth) is spent: the toggle narrowed (`D108`), an aligned body is mode-less, the second finger lifts + spins (`D123`) → [`INPUTS_TABLE.md`](../10_INPUT_TOUCH/spec/INPUTS_TABLE.md).
 
-⛔⛔ **DELETED, NOT DISABLED**: `holderDrive`⛔⛔ **DELETED, NOT DISABLED**: `holderDrive`, the flag, its latch, the menu slider,
+⛔⛔ **DELETED, NOT DISABLED**: `holderDrive`, the flag, its latch, the menu slider,
 `assignment.ts` (→ `mode_toggle.ts`) and **44 vectors**. ⭐ A dormant fork is a trap, and a
 tunable nothing reads is what `config_debt.test.ts` refuses.
 ⛔⛔ **AND IT RETIRED `A14` AND `A12` BY CONSTRUCTION** — the grace existed only because the
