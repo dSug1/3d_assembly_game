@@ -911,3 +911,21 @@ starts only when that frame's jump is ≥ 10°; the miss grows with his pace (�
   1 — the miss and the camera's way back ≤ 1° on both scenes (`rd_miss.mjs`), no crossing's out-and-back ≥ 2° (`rd_cls.mjs`); G3 nothing worse — the
   view / up / piece steps (`rd_jumps.mjs`), the stuck reader on the six `Scene_0bis` presets (`rd_stuck.mjs`), at 1 against 0.
 * ⛔ Not in this step: close in's own turns (`crossTurn` with the logic's rebase) — not reported, not measured.
+
+### 19.5 AS BUILT AND MEASURED (2026-11-22, `50f4884b` on `1.0.155-Camera_back_and_forth_at_the_cap_edge`; verify 2308)
+* **Code**: `followFarStep` takes `psiLAt` (the reading where the gizmo waits) and, only when a turn starts, aims the turn there and carries it (`psiT`);
+  `farAskedWhereHeld` (`assembly_wiring.ts`) reads it at `asmShown` (yaw, `vOfPitch(pitch)`), this frame's calm asked, the band at that place; the wiring
+  hands it under the far rule as decided and `followTurnAtGizmo` 1; the record's `top.A`. Slider ORBIT › CAMERA FOLLOWER › THE EDGE'S TURN (133).
+* **Vectors** (`tests/follow_turn_at_gizmo.test.ts`, 6): his `Scene_0bis` crossing as a fixture (a 27° jump, the turn on 40°, the gizmo waiting at 27°) —
+  aimed where the gizmo waits the heading drawn never passes 27° and settles on it; ⛔ against the old follower it reaches **36.6°** and comes back (the
+  vector fails there); 0 / `null` / no turn: exactly as before; the default; the wiring's text. The R5 wiring vector amended for the new argument.
+* **G1 identity at 0**: `runs_set` (3 and 9 px/frame) and `runs_edge` (5 and 9) — **identical** frame for frame (camera and gizmo) to `4dbd704`'s.
+* **G2 his symptom at 1** (kit `follow/cap/runs_at1`, `runs_eat1`): the camera's way back after a far turn **≤ 0.6°** (before 3.6 – 45° at his pace on
+  `Scene_0bis`, 6.3 – 7.9° on `Scene_1`'s top edge); a body ↔ cap crossing's out-and-back ≥ 2°: **0 of 48** (before 5 of 16 at his pace); the turn's aim
+  against the reading the frame after: median **0.00°** (before 9.6 – 11.8°) — the one exception (`cap_p9` f310: a 3° turn ended at once, his finger
+  then carried the reading through the band, no jump) is his own motion, followed with no way back.
+* **G3 nothing worse**: no frame over the turn's top speed (520°/s, his clamp: 8.67° a frame at 60 fps) — the largest view step is now that top speed
+  (8.67°; 7.92° before, when the spring's pull back slowed the turn), the piece's largest step on the glass 3.02° (3.94° before); the six `Scene_0bis`
+  presets 1 against 0: `close` and `farft0` identical, `far` / `band` / `bandmix` the frames over 5° 31 / 31 / 176 (37 / 37 / 195 at 0), the gizmo still
+  304 / 304 / 596 frames (312 / 312 / 595), the view's and up's p90 unchanged.
+* ⛔ Not done: his look on the device (rule 5); close in's own turns not measured. Not deployed (his word).
