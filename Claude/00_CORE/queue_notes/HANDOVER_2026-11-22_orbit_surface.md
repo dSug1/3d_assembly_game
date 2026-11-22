@@ -16,8 +16,11 @@ still hold).
   orbit speed"*) is a far turn with the gizmo WAITING at the edge, on every face and at every distance (his first impression of the back being worse set
   aside on his word). The root: R5's D-H15 as built reads the jump between two PLACES (last frame's calm), so the calm's share ramp crossed in one big
   step reads as a jump — a pace threshold, §18.4's Root 1 again ([`CAMERA_FOLLOWS_GIZMO.md`](../../40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md) §20).
-  ⭐ His order: the docs committed, then the fix **D-H23** (the jump read at one place, switch `followJumpAtPlace`, 0 = `40b8095`) built and gated on
-  `1.0.156-Orbit-surface` (local — a failure is reverted to the docs commit); not deployed (his word).
+  ⭐ On his order (*"proceed with the fix and tests without asking me questions"*), on `1.0.156-Orbit-surface` (LOCAL, not pushed, NOT DEPLOYED):
+  `ea3a28a1` docs (the revert point) → `9147bd2e` **D-H23** (the jump read at ONE place, `followJumpAtPlace`, 0 = `40b8095` bit for bit) → `e53b3c39`
+  docs → `9e82618a` **D-H24** (the taut leash at his finger's pace, `followLeashPace`, 0 = `9147bd2e` bit for bit) → the as-built docs. On his records
+  replayed: far turns 43 → 1, the gizmo's waits 325 → 145 frames, the camera never faster than his finger (§20.9). verify **2321**. Owed: his device
+  look, the deploy on his word; open: the waits left, a cap at 520°/s over his own spins (his word).
 * **The workfront:** the MAIN folder `3d_assembly_game` (the only worktree), branch **`1.0.156-Orbit-surface`**, made from `1.0.155-Orbits-finalized`
   (local, not pushed — start from `1.0.155-Orbits-finalized` elsewhere).
 * **No longer owed** (closed with the orbit — future improvements only, on his word): FO3's open points ([`FAST_ORBIT.md`](../../40_RENDER_SCENE/spec/FAST_ORBIT.md)

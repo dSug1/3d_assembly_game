@@ -1086,3 +1086,33 @@ Six play records on his PC (the dev server with `#rec`, `src/render/play_recorde
   **Gates**: G1 identity at 0 against D-H23's runs; the 60 fps strokes and his four records at 1 — the largest step ≤ his finger's pace a frame, no
   frame faster than max(his pace, 520°/s), no turning point inside a stroke, the turns and the waits as D-H23.
 * ⛔ The second change to the far follower this session — the last before his look (his rule: after a second fix round on one join, stop and study).
+
+### 20.9 AS BUILT AND MEASURED — D-H24, and the two together (2026-11-22 evening, `9e82618a`; verify 2321)
+* **Code**: `followFarStep` — taut (more than the leash behind), the heading's follower moves toward the leash's place by at most max(`pace`, the clamp) ×
+  the frame's time, never behind the spring's own step, its speed carried at most the leash's (no overshoot); the knob `leashPace` (the wiring:
+  `followLeashPace === 1`); untaut nothing changes. Slider THE EDGE'S TURN (135).
+* **Vectors** (`tests/follow_leash_pace.test.ts`, 5 — the key one RED against `9147bd2e`'s follower: the 31 / 24 / 18° spike copied, over 20° in one frame):
+  his mean pace at 60 fps with the spike — no step over his finger's pace, never back, settled on the reading; ⚠ after he stops, his pace as the follower
+  measures it (`pace`, a peak decaying over `followMs` — H2's estimator) for its first ~70 ms, then at most 520°/s; under the leash frame for frame as
+  built; a steady fast spin at his finger's pace; the default and the wiring. Amended pins: the knobs line, the menu (135).
+* **G1 identity at 0** (`followLeashPace=0` against D-H23's runs): `Scene_1` front and `Scene_0bis` front replayed — **0.0 difference over 14 415 frames**;
+  the 60 fps strokes identical.
+* **60 fps side strokes** (`Scene_1` far): at his mean 540 px/s the camera's peak 1 435 → **729°/s — his finger's pace exactly** (the follower's own record),
+  the largest step 23.9° → **12.16°** (729 / 60), no spike, no turn, no turning point inside a stroke; at 300 px/s unchanged (never taut).
+* **His records** — the two together against `40b8095` (replayed; G3's top walks unchanged by D-H24):
+
+| record (replayed) | far turns | gizmo frozen while his mouse moves | largest camera step a frame | frames > 520°/s |
+|---|---|---|---|---|
+| `Scene_1` back 4.25 m | 6 → **0** | 42 → 14 | 7.5° → 10.6° | 0 → 6 |
+| `Scene_1` front 7.5 + 2.5 m | 12 → **0** | 84 → 22 | 7.5° → 24.9° | 0 → 25 |
+| `Scene_0bis` back far | 11 → **0** | 72 → 40 | 8.3° → 4.6° | 0 → 0 |
+| `Scene_0bis` front 7.5 + 2.5 m | 14 → **1** (a real crossing) | 127 → 69 | 7.3° → 7.3° | 0 → 0 |
+
+  The 24.9° frame is his own top spin at 2.5 m (`cb4r` f6860: his mouse 18 px in 10 ms, the orbit 24.9° that frame, ~2 400°/s): the camera moves exactly
+  his finger's step (the reading spiked 44.7°). The frames over 520°/s are his spins over his clamp, followed at his pace — D-H14 as decided.
+* **What he will feel** (plain words): crossing an edge — a side's vertical edge, a body ↔ cap edge — the gizmo no longer stops and the camera no longer
+  snaps: it follows his finger smoothly, at every pace and distance, on the iPhone (60 frames a second: 34 – 39 waits a run removed) as on the PC. When he
+  spins faster than 520°/s the camera keeps up at his own finger's pace instead of waiting at the clamp, and it never jumps ahead of his finger.
+* **Owed**: his device look (iPhone and PC — rule 5); the deploy on his word. Open, not studied: the frames the gizmo still stands while his mouse
+  moves (14 – 69 a record — other holds: the real crossing's turn, the dy hold, the mouth hold, the map's own catch-up); whether he wants the camera capped
+  at 520°/s even when he spins faster (a new rule — his word); close in unchanged. The revert point: `ea3a28a1` (docs only past `40b8095`'s code).
