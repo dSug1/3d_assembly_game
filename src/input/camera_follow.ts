@@ -328,6 +328,9 @@ export interface FollowTopKnobs {
   readonly degPerMm?: number;
   /** ⭐ (H3, F-2) the turn's top speed (deg a second; 0 / absent: no clamp) */
   readonly maxDegS?: number;
+  /** ⭐⭐⭐ (2026-11-22 evening, `CAMERA_FOLLOWS_GIZMO.md` §20.8, D-H24 — `followLeashPace`) the taut leash at HIS FINGER's pace (never under the clamp); absent /
+   *  false: at the reading's pace (as built in R5 — its spikes copied) */
+  readonly leashPace?: boolean;
 }
 
 /**
@@ -612,7 +615,17 @@ export function followFarStep(
   const leash = followLeashRad(k.maxDegS ?? 0, k.tauMs);
   if (leash > 0 && Math.abs(c - f.x) > leash) {
     const sg = Math.sign(c - f.x);
-    f = { x: c - sg * leash, v: (sg * leash) / tauS };
+    if (k.leashPace === true) {
+      // ⭐⭐⭐ (2026-11-22 evening, `CAMERA_FOLLOWS_GIZMO.md` §20.8, D-H24 — `followLeashPace`) TAUT AT HIS FINGER'S PACE, as D-H14 was decided: toward the leash's
+      // place by at most max(his pace, his clamp) × the frame's time, never behind the spring's own step; its speed carried at most the leash's (from that
+      // speed a critically damped spring never passes its target). ⛔ At the READING's pace the taut leash copied its spikes — 23.9° in one frame at 60
+      // frames a second at his mean pace (the share's ramp at an edge), 43.9° on `Scene_1`'s top spin (the reading near the pole)
+      const xt = c - sg * leash;
+      const vMax = Math.max(pace, Math.max(0, k.maxDegS ?? 0) * DEG);
+      const xl = h + sg * Math.min(Math.max(0, sg * (xt - h)), vMax * dtS);
+      const x = sg > 0 ? Math.max(f.x, xl) : Math.min(f.x, xl);
+      f = { x, v: sg * Math.min(dtS > 0 ? Math.abs(x - h) / dtS : 0, leash / tauS) };
+    } else f = { x: c - sg * leash, v: (sg * leash) / tauS };
   }
   if (turn !== null) {
     turn = followTurnStep(turn, dtMs);

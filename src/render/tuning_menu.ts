@@ -235,6 +235,7 @@ export function installTuningMenu(st: SceneState): void {
                 // ⭐⭐⭐ (2026-11-22, `CAMERA_FOLLOWS_GIZMO.md` §19, D-H20) his back and forth at a facet change far out
                 tunable(st, "follower: the edge's turn aimed where the gizmo waits (1; 0 = 4dbd704)", "followTurnAtGizmo", 0, 1, 1),
                 tunable(st, "follower: the edge's jump read at one place (1; 0 = 40b8095)", "followJumpAtPlace", 0, 1, 1),
+                tunable(st, "follower: the taut leash at his finger's pace (1; 0 = 9147bd2e)", "followLeashPace", 0, 1, 1),
               ],
             },
           ],

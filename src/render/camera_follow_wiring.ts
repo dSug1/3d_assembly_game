@@ -82,7 +82,7 @@ export function followFrame(
   // orbit's own degrees per mm (the drag's `gainOrbitYaw` × `boxGainYaw` × `closeInGain`, whole far out) — and the clamp (⛔ R6: H2's, the switches 0, deleted)
   const dpm = orbitDegPerMm(st.cfg, st.orbit.elevation).yawDegPerMm;
   const degPerMm = dpm * closeInGain(approachDistance(st.cfg, st.approach), st.cfg.orbitGainFullM, st.cfg.orbitContactMmPerMm, dpm, st.asm?.radius ?? 0);
-  const kt = { tauMs: st.cfg.followMs, poleDeg: st.cfg.followPoleDeg, minDeg: st.cfg.followTurnMinDeg, rollDegS: st.cfg.tiltRollDegS, paceShare: st.cfg.followTurnPace, degPerMm, maxDegS: st.cfg.followTurnMaxDegS };
+  const kt = { tauMs: st.cfg.followMs, poleDeg: st.cfg.followPoleDeg, minDeg: st.cfg.followTurnMinDeg, rollDegS: st.cfg.tiltRollDegS, paceShare: st.cfg.followTurnPace, degPerMm, maxDegS: st.cfg.followTurnMaxDegS, leashPace: st.cfg.followLeashPace === 1 };
   const orbitW = tiltDir(dirFrame(st), orbitDir(st.orbit.yaw, st.orbit.elevation));
   // ⭐⭐⭐ (2026-11-21, R5 — `TOP_BOTTOM_STUDY.md` §3, §6) under the far rule as decided (`farTopDecided`: `pictureFarTop` 1) `followFarStep`: the far reading
   // (D-H19, `asmAskLevel`), its jump by GEOMETRY (D-H15: last frame's calm at these angles, `asmAskLevelWas`), the dy hold on the up HE sees (D-H16: the

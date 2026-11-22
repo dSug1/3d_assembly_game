@@ -169,7 +169,8 @@ describe("H3 — F-1 – F-3 at the camera's stage", () => {
     expect(w).not.toMatch(/followTurnFinger|followTurnOnJump|onJump:|finger: fin/);
     expect(w).toContain("const dpm = orbitDegPerMm(st.cfg, st.orbit.elevation).yawDegPerMm;");
     expect(w).toContain("const degPerMm = dpm * closeInGain(approachDistance(st.cfg, st.approach), st.cfg.orbitGainFullM, st.cfg.orbitContactMmPerMm, dpm, st.asm?.radius ?? 0);");
-    expect(w).toContain("paceShare: st.cfg.followTurnPace, degPerMm, maxDegS: st.cfg.followTurnMaxDegS };");
+    // ⭐ (2026-11-22 evening, `CAMERA_FOLLOWS_GIZMO.md` §20.8 D-H24) + the taut leash at his finger's pace (`followLeashPace`)
+    expect(w).toContain("paceShare: st.cfg.followTurnPace, degPerMm, maxDegS: st.cfg.followTurnMaxDegS, leashPace: st.cfg.followLeashPace === 1 };");
     expect(w).toContain("fingerMm: st.asmFrameMm }, dtMs, kt);");
   });
 
