@@ -8,6 +8,7 @@
 > ⭐ §9 — ⛔ THE RULE (the owner, 2026-11-17): what the orbit's surface rebuild teaches about a scene becomes a CHECK run in this workflow
 > ⭐ §10 — ⛔ THE RULE (the owner, 2026-11-22): every lesson of the surface work becomes a RULE of construction (§10.3) or of drawing
 > (`PART_AUTHORING.md` §6.4), written so a script can apply it — the input of the scene's and the parts' automated construction
+> ⭐ §11 — ⏳ THE AUTOMATION LOOPS (the owner, 2026-11-23): every check run with no hand step — what exists, what each loop lacks (OWED)
 
 > *"I think we first need to draft an assembly plan how the player would build the assembly. That will determine how to geometrize the parts, how to
 > draw them and their supporting surfaces in blender, etc. Propose a workflow which could be adopted for any new scene and which will be captured in
@@ -488,6 +489,7 @@ The owner left both ways open (above): a script for all the surface's findings, 
 **Proposed (Claude), his word owed when the second check is built:** ONE command to run at the gate, giving one verdict for the scene; behind it
 each check stays its own file, named after the question it answers — as he asked for the first (*"so we know what the script is about when we
 re-use it later on"*) — so widening the scope does not make that name untrue. Until then the gate runs §8's command.
+⭐ (2026-11-23) The loops that will run them with no hand step — and what each lacks: §11.
 
 ## 10. ⛔ THE RULE — EVERY LESSON OF THE ORBIT'S SURFACE WORK BECOMES A RULE OF CONSTRUCTION OR OF DRAWING, WRITTEN SO A SCRIPT CAN APPLY IT (2026-11-22)
 
@@ -542,3 +544,51 @@ rule; each line is put into this form when a build script first applies it.
 | **C2** | The landing map's cost grows with the placed parts' convex pieces (S1: 36 – 270 ms a direction for a whole map on `Scene_1`; ledger row 7) | W2, W5 | the placed set's convex pieces, per stage | ⏳ a budget per scene, from the readout's cost on the phone (`ORBIT_SURFACE_BUILD.md` §2bis) | ⏳ keep the placed set's convex pieces within the budget at every stage | ⏳ none yet (B3 runs the game's own function) | OWED — after the readout's phone measurement |
 | **C3** | The orbited piece's collision ignores every FROZEN body, and `Scene_2`'s plinth is frozen (read in the code at the S1 review; ledger row 6) | W1, W5 | the plan's frozen parts | — | ⏳ to write once seen in the game: only the floor frozen, or the game's rule changed | ⏳ none yet | OWED — later, with `Scene_2` (`ORBIT_SURFACE_BUILD.md` §2bis) |
 | **C4** | The readout and the footprint support read each placed part as ONE convex body (S2's build, 2026-11-22; ledger row 10) | W2, W5 | a data scene's bodies (`src/content/<scene>.ts`) | — | author a part as data only when it is convex — a box, a prism, a frustum (`PART_AUTHORING.md` §2); anything else is a Blender part with `UCX_` pieces | ⏳ owed: each data body's hull volume = its mesh's | WRITTEN (= `PART_AUTHORING.md` §2's table); its check OWED |
+
+## 11. ⏳ THE AUTOMATION LOOPS — every check run with no hand step (OWED; the owner, 2026-11-23)
+
+> *"capture what is missing for that loop. capture that we will need to work on other loops to automatize the other checks as well (S6, etc.)"*
+> — the owner, 2026-11-23, on the answer to his question *how are the part checks linked with the automated building of the scene and the parts?*
+
+**A loop** = a generator (the scene constructed, a part drawn — §10) → the export (`.glb`) → the scene's checks on the EXPORTED file, with the
+game's own readers and constants → STOP on a FAIL (an exit code ≠ 0, every finding named) → the rule or the file fixed → run again. The check is
+the generator's test: it proves that what was generated obeys the rules (§10), and it catches a part drawn by hand that does not.
+⛔ None runs with no hand step today: every check below is started by hand or by `npm run verify` on the scenes already built.
+
+### 11.1 What exists (2026-11-23)
+
+| the check | its file | where it runs today | its verdict | what its loop lacks |
+|---|---|---|---|---|
+| the reach (C1; B4's game side; S0 — §8) | `scripts/surface/check_parts_reach_their_seat.ts` | by hand at the export gate | exit 0 / 1 | called by no build; B4's *"a direction starts at a landing"* waits for B3 |
+| B1 the solids and the proxy on them (D4 – D6; S5) | `scripts/surface/check_part_solids.ts` (`src/core/part_checks.ts`) | by hand at the gate; `npm run verify` on `Scene_2` (its findings pinned) | exit 0 / 1 / 2 | called by no build; at load, its cheap subset (§7.3) |
+| B2 exposed per stage; B1i (D7) | the same | the same | a map — information, no pass rule | — (it feeds B5 and the stage's surface, `PROXY_AND_COLLISION_RULES.md` §3bis) |
+| the proxy rules R7, R3, R4, R2 (S6 packet 1) | the same | the same | in the same verdict | — |
+| S6 packets 2 – 3 (coverage, caps; the collision pieces against the render; the resting candidates) | the same — being built | — | — | — |
+| B3 the landing per stage (the game's L2 on the `.glb`); B5 the coverage list | not built | — | — | L2 is now wired (S2, S4): they can be built |
+| B6 the thresholds | R4's angles built; the closing radius and the share not | — | — | — |
+| the Blender build's own checks (`../../30_OBJECTS_3D/spec/PART_AUTHORING.md` §4.2: the seats, the way in, collision simplicity, the proxy sanity …) | `Assets/Blender/scripts/build_<scene>.py` | every build run, inside Blender | PRINTED — a failure does not stop the run | an exit code ≠ 0 on a FAIL |
+| the plan's rules on the level data (W5); the headless proof (W6) | vectors; the probes | `npm run verify`; the probes by hand | vectors red / green | the probes run by the loop |
+
+### 11.2 The part-drawing loop — what it lacks (the first to build)
+
+1. **ONE command per scene** running every check of the export gate: one verdict, one exit code — §9.3's proposal (each check its own file behind
+   it, named after its question).
+2. **The build script calls it after its export, and stops on a FAIL** — today `build_engine.py` calls no game-side check and stops on none of its
+   own (its only stop: `--rev` before the export).
+3. **A GENERATOR that applies the rules**: the proxy and collision rules are WRITTEN (`PROXY_AND_COLLISION_RULES.md`; §10.2's status), none
+   APPLIED — no script draws a proxy or a collision piece by them yet.
+4. **The Blender side reads the game's constants from the game's files** (`units.ts`, never retyped — B6's rule), so the two sides cannot disagree.
+5. **The painting** (§7.2: each check's result coloured on the faces in the review `.blend`) — for the owner's review, not for the loop's verdict.
+
+### 11.3 The other loops — OWED, each its own work (his words: *"we will need to work on other loops to automatize the other checks as well"*)
+
+* **The scene's construction** (W1 → W5): the plan → the level data → the reach (C1) and the plan's rules on the data (§2.3) → stop on a FAIL.
+* **The landing** (B3, B5, B4's second half): the game's L2 run on the provisional `.glb` per stage and per held piece (one implementation —
+  `../../40_RENDER_SCENE/spec/ORBIT_SURFACE.md` §7bis.3) → `<scene>_landing.json` → painted; failed where a face a later step needs is not landable.
+* **The headless proof** (W6): the probes walking every step, run by the loop rather than by hand.
+* **Every new check** (S6's packets, each row of the ledger — `../../40_RENDER_SCENE/spec/ORBIT_SURFACE_BUILD.md` §8) joins §11.2's ONE command
+  when it is built — never a script run apart.
+* ⛔ **The device look stays a hand step** (W7, `CLAUDE.md` rule 5): no loop closes a scene.
+
+Their order: his word, when the first is built.
+

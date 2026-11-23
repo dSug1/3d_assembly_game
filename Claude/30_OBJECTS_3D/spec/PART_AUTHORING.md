@@ -391,6 +391,8 @@ placed parts' and the part's face normals (a tight slot's single direction is mi
 gizmo, from patent-free methods (an alpha-wrap, a planar partition, an axis sweep): [`PROXY_AND_COLLISION_RULES.md`](PROXY_AND_COLLISION_RULES.md)
 — ✅ DECIDED 2026-11-23 (his five decisions, the audit, his *"I agree with your recommendations. Capture, proceed"*): R0 – R7 and
 C-R1 – C-R4 are the drawing rules of every part from now on (registered as **D8** below); D4 – D7 are their first cases.
+⏳ (2026-11-23) Their checks are run by hand today; the LOOP that runs them after every export and stops on a FAIL — and what it lacks (one command,
+the build script calling it, a generator applying the rules): `../../20_GAME_RULES/spec/SCENE_WORKFLOW.md` §11.
 
 ⭐ His words and the rule: `../../20_GAME_RULES/spec/SCENE_WORKFLOW.md` §10 — every lesson of the surface work becomes a rule of construction
 (there, §10.3) or of DRAWING (here), in the form of its §10.2 so that a Blender script can apply it; its check by its §9; its row in

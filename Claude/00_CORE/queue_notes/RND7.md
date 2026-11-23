@@ -82,3 +82,7 @@
   cylinder a hexagon face up, every cavity deeper than wide and every undercut capped, no fixed count of pieces); S6 packet 1 BUILT
   (`checkProxyFaces`: R7, R3, R4, R2; his three shapes clean reference parts; 9 mutants red); ⛔ a second correction of S5's record — the resting
   proxies are VIRTUAL by design (`ORBIT_SURFACE_PART_CHECKS.md` §12). Packets 2 (coverage, caps) and 3 (collision pieces) owed. Local.
+* **2026-11-23, later** — his question *how are the part checks run, and linked with the automated building?* answered (by hand at the export
+  gate and in `npm run verify`, never at play); his word *"capture what is missing for that loop … other loops to automatize the other checks as
+  well"* → `SCENE_WORKFLOW.md` §11 (OWED: one command per scene, the build script calling it and stopping on a FAIL, a generator applying the
+  rules; the construction, landing and headless loops). Then packet 2.

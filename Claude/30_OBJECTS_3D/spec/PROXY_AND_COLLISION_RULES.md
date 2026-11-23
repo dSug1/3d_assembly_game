@@ -271,4 +271,6 @@ The check script (`check_part_solids.ts`) counts them in its verdict (a riser ap
   rim on real proxy edges, flush. (B1i's 4 mm floods are its first form.)
 * **Packet 3 — the collision pieces (C-R2 – C-R4) and the resting candidates**: the pieces' union within τc of the render, both ways; a cavity a part
   enters left open; rings by the angle rule; the resting-face candidates — the proxy's faces on its convex hull, the largest first.
+* ⏳ **The loop** (his word, 2026-11-23): these checks run by hand today — the loop that runs them after every export and stops on a FAIL, and the
+  other loops owed: `../../20_GAME_RULES/spec/SCENE_WORKFLOW.md` §11.
 
