@@ -1,9 +1,9 @@
 # RND7 — The orbit's surface: where the gizmo travels
 
-> **STATUS** · 🔧 **S2 (the readout) BUILT AND GATED** (2026-11-22 night, the owner asleep; `ORBIT_SURFACE_READOUT.md` §13 – §14) — the workfront: branch `1.0.158from1.0.157-Orbit_surface` (from `1.0.157-Orbit_surface`, pushed), the
+> **STATUS** · 🔧 **S2 (the readout) BUILT AND GATED** (2026-11-22 night, the owner asleep; `ORBIT_SURFACE_READOUT.md` §13 – §14), ⭐ **DEPLOYED 2026-11-23** (LIVE main `ff41fc3` = `5d30edf5`) — the workfront: branch `1.0.158from1.0.157-Orbit_surface` (pushed), the
 > worktree `../orbit_surface`. Built OFFLINE before the merge (2026-11-17): S0 (the entry sets on `Scene_2`'s real collision pieces) and S1 (the landing map,
 > `src/core/landing_map.ts` — NOT wired: nothing calls it). Nothing else built.
-> **NEXT** · his look on the readout (USB or his deploy word) and his word on the side facets' question (`ORBIT_SURFACE_READOUT.md` §14: P2 as held,
+> **NEXT** · his look on the readout (deployed) and his word on the side facets' question (`ORBIT_SURFACE_READOUT.md` §14: P2 as held,
 > as it would land, or both); then the build list's item 2 (the mouth's hold) or item 4 (P2 driving). Before: the READOUT designed for his look, then
 > built. ✅ §8's end asked again 2026-11-22, all four answered (`ORBIT_SURFACE_BUILD.md` §2bis).
 > **LAST VERIFIED** · 2026-11-22, on `c0e40f85` (docs) = LIVE `3b7a479`'s code
@@ -45,3 +45,5 @@
   (§14): G1 bit for bit on his four records at 1 and 0; G2 offline 2.5 – 6.6 ms a preparation, 2 – 4 a record; G3 met on the top (+41.3 mm round
   `Piece44`, +73.3 mm over the recess beside it), ONE FINDING on the side facets (P2 as held stands half the piece out until he aligns) — his word owed.
   Lessons → rules: C4 (a data part is convex). Nothing pushed or deployed.
+* **2026-11-23** — his word *"deploy"*: the branch pushed at `5d30edf5`, merged into main with no working tree touched (main's tree = the branch's): LIVE main `ff41fc3` = `5d30edf5`.
+  His look and his word on the side facets owed.

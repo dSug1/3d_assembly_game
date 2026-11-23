@@ -157,7 +157,7 @@ gizmo's place every frame, exact (no grid), beside today's depth on `Scene_1` �
 * ⭐ **S2 — BUILT 2026-11-22 (P1 `dfeb7ef9`, P2 `fafbde6b`, P2b `d21a4826` — on `Scene_1` only), the gates G1 – G3 OWED** → [ORBIT_SURFACE_READOUT.md](ORBIT_SURFACE_READOUT.md) §13.
 * ⭐ **S2 — AUDITED, FIXED (`e91d3e82`), GATED 2026-11-22 night** → [ORBIT_SURFACE_READOUT.md](ORBIT_SURFACE_READOUT.md) §13.7, §14: G1 bit for bit on his four
   records at 1 and 0; G2 offline 2.5 – 6.6 ms a preparation, 2 – 4 preparations a record, ~3 µs a frame; G3 met on the top, ONE FINDING on the side
-  facets (P2 as held: half a piece out until the player aligns — his word, §8 row 9). His look owed (USB, or his deploy word).
+  facets (P2 as held: half a piece out until the player aligns — his word, §8 row 9). ⭐ DEPLOYED 2026-11-23 (LIVE main `ff41fc3` = `5d30edf5`); his look owed.
 
 ## 8. ⛔ FINDINGS → RULES → CHECKS: THE LEDGER (the owner's rules, 2026-11-17 and 2026-11-22)
 
