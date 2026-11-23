@@ -2,6 +2,9 @@
  * ⭐⭐⭐ **THE LANDING MAP — layer L2, principle P2** (`ORBIT_SURFACE.md` §2.2, §5.1; the design: `ORBIT_SURFACE_LANDING_MAP.md`; package S1 of
  * `ORBIT_SURFACE_BUILD.md`, 2026-11-17 — the owner accepted the six layers, to be tested). ⭐ (2026-11-22, S2) WIRED AS A READOUT ONLY: its sums with no
  * grid (`prepareLanding`) read once a frame beside today's depth (`render/landing_readout.ts`) — driving nothing; the grid (`buildLandingMap`) unwired.
+ * ⭐⭐⭐ (2026-11-23, S4 — `ORBIT_SURFACE_DRIVE.md`) AND DRIVING, at `landingDrives` ≥ 1: the gizmo's depth and the piece's support read from where the
+ * piece is (`driveLevel`, `landingSupport`; `render/landing_drive.ts`), on a preparation split in two — direction-free (`prepareHeldSums`) and per
+ * direction (`landingFor`).
  *
  * For one facet direction (a plane, its outward normal `n`, a region of the plane) and the held piece AS HELD, per place of a grid: the placed
  * parts' LAYERS along `n` (each stretch inside a part, outermost first) and the held piece's layers — the depths at which the piece, its reference
@@ -161,8 +164,21 @@ const support = (pts: readonly Vec3[], m: Vec3): number => {
   return s;
 };
 
-/** ⭐ the sum P ⊕ (−H) prepared for the frame (`H` null: P alone — the placed parts' own layers) */
-function prepareSum(P: Poly, H: Poly | null, part: number, f: LandingAxes): Sum {
+/**
+ * ⭐ (2026-11-23, S4 — `ORBIT_SURFACE_DRIVE.md` §3.4) a sum P ⊕ (−H) WITHOUT a direction: its half-spaces' normals (in their order) and their support
+ * values — the expensive part (the keyed de-duplication), done once per placed set and held piece; `project` puts it on a direction.
+ */
+interface SumForm {
+  readonly part: number;
+  readonly P: Poly;
+  readonly H: Poly | null;
+  readonly ms: readonly Vec3[];
+  readonly sig: Float64Array;
+}
+/** σ_{P ⊕ −H}(m) = σ_P(m) + σ_H(−m) */
+const sigOf = (P: Poly, H: Poly | null, m: Vec3): number => support(P.pts, m) + (H === null ? 0 : support(H.pts, neg(m)));
+/** ⭐ the sum's form (`H` null: P alone — the placed parts' own layers) */
+function formOf(P: Poly, H: Poly | null, part: number): SumForm {
   const ms = new Map<string, Vec3>();
   for (const m of P.normals) ms.set(keyOf(m), m);
   if (H !== null) {
@@ -172,18 +188,27 @@ function prepareSum(P: Poly, H: Poly | null, part: number, f: LandingAxes): Sum 
       if (m !== null) for (const s of [m, neg(m)]) ms.set(keyOf(s), s);
     }
   }
-  // σ_{P ⊕ −H}(m) = σ_P(m) + σ_H(−m)
-  const sig = (m: Vec3) => support(P.pts, m) + (H === null ? 0 : support(H.pts, neg(m)));
   const list = [...ms.values()];
-  const hs = new Float64Array(list.length * 4);
-  list.forEach((m, k) => {
+  const sig = new Float64Array(list.length);
+  list.forEach((m, k) => (sig[k] = sigOf(P, H, m)));
+  return { part, P, H, ms: list, sig };
+}
+/** ⭐ the form on the frame's direction: four dots a half-space, the rectangle on the plane */
+function project(s: SumForm, f: LandingAxes): Sum {
+  const hs = new Float64Array(s.ms.length * 4);
+  s.ms.forEach((m, k) => {
     hs[4 * k] = dot(m, f.n);
-    hs[4 * k + 1] = sig(m) - dot(m, f.origin);
+    hs[4 * k + 1] = s.sig[k]! - dot(m, f.origin);
     hs[4 * k + 2] = dot(m, f.u);
     hs[4 * k + 3] = dot(m, f.v);
   });
+  const sig = (m: Vec3) => sigOf(s.P, s.H, m);
   const ou = dot(f.u, f.origin), ov = dot(f.v, f.origin);
-  return { part, hs, uLo: -sig(neg(f.u)) - ou, uHi: sig(f.u) - ou, vLo: -sig(neg(f.v)) - ov, vHi: sig(f.v) - ov };
+  return { part: s.part, hs, uLo: -sig(neg(f.u)) - ou, uHi: sig(f.u) - ou, vLo: -sig(neg(f.v)) - ov, vHi: sig(f.v) - ov };
+}
+/** ⭐ the sum P ⊕ (−H) prepared for the frame (`H` null: P alone — the placed parts' own layers) — its form put on the direction */
+function prepareSum(P: Poly, H: Poly | null, part: number, f: LandingAxes): Sum {
+  return project(formOf(P, H, part), f);
 }
 
 /** the sum's interval on the ray at (U, V), pushed as (bottom, top, part); nothing when the ray misses or only grazes */
@@ -256,8 +281,17 @@ interface Sums {
   readonly pieceSums: readonly Sum[];
 }
 
-/** ⭐ THE PREPARATION — the hulls, the ids, the refused, every pair's sum for the facet direction (`buildLandingMap`'s and `prepareLanding`'s, one code) */
-function prepareSums(placed: readonly ConvexPiece[], held: readonly (readonly Vec3[])[], frame: LandingAxes): Sums {
+/**
+ * ⭐⭐ (2026-11-23, S4 — `ORBIT_SURFACE_DRIVE.md` §3.4) THE DIRECTION-FREE PREPARATION — the hulls, the ids, the refused, every pair's sum's FORM: once
+ * per placed set and held piece; `landingFor` puts it on a direction (four dots a half-space). Opaque outside this file.
+ */
+export interface HeldSums {
+  readonly ids: readonly string[];
+  readonly refused: readonly string[];
+  readonly P: readonly { readonly poly: Poly; readonly part: number }[];
+  readonly forms: readonly SumForm[];
+}
+export function prepareHeldSums(placed: readonly ConvexPiece[], held: readonly (readonly Vec3[])[]): HeldSums {
   const refused: string[] = [];
   const ids = [...new Set(placed.map((p) => p.id))].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
   const idx = new Map(ids.map((id, k) => [id, k] as const));
@@ -274,8 +308,15 @@ function prepareSums(placed: readonly ConvexPiece[], held: readonly (readonly Ve
     else H.push(poly);
   });
   refused.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
-  const pieceSums = P.flatMap((p) => H.map((h) => prepareSum(p.poly, h, p.part, frame)));
-  return { ids, refused, P, pieceSums };
+  const forms = P.flatMap((p) => H.map((h) => formOf(p.poly, h, p.part)));
+  return { ids, refused, P, forms };
+}
+/** ⭐ THE PREPARATION — the direction-free part, every pair's sum put on the facet direction (`buildLandingMap`'s and `prepareLanding`'s, one code) */
+function sumsOn(h: HeldSums, frame: LandingAxes): Sums {
+  return { ids: h.ids, refused: h.refused, P: h.P, pieceSums: h.forms.map((s) => project(s, frame)) };
+}
+function prepareSums(placed: readonly ConvexPiece[], held: readonly (readonly Vec3[])[], frame: LandingAxes): Sums {
+  return sumsOn(prepareHeldSums(placed, held), frame);
 }
 
 /** ⭐ THE EXACT EVALUATION — one ray at (u, v) through every prepared sum, merged, read from outside or from `from` (both readers' `landingAt`) */
@@ -293,8 +334,45 @@ function exactOf(s: Sums): (u: number, v: number, from?: number) => Landing {
  * `buildLandingMap`'s (`frame`: the direction alone — no region). Pure: keeps no state.
  */
 export function prepareLanding(placed: readonly ConvexPiece[], held: readonly (readonly Vec3[])[], frame: LandingAxes): PreparedLanding {
-  const s = prepareSums(placed, held, frame);
-  return { frame, refused: s.refused, landingAt: exactOf(s) };
+  return landingFor(prepareHeldSums(placed, held), frame);
+}
+
+/**
+ * ⭐⭐ (2026-11-23, S4 — `ORBIT_SURFACE_DRIVE.md` §3.4) THE LANDING ON A DIRECTION from the direction-free preparation (`prepareHeldSums`) — bit for bit
+ * `prepareLanding`'s (which is this). `top`: the highest level any of its sums reaches along `n` — read from above it, a landing is the one from outside
+ * (the sections' key, §3.6). Pure.
+ */
+export function landingFor(h: HeldSums, frame: LandingAxes): PreparedLanding & { readonly top: number } {
+  const s = sumsOn(h, frame);
+  let top = -Infinity;
+  for (const f of h.forms) top = Math.max(top, sigOf(f.P, f.H, frame.n) - dot(frame.n, frame.origin));
+  return { frame, refused: s.refused, landingAt: exactOf(s), top };
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-23, S4 — `ORBIT_SURFACE_DRIVE.md` §3.1, D1 – D2) THE GIZMO'S LEVEL along the facet's normal when P2 drives it, from the landing read
+ * from where the piece is: `land` → its depth LESS the piece's `reach` (`heldReach`: the gizmo marks the CONTACT — the piece hangs from it by its lift);
+ * `nothing` → the facet's `plane` (nothing to land on); `inside` (a wall beside the piece at its level) or `uncovered` → `today`'s level, as built.
+ */
+export function driveLevel(l: Landing, reach: number, plane: number, today: number): number {
+  if (l.kind === "land") return l.depth - reach;
+  if (l.kind === "nothing") return plane;
+  return today;
+}
+
+/** ⭐ (S4, §3.3) the piece's support read on P2: a part and its level; none; or today's rule (`today`: the piece at its level inside a part). */
+export type LandingSupport = { readonly kind: "land"; readonly part: string; readonly level: number } | { readonly kind: "none" } | { readonly kind: "today" };
+
+/**
+ * ⭐⭐⭐ (2026-11-23, S4 — `ORBIT_SURFACE_DRIVE.md` §3.3) THE FOOTPRINT SUPPORT ON P2 (⑤, its wall kept): the landing read from the piece's reference
+ * level `ref` (the caller reads it from `ref` + the support's slack: a part above the piece is never landed on — a wall), along the surface's normal.
+ * `land` within `windowM` of the piece (its reference no farther than that above the first contact — the shell's offset, as `footprintSupport`'s
+ * window) → that part, its level the contact's plane (`depth − reach`); beyond it, or `nothing` → none; `inside` → today's rule. Pure.
+ */
+export function landingSupport(l: Landing, ref: number, reach: number, windowM: number): LandingSupport {
+  if (l.kind === "land") return ref - l.depth <= windowM ? { kind: "land", part: l.part, level: l.depth - reach } : { kind: "none" };
+  if (l.kind === "inside") return { kind: "today" };
+  return { kind: "none" };
 }
 
 /**

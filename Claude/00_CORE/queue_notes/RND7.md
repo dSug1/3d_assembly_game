@@ -1,10 +1,10 @@
 # RND7 — The orbit's surface: where the gizmo travels
 
-> **STATUS** · 🔧 **S2 (the readout) BUILT AND GATED** (2026-11-22 night, the owner asleep; `ORBIT_SURFACE_READOUT.md` §13 – §14), ⭐ **DEPLOYED 2026-11-23** (LIVE main `ff41fc3` = `5d30edf5`); 🔧 **S3 (the mouth's hold restricted) BUILT AND GATED** 2026-11-23 (`d4b6c222`, `ORBIT_SURFACE_MOUTH_HOLD.md`) — the workfront: branch `1.0.158from1.0.157-Orbit_surface` (pushed), the
+> **STATUS** · 🔧 **S2 (the readout) BUILT AND GATED** (2026-11-22 night, the owner asleep; `ORBIT_SURFACE_READOUT.md` §13 – §14), ⭐ **DEPLOYED 2026-11-23** (LIVE main `ff41fc3` = `5d30edf5`); 🔧 **S3 (the mouth's hold restricted) BUILT AND GATED** 2026-11-23 (`d4b6c222`, `ORBIT_SURFACE_MOUTH_HOLD.md`), ⭐ **DEPLOYED 2026-11-23** (LIVE main `e80a7b0` = `1bc13f70`); 🔧 **S4 (P2 drives the gizmo) BUILT AND GATED** 2026-11-23 (`19fa42bf`, local, `ORBIT_SURFACE_DRIVE.md`) — the workfront: branch `1.0.158from1.0.157-Orbit_surface` (pushed), the
 > worktree `../orbit_surface`. Built OFFLINE before the merge (2026-11-17): S0 (the entry sets on `Scene_2`'s real collision pieces) and S1 (the landing map,
 > `src/core/landing_map.ts` — NOT wired: nothing calls it). Nothing else built.
-> **NEXT** · his look (the readout deployed; S3 local) and his word on S3's finding (`ORBIT_SURFACE_MOUTH_HOLD.md` §7: keep `mouthHoldDomain` 2 and
-> build item 4 next — recommended — or 1 until item 4); then the build list's item 4 (P2 driving) or 3 (the Blender checks). ✅ The side facets: AS HELD (his word). Before: the READOUT designed for his look, then
+> **NEXT** · his look on S4 (local: his word to deploy, or USB) — the build list's item 4, P2 DRIVING the gizmo, BUILT: `ORBIT_SURFACE_DRIVE.md` (his word 2026-11-23 *"Do as per your recommendation"*: `mouthHoldDomain` stays 2,
+> item 4 next — S3's finding, `ORBIT_SURFACE_MOUTH_HOLD.md` §7); his look on the readout and S3 (deployed) owed; then item 3 (the Blender checks). ✅ The side facets: AS HELD (his word). Before: the READOUT designed for his look, then
 > built. ✅ §8's end asked again 2026-11-22, all four answered (`ORBIT_SURFACE_BUILD.md` §2bis).
 > **LAST VERIFIED** · 2026-11-22, on `c0e40f85` (docs) = LIVE `3b7a479`'s code
 
@@ -52,3 +52,10 @@
   (`d4b6c222`; `mouthHoldDomain`, default 2; 0 = `3b7a479`); measured first: his four records never meet the hold; `Scene_1`'s scan: no cap mouth,
   H2 removes the hold at the 10 mm bottom slots and within half a piece of the top channel's walls (there the top's depth, not yet P2's, brings back
   the drop at the tilt: ledger row 11, his word); G1 IDENTICAL to `3b7a479` at the defaults; an independent audit: no defect (its nits fixed). Local.
+* **2026-11-23, later** — his word *"Deploy"*: the branch pushed at `1bc13f70`, merged into main with no working tree touched (main's tree = the
+  branch's): LIVE main `e80a7b0` = `1bc13f70` — S2 and S3 live; his look owed, and his word on S3's finding (`ORBIT_SURFACE_MOUTH_HOLD.md` §7).
+* **2026-11-23, later** — his word *"Do as per your recommendation"* on S3's finding: `mouthHoldDomain` stays 2; the build list's item 4 (P2
+  driving the gizmo, the footprint support re-expressed on it) is designed and built next.
+* **2026-11-23, later** — S4 built (`54e37d03`), audited (two defects: queries between frames read undriven and cached; `F` read on faces the piece is
+  not over), fixed (`19fa42bf`); G1 identical at 0 on his four records; his front record at 2: the gizmo moved on the top round `Piece44` only
+  (+73.25 mm), the camera ≤ 2.9 mm (F17); the support never active in his records (the contact-range gate: vector V3). Local, not deployed.

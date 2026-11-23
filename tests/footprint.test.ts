@@ -92,7 +92,9 @@ describe("⭐⭐⭐ wired: the foot raised to the support's level; the support c
     expect(a).toContain("const r = levelRaise(lv, g);");
     expect(a).toContain("const gs: Vec3 = r > 0 ? [g[0] + lv!.n[0] * r, g[1] + lv!.n[1] * r, g[2] + lv!.n[2] * r] : g;"); // ⭐ along the SURFACE's normal (⛔ the piece's slanted direction)
     expect(a).toContain("const f = shellAnchor(gs, u, d, st.cfg.orbitShellOffsetMm / 1000, shellOf(st), reachOf(st, u));"); // ⭐ (2026-11-12, the slide's rebuild) then the rest on the support (`slide_rebuild.test.ts`)
-    expect(a).toContain("const i = footprintSupport(piece, parts.parts, u, undefined, st.cfg.orbitShellOffsetMm / 1000);");
+    // ⭐ (2026-11-23, S4 — `ORBIT_SURFACE_DRIVE.md` §3.3) the choice through `supportOf`: P2 from the piece at `landingDrives` ≥ 1, else this rule as built
+    expect(a).toContain("const win = st.cfg.orbitShellOffsetMm / 1000; const ps = supportOf(st, piece, anchor, parts, u, win);");
+    expect(a).toContain("const i = footprintSupport(piece, parts.parts, u, undefined, win);");
     expect(a).toContain("supportFrame(st, dtMs);");
     expect(a.indexOf("supportFrame(st, dtMs);")).toBeLessThan(a.indexOf("if (st.asmTilt !== null && st.asmTilt.exit) tiltOff(st);"));
     expect(a).toContain("const u = st.gizmoNormal ?? null;"); // the gizmo's FACE normal
@@ -100,6 +102,6 @@ describe("⭐⭐⭐ wired: the foot raised to the support's level; the support c
     expect(a).toContain("if (lv !== null && same && (next === null || next.h < lv.h) && st.pieceQ !== null) {"); // ⭐ (the slide's rebuild) on the same face only — another face's level at once (`slide_rebuild.test.ts`)
     expect(a).toContain("if (pieceSolverEnv(st).gap(st.pieceQ) < pieceSolveOptions(st).gapM) { st.asmSupportLevel = lv; return; }");
     // ⭐⭐ never a level made from the gizmo alone — a support's level eases down to the gizmo, then clears (⛔ far out it held the piece at the last gizmo's height)
-    expect(a).toContain("let target = i !== null ? supportTop(parts.parts[i]!, u) : gl !== null && lv!.h > gl + 1e-4 ? gl : null;"); // ⭐ (the slide's rebuild) `let`: a drop then held by the drawn piece (`slide_rebuild.test.ts`)
+    expect(a).toContain("let target = ps !== null ? ps.top : gl !== null && lv!.h > gl + 1e-4 ? gl : null;"); // ⭐ (2026-11-23, S4) the level `supportOf` gives: P2's, or the part's top as built // ⭐ (the slide's rebuild) `let`: a drop then held by the drawn piece (`slide_rebuild.test.ts`)
   });
 });
