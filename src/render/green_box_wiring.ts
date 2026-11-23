@@ -27,6 +27,7 @@ import { trackingMetresPerPx } from "../input";
 import { OBJECT_TOP_SCALE } from "../core/scene_dims";
 import { taperMesh } from "./bodies";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
+import { landingMarkerFrame } from "./landing_readout";
 import { GIZMO_RING_PX, RING_POINTS } from "./scene_state";
 import { cameraOrbitAt, cameraOrbitStep, springOrbit, type OrbitAt } from "../input/follow_camera";
 import { laggedPlace, pauseMid, pauseSpan, pauseTowardEnd, pauseYawStep, placeOf, settledPause, travelOf } from "../input/top_pause";
@@ -1114,6 +1115,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   }
   contactFrame(st, now); // ⭐ (2026-11-12) the contact readout: the shadow, the hosting face, the outline — ⭐ (2026-10-15, the Fable audit) BEFORE the contour reads its readiness
   restingFillFrame(st, now);
+  landingMarkerFrame(st); // ⭐⭐⭐ (2026-11-22, S2 — `ORBIT_SURFACE_READOUT.md` §2) the readout's ring, by the gizmo ring's path (after it: the camera as drawn)
 }
 
 /**

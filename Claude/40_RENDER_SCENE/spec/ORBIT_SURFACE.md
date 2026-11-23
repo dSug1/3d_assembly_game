@@ -1,8 +1,15 @@
 # THE ORBIT'S SURFACE — what it aims at, its rules and principles, its singularities, its obstacles, what the rebuild must specify (2026-11-16)
 
 > ⭐⭐⭐ **2026-11-22 — THE SURFACE WORK STARTS (his word: *"We will then move to the orbit surface work"*).** The condition below is MET: the orbit
-> charts are CLOSED (LIVE `40b8095`, the best so far) and this branch is merged (`1.0.154-`, 2026-11-22). The workfront: `1.0.156-Orbit-surface`.
-> First: ask him again what §8 (its end) keeps for this moment → [`HANDOVER_2026-11-22_orbit_surface.md`](../../00_CORE/queue_notes/HANDOVER_2026-11-22_orbit_surface.md).
+> charts are CLOSED (LIVE `3b7a479`, `1.0.156-Orbits_with_camera_follow_final`, the best so far) and this branch is merged (`1.0.154-`, 2026-11-22). The workfront: `1.0.157-Orbit_surface`.
+> First: ask him again what §8 (its end) keeps for this moment → [`HANDOVER_2026-11-22_orbit_surface.md`](../../00_CORE/queue_notes/HANDOVER_2026-11-22_orbit_surface.md). ✅ **Asked 2026-11-22 evening, all four answered** → [ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md) §2bis.
+> ⭐⭐ **2026-11-22 evening — WHAT CHANGED SINCE THIS SPECIFICATION WAS WRITTEN (11-16 / 17) — read before building** ([ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md) §9).
+> (1) Its code references were read on `30f7bb3` / `1190db2`; since then step 2.5 deleted the old detectors, `chartLayout` / `chartCalm` and the legacy
+> zones (§3.3's T3 row, the audit's WS17); the camera became a FOLLOWER far out and ONE PICTURE at every distance (11-20 – 11-22; R6 deleted twelve
+> switches); D-H20, D-H23, D-H24 changed the far turn — re-read every reference on `1.0.157-Orbit_surface` before building on it. (2) The camera is
+> CLOSED ([CAMERA_FOLLOWS_GIZMO.md](CAMERA_FOLLOWS_GIZMO.md), [PICTURE_REBUILD.md](PICTURE_REBUILD.md); never reopened here — §0's scope): the surface
+> reaches it only through the map's place and the calm (`asmShown` → `calmTargets` → the calm asked → the far reading) and the gizmo's facet.
+> (3) The queue: this work is `RND7`; its handed findings `RND8` ([QUEUE.md](../../00_CORE/QUEUE.md)).
 
 > ⛔⛔ **THE OWNER'S DECISIONS OF 2026-11-16 ARE RECORDED (§8) — PROVISIONAL: TO BE TESTED, AND MAY BE REVERSED BY THE TESTING. NOTHING BUILT, NO GAME
 > CODE CHANGED.** Branch `1.0.146s-Orbit-surface-spec` (from `1.0.146-Orbit-charts`, `1190db2`). **[OWNER]** quotes the owner, with its file, section
@@ -72,9 +79,10 @@ orbit_surface_spec on branch 1.0.146s-. We will have to merge orbit_charts into 
 3d_assembly_game. Therefore we will finish the work on the build chain and the orbit charts, then merge orbit_charts into 3d_assembly_game, before
 any rebuild work on the orbit’s surface is started."* So nothing of this specification is built before the build chain and the orbit charts are
 finished and `orbit_charts` (`1.0.146-Orbit-charts`) is merged into `3d_assembly_game` (`1.0.145-`); this branch (`1.0.146s-`) is merged after it.
+✅ **DONE 2026-11-22** (both merged into `1.0.154-`; the work on `1.0.157-Orbit_surface`).
 **For whoever does those merges:** this branch also changes `SCENE_WORKFLOW.md` (§7) and `PART_AUTHORING.md` (§6) (§7bis.5); two findings are handed
 to queues with no row yet — F17 and the mouth's lip to the ORBIT's, the drop into a slot in contact range to the CONTACT's (§2.2 P1, P5): their rows
-are to be written in `Claude/00_CORE/QUEUE.md` at that merge (that file is at its size budget). What to ask him again then: §8, end. ⭐ **2026-11-17, amended by him:** the offline part (the entry-set check on `Scene_2`'s real pieces, the landing map as a pure function) starts now, in parallel, on new files only; everything wired still waits for that merge → [ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md).
+are to be written in `Claude/00_CORE/QUEUE.md` at that merge (that file is at its size budget). ✅ **Written 2026-11-22 evening: `RND8`** (this work: `RND7`). What to ask him again then: §8, end. ⭐ **2026-11-17, amended by him:** the offline part (the entry-set check on `Scene_2`'s real pieces, the landing map as a pure function) starts now, in parallel, on new files only; everything wired still waits for that merge → [ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md).
 
 ---
 
@@ -482,7 +490,7 @@ Sizes (from `scene_*.ts`, `SCENE_2_ASSEMBLY.md`): every scene is held near the c
 
 ### 3.0 How the catalogue is derived — so that it does not rest on the shapes met so far *(review)*
 
-[PROPOSED] The classes C1 – C24 of §3.1 are the ones the scenes and the probes have met. To cover what they have not, every feature of a
+[ACCEPTED by the owner 2026-11-22 — to be tested] The classes C1 – C24 of §3.1 are the ones the scenes and the probes have met. To cover what they have not, every feature of a
 surface is read on the grid below; a class is one cell of it, and a shape nobody has drawn yet falls in a cell too. §3.1b lists the cells
 the pipeline has not met.
 
@@ -553,7 +561,7 @@ Six rulers stand in the record (rule 3, *one constant in one place*, is broken).
 | the held piece's two smallest sizes (+ 0.5 mm) | voids (S8) | → the piece as held, its `UCX_` outline (P2) |
 | ¼ of its own polygon (D5, `facetMinShare`) | facets | the orbit's layout ruler, read here (WS21 handed over, §2.6) |
 | ≈ 7 mm "too narrow to stand on" | authoring check ⑤ (reference units: per scene) | → B6 paints what P2 closes for each piece; the 7 mm goes |
-| 0.22 × the placed box's smallest side (T3) | polar zones, `chartLayout 0` only | → goes with the legacy zones (step 2.5); the charts' fans need none |
+| 0.22 × the placed box's smallest side (T3) | polar zones, `chartLayout 0` only | → goes with the legacy zones (step 2.5); the charts' fans need none (✅ gone with step 2.5, 2026-11-16) |
 | the finger: a 37 mm face is 0.34 mm of finger far out (I17) | the reach on the glass | not a ruler of the surface (close in, the camera reaches anything) |
 | `MAP_GROW_M` 1.6 mm; the coplanar 0.5 mm; the glide's 5 mm | joints; flush faces; depth steps | → ONE noise family in `units.ts`, with a named depth for "flush" (former D-S18); the glide's 5 mm goes (S26) |
 | the piece AS IT IS TURNED; a spacing (arrays) | a keyed slot (C44); studs, fins (C34) | → answered by P2 itself (§8 Q2 for the turn) |
@@ -610,7 +618,7 @@ still reaches only the first). Where a scene's parts are boxes, frusta and prism
 
 ### 5.2 The table SINGULARITY → PRINCIPLE → EVENT
 
-[PROPOSED] "Nothing to land on" = no contact along the facet's direction: the gizmo on the facet's plane, marked. "Approached" = reached by
+[ACCEPTED by the owner 2026-11-22 — to be tested] "Nothing to land on" = no contact along the facet's direction: the gizmo on the facet's plane, marked. "Approached" = reached by
 A + dy or a plunge. "⏳ open" = no principle answers it yet.
 
 | class | answered by | what it gives | event at its border |
@@ -777,7 +785,7 @@ round's decisions each answered: [ORBIT_SURFACE_AUDIT.md](ORBIT_SURFACE_AUDIT.md
 question in the md file and ask again when we work on the orbit surface later on."*
 1. **A goal's way in: is "a free direction exists" enough, or must the player be able to get there?** Check B4 answers *"can this part slide into its seat along at least one direction without touching a placed part?"* Not yet *"can the player bring the piece to where that slide starts?"* Example: a seat open only from under an overhang — the slide upward is free, but the gizmo may never reach a place under the overhang (no face there is a place of the orbit). Accept a level only when, for every goal, a free direction starts at a place the gizmo reaches (needs the landing map B3 and the coverage B5 first; §2.5 already writes it so) — or is the first test enough for now? ✅ **2026-11-17: the first test is enough for now; the second once the landing map exists.**
 2. **The entry-set check was run on boxes only** (the study's shapes): run it on the real parts' collision pieces (`UCX_`, `Scene_2`) before the first surface build? ✅ **2026-11-17: yes — package S0.**
-3. Still [PROPOSED], his word owed: §3.0 the catalogue derived from a grid of questions; §5.1 the six layers L0 – L5; §5.2 "nothing to land on" (the gizmo on the facet's plane, marked) and "approached". ✅ **2026-11-17: the six layers ACCEPTED, to be tested; the catalogue's grid and §5.2's two words still owed.**
+3. Still [PROPOSED], his word owed: §3.0 the catalogue derived from a grid of questions; §5.1 the six layers L0 – L5; §5.2 "nothing to land on" (the gizmo on the facet's plane, marked) and "approached". ✅ **2026-11-17: the six layers ACCEPTED, to be tested; the catalogue's grid and §5.2's two words still owed.** ✅ **2026-11-22: the catalogue's grid and §5.2's two words ACCEPTED, to be tested** ([ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md) §2bis).
 4. Still ⏳ open (§5.2): C22 very long flat shapes; a piece wider than its facet (C24); C38 free-form; the layout's events at a pole (C41).
 
 ---

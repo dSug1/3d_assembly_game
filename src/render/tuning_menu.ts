@@ -341,6 +341,8 @@ export function installTuningMenu(st: SceneState): void {
         // ⭐ prototype (2026-10-12, *"create a slider for the power of the scaling distance"*)
         // ⭐ (2026-10-12, *"instead of power 3 for the quad scale, use a logarythm curve so that the quads and resting face grow faster when they are small"*) — the log curve's steepness (0 = a straight line)
         tunable(st, "resting-face quads: growth steepness (log curve) with the gizmo's distance", "quadGrowthLogK", 0, 50, 0.5),
+        // ⭐⭐⭐ (2026-11-22, `ORBIT_SURFACE_READOUT.md` §5 — S2) the landing map's P2 beside today's depth: the second ring and the HUD's `landing` line
+        tunable(st, "landing readout: P2 beside today's depth, ring + HUD line (1; 0 = 3b7a479)", "landingReadout", 0, 1, 1),
       ],
     },
     {

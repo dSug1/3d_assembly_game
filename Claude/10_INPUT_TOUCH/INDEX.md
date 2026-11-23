@@ -54,7 +54,8 @@ two days after it was hardened — **the circle fit had had no channel since**.
 
 ✅✅ **`IN9` CLOSED (2026-09-14)** — the two CAMERA-ONLY rules, which needed no object
 model and so did not wait on `3D1`:
-* **rule 4, pinch zoom** (`pinch.ts`) — all five device checks passed.
+* ⛔ **rule 4, pinch zoom** — all five device checks passed, then **DELETED 2026-11-13** with the zoom;
+  `pinch.ts`'s radius guard is `camera_radius.ts` → [`spec/ZOOM_REMOVED_PINCH_APPROACH.md`](spec/ZOOM_REMOVED_PINCH_APPROACH.md).
 * **rule 1, orbit** (`orbit.ts`, `barycentre.ts`) — three defects found by finger and
   fixed, including a **composition nobody had computed**.
 

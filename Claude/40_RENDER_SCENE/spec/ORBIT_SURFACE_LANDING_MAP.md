@@ -269,7 +269,8 @@ and not measured.
   coordinates, metres (never the swaying meshes). A piece with no volume is named in `refused`: look at it.
 * "Nothing to land on" is a kind: the wiring puts the gizmo on the facet's plane and marks it (§5.2 of the specification).
 * In contact range, read FROM the piece's depth (P2 ⑤): `inside` there means the piece already overlaps — the collision's matter (P5), not a landing.
-* Rebuild at a pick-up, a turn of the piece, a seat, a frame change: the function keeps no state.
+* Rebuild at a pick-up, a turn of the piece, a change of resting face (⭐ 2026-11-22, the S2 audit: a tapped face moves the reference point with no
+  turn — [ORBIT_SURFACE_READOUT.md](ORBIT_SURFACE_READOUT.md) §13.7), a seat, a frame change: the function keeps no state.
 * The cost (§10.4) decides the representation before anything drives the gizmo; the readout beside today's depth on `Scene_1` comes first
   (the specification §6).
 * `LANDING_STEP_MM` moves to `src/core/units.ts`, and the `PENDING` line leaves `tests/unwired_debt.test.ts` once something calls the map
@@ -303,3 +304,5 @@ lookup's error (§6 (a) – (c) fall away). A tile round the gizmo (the third op
 ⚠ To settle at the wiring step, after ONE measurement on a phone (none exists). The specification's sentence "one height map per facet
 direction … each frame a lookup" (§2.2 P2, its cost) is rewritten then; the rule P2 does not change. The grid and `landing` (the lookup) would
 then serve the vectors and the offline comparison only.
+✅ **2026-11-22, the owner: no grid for the readout, its cost timed on the HUD** — the phone measurement is taken by the readout itself
+([ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md) §2bis).

@@ -2,7 +2,7 @@
 
 > **STATUS** · live · **OWNS** · what gets built next, for the whole project
 > **READ IF** · you are starting any build, or wondering where an item stands
-> **LAST VERIFIED** · 2026-09-28
+> **LAST VERIFIED** · 2026-11-22 (YOU ARE HERE, `RND5`–`RND8`) · 2026-09-28 (the other rows)
 
 ⛔ **THIS IS THE ONLY QUEUE.** Do not start a second list anywhere else, and do not reorder it.
 
@@ -14,13 +14,11 @@ record. **A status changes in BOTH places or neither.**
 
 ---
 
-## ⭐⭐⭐ YOU ARE HERE (2026-11-22, branch `1.0.156-Orbit-surface` in the MAIN folder, live main `40b8095` = `b21b667`)
+## ⭐⭐⭐ YOU ARE HERE (2026-11-22 evening, branch `1.0.158from1.0.157-Orbit_surface` in `../orbit_surface`, live main `3b7a479` = `2cd1be34`)
 
-⭐⭐⭐ **THE ORBIT CLOSED (2026-11-22, his word)** — *"the orbit charts and camera follow work is closed and this is the best implementation so far"*: LIVE main `40b8095` = `b21b667` (`1.0.155-Orbits-finalized`; its last change D-H20 → [`CAMERA_FOLLOWS_GIZMO.md`](../40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md) §19) — the reference never to regress; **2308 vectors**; what was still listed for the orbit is no longer owed.
-⭐⭐⭐ **2026-11-22 evening — his amendment's ROOT on his PC records** (the gizmo waiting at the edges: R5's jump read between two places, a pace threshold) →
-D-H23 (the jump at one place) + D-H24 (the taut leash at his pace) built and gated on `1.0.156-` (local, NOT deployed; revert `ea3a28a1`) → [`CAMERA_FOLLOWS_GIZMO.md`](../40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md) §20.
-⭐⭐⭐ **NEXT: THE ORBIT SURFACE WORK** on `1.0.156-Orbit-surface` (the main folder, the only worktree) → [`queue_notes/HANDOVER_2026-11-22_orbit_surface.md`](queue_notes/HANDOVER_2026-11-22_orbit_surface.md) — ask him `ORBIT_SURFACE.md` §8's questions again first; then RND6.
-⭐ The lines of 2026-11-22 morning (the merge, D-H20 built and deployed) moved → [`history/2026-11-22_queue_orbit_closed_moved.md`](history/2026-11-22_queue_orbit_closed_moved.md).
+⭐⭐⭐⭐ **THE BEST IMPLEMENTATION OF THE ORBIT SO FAR (2026-11-22 evening, his word)** — branch `1.0.156-Orbits_with_camera_follow_final`, LIVE main `3b7a479` = `2cd1be34`: the orbit closed this afternoon (`40b8095`, branch `1.0.155-Orbits_with_camera_follow_1`) + D-H23 + D-H24 → [`CAMERA_FOLLOWS_GIZMO.md`](../40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md) §20 — the reference never to regress; **2321 vectors**.
+⭐⭐⭐ **NOW: THE ORBIT SURFACE WORK** (`RND7`) on `1.0.158from1.0.157-Orbit_surface` in the worktree `../orbit_surface` (from `1.0.157-Orbit_surface`, pushed) → [`queue_notes/HANDOVER_2026-11-22_orbit_surface.md`](queue_notes/HANDOVER_2026-11-22_orbit_surface.md); §8's questions answered (`ORBIT_SURFACE_BUILD.md` §2bis), the readout next; then RND6.
+⭐ The lines of 2026-11-22 (the merge, D-H20; the orbit closed; D-H23 + D-H24) moved → [`history/2026-11-22_queue_orbit_closed_moved.md`](history/2026-11-22_queue_orbit_closed_moved.md), [`history/2026-11-22_queue_evening_moved.md`](history/2026-11-22_queue_evening_moved.md).
 ⭐ The lines of 2026-11-19 (LIVE `675ec23`, the upright law U, option 3) moved → [`history/2026-11-22_queue_status_moved.md`](history/2026-11-22_queue_status_moved.md).
 ⭐ The lines of 2026-11-18 (LIVE `4eabab8`, FO3, the upright study, NEXT) moved → [`history/2026-11-18_queue_status_moved.md`](history/2026-11-18_queue_status_moved.md).
 ⭐⭐⭐ **`12dc4b6` is the best orbit before the charts** (the owner, 2026-11-12). The status lines of 2026-11-12 to 2026-11-14 (the slide's rebuild, no zoom, the cleaned sliders, the pick-up flow, the browser guards) moved → [`history/2026-11-18_queue_status_moved.md`](history/2026-11-18_queue_status_moved.md).
@@ -40,7 +38,7 @@ md, commits, deploys only when asked; deploy = push the branch, merge `--no-ff` 
 3. ⚠ `D47`'s pull-apart break (`3D3`) and the approach (`3D2`) — specified, not built.
 4. ⚠ **Prototype `1.0.58b-`** → `DOUBLE_ORBIT_PROTOTYPE.md`; its demo path drives the box, `DEMO_SCENE.md` §7. ⭐ (2026-10-14) it IS the main line — see the block above.
 5. ⛔ **THE LAUNCH MESSAGES SHEET** — not built; its texts in `render/browser_guards.ts` → [`BROWSER_GUARDS.md`](../10_INPUT_TOUCH/spec/BROWSER_GUARDS.md) §3.
-6. ✅ **The orbit — CLOSED** (2026-11-22, his word; `40b8095` the best so far): what it still listed is no longer owed (future improvements, on his word); the surface work next, then RND6 → [`HANDOVER_2026-11-22_orbit_surface.md`](queue_notes/HANDOVER_2026-11-22_orbit_surface.md), [`RND5.md`](queue_notes/RND5.md).
+6. ✅ **The orbit — CLOSED** (2026-11-22, his word; the best so far `3b7a479`): what it still listed is no longer owed (future improvements, on his word); the surface work next (`RND7`), then RND6 → [`HANDOVER_2026-11-22_orbit_surface.md`](queue_notes/HANDOVER_2026-11-22_orbit_surface.md), [`RND5.md`](queue_notes/RND5.md).
 ⭐ The 2026-09-17 version of this list (white contours, shakes, two undos, `FOLLOW`) is spent → [`history/2026-09-27_queue_spent_blocks.md`](history/2026-09-27_queue_spent_blocks.md).
 
 ### ⛔⛔⛔ THE 2026-09-17 AUDIT — the first defects found by READING, and a device look is owed
@@ -82,7 +80,7 @@ fork C."*
 
 ⭐ Its 2026-09-16 table (any tap flips the mode; a second finger picks roll *or* depth) is spent: the toggle narrowed (`D108`), an aligned body is mode-less, the second finger lifts + spins (`D123`) → [`INPUTS_TABLE.md`](../10_INPUT_TOUCH/spec/INPUTS_TABLE.md).
 
-⛔⛔ **DELETED, NOT DISABLED**: `holderDrive`⛔⛔ **DELETED, NOT DISABLED**: `holderDrive`, the flag, its latch, the menu slider,
+⛔⛔ **DELETED, NOT DISABLED**: `holderDrive`, the flag, its latch, the menu slider,
 `assignment.ts` (→ `mode_toggle.ts`) and **44 vectors**. ⭐ A dormant fork is a trap, and a
 tunable nothing reads is what `config_debt.test.ts` refuses.
 ⛔⛔ **AND IT RETIRED `A14` AND `A12` BY CONSTRUCTION** — the grace existed only because the
@@ -301,8 +299,10 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | RND2 | Mate preview: ghost + drop line | RND | render | queued | 3D2 |
 | RND3 | Anchor ring during two-touchpoint gestures (§4) | RND | render | queued | IN2 |
 | RND4 | Off-screen target indication — Halo / Wedge | RND | render | queued. ⭐ Not general polish: **6ter needs BOTH objects selected**, and at close zoom the partner is routinely off-frame, so the gesture becomes unreachable with nothing to say why. Curvature (Halo) or a tapered wedge encodes direction AND distance without a camera snap. ⚠ Audience includes youth — cap the indicator count. Prior art: Baudisch & Rosenholtz CHI 2003; Gustafson et al. CHI 2008 | 3D1, IN4 |
-| RND5 | ✅ Orbit on charts | RND | feature | ✅ CLOSED 2026-11-22 (his word): the charts and the camera follower, LIVE `40b8095` the best so far; step 3, FO3 no longer owed; step B → the orbit surface work → `queue_notes/RND5.md` | — |
+| RND5 | ✅ Orbit on charts | RND | feature | ✅ CLOSED 2026-11-22 (his word): the charts and the camera follower; the best so far LIVE `3b7a479` (+ D-H23, D-H24); step 3, FO3 no longer owed; step B → `RND7` → `queue_notes/RND5.md` | — |
 | RND6 | ⛔ Black canvas on iPhone: WebGL context lost, never restored; Safari dead until force-quit | RND | defect | diagnosed to `Scene_2`'s loads (≈ 4th reload); mechanism probable; ⛔ no fix built — the owner's instruction; ⏸ worked on AFTER the orbit surface work (2026-11-22) → `queue_notes/RND6.md` | — |
+| RND7 | ⭐ The orbit's surface — where the gizmo travels (the landing map, the entry sets, the reach check) | RND | feature | 🔧 S2 the readout BUILT, GATED (2026-11-22 night): G1 bit for bit, G3 one finding — his look owed; branch `1.0.158from1.0.157-Orbit_surface` → `queue_notes/RND7.md` | RND5 |
+| RND8 | ⛔ The surface study's findings handed over: F17 and the mouth's lip (the orbit's), the drop into a slot in contact range (the contact's) | RND | defect | open since 2026-11-16 (`ORBIT_SURFACE.md` §2.2 P1, P5); none decided — the orbit is closed: his word → `queue_notes/RND8.md` | RND7 |
 
 ## Phase DEP — build and deployment
 

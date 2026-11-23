@@ -68,6 +68,11 @@ export interface HudFields {
    * was, the canvas's size and its buffer's, the WebGL context (`formatDrawState`). ⚠ Its numbers come FIRST on the line: a phone cuts a line's end.
    */
   readonly draw: string;
+  /**
+   * ⭐⭐⭐ (2026-11-22, S2 — `ORBIT_SURFACE_READOUT.md` §2, §6) THE READOUT: P2 beside today's depth at the gizmo's place (Δ, the part touched or nothing,
+   * `band`) and its own cost (the preparation's last and worst over 2 s, the query's mean, the facets prepared). Empty: no line (`landingReadout` 0).
+   */
+  readonly landing: string;
 }
 
 export interface Hud {
@@ -173,6 +178,8 @@ DRAWFAULT ${text}`;
         // ⭐ prototype (green box), the owner 2026-10-02: *"in the HUD, after motion, add a line with the distance of the green
         // piece to yellow orbit center"*.
         `green     ${f.green}`,
+        // ⭐⭐⭐ (2026-11-22, S2) the readout's line — none at `landingReadout` 0
+        ...(f.landing === "" ? [] : [`landing   ${f.landing}`]),
         // ⛔⛔ THE ROLL LINE IS GONE, AND IT WAS WORSE THAN DEAD. It showed
         // `RollDetector`'s swept angle — the CIRCULAR roll `A12` retired — so a circular
         // drag made degrees accumulate on the HUD while nothing on screen rolled. ⭐ An

@@ -126,6 +126,11 @@ export interface SceneState {
   greenBox: Mesh | null;
   /** ⭐ Prototype: the pink ring at the yellow target (`pinkRingFrame`). */
   pinkRing: LinesMesh | null;
+  /** ⭐⭐⭐ (2026-11-22, S2 — `ORBIT_SURFACE_READOUT.md`) THE READOUT's state (`render/landing_readout.ts`): its cache, the frame's readout, its cost — `null`
+   *  until its first frame at `landingReadout` 1. ⛔ Nothing in the frame reads it: the HUD's `landing` line and its ring only */
+  landing: import("./landing_readout").LandingReadoutState | null;
+  /** ⭐ …its ring (white: land, magenta: nothing to land on), drawn by the gizmo ring's path (`landingMarkerFrame`) */
+  landingMarker: LinesMesh | null;
   /** ⭐ Prototype: the pieces the orbit can carry — [0] the green frustum, [1] the turquoise hexagonal prism — each with its logical
    * face count (read at creation) and volume (the inertia's); the one in use is `greenBox` (`spawnOrbitPiece`). */
   orbitPieces: {
@@ -555,8 +560,9 @@ export interface SceneState {
   asmGizmoAt: Vec3 | null;
   /** ⭐⭐⭐ (2026-11-11) the rig's base behind its target along the gizmo's face — the ring and its sections drawn by it (`gizmoLag`); none: at the exact point */
   asmGizmoLag: Vec3 | null;
-  /** ⭐ the placed parts' model vertices and each mesh's model-space box (the casts' pre-reject), per placed set */
-  asmParts: { readonly key: string; readonly parts: readonly (readonly Vec3[])[]; readonly boxes: ReadonlyMap<AbstractMeshT, import("../input/ray_box").Box3> } | null;
+  /** ⭐ the placed parts' model vertices and each mesh's model-space box (the casts' pre-reject), per placed set — ⭐ (2026-11-22, S2) and each body's
+   *  part id (`ids`, parallel to `parts`: the readout's `ConvexPiece`s) */
+  asmParts: { readonly key: string; readonly parts: readonly (readonly Vec3[])[]; readonly ids: readonly string[]; readonly boxes: ReadonlyMap<AbstractMeshT, import("../input/ray_box").Box3> } | null;
   /** ⭐ (2026-11-04, the audit) the placed set's key and meshes, once a frame */
   asmKey: { readonly frame: number; readonly world: import("../core/object_model").World; readonly count: number; readonly key: string; readonly meshes: readonly AbstractMeshT[] } | null;
   /** ⭐ (2026-11-04, the audit) the parts a cast reads (pose, drawn place and turn, model box), once a frame */

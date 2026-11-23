@@ -25,3 +25,10 @@ export function mmToPx(mm: number): number {
 export function pxToMm(px: number): number {
   return (px / CSS_PX_PER_INCH) * MM_PER_INCH;
 }
+
+/**
+ * ⭐ THE LANDING MAP'S GRID STEP — millimetres of the MODEL (not of the screen), converted at its use (`core/landing_map.ts`; `ORBIT_SURFACE.md` §5.1).
+ * ⭐ (2026-11-22, package S2 — `ORBIT_SURFACE_BUILD.md` §6) its home here once the map is wired: one constant, one place. ⚠ The readout (S2) prepares the
+ * sums with no grid (`prepareLanding`): the step serves `buildLandingMap` — the vectors and the offline comparison.
+ */
+export const LANDING_STEP_MM = 4;

@@ -1116,3 +1116,18 @@ Six play records on his PC (the dev server with `#rec`, `src/render/play_recorde
 * **Owed**: his device look (iPhone and PC — rule 5); the deploy on his word. Open, not studied: the frames the gizmo still stands while his mouse
   moves (14 – 69 a record — other holds: the real crossing's turn, the dy hold, the mouth hold, the map's own catch-up); whether he wants the camera capped
   at 520°/s even when he spins faster (a new rule — his word); close in unchanged. The revert point: `ea3a28a1` (docs only past `40b8095`'s code).
+
+### 20.10 DEPLOYED (his word *"update the md files, deploy"*, 2026-11-22 16:49Z)
+LIVE main **`3b7a479`** = `2cd1be34` (branch `1.0.156-Orbit-surface`, pushed): D-H23 + D-H24 on by default. To compare on the device: THE EDGE'S TURN —
+`followJumpAtPlace` 0 = `40b8095` (the waits back); `followLeashPace` 0 = D-H23 alone. ⛔ Owed: his device look (iPhone and PC — rule 5). `40b8095`
+stays the orbit's reference (`UPRIGHT_LESSONS.md` §3) until his verdict on `3b7a479`.
+
+### 20.11 HIS VERDICT (2026-11-22 evening) — THE BEST IMPLEMENTATION OF THE ORBIT SO FAR
+*"rename branch 1.0.155-Orbits-finalized to 1.0.155-Orbits_with_camera_follow_1 in remote and local. rename branch 1.0.156-Orbit-surface to 1.0.156-Orbits_with_camera_follow_final in remote and local. Mark in the md files that this branch is the best implementation of the orbit so far. then create branch 1.0.157-Orbit_surface and move to this new branch."* → branch **`1.0.156-Orbits_with_camera_follow_final`** (the `1.0.156-Orbit-surface` of §20.1 – §20.10, renamed; pushed), LIVE main **`3b7a479`** = `2cd1be34`, is the best implementation of the orbit so far — the reference ([`UPRIGHT_LESSONS.md`](UPRIGHT_LESSONS.md) §3); `40b8095` is on `1.0.155-Orbits_with_camera_follow_1` (the `1.0.155-Orbits-finalized` of §19). §20.9's open points (the waits left, a cap at 520°/s over his own spins) are future improvements, on his word. Next: the orbit surface work on `1.0.157-Orbit_surface` ([`ORBIT_SURFACE.md`](ORBIT_SURFACE.md)).
+
+### 20.12 A KNOWN LIMIT OF D-H23 — for the surface work (2026-11-22 evening)
+D-H23 tells one calm source from another by its NORMAL (`calmSourceKey`): on today's faceted charts the normal steps only at an edge, so the crossing
+search (`placeCrossings`: 6 samples, 8 halvings, each a `calmTargets` run on a copy of the state) runs only on the frames that cross one. The charts'
+step B ([`ORBIT_CHARTS.md`](ORBIT_CHARTS.md) §5.3 — the normal of the shape with its edges rounded, part of the surface work, `RND7`) would make the
+normal change on every moving frame: the search would run every frame, its jumps near 0. ⛔ Before step B is wired: re-key the source (the facet,
+the band) or bound the search, and measure on his play records → [`ORBIT_SURFACE_BUILD.md`](ORBIT_SURFACE_BUILD.md) §9.

@@ -4,6 +4,8 @@
 > and what it carries besides its look — stage W2 / W3 of the scene workflow
 > **READ IF** · you are deriving a scene's geometry from its assembly plan, or modelling, importing or checking a part
 > **LAST VERIFIED** · 2026-11-12 (branch `1.0.124from1.0.121-Added_scene_2`) · ⭐ §6 (the playability checks) APPROVED 2026-11-16, to be tested
+> ⭐ §6.4 — ⛔ THE DRAWING RULES the orbit's surface work teaches (the owner, 2026-11-22: written so the parts' drawing in Blender can be automated;
+> the rule and its form: `../../20_GAME_RULES/spec/SCENE_WORKFLOW.md` §10)
 
 ⭐ The process this serves: [`../../20_GAME_RULES/spec/SCENE_WORKFLOW.md`](../../20_GAME_RULES/spec/SCENE_WORKFLOW.md) — the ASSEMBLY PLAN (W1) comes first,
 and everything here is DERIVED from its steps: a seat, a gizmo route, an insertion of the plan is what makes a part carry a face, a connector or a
@@ -335,7 +337,8 @@ Blender; Blender previews it. Each moving piece's PIVOT is authored where the fo
 > ⛔ **SPECIFIED, NOT BUILT**: no Blender script and no game-side check below exists yet — ⭐ but **B4's computation, BUILT 2026-11-17** as a
 > script run on the exported `.glb`, for any scene (`scripts/surface/check_parts_reach_their_seat.ts` → `SCENE_WORKFLOW.md` §8; its colours in
 > Blender and *"a direction starts at a place"* are not built). ⛔ **THE RULE** (the owner, 2026-11-17): every finding of the orbit's surface
-> rebuild gets its check in a script run in the scene workflow → `SCENE_WORKFLOW.md` §9. **First**: B1, B2, B4; **once the landing map exists** (the
+> rebuild gets its check in a script run in the scene workflow → `SCENE_WORKFLOW.md` §9; ⛔ and (the owner, 2026-11-22) every lesson of it a
+> RULE — about drawing a part, in §6.4 → `SCENE_WORKFLOW.md` §10. **First**: B1, B2, B4; **once the landing map exists** (the
 > game's L2, [ORBIT_SURFACE.md](../../40_RENDER_SCENE/spec/ORBIT_SURFACE.md) §5.1): B3, B5; B6 beside them. The brief they read: [`../../20_GAME_RULES/spec/SCENE_WORKFLOW.md`](../../20_GAME_RULES/spec/SCENE_WORKFLOW.md) §7.1.
 > The rule numbers (S…, P…) are [ORBIT_SURFACE.md](../../40_RENDER_SCENE/spec/ORBIT_SURFACE.md)'s.
 
@@ -380,3 +383,16 @@ placed parts' and the part's face normals (a tight slot's single direction is mi
 8. Symmetric, or obviously not: a look-alike turn declared in the catalogue (`SCENE_WORKFLOW.md` §2.3 rule 7).
 9. Nothing placed inside what is already closed; no step that needs a turn mid-path (B4).
 10. Each exposed face is a place, or listed with its reason (S24, B5).
+
+### 6.4 ⛔ The drawing rules the orbit's surface work teaches — the register (the owner, 2026-11-22)
+
+⭐ His words and the rule: `../../20_GAME_RULES/spec/SCENE_WORKFLOW.md` §10 — every lesson of the surface work becomes a rule of construction
+(there, §10.3) or of DRAWING (here), in the form of its §10.2 so that a Blender script can apply it; its check by its §9; its row in
+`../../40_RENDER_SCENE/spec/ORBIT_SURFACE_BUILD.md` §8. ⭐ §6.3's ten lines are the first drawing rules (2026-11-16): each is put into this form
+when a build script first applies it.
+
+| id | lesson (where) | stage | reads | parameters (unit, home) | the rule | its check | status |
+|---|---|---|---|---|---|---|---|
+| **D1** | A goal entered along ONE axis needs the ghost and the plunge (S0 finding 2: the six pistons, 1.9° – 2.7°; ledger row 2) | W2, W3 | the goal's entry set (B4); the brief's `entry_narrow`, `entry_small` | NARROW: the set's widest opening under 10° — PROVISIONAL, the check's own (`NARROW_DEG`, `check_parts_reach_their_seat.ts`), his word with B4 | give every NARROW goal a ghost at its mouth along each narrow axis and sense, with `plunge_axis`, `plunge`, `plunge_to` (§3 item 3); none where the set is wide | the reach check — WARN: NARROW, and says when no ghost is authored | WRITTEN (§6.2, §6.3 item 2); checked |
+| **D2** | Ghosts and seat markers ended 2 – 17 mm from the collision pieces (S0 finding 3; ledger row 3) | W3 | the part's `UCX_` pieces at its goal pose (§3 item 5) | a ghost's tolerance 1 mm (`GHOST_MM`, the check's own); a seat pair within 0.1 mm and 0.1° (`PAIR_MM`, `PAIR_DEG`, the check's own; §3 item 4) | DERIVE the ghost (the pre-insertion pose, by withdrawal along its axis) and the seat markers from the collision pieces at the goal pose — never placed by hand; the drawn mesh at the same pose | the reach check — WARN: a ghost off by more than 1 mm; ⏳ against the drawn meshes: B1 | WRITTEN (§3 item 3: *one source of truth, the goal pose*); half checked — ⏳ B1 later, with `Scene_2` |
+| **D3** | Two pistons stopped 1.4 mm short of their pin (S0 finding 4; ledger row 4) | W3 | the part's `UCX_` at its goal; the placed parts' | the contact skin (`collisionSkinMm`, `gestureConfig.ts`, mm on the glass, converted as `collision_wiring.ts` does) | at its goal a part's collision pieces TOUCH what it seats on (a gap within the skin) and sit INSIDE no placed piece | the reach check — WARN: touches no placed part / sits INSIDE a placed piece | WRITTEN (here); checked |

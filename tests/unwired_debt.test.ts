@@ -114,7 +114,10 @@ const PENDING: Record<string, string> = {
   // ⭐ `D170`: run at BUILD time, not in the product — `scripts/gen_demo_plan.ts` writes the committed plan the
   // product plays, and `d170_regenerate.test.ts` regenerates it to prove the data is still the generator's.
   generateDemoPlan: "build-time only — `scripts/gen_demo_plan.ts` writes `content/scene1_demo_plan.ts` (D170)",
-  buildLandingMap: "S1 (`ORBIT_SURFACE_BUILD.md`) — the landing map L2, pure and vectored, NOT wired until orbit_charts is merged: first a readout beside today's depth on Scene_1",
+  // ⭐ (2026-11-22, S2 — `ORBIT_SURFACE_READOUT.md` §13) the readout WIRED the map's sums and exact evaluation with NO GRID (`prepareLanding`, read by
+  // `render/landing_readout.ts`; `prepareLanding`, `readoutAt`, `readoutKey`, `landingAxes`, `heldPiece` left this list with it) — the GRID stays unwired
+  // by his answer (no grid, `ORBIT_SURFACE_BUILD.md` §2bis), so this line stays, its reason rewritten (⚠ the design expected it to leave: it cannot)
+  buildLandingMap: "S2 (`ORBIT_SURFACE_READOUT.md` §13) — the landing map's GRID: the readout reads its sums with no grid (`prepareLanding`); the grid serves the vectors and the offline comparison until the representation is chosen (`ORBIT_SURFACE_LANDING_MAP.md` §10.9)",
   // ✅ `qAngle` LEFT THIS LIST 2026-09-22 — `RotationFollower` reads it to decide a body has
   // ARRIVED at its detent, so it is wired and the guard reddened until this line was deleted.
   // ⭐ That is the second direction the list is asserted in: *a stale allowlist is the same lie

@@ -1,7 +1,9 @@
 # THE ORBIT'S SURFACE — THE BUILD, STARTED IN PARALLEL (2026-11-17)
 
 > ⭐⭐⭐ **2026-11-22:** §4's merges DONE (the charts and this branch merged into `1.0.154-`, `1.0.146b-` too); the orbit charts and the camera follower
-> CLOSED (his word; LIVE `40b8095`); the surface work starts on `1.0.156-Orbit-surface` — S0 and S1 built offline, the landing map NOT wired yet.
+> CLOSED (his word; LIVE `3b7a479`, the best so far); the surface work starts on `1.0.157-Orbit_surface` — S0 and S1 built offline, the landing map NOT wired yet.
+> ⭐⭐⭐ **2026-11-22 evening — THE OWED QUESTIONS ASKED, ALL FOUR ANSWERED (§2bis).** The work moves to the worktree `../orbit_surface`, branch
+> `1.0.158from1.0.157-Orbit_surface`. Next: the READOUT (the specification's §6, item 1), its design written for his look before it is built.
 
 > **STATUS** · ⭐ **S0 and S1 LAUNCHED 2026-11-17** (Opus agents, a builder then an independent auditor each; local commits; **nothing wired, no existing
 > game file changed**). **OWNS** · the record of the surface build: the owner's words, the parallel rule, the merge order, each package as briefed and
@@ -26,12 +28,24 @@ with what was proposed to him (this record, then the landing map launched as an 
 | 2 | A goal's way in: is *"a free direction into the seat exists"* enough, or must the check also prove that the player can bring the piece to where that slide starts? | **The first test is enough for now**; the second once the landing map exists (it needs B3 and B5) |
 | 3 | The entry-set check was run on boxes only: run it on `Scene_2`'s real collision pieces before the first surface build? | **Yes** — package S0, before S1 |
 
+## 2bis. The four answers of 2026-11-22 (the surface work starts)
+
+Asked again: `ORBIT_SURFACE.md` §8 (its end) and the handover's *words still owed*, kept for this moment. He took each recommendation.
+
+| # | the question | his answer |
+|---|---|---|
+| 1 | The catalogue's grid (`ORBIT_SURFACE.md` §3.0) and §5.2's two words: *nothing to land on* (no contact along the facet's direction — the gizmo on the facet's plane, marked), *approached* (reached only by A + dy or a plunge) | **ACCEPTED — to be tested**, all three |
+| 2 | The reach check's thresholds NARROW (under 10°) and BESIDE (10 mm): decided now, or with B4? | **With B4.** Until then they stay the check's own provisional values: a warning, never a failure (§8 rows 2, 5) |
+| 3 | The readout's representation (`ORBIT_SURFACE_LANDING_MAP.md` §10.9: no grid, or the 4 mm grid as built) | **No grid, timed on the HUD**: the readout evaluates exactly at each query and prints its preparation and per-frame cost, so his first look on the phone is the measurement §10.9 asked for; the grid serves the vectors and the offline comparison |
+| 4 | `Scene_2`'s two questions: the ghosts and markers against the collision pieces (2 – 17 mm); the frozen plinth in the pick-up flow | **Later, with `Scene_2`**: before the plunge is built, or when `Scene_2` next runs with the charts (§8 rows 3, 6) |
+
 ## 3. The parallel rule — what keeps the merges clean
 
 * **Measured 2026-11-17:** this branch (`1.0.146s-Orbit-surface-spec`, from `1190db2`) and the charts' branch (`1.0.147-`) touch NO file in common, and
   a trial merge of the two (`git merge-tree`) is clean. This branch so far: its three documents, `scripts/probes/surface_study/` (new), and two
   workflow documents edited (`SCENE_WORKFLOW.md`, `PART_AUTHORING.md`).
-* ⛔ **THE RULE: until `orbit_charts` is merged into `3d_assembly_game`, this branch ADDS NEW FILES ONLY.** It edits no existing file but its own
+* ⛔ **THE RULE: until `orbit_charts` is merged into `3d_assembly_game`, this branch ADDS NEW FILES ONLY.** ✅ **LIFTED 2026-11-22** (the merges
+  done, §4): the wiring may now edit existing files — on the terms of §9. It edits no existing file but its own
   documents (`ORBIT_SURFACE*.md`). Where a test demands a one-line registration in an existing file, that line is the only exception, and it is
   listed in §6.
 * ⭐ **One exception, asked by the owner (2026-11-17)**: the check *can every part reach its seat?* kept as a permanent script and written into
@@ -68,6 +82,10 @@ exact from the convex collision pieces, one operation for voids and protrusions,
 given depth. Its vectors against a second implementation (the study's brute-force reading) on the study's shapes, for two pieces; the same after a
 shape is moved and turned, and for every order of its parts; each vector shown red on a mutant. Its cost measured (the time to build a map for a set
 like `Scene_1`'s), as a figure for the wiring step. A new file under `src`, a new test file, new helpers; nothing calls it yet.
+
+**S2 — the READOUT** (designed 2026-11-22; his word *"proceed"*: BUILT and GATED the same night — §7) → [ORBIT_SURFACE_READOUT.md](ORBIT_SURFACE_READOUT.md): the landing map at the
+gizmo's place every frame, exact (no grid), beside today's depth on `Scene_1` — a second ring and a HUD line with its cost; driving nothing; behind
+`landingReadout` (0 = `3b7a479` frame for frame).
 
 ## 6. Notes for the merges (filled by the packages)
 
@@ -136,8 +154,12 @@ like `Scene_1`'s), as a figure for the wiring step. A new file under `src`, a ne
   The three files typecheck clean (the project's settings; the only errors reported are two older ones in the study's own
   `scripts/probes/surface_study/shapes.ts`, which they import). ⚠ Built and checked by Fable alone, no second agent's audit; scripts are
   outside `npm run verify`.
+* ⭐ **S2 — BUILT 2026-11-22 (P1 `dfeb7ef9`, P2 `fafbde6b`, P2b `d21a4826` — on `Scene_1` only), the gates G1 – G3 OWED** → [ORBIT_SURFACE_READOUT.md](ORBIT_SURFACE_READOUT.md) §13.
+* ⭐ **S2 — AUDITED, FIXED (`e91d3e82`), GATED 2026-11-22 night** → [ORBIT_SURFACE_READOUT.md](ORBIT_SURFACE_READOUT.md) §13.7, §14: G1 bit for bit on his four
+  records at 1 and 0; G2 offline 2.5 – 6.6 ms a preparation, 2 – 4 preparations a record, ~3 µs a frame; G3 met on the top, ONE FINDING on the side
+  facets (P2 as held: half a piece out until the player aligns — his word, §8 row 9). His look owed (USB, or his deploy word).
 
-## 8. ⛔ FINDINGS → CHECKS: THE LEDGER (the owner's rule, 2026-11-17)
+## 8. ⛔ FINDINGS → RULES → CHECKS: THE LEDGER (the owner's rules, 2026-11-17 and 2026-11-22)
 
 > *"capture in the md files that any findings we learn from the orbit's surface rebuild needs its check to be integrated in a check script to be
 > run as part of the scene workflow. check_parts_reach_their_seat was the check script for the orbit chart to make sure each part reaches its
@@ -147,18 +169,40 @@ like `Scene_1`'s), as a figure for the wiring step. A new file under `src`, a ne
 **The rule in full:** [SCENE_WORKFLOW.md](../../20_GAME_RULES/spec/SCENE_WORKFLOW.md) §9 — every finding about a SCENE gets a check in a
 check script, run at the scene workflow's export gate, shown failing once, in the same change as the finding's record, and a row here.
 ⛔ **It binds every package's brief from now on**: each brief ends with *"what did this teach about how a scene must be drawn, ordered or
-marked? → its check, its control, its row in §8"*; a builder with nothing to add says so. One script or several: open
+marked? → its check, its control, its row in §8"*; a builder with nothing to add says so.
+⭐⭐ **WIDENED 2026-11-22 (the owner)** — *"also, make sure that you capture in the md files that any lesson learned in this orbit's surface work is captured for the scene construction workflow or the blender drawing workflow, so that later on I can automate the construction of the scene and the drawing of the parts in blender with rules which have incorporated those lessons learned."* → every lesson first a RULE of construction or drawing
+(`SCENE_WORKFLOW.md` §10: the form a script applies; the registers §10.3 and `PART_AUTHORING.md` §6.4), then its check; the column *its rule* below. One script or several: open
 (`SCENE_WORKFLOW.md` §9.3).
 
-| # | the finding (where it was learned) | what a scene must satisfy | its check | status |
-|---|---|---|---|---|
-| 1 | A part placed after what closes its seat cannot be placed (S0; the plan's rule 2 — `Scene_2`'s first plan slid the pistons in sideways) | at its stage every goal has a free straight way in, and the way in the scene names is free | `scripts/surface/check_parts_reach_their_seat.ts` — FAIL: SHUT, way in BLOCKED | ✅ built, shown failing (a head before its pistons) |
-| 2 | A goal entered along ONE axis needs the ghost and the plunge (S0, finding 2: the six pistons, 1.9° – 2.7°) | every narrow goal has a ghost with a plunge at its opening | the same — WARN: NARROW, and says when no ghost is authored | ✅ built; the threshold (10°) is the check's own: the owner's word owed |
-| 3 | Ghosts and seat markers end 2 – 17 mm from the collision pieces (S0, finding 3) | the plunge's depth and the collision pieces agree; the collision pieces follow the drawn part | the same — WARN: a ghost off by more than 1 mm. ⏳ Against the DRAWN meshes: B1 | ✅ the first half built; ⏳ B1 owed (to run before the plunge is built) |
-| 4 | Two pistons stop 1.4 mm short of their pin (S0, finding 4) | at its goal a part touches what it seats on and sits inside nothing | the same — WARN: touches no placed part / sits INSIDE a placed piece | ✅ built |
-| 5 | A way in free but 7.5° from a blocked direction; the smallest wide sets, 28° – 30° round the vertical (S0, findings 5, 6) | nothing to pass — facts for the owner's look | the same — WARN under 10°; each part's share and widest opening printed | ✅ built |
-| 6 | The orbited piece's collision ignores every FROZEN body, and `Scene_2`'s plinth is frozen (read in the code at the review; not seen in the game) | ⏳ to decide once seen in the game: the game's rule changes, or a scene's frozen parts other than its floor are reported | none yet | ⏳ owed — first to check in the pick-up flow |
-| 7 | The landing map's cost grows with the placed parts' convex pieces (S1: 36 – 270 ms a direction on `Scene_1` for a whole map) | ⏳ proposed: a budget per scene, once the wiring has chosen the map's representation | none yet (B3 will run the game's own function on the `.glb`) | ⏳ owed — after the wiring's choice |
-| 8 | The specification's own checks, from the shapes study: solids (B1), exposed per stage (B2), where each held piece first touches (B3), coverage (B5), features at a threshold (B6) | `PART_AUTHORING.md` §6.1, each with its pass rule | specified there | ⏳ not built — B1, B2 first; B3, B5 once the landing map is wired |
+| # | the finding (where it was learned) | what a scene must satisfy | its rule (`SCENE_WORKFLOW.md` §10) | its check | status |
+|---|---|---|---|---|---|
+| 1 | A part placed after what closes its seat cannot be placed (S0; the plan's rule 2 — `Scene_2`'s first plan slid the pistons in sideways) | at its stage every goal has a free straight way in, and the way in the scene names is free | **C1** (construction) | `scripts/surface/check_parts_reach_their_seat.ts` — FAIL: SHUT, way in BLOCKED | ✅ built, shown failing (a head before its pistons) |
+| 2 | A goal entered along ONE axis needs the ghost and the plunge (S0, finding 2: the six pistons, 1.9° – 2.7°) | every narrow goal has a ghost with a plunge at its opening | **D1** (drawing) | the same — WARN: NARROW, and says when no ghost is authored | ✅ built; the threshold (10°) is the check's own: his word with B4 (§2bis) |
+| 3 | Ghosts and seat markers end 2 – 17 mm from the collision pieces (S0, finding 3) | the plunge's depth and the collision pieces agree; the collision pieces follow the drawn part | **D2** (drawing) | the same — WARN: a ghost off by more than 1 mm. ⏳ Against the DRAWN meshes: B1 | ✅ the first half built; ⏳ B1 owed (to run before the plunge is built — later, with `Scene_2`: §2bis) |
+| 4 | Two pistons stop 1.4 mm short of their pin (S0, finding 4) | at its goal a part touches what it seats on and sits inside nothing | **D3** (drawing) | the same — WARN: touches no placed part / sits INSIDE a placed piece | ✅ built |
+| 5 | A way in free but 7.5° from a blocked direction; the smallest wide sets, 28° – 30° round the vertical (S0, findings 5, 6) | nothing to pass — facts for the owner's look | — facts for his look, no rule | the same — WARN under 10°; each part's share and widest opening printed | ✅ built |
+| 6 | The orbited piece's collision ignores every FROZEN body, and `Scene_2`'s plinth is frozen (read in the code at the review; not seen in the game) | ⏳ to decide once seen in the game: the game's rule changes, or a scene's frozen parts other than its floor are reported | **C3** — OWED | none yet | ⏳ owed — first to check in the pick-up flow (later, with `Scene_2`: §2bis) |
+| 7 | The landing map's cost grows with the placed parts' convex pieces (S1: 36 – 270 ms a direction on `Scene_1` for a whole map) | ⏳ proposed: a budget per scene, once the wiring has chosen the map's representation | **C2** — OWED | none yet (B3 will run the game's own function on the `.glb`) | ⏳ owed — after the wiring's choice |
+| 8 | The specification's own checks, from the shapes study: solids (B1), exposed per stage (B2), where each held piece first touches (B3), coverage (B5), features at a threshold (B6) | `PART_AUTHORING.md` §6.1, each with its pass rule | `PART_AUTHORING.md` §6.3's ten lines, put into §10.2's form when a build script applies them | specified there | ⏳ not built — B1, B2 first; B3, B5 once the landing map is wired |
+| 9 | On a side facet P2 (the piece AS HELD, resting face down) stands half the piece's size out: +22.5 mm across it, +51.8 mm along it (S2's G3 on his records, `ORBIT_SURFACE_READOUT.md` §14) | — a GAME rule's (P2's orientation), not a scene's | none — golden vectors once decided (`SCENE_WORKFLOW.md` §9.2) | none (a game rule) | ⏳ his word: (a) as held — recommended, (b) as it would land, (c) both |
+| 10 | The readout and the footprint support read each placed part as ONE convex body (S2's build, `ORBIT_SURFACE_READOUT.md` §13.8) | a part authored as data is convex | **C4** (construction) | ⏳ owed: its hull's volume = its mesh's | ⏳ the check owed |
 
 ⭐ Rows are ADDED by each package and by each look of the owner; a row leaves only when its check is built AND has been seen failing.
+
+## 9. THE TERMS THE CLOSED ORBIT SETS FOR THE WIRING (2026-11-22 evening — read before any wiring)
+
+* **The reference**: LIVE `3b7a479` (`1.0.156-Orbits_with_camera_follow_final`), the best implementation of the orbit so far
+  ([`UPRIGHT_LESSONS.md`](UPRIGHT_LESSONS.md) §3). Every wired step behind its own switch, 0 = that build frame for frame. The queue: `RND7` (this work),
+  `RND8` (the study's handed findings).
+* **Where the surface reaches the camera** (the camera is not reopened — [`ORBIT_SURFACE.md`](ORBIT_SURFACE.md) §0's scope): the map's place shown
+  (`asmShown`) → the calm's target (`calmTargets`) → the calm asked (`asmAskCalm`) → the far reading (`farAsked`) → the far follower (`followFarStep`);
+  and the gizmo's facet (`gizmoFacetW`). A change of the map, of the facets or of the calm's runs changes the camera's path — measured, never assumed.
+* ⚠ **D-H23 keys the calm's source on its NORMAL** (`calmSourceKey`, `farJumpAtRead` — [`CAMERA_FOLLOWS_GIZMO.md`](CAMERA_FOLLOWS_GIZMO.md) §20.6): a
+  surface whose calm normal varies continuously — the charts' step B ([`ORBIT_CHARTS.md`](ORBIT_CHARTS.md) §5.3, the normal of the shape with its edges
+  rounded), which belongs to this work ([`ORBIT_SURFACE.md`](ORBIT_SURFACE.md) §1.1) — makes every moving frame a change of source: the crossing search
+  (6 samples, 8 halvings, each a `calmTargets` run) every frame. Re-key the source (the facet, the band) or bound the search BEFORE step B is wired.
+* **The gates**: his PC play records replayed headless (the kit's `walk_r.mjs` / `drv_r.sh`: his window, his frame times, his events; six records of
+  2026-11-22 in `.recordings/`, git-ignored) — the switch at 0 identical to `3b7a479`'s replays (G1), and his symptoms at 1; the method:
+  [`CAMERA_FOLLOWS_GIZMO.md`](CAMERA_FOLLOWS_GIZMO.md) §20.1 – §20.9. Every finding about a scene becomes a check (§8).
+* **The code references** here and in [`ORBIT_SURFACE.md`](ORBIT_SURFACE.md) were read on `30f7bb3` / `1190db2`: re-read on the branch before building on
+  any (step 2.5 deleted the legacy zones and `chartLayout`; R6 twelve picture switches).

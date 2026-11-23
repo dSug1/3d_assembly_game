@@ -31,6 +31,7 @@ which no camera removes — a polar camera turns it into ONE yaw a pass (§5.5 o
 3 frames over 45° in 9 274): what jumped was the roll, and the yaw at a pole.
 
 ## 3. SOLVED — must never regress (his eye)
+⭐⭐⭐⭐⭐ **THE BEST IMPLEMENTATION OF THE ORBIT SO FAR (2026-11-22 evening, his word): LIVE `3b7a479` = `2cd1be34`, branch `1.0.156-Orbits_with_camera_follow_final`** — `40b8095` (below) + D-H23 (the far jump read at ONE place: no wait at an edge at any pace) + D-H24 (the taut leash at his finger's pace) ([`CAMERA_FOLLOWS_GIZMO.md`](CAMERA_FOLLOWS_GIZMO.md) §20): the reference that must never regress. `40b8095` is on `1.0.155-Orbits_with_camera_follow_1`.
 ⭐⭐⭐⭐ **THE ORBIT CLOSED (2026-11-22, his word): LIVE `40b8095` — *"the orbit charts and camera follow work is closed and this is the best implementation so far"*** — the picture's rebuild (R2, R3, R3-FIX, R5 on, R6) and D-H20 ([`CAMERA_FOLLOWS_GIZMO.md`](CAMERA_FOLLOWS_GIZMO.md) §19). Every later change is compared with it.
 ⭐⭐⭐ **The top and bottom far out on the follower (`ba369aa`, 2026-11-21): *"this is the best implementation of orbits chart so far"*** — superseding **the camera follower far out (`de4a10e`, 2026-11-20): *"This is very good"* — THE BEST IMPLEMENTATION OF THE ORBIT SO FAR** then
 ([`CAMERA_FOLLOWS_GIZMO.md`](CAMERA_FOLLOWS_GIZMO.md) §14, §17; what is open there: his two exceptions and the fixes F-1 – F-4, §17). The gizmo's travel (polar orbit and the tilted-pole orbit — what drives the piece and the gizmo is never reopened); the dy hold from the
