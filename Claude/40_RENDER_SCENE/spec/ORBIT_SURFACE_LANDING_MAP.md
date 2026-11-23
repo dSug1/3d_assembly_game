@@ -198,7 +198,7 @@ the full sort key of §5 gives by construction).
 | M4 the layers out of order (innermost first) | 3 |
 | M5 "nothing" returned as the plane's depth | 2 (the hole; the library) |
 | M6 a tie broken by array order (the ids not sorted) | 3 (ties; two order vectors) |
-| M7 the edge-against-edge facets left out | 1 (the slanted ridge) |
+| M7 the edge-against-edge facets left out | 1 (the slanted ridge); ⭐ 2 since 2026-11-23 (+ the DOME of `ORBIT_SURFACE.md` §5.3's shapes) |
 | M8 the lookup takes the lower corner | 1 |
 | M9 touching counted as overlap | 1 (the turned flush slot) |
 | M10 a tie on exactly equal floats only (the first build's rule) | 1 (the rigid motion on L26) |

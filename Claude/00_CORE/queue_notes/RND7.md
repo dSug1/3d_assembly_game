@@ -106,3 +106,5 @@
   refuses the rest; its guard `tests/data_parts_convex.test.ts` (95 bodies in 5 scenes; a new kind fails it until proved convex). Local.
 * **2026-11-23, night (later)** — the loop's items 2 and 4 (SCENE_WORKFLOW.md §11.2): `scene_gate.py` (a build script's call to the gate;
   not yet in `build_engine.py`) and the rules' constants as JSON for the Blender side (`rules_constants.json`, its staleness vector). Local.
+* **2026-11-23, night (later)** — `ORBIT_SURFACE.md` §5.3's missing shapes added to the landing map's vectors (a round hole through and blind,
+  a 12-sided cylinder, a dome, a thin bar, an oblique facet — against the brute force); M7 now 2 red; the brute's bound includes a corner's √2. Local.

@@ -270,3 +270,100 @@ describe("⭐⭐ S1 — INVARIANCE: a rigid motion; every order of the parts and
     });
   }
 });
+
+// ── ⭐ (2026-11-23 night — `ORBIT_SURFACE.md` §5.3: *"still to add: a round hole in one face (C19), a 12-sided cylinder and a dome (C15, C38), … long
+// flat shapes (C22), … facets other than the top and the front"*) the specification's missing shapes, each against the brute force, sample for sample ──
+const R6 = (deg: number) => (deg * Math.PI) / 180;
+/** a ROUND HOLE through the block's top (radius r, a 24-gon, centred at (cx, cz), `depth` deep): 24 convex wedges — each the sector between two
+ * of its chords' rays, cut by the chord, bounded by the block's square */
+function roundHole(r: number, cx: number, cz: number, depth: number): Part[] {
+  const N = 24, B = 240, y0 = 240 - depth;
+  const parts: Part[] = withVoids([]).length === 1 && depth < 240 ? [bx("floor", -B, B, 0, y0, -B, B)] : [];
+  const ray = (a: number): [number, number] => {
+    const dx = Math.cos(a), dz = Math.sin(a);
+    const t = Math.min(dx !== 0 ? (dx > 0 ? (B - cx) / dx : (-B - cx) / dx) : Infinity, dz !== 0 ? (dz > 0 ? (B - cz) / dz : (-B - cz) / dz) : Infinity);
+    return [cx + dx * t, cz + dz * t];
+  };
+  for (let k = 0; k < N; k++) {
+    const a0 = (2 * Math.PI * k) / N, a1 = (2 * Math.PI * (k + 1)) / N;
+    const poly: [number, number][] = [[cx + r * Math.cos(a0), cz + r * Math.sin(a0)], [cx + r * Math.cos(a1), cz + r * Math.sin(a1)], ray(a1)];
+    for (const [qx, qz] of [[B, B], [-B, B], [-B, -B], [B, -B]] as const) {
+      const aq = (Math.atan2(qz - cz, qx - cx) + 2 * Math.PI) % (2 * Math.PI);
+      if (aq > a0 && aq < a1) poly.push([qx, qz]);
+    }
+    poly.push(ray(a0));
+    parts.push(hullPart(`w${String(k).padStart(2, "0")}`, poly.flatMap(([x, z]): [number, number, number][] => [[x, y0, z], [x, 240, z]])));
+  }
+  return parts;
+}
+/** a 12-sided CYLINDER lying along x on the block's top (radius r, centred at z = cz), a face up */
+const cylinder12 = (r: number, cz: number): Part => {
+  const pts: [number, number, number][] = [];
+  for (let k = 0; k < 12; k++) {
+    const a = R6(15 + 30 * k); // a face up: vertices at ±15° off the vertical
+    for (const x of [-120, 120]) pts.push([x, 240 + r + r * Math.cos(a), cz + r * Math.sin(a)]);
+  }
+  return hullPart("cyl", pts);
+};
+/** a DOME on the block's top: the upper half of a sphere (radius r, at (cx, cz)), its points every 22.5° — a convex polyhedron */
+const dome = (r: number, cx: number, cz: number): Part => {
+  const pts: [number, number, number][] = [];
+  for (let el = 0; el <= 90; el += 22.5) for (let az = 0; az < 360; az += 22.5) pts.push([cx + r * Math.cos(R6(el)) * Math.cos(R6(az)), 240 + r * Math.sin(R6(el)), cz + r * Math.cos(R6(el)) * Math.sin(R6(az))]);
+  return hullPart("dome", pts);
+};
+/** compare the map with the brute force over a frame's every sample (pieces A and B) — the places and the 'nothing's counted */
+function againstBrute(parts: Part[], f: { n: [number, number, number]; t: [number, number, number]; b: [number, number, number] }, u0: number, u1: number, v0: number, v1: number) {
+  let places = 0, nothing = 0;
+  // the brute force's own convention — its footprint shrunk by 1e-4 mm, so on a slope its level drops by 1e-4 mm × the slope: the bound from THIS shape's
+  // steepest facet facing the frame (a fixed knife's 85 / 15 was the library's; a dome's hull triangles are steeper)
+  let maxTan = 0;
+  for (const pt of parts) for (const pl of pt.planes) {
+    const c = pl.n[0] * f.n[0] + pl.n[1] * f.n[1] + pl.n[2] * f.n[2];
+    if (c >= 0.1) maxTan = Math.max(maxTan, Math.sqrt(Math.max(0, 1 - c * c)) / c);
+  }
+  // (its footprint shrinks along BOTH its axes: a CORNER moves 1e-4 · √2 along its diagonal — the dome's band, slope 5.03, read 7.1e-4 mm: exactly that)
+  const SHRINK = maxTan * Math.SQRT2 * 1e-4 * M + TOL_M;
+  for (const pc of [PIECE_A, PIECE_B]) {
+    const map = buildLandingMap(toConvex(parts), [boxHeld(pc, f)], frameOf(f, u0, u1, v0, v1), 8);
+    for (let i = 0; i < map.nu; i++)
+      for (let j = 0; j < map.nv; j++) {
+        const l = map.landingSample(i, j), L = map.uAt(i) / M, sv = map.vAt(j) / M;
+        const br = bruteLanding(parts, f.n, f.t, f.b, L, sv, pc);
+        places++;
+        if (br.nothing) {
+          nothing++;
+          expect(l.kind, `${pc.name} (${L}, ${sv})`).toBe("nothing");
+          continue;
+        }
+        expect(l.kind, `${pc.name} (${L}, ${sv})`).toBe("land");
+        const d = (l as { depth: number }).depth - br.level * M;
+        expect(d, `${pc.name} (${L}, ${sv})`).toBeGreaterThanOrEqual(-TOL_M);
+        expect(d, `${pc.name} (${L}, ${sv})`).toBeLessThanOrEqual(Math.max(SHRINK, OPEN_SHRINK_M));
+      }
+  }
+  return { places, nothing };
+}
+
+describe("⭐⭐ §5.3 — the specification's missing shapes, each against the brute force", () => {
+  it("C19 — a ROUND HOLE through the top (ø 70, 24 convex wedges): nothing to land on where a piece fits inside it, the rim where it does not", () => {
+    const r = againstBrute(roundHole(35, 0, 0, 240), TOP_F, -120, 120, -120, 120);
+    expect(r.places).toBeGreaterThan(1000);
+    expect(r.nothing).toBeGreaterThan(0);
+  });
+  it("C19 — a round BLIND hole (ø 70, 40 deep): its floor where a piece fits, the rim elsewhere — never nothing", () => {
+    const r = againstBrute(roundHole(35, 0, 0, 40), TOP_F, -120, 120, -120, 120);
+    expect(r.nothing).toBe(0);
+  });
+  it("C15 — a 12-sided CYLINDER lying on the top (r 40), read from the top and from the FRONT", () => {
+    const parts = [...base(), cylinder12(40, 0)];
+    expect(againstBrute(parts, TOP_F, -160, 160, -120, 120).places).toBeGreaterThan(1000);
+    expect(againstBrute(parts, { n: [0, 0, 1], t: [-1, 0, 0], b: [0, 1, 0] }, -160, 160, 150, 360).places).toBeGreaterThan(1000);
+  });
+  it("C38 — a DOME on the top (r 60): every slanted facet of a doubly curved shape", () => expect(againstBrute([...base(), dome(60, 30, -20)], TOP_F, -140, 140, -140, 140).places).toBeGreaterThan(1000));
+  it("C22 — a long THIN BAR (400 × 8 × 20) on the top, narrower than either piece", () => expect(againstBrute([...base(), bx("bar", -200, 200, 240, 260, -4, 4)], TOP_F, -220, 220, -60, 60).places).toBeGreaterThan(1000));
+  it("⭐ an OBLIQUE facet (its normal 30° off the vertical, toward +z) over the cylinder and a pin — a frame neither the top nor the front", () => {
+    const c = Math.cos(R6(30)), sn = Math.sin(R6(30));
+    const f = { n: [0, c, sn] as [number, number, number], t: [1, 0, 0] as [number, number, number], b: [0, -sn, c] as [number, number, number] };
+    expect(againstBrute([...base(), cylinder12(40, 0), bx("pin", 60, 70, 240, 280, 40, 50)], f, -160, 160, -140, 140).places).toBeGreaterThan(1000);
+  });
+});
