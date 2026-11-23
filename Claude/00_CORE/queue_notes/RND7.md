@@ -73,3 +73,8 @@
   CHECKED — the plinth's proxy is ONE open face (its top); no `Scene_2` proxy is closed (a selection of faces by convention). Lessons → D4 – D7
   (`PART_AUTHORING.md` §6.4, §4.2), `SCENE_WORKFLOW.md` §7.3, §9.1, the ledger 14 – 16; `check_part_solids.ts`. B2 + B1i built (5 s): the plinth's
   sides uncovered (71.8 %) — but D7 read literally flags every part: his word on the rule (`ORBIT_SURFACE_PART_CHECKS.md` §10). Local.
+* **2026-11-23, later** — ⛔ his question *"why your previous check failed to identify this issue and I had to tell you?"*: answered and the
+  record CORRECTED (`ORBIT_SURFACE_PART_CHECKS.md` §11) — B1 tested one direction only (no rule said which faces a proxy covers), and the first
+  coverage check, flagging all parts, was narrowed until it found the plinth's corners, reported as his issue; it was not (the sides). His word:
+  no rebuild of `Scene_2` here; the lessons captured; the RULES for proxies (simplified — the gizmo's moves) and maybe the collision pieces
+  defined first, then the proper checks.

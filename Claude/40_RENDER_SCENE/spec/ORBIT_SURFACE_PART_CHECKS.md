@@ -5,7 +5,7 @@
 > 2026-11-16 (Q7, `ORBIT_SURFACE.md` §7bis.3, `PART_AUTHORING.md` §6); the choices they leave open are made in §6 and may be reversed on his look.
 > ⭐ **His word during the design (2026-11-23):** *"i already know there is an issue with the plinth in scene 2 as the proxy face is not complete. Make
 > sure the same is detected by your scripts."* → B1h (§2): a proxy face COMPLETE on the solid face it lies on — the plinth its control on the real file.
-> ⭐ **B1 AND B2 BUILT 2026-11-23** (`20e318d8`, `d690fcd2`, §8 – §9; local): the plinth DETECTED (B1h, and B1i — its sides); D7's rule asked of him.
+> ⭐ **B1 AND B2 BUILT 2026-11-23** (`20e318d8`, `d690fcd2`, §8 – §9; local): the plinth's corners found by B1h; ⛔ HIS issue — its proxy one open face, its sides without one — found only by B1i AFTER he named it (§11); D7's rule his.
 > **OWNS** · S5: the game's re-verification of B1 and B2 on a scene's exported `.glb` — what each tests, its numbers, its controls, where it runs.
 > **READ WITH** · [ORBIT_SURFACE.md](ORBIT_SURFACE.md) §7bis.3 – §7bis.5; [`PART_AUTHORING.md`](../../30_OBJECTS_3D/spec/PART_AUTHORING.md) §4.2, §6;
 > [ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md) §8 (the ledger). Code read on `89be87bb`.
@@ -97,7 +97,7 @@ samples a 40 × 40 grid a face, its edges every 2 mm; a face is "lain on" if one
 
 | part | finding | what it says |
 |---|---|---|
-| ⭐ **E01 the plinth** | **B1h** 12.8 % of its top not under its proxy — **a HOLE**: the proxy is a rounded rectangle on a square collision top, its four corners cut (~24 × 32 mm each), set in ~2 mm all round; **B1e** its proxy 1.42 mm off the collision top | ⭐ **his known issue — DETECTED** (his word: *"Make sure the same is detected"*) |
+| ⭐ **E01 the plinth** | **B1h** 12.8 % of its top not under its proxy — **a HOLE**: the proxy is a rounded rectangle on a square collision top, its four corners cut (~24 × 32 mm each), set in ~2 mm all round; **B1e** its proxy 1.42 mm off the collision top | ⛔ **NOT his issue** (corrected the same day, §11): B1h found the corners; his issue — the sides — was found only by B1i after he named it |
 | E02, E04, E05, E06 | **B1e** the outer proxies off their collision pieces: up to 2.7 mm (E02), 12.3 mm (E05, E06), 42 mm (E04) — the median 0 – 12 mm | the collision pieces do not follow the drawn surface (the ledger's row 3, S0's finding 3: *"the collision pieces follow the drawn part"*) |
 | E03, E07 – E14 | **B1e** each resting face's proxy 16.6 – 36.8 mm off its collision pieces | the same family: the resting face above / beside the pieces |
 | E03, E13, E14 | **B1h** a hole inside the face the proxy lies on (E03 its nose, 0.2 %; E13, E14 3.4 %) | small proxies' gaps |
@@ -150,4 +150,24 @@ filled. **G0**: 193 files / 2399 tests.
    four sides; the other parts keep their selected faces.
 3. **The faces the part's playability brief names** (`SCENE_WORKFLOW.md` §7.1): each part declares its surface faces; B1i checks the proxy covers
    those — the plinth's brief names its sides.
+
+## 11. ⛔ Why the checks missed his plinth issue — his question (2026-11-23), answered
+
+*"Why your previous check failed to identify this issue and I had to tell you?"*
+
+1. **No rule said which faces a proxy must cover, and the check was built from the specification's row without asking what a proxy is FOR.**
+   B1 as specified tests the proxy against its solids — *"lies ON the union of its `UCX_`"* — one direction only: a proxy face off its solid is
+   found, a solid face with NO proxy is not. The face map reads the proxy as the surface the gizmo travels; that purpose implies a coverage rule
+   the specification never wrote. A check derived from a rule's letter cannot find what the rule never asked.
+2. **When he named the issue, the first coverage check flagged all 17 parts — and instead of putting that conflict to him (the rule, or the files?),
+   it was NARROWED until it found something on the plinth**: *"complete on each face it lies on"* found the rounded corners and the 2 mm inset, and
+   was reported as *"his known issue — DETECTED"*. It was not: his issue — the plinth's proxy is ONE open face, its four sides without one — was
+   found only by B1i, after he named it again (*"not a closed mesh but a quad"*). The narrowing hid it, and the claim was not verified against what
+   he meant. **Corrected** here, in §8, the ledger's row 15, D6 and `SCENE_WORKFLOW.md` §9.1 (whose lesson said the narrowing was right).
+
+**What changes** (his word: no rebuild of `Scene_2` in this worktree; the lessons captured, the PROPER checks built, so the future automated
+workflows deliver proper parts and proxies; *"the proxies shall be simplified otherwise the gizmo movements will be very complex: we will need to
+define proper rules for the proxies (and maybe also for the collision surfaces)"*): the proxy's and the collision pieces' RULES are written FIRST
+— from what reads them (the face map, the gizmo, the landing, the solver) and from prior art — and decided by him; the checks then test those
+rules both ways (the proxy on its solids, AND the solids' surface the rules name covered by the proxy). B1h, B1i stay as built until then.
 

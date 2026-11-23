@@ -461,10 +461,13 @@ the owner's look on the device — is not left as a sentence in a document. For 
 It is §6.3 item 3 (*every finding the owner makes that a check missed → a new check and a planted control*) widened from the Blender
 build's own checks to everything the surface rebuild learns.
 ⭐ (2026-11-22) §10 adds the step BEFORE the check: the lesson's RULE of construction or drawing, in a form a script applies.
-⭐ (2026-11-23, S5's lesson) **A check is CALIBRATED on the scene's real file and on a defect the owner already knows, before its rule is pinned**:
-the first coverage check read *"the proxy covers its solids"* and flagged all 17 parts of `Scene_2` — a proxy is a SET of the part's faces by the
-convention, not a closed mesh; read again as *"complete on each face it lies on"*, it found the plinth (his known issue) and little else. A check
-that flags everything is read as noise and turned off: the owner's known defect is its first control on a real file.
+⭐ (2026-11-23, S5's lesson — ⛔ CORRECTED the same day, his question *"why your previous check failed to identify this issue and I had to tell
+you?"*, `../../40_RENDER_SCENE/spec/ORBIT_SURFACE_PART_CHECKS.md` §11) **A check tests what a part is FOR, both ways; when it flags every part,
+the conflict goes to the owner — it is never narrowed until it passes.** (1) B1 tested the proxy ON its solids only; no rule said which of the
+solids' faces a proxy must cover — so a missing face was invisible. Write the rule from what READS the data (the face map, the gizmo) first.
+(2) The first coverage check flagged all 17 parts of `Scene_2`; it was narrowed until it found something on the plinth (its corners) and that
+was reported as his issue — it was not (the plinth's sides had no proxy at all). A check that flags everything means the RULE is undefined or
+the FILES break it: ask which. And a check meant to catch the owner's known defect is verified on THAT defect, as he describes it.
 
 ### 9.2 What counts — read as follows (Claude's reading, to correct)
 
