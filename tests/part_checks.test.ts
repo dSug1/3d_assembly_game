@@ -27,10 +27,9 @@ describe("⭐⭐⭐ V1 — B1 on `Scene_2`'s exported file", () => {
   });
   it("the report, pinned (each a finding for his word — the file or an exemption, `ORBIT_SURFACE_BUILD.md` §8)", () => {
     expect(findings.map((f) => `${f.check} ${f.part} ${f.node}`)).toEqual([
-      "B1e E01 UFM_E01_top", "B1h E01 UFM_*", "B1e E02 UFM_E02_outer", "B1e E03 UFM_E03_rest", "B1h E03 UFM_*", "B1e E04 UFM_E04_outer",
-      "B1e E05 UFM_E05_outer", "B1e E06 UFM_E06_outer", "B1e E07 UFM_E07_rest", "B1e E08 UFM_E08_rest", "B1e E09 UFM_E09_rest", "B1e E10 UFM_E10_rest",
-      "B1e E11 UFM_E11_rest", "B1e E12 UFM_E12_rest", "B1e E13 UFM_E13_rest", "B1h E13 UFM_*", "B1e E14 UFM_E14_rest", "B1h E14 UFM_*",
-      "B1e E17 UFM_E17_faces", "B1f E17 UFM_E17_faces", "B1h E17 UFM_*",
+      // ⛔ (2026-11-23, corrected) the RESTING PROXIES (`…_rest`) are VIRTUAL by design (the 11-13 principle): no longer read as off their solids
+      "B1e E01 UFM_E01_top", "B1h E01 UFM_*", "B1e E02 UFM_E02_outer", "B1h E03 UFM_*", "B1e E04 UFM_E04_outer", "B1e E05 UFM_E05_outer",
+      "B1e E06 UFM_E06_outer", "B1h E13 UFM_*", "B1h E14 UFM_*", "B1e E17 UFM_E17_faces", "B1f E17 UFM_E17_faces", "B1h E17 UFM_*",
     ]);
   });
   it("its collision pieces: convex, closed, with volume, within the budget (B1a – B1d: none found)", () => {
@@ -50,7 +49,7 @@ const quad = (name: string, x0: number, y0: number, x1: number, y1: number, z: n
   points: [[x0, y0, z], [x1, y0, z], [x1, y1, z], [x0, y1, z]],
   triangles: flip ? [[0, 2, 1], [0, 3, 2]] : [[0, 1, 2], [0, 2, 3]],
 });
-const part = (pieces: PartMesh[], proxy: PartMesh[]): PartSolids => ({ id: "P", frozen: false, fitMm: B1_FIT_MM, pieces, proxy });
+const part = (pieces: PartMesh[], proxy: PartMesh[]): PartSolids => ({ id: "P", frozen: false, fitMm: B1_FIT_MM, pieces, proxy, renders: [] });
 const BOX = boxPiece("UCX_P", 50, 50, 0, 40);
 const TOP = quad("UFM_P_top", -50, -50, 50, 50, 40);
 const checks = (p: PartSolids) => checkSolids([p]).map((f) => f.check);
@@ -112,7 +111,7 @@ const solidBox = (name: string, x0: number, x1: number, y0: number, y1: number, 
   return { name, points: h.points, triangles: h.triangles };
 };
 const at0 = (ids: string[]) => new Map(ids.map((id) => [id, { position: [0, 0, 0] as Vec3, rotation: [1, 0, 0, 0] as const }]));
-const solids = (id: string, pieces: PartMesh[], proxy: PartMesh[], frozen = false): PartSolids => ({ id, frozen, fitMm: B1_FIT_MM, pieces, proxy });
+const solids = (id: string, pieces: PartMesh[], proxy: PartMesh[], frozen = false): PartSolids => ({ id, frozen, fitMm: B1_FIT_MM, pieces, proxy, renders: [] });
 
 describe("⭐⭐⭐ V3 — B2 on `Scene_2`: the map per stage, and B1i (D7) on the plinth", () => {
   const bytes = new Uint8Array(readFileSync(GLB));

@@ -175,3 +175,12 @@ define proper rules for the proxies (and maybe also for the collision surfaces)"
 — from what reads them (the face map, the gizmo, the landing, the solver) and from prior art — and decided by him; the checks then test those
 rules both ways (the proxy on its solids, AND the solids' surface the rules name covered by the proxy). B1h, B1i stay as built until then.
 
+## 12. ⛔ A second correction (2026-11-23): the RESTING PROXIES are virtual by design
+
+§8 listed *"E03, E07 – E14: B1e each resting face's proxy 16.6 – 36.8 mm off its collision pieces"* as findings for his word. ⛔ They are not: a
+`…_rest` node is a RESTING PROXY — *"one flat face SQUARE to its approach axis, CENTRED on it, at its hull's extreme"* (`SCENE_2_ASSEMBLY.md` §6.1),
+off the real surface BY DESIGN — and his 11-13 principle exempts it (*"a VIRTUAL face (a resting proxy, a ghost) exempt from ① and ②"*). B1 was built
+without reading that rule (§11's third reason, again). Now `isVirtualProxy` (`part_checks.ts`) exempts resting proxies and caps from B1e, B1h and
+B1i's covering; `Scene_2`'s B1 report: **12 findings** (was 21) — the plinth (B1e 1.42 mm, B1h its corners), E02 (2.7 mm), E04 (42 mm), E05 / E06
+(12.3 mm) outer proxies off their collision pieces, E03 / E13 / E14 small holes (B1h), E17 (B1e, B1f, B1h). The vector re-pinned.
+

@@ -11,7 +11,7 @@
 import { readFileSync } from "node:fs";
 import { glbBin, partGeometry, type Placement } from "../../src/core/glb_geometry";
 import { glbJson, readModelCatalog } from "../../src/core/model_catalog";
-import { B1_FIT_MM, checkSolids, exposedPerStage, readPartSolids } from "../../src/core/part_checks";
+import { B1_FIT_MM, checkProxyFaces, checkSolids, exposedPerStage, readPartSolids } from "../../src/core/part_checks";
 
 const file = process.argv.slice(2).find((a) => a.endsWith(".glb")) ?? process.env["GLB"];
 if (file === undefined) {
@@ -42,5 +42,10 @@ const last = map.stages[map.stages.length - 1];
 console.log(`B2 at ${map.stepMm} mm (a gap under it reads closed): ${map.stages.length} stages; the last — each part's proxy triangles e(xposed) / g(lued) / b(uried) / s(ealed):`);
 if (last !== undefined) console.log("  " + last.parts.map((p) => `${p.id} e${p.exposed}/g${p.glued}/b${p.buried}/s${p.sealed}`).join(" "));
 for (const f of map.uncovered) console.log(`  (D7, PROPOSED) ${f.check} ${f.part}: ${f.detail}`);
-console.log(found.length === 0 ? "PASS" : `FAIL — ${found.length} finding(s): fix the file in Blender, or write an exemption per piece (ORBIT_SURFACE_PART_CHECKS.md §8)`);
-process.exit(found.length === 0 ? 0 : 1);
+// ⭐⭐ (S6) THE PROXY RULES (`30_OBJECTS_3D/spec/PROXY_AND_COLLISION_RULES.md`, DECIDED 2026-11-23) — R7, R3, R4, R2 on each proxy face; a riser information
+const rulesFound = checkProxyFaces(parts, new Map(partGeometry(j.json, glbBin(bytes), catalog).map((g) => [g.id, { position: [0, 0, 0], rotation: g.goal.rotation }])));
+console.log(`the proxy rules (R7 one face a node, R3 no travelled face under 10 mm, R4 30° apart / not near 45°, R2 ON its real face): ${rulesFound.length} finding(s)`);
+for (const f of rulesFound) console.log(`  ${f.rule}${f.info ? " (information)" : ""} ${f.part} ${f.node}: ${f.detail}`);
+const failing = found.length + rulesFound.filter((f) => !f.info).length;
+console.log(failing === 0 ? "PASS" : `FAIL — ${failing} finding(s): fix the file in Blender (PROXY_AND_COLLISION_RULES.md), or write an exemption per piece`);
+process.exit(failing === 0 ? 0 : 1);

@@ -2,7 +2,7 @@
 
 > **STATUS** · ⭐ **A STUDY — HIS FIVE DECISIONS GIVEN 2026-11-23 (§8)**, written into §3 and §3bis; the patent-free methods surveyed (§5); ⭐ **AUDITED
 > 2026-11-23 (§7): two blockers and seven should-fix, ADOPTED where they apply a recorded rule; four questions back to him (§7.2)** — ✅ **ANSWERED 2026-11-23: *"I agree with your recommendations. Capture, proceed"*** (§7.3): the RULES DECIDED;
-> the checks being built (§9). The four-part method (`orbit-design-method`):
+> the checks being built (§9: packet 1 BUILT — R7, R3, R4, R2; packets 2 – 3 owed). The four-part method (`orbit-design-method`):
 > the rules (§1 – §3), the obstacles and fallbacks (§4), a systematic design from patent-free prior art (§5), an audit (§7) — before any check.
 > **OWNS** · what a part's FACE PROXY (`UFM_`) and its COLLISION PIECES (`UCX_`) must be, for ANY shape — so that a generator (the Blender build
 > scripts, an automated workflow) delivers them right and a check proves it.
@@ -226,3 +226,49 @@ step 60° and B6's 30° apart, read where they live.
    happens as the assembly gets assembled: how the proxy surface of the assembly evolves and how to append the faces"* → §3bis.
 5. **The resting-face candidates — the LARGEST faces**: the proxy's faces of at least a quarter of its largest face's area (⏳ the share, proposed
    ¼ as the face map's, a constant of its own — for the audit).
+
+## 9. The checks — as built
+
+### 9.1 Packet 1 (2026-11-23) — the proxy's own rules: R7, R3, R4, R2
+
+**`checkProxyFaces`** (`src/core/part_checks.ts`; the reader `readPartSolids` now reads each part's RENDER meshes too — the real surface — a
+label's mesh apart), the scales in `units.ts` (`PROXY_PROBE_MM`, `PROXY_FACE_MIN_MM`, `PROXY_FLUSH_MM`, `PROXY_CURVE_TOL_MM`, `COLLISION_TOL_MM`):
+* **R7** — each `UFM_` node ONE planar face (its triangles within 1°); two coplanar neighbouring nodes: one face split.
+* **R3** — each face's INSCRIBED width (twice the largest distance from a point of it to its boundary) at least 10 mm; a RISER (narrow, between two
+  faces parallel to each other and square to it) reported as INFORMATION — an S26 step, not a travelled face.
+* **R4** — neighbours one face or ≥ 30° apart (B6); at the goal, no face within 15° of 45° of elevation (a face at exactly 30° or 60° passes).
+* **R2** — the real surface UNDER each sample of the face: a sample ON a real face of its own normal within the flush (0.25 mm) is flat-on;
+  else the render met ALONG the face's normal (either side — never the nearest triangle: a thin wall's underside, a side at an edge); a FLAT real
+  face: the proxy within 0.25 mm of it; else a curve: its facet turns at most ±30° from it (the hexagon's half step), its sagitta exempt; no real
+  surface within τ either way: a face floating. Sampled over the WHOLE face, to within 2 % of its edges (a facet's span is read at its edges).
+* ⭐ **A VIRTUAL face** (`isVirtualProxy`: a RESTING PROXY `…_rest` — one flat face square to the part's approach axis, by design off the real
+  surface (the 11-13 principle, `SCENE_2_ASSEMBLY.md` §6.1) — and a CAP `…_cap…`) exempt from R2, R3, from the pair rules with a real face, and
+  from B1e / B1h / B1i's covering; its orientation and its one face still read.
+
+**The vectors** (`tests/proxy_rules.test.ts`, 13): ⭐ his three shapes as CLEAN reference parts — a SHAFT (a hexagon, a face up, over a round
+24-gon render: its facets within ±30°, its faces at 30° of elevation pass), a HOLLOW CASE (its pocket CAPPED, the cap flush with the ring of the top),
+a CHAMFERED HULL (faces 30° and 60° apart, chamfers at 60° of elevation) — every rule passes on them; one planted defect each reads exactly its rule
+(two faces in one node; a face split in two; a 6 mm chamfer; a 5 mm riser — information; a 19° pair; a face at 45°; a proxy 0.5 mm off its flat face;
+a SQUARE over a round shaft — ±45°; a lifted cap and a floating resting proxy — none). Each RED on its mutant first: R7 blind (*"expected [] to deeply
+equal [ 'R7' ]"*), the split blind, a riser never told (*"expected [ 'R3' ] to deeply equal [ 'R3(info)' ]"*), R3 blind, R4's 30° blind, the
+elevation blind, R2 flat blind, R2's curve blind (*"expected [] to deeply equal [ 'R2', 'R2', 'R2', 'R2' ]"*), no virtual face (*"expected
+[ 'R7', 'R2' ] to deeply equal []"*). **G0** `npm run verify`: 194 files / 2412 tests. 3 s on `Scene_2`.
+
+**Calibrated on the real file, by ASKING what each reading means** (the lesson of S5 §11): the first run flagged every resting proxy — they are
+VIRTUAL by design (the 11-13 rule): the exemption, not a narrowing; *"spans ±180°"* came from the NEAREST triangle (a wall's underside) — the cast
+along the normal; round rims' tessellations (a 16-gon proxy over a 32-gon render) read as floating — a rim within τ is the rim; the crankshaft's
+NOSE disc kept: its render has NO end disc at x 192.5 mm (a ring of 32 points only) — the proxy lies over an open end: a real finding, its message
+made to say so.
+
+**`Scene_2`'s report** (pinned — not rebuilt here; findings for the future workflows): **R7** E02, E04, E05, E06 — each `…_outer` node a whole
+surface of many faces (R7: one node a face); **R2** E03's nose disc over its render's open end (±89°); E17's proxy half turned inward (±180°).
+The check script (`check_part_solids.ts`) counts them in its verdict (a riser apart).
+
+### 9.2 Owed — packets 2 and 3
+
+* **Packet 2 — coverage and caps (R1, R1b, R2 the other way)**: the outer surface at the ρ-closing (the render voxelized at ≤ ρ / 2, closed at ρ)
+  covered by the real proxy faces within τ; every cavity deeper than its mouth is wide and every undercut CAPPED (B4's sweep with a ρ-ball); a cap's
+  rim on real proxy edges, flush. (B1i's 4 mm floods are its first form.)
+* **Packet 3 — the collision pieces (C-R2 – C-R4) and the resting candidates**: the pieces' union within τc of the render, both ways; a cavity a part
+  enters left open; rings by the angle rule; the resting-face candidates — the proxy's faces on its convex hull, the largest first.
+

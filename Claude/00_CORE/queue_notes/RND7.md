@@ -78,3 +78,7 @@
   coverage check, flagging all parts, was narrowed until it found the plinth's corners, reported as his issue; it was not (the sides). His word:
   no rebuild of `Scene_2` here; the lessons captured; the RULES for proxies (simplified — the gizmo's moves) and maybe the collision pieces
   defined first, then the proper checks.
+* **2026-11-23, later** — his *"I agree with your recommendations. Capture, proceed"*: the proxy and collision rules DECIDED (w 10 mm, every
+  cylinder a hexagon face up, every cavity deeper than wide and every undercut capped, no fixed count of pieces); S6 packet 1 BUILT
+  (`checkProxyFaces`: R7, R3, R4, R2; his three shapes clean reference parts; 9 mutants red); ⛔ a second correction of S5's record — the resting
+  proxies are VIRTUAL by design (`ORBIT_SURFACE_PART_CHECKS.md` §12). Packets 2 (coverage, caps) and 3 (collision pieces) owed. Local.

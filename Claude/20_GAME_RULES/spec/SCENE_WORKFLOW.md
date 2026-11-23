@@ -347,6 +347,9 @@ item 5), and as vectors on `Scene_2` (`part_checks.test.ts`); its drawing rules 
 takes 5 s in full on `Scene_2`, the coverage the heavy part) — printed, never a refusal, until `Scene_2` passes or its findings are answered.
 ⭐ **B2 BUILT** the same day (`exposedPerStage`, a 4 mm grid, the floor solid): the map per stage — each proxy face exposed, glued, buried or sealed
 — printed by the same script, a vector on `Scene_2` (a seat that seals a face shows: E03's nose under E17); with it B1i (D7, PROPOSED).
+⭐ **THE PROXY RULES** (`../../30_OBJECTS_3D/spec/PROXY_AND_COLLISION_RULES.md`, DECIDED 2026-11-23) — packet 1 in the same script and its verdict:
+R7 one face a node, R3 no travelled face under 10 mm (a riser information), R4 30° apart and none near 45°, R2 a proxy ON its real face (a
+resting proxy and a cap virtual); his three shapes its clean reference parts.
 
 ### 7.4 The design-for-playability checklist (whoever draws a part)
 

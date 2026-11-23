@@ -13,8 +13,8 @@
 import { accessorIndices, accessorPoints, compose, apply, nodePlacement, type Placement } from "./glb_geometry";
 import { convexHull3 } from "./hull3";
 import type { ModelCatalog, ModelPart } from "./model_catalog";
-import { SURFACE_STEP_MIN_MM } from "./units";
-import { cross, dot, sub, type Vec3 } from "./vec";
+import { PROXY_CURVE_TOL_MM, PROXY_FACE_MIN_MM, PROXY_FLUSH_MM, SURFACE_STEP_MIN_MM } from "./units";
+import { cross, dot, qRotate as qRot, sub, type Vec3 } from "./vec";
 
 /** ⭐ (B1d, `PART_AUTHORING.md` §4.2 — COLLISION SIMPLICITY) a collision piece's budget — the constants' one home. */
 export const UCX_MAX_VERTICES = 24;
@@ -29,6 +29,14 @@ export const B1_SAME_FACE_DEG = 1;
 export const B1_COVER_STEP_MM = 2;
 export const B1_COVER_INNER = 40;
 
+/**
+ * ⭐⭐ (2026-11-23 — the 11-13 principle, `PART_AUTHORING.md` §3 item 3: *"a VIRTUAL face (a resting proxy, a ghost) exempt from ① and ②"*; `SCENE_2_ASSEMBLY.md`
+ * §6.1) a VIRTUAL proxy face — off the real surface BY DESIGN: a RESTING PROXY (`…_rest`: one flat face square to the part's approach axis, at its
+ * hull's extreme) or a CAP over a hollow's mouth (`…_cap…`, `PROXY_AND_COLLISION_RULES.md` §7.1 row 4). Exempt from the fidelity (B1e, R2), the width
+ * (R3) and from covering the real surface (B1h, B1i); its orientation (B1f) and its one face (R7) still read.
+ */
+export const isVirtualProxy = (name: string): boolean => /_rest$/.test(name) || name.includes("_cap");
+
 /** one mesh node of a part, in the part's frame (mm): its name, its points, its triangles */
 export interface PartMesh {
   readonly name: string;
@@ -42,6 +50,8 @@ export interface PartSolids {
   readonly fitMm: number;
   readonly pieces: readonly PartMesh[];
   readonly proxy: readonly PartMesh[];
+  /** ⭐ (S6) its RENDER meshes (the real surface: R2's fidelity reads it; a label's mesh — `metadata` — left out); [] when the caller needs none */
+  readonly renders: readonly PartMesh[];
 }
 /** one finding: the check, the part, the node, what was measured */
 export interface B1Finding {
@@ -64,13 +74,15 @@ export function readPartSolids(json: unknown, bin: Uint8Array, catalog: ModelCat
   return catalog.parts.map((part: ModelPart) => {
     const ucx = new Set(part.ucx);
     const ufm = new Set(part.faces);
+    const rnd = new Set(part.renders.filter((r) => !r.metadata).map((r) => r.node));
+    const renders: PartMesh[] = [];
     const pieces: PartMesh[] = [];
     const proxy: PartMesh[] = [];
     const walk = (i: number, toPart: Placement): void => {
       const n = g.nodes[i]!;
       const here = compose(toPart, nodePlacement(n));
       const name = n.name ?? `#${i}`;
-      if (n.mesh !== undefined && (ucx.has(name) || ufm.has(name))) {
+      if (n.mesh !== undefined && (ucx.has(name) || ufm.has(name) || rnd.has(name))) {
         const points: Vec3[] = [];
         const triangles: [number, number, number][] = [];
         for (const pr of g.meshes[n.mesh]!.primitives) {
@@ -82,14 +94,14 @@ export function readPartSolids(json: unknown, bin: Uint8Array, catalog: ModelCat
           const idx = pr.indices === undefined ? points.slice(base).map((_, k) => k) : accessorIndices(g as never, bin, pr.indices);
           for (let k = 0; k + 2 < idx.length; k += 3) triangles.push([base + idx[k]!, base + idx[k + 1]!, base + idx[k + 2]!]);
         }
-        (ucx.has(name) ? pieces : proxy).push({ name, points, triangles });
+        (ucx.has(name) ? pieces : ufm.has(name) ? proxy : renders).push({ name, points, triangles });
       }
       for (const c of n.children ?? []) walk(c, here);
     };
     const pi = byName.get(part.node);
     const fit = pi === undefined ? undefined : g.nodes[pi]!.extras?.["fit_tol"];
     if (pi !== undefined) for (const c of g.nodes[pi]!.children ?? []) walk(c, { position: [0, 0, 0], rotation: [1, 0, 0, 0] });
-    return { id: part.id, frozen: part.frozen, fitMm: typeof fit === "number" && fit > B1_FIT_MM ? fit : B1_FIT_MM, pieces, proxy };
+    return { id: part.id, frozen: part.frozen, fitMm: typeof fit === "number" && fit > B1_FIT_MM ? fit : B1_FIT_MM, pieces, proxy, renders };
   });
 }
 
@@ -205,7 +217,7 @@ export function checkSolids(parts: readonly PartSolids[]): B1Finding[] {
         const A = px.points[a]!, B = px.points[b]!, C = px.points[c]!;
         const n = triNormal(A, B, C);
         if (n === null) continue;
-        proxyTris.push({ t: [A, B, C], n, lo: [Math.min(A[0], B[0], C[0]), Math.min(A[1], B[1], C[1]), Math.min(A[2], B[2], C[2])], hi: [Math.max(A[0], B[0], C[0]), Math.max(A[1], B[1], C[1]), Math.max(A[2], B[2], C[2])] });
+        if (!isVirtualProxy(px.name)) proxyTris.push({ t: [A, B, C], n, lo: [Math.min(A[0], B[0], C[0]), Math.min(A[1], B[1], C[1]), Math.min(A[2], B[2], C[2])], hi: [Math.max(A[0], B[0], C[0]), Math.max(A[1], B[1], C[1]), Math.max(A[2], B[2], C[2])] });
         const g: Vec3 = [(A[0] + B[0] + C[0]) / 3, (A[1] + B[1] + C[1]) / 3, (A[2] + B[2] + C[2]) / 3];
         // B1e — on its solids: the corners and the centroid near the union's surface (never deep inside, never far out)
         offs.push(Math.max(...[A, B, C, g].map((q) => Math.abs(toUnion(q, ks)))));
@@ -213,7 +225,7 @@ export function checkSolids(parts: readonly PartSolids[]): B1Finding[] {
         const st = 2 * part.fitMm;
         if (toUnion([g[0] + n[0] * st, g[1] + n[1] * st, g[2] + n[2] * st], ks) < 0) inward++;
       }
-      const bad = offs.filter((o) => o > part.fitMm).length;
+      const bad = isVirtualProxy(px.name) ? 0 : offs.filter((o) => o > part.fitMm).length; // a virtual face is off its solids by design
       if (bad > 0) {
         const sorted = [...offs].sort((x, y) => x - y);
         f("B1e", `${bad} of ${offs.length} triangle(s) off its solids — the worst ${sorted[sorted.length - 1]!.toFixed(2)} mm, the median ${sorted[Math.floor(sorted.length / 2)]!.toFixed(2)} mm (the fit ${part.fitMm} mm)`);
@@ -298,7 +310,7 @@ interface Placed {
   readonly id: string;
   readonly index: number;
   readonly ks: readonly Convex[];
-  readonly proxy: readonly { readonly t: readonly [Vec3, Vec3, Vec3]; readonly n: Vec3 }[];
+  readonly proxy: readonly { readonly t: readonly [Vec3, Vec3, Vec3]; readonly n: Vec3; readonly real: boolean }[];
 }
 /** one stage of the plan: the part placed (the frozen ones first, together), and per placed part its proxy triangles' states */
 export interface B2Stage {
@@ -325,12 +337,12 @@ export function exposedPerStage(parts: readonly PartSolids[], goals: ReadonlyMap
     const g = goals.get(p.id)!;
     const at = (q: Vec3): Vec3 => apply(g, q);
     const ks = p.pieces.map((pc) => convexOf(pc.points.map(at))).filter((k): k is Convex => k !== null);
-    const proxy: { t: [Vec3, Vec3, Vec3]; n: Vec3 }[] = [];
+    const proxy: { t: [Vec3, Vec3, Vec3]; n: Vec3; real: boolean }[] = [];
     for (const px of p.proxy)
       for (const [a, b, c] of px.triangles) {
         const t: [Vec3, Vec3, Vec3] = [at(px.points[a]!), at(px.points[b]!), at(px.points[c]!)];
         const n = triNormal(t[0], t[1], t[2]);
-        if (n !== null) proxy.push({ t, n });
+        if (n !== null) proxy.push({ t, n, real: !isVirtualProxy(px.name) });
       }
     return { id: p.id, index, ks, proxy };
   });
@@ -448,7 +460,7 @@ export function exposedPerStage(parts: readonly PartSolids[], goals: ReadonlyMap
       total++;
       let d = Infinity;
       for (const x of p.proxy) {
-        if (dot(x.n, nn) < cosSame) continue;
+        if (!x.real || dot(x.n, nn) < cosSame) continue;
         d = Math.min(d, pointTriangle(q, x.t[0], x.t[1], x.t[2]));
         if (d <= fit) break;
       }
@@ -463,4 +475,214 @@ export function exposedPerStage(parts: readonly PartSolids[], goals: ReadonlyMap
     }
   }
   return { stepMm, cells: n, stages, uncovered };
+}
+
+// ── S6 — THE PROXY RULES, packet 1 (`30_OBJECTS_3D/spec/PROXY_AND_COLLISION_RULES.md` §3, §7.1, §7.3 — DECIDED 2026-11-23) ─────────────────────
+/** ⭐ (S6) one finding of the proxy rules; `info`: reported, not a failure (a riser — an S26 step). */
+export interface ProxyFinding {
+  readonly rule: "R2" | "R3" | "R4" | "R7";
+  readonly part: string;
+  readonly node: string;
+  readonly detail: string;
+  readonly info?: true;
+}
+/** ⭐ (R7) the triangles of one proxy node within this of their plane's normal (degrees) — one face. */
+export const R7_PLANAR_DEG = 1;
+/** ⭐ (R4, B6 — `SCENE_WORKFLOW.md` §4) two faces apart: one face (under 1°), or at least this (degrees). */
+export const B6_APART_DEG = 30;
+/** ⭐ (R4, B6) no face's elevation within this of 45° (degrees). */
+export const B6_ELEVATION_BAND_DEG = 15;
+/** ⭐ (R2, his Q2) a facet of a curve spans at most half the hexagon's step either side of its normal (degrees). */
+export const R4_HALF_STEP_DEG = 30;
+
+/** a uniform grid of triangles for nearest-point queries (cell `c` mm) */
+function triGrid(tris: readonly (readonly [Vec3, Vec3, Vec3])[], c: number) {
+  const cells = new Map<string, number[]>();
+  const key = (i: number, j: number, k: number) => `${i},${j},${k}`;
+  tris.forEach(([a, b, d], t) => {
+    const lo = [0, 1, 2].map((x) => Math.floor(Math.min(a[x]!, b[x]!, d[x]!) / c)), hi = [0, 1, 2].map((x) => Math.floor(Math.max(a[x]!, b[x]!, d[x]!) / c));
+    for (let i = lo[0]!; i <= hi[0]!; i++) for (let j = lo[1]!; j <= hi[1]!; j++) for (let k = lo[2]!; k <= hi[2]!; k++) {
+      const kk = key(i, j, k);
+      const l = cells.get(kk);
+      if (l === undefined) cells.set(kk, [t]);
+      else l.push(t);
+    }
+  });
+  /** ⭐ the triangle the LINE through `p` along `n` meets nearest to `p` within `r` mm (either side; Möller – Trumbore): its index and |t| */
+  const cast = (p: Vec3, n: Vec3, r: number): { readonly t: number; readonly d: number } | null => {
+    let best: { t: number; d: number } | null = null;
+    const lo = p.map((x) => Math.floor((x - r) / c)), hi = p.map((x) => Math.floor((x + r) / c));
+    const seen = new Set<number>();
+    for (let i = lo[0]!; i <= hi[0]!; i++) for (let j = lo[1]!; j <= hi[1]!; j++) for (let k = lo[2]!; k <= hi[2]!; k++) {
+      for (const t of cells.get(key(i, j, k)) ?? []) {
+        if (seen.has(t)) continue;
+        seen.add(t);
+        const [a, b, d] = tris[t]!;
+        const e1 = sub(b, a), e2 = sub(d, a), h = cross(n, e2), det = dot(e1, h);
+        if (Math.abs(det) < 1e-12) continue;
+        const sv = sub(p, a), u = dot(sv, h) / det;
+        if (u < -1e-9 || u > 1 + 1e-9) continue;
+        const q = cross(sv, e1), v = dot(n, q) / det;
+        if (v < -1e-9 || u + v > 1 + 1e-9) continue;
+        const tt = Math.abs(dot(e2, q) / det);
+        if (tt <= r && (best === null || tt < best.d)) best = { t, d: tt };
+      }
+    }
+    return best;
+  };
+  /** the nearest triangle to `p` within `r` mm (its index and distance), or none */
+  const nearest = (p: Vec3, r: number): { readonly t: number; readonly d: number } | null => {
+    let best: { t: number; d: number } | null = null;
+    const lo = p.map((x) => Math.floor((x - r) / c)), hi = p.map((x) => Math.floor((x + r) / c));
+    const seen = new Set<number>();
+    for (let i = lo[0]!; i <= hi[0]!; i++) for (let j = lo[1]!; j <= hi[1]!; j++) for (let k = lo[2]!; k <= hi[2]!; k++) {
+      for (const t of cells.get(key(i, j, k)) ?? []) {
+        if (seen.has(t)) continue;
+        seen.add(t);
+        const [a, b, d] = tris[t]!;
+        const dd = pointTriangle(p, a, b, d);
+        if (dd <= r && (best === null || dd < best.d)) best = { t, d: dd };
+      }
+    }
+    return best;
+  };
+  return { cast, nearest };
+}
+const angleDeg = (a: Vec3, b: Vec3) => (Math.acos(Math.max(-1, Math.min(1, dot(a, b)))) * 180) / Math.PI;
+
+/**
+ * ⭐⭐⭐ (S6, packet 1) THE PROXY'S OWN RULES on each part (`readPartSolids` — its proxy nodes, its render meshes), in its frame, in mm:
+ * * **R7** — each `UFM_` node ONE planar face (its triangles within 1° of their plane's normal); two coplanar neighbouring nodes, one face split;
+ * * **R3** — each face the gizmo travels at least `PROXY_FACE_MIN_MM` across (its inscribed width); a RISER (a narrow face between two faces parallel
+ *   to each other, square to it) an S26 step — reported as information;
+ * * **R4** — two neighbouring faces one face or at least 30° apart (B6); with `goals` (the part's goal turn), no face within 15° of 45° of elevation;
+ * * **R2** — a face over a FLAT real face ON it (`PROXY_FLUSH_MM`); a face over a CURVE spans at most ±30° of it (the hexagon's half step) — its
+ *   sagitta exempt. A CAP (`_cap` in its name) exempt from R2. No render meshes: R2 not read.
+ */
+export function checkProxyFaces(parts: readonly PartSolids[], goals?: ReadonlyMap<string, Placement>): ProxyFinding[] {
+  const out: ProxyFinding[] = [];
+  const kp = (p: Vec3) => `${p[0].toFixed(3)},${p[1].toFixed(3)},${p[2].toFixed(3)}`;
+  for (const part of parts) {
+    const faces = part.proxy.map((px) => {
+      const tris = px.triangles.map(([a, b, c]) => [px.points[a]!, px.points[b]!, px.points[c]!] as [Vec3, Vec3, Vec3]);
+      let nx = 0, ny = 0, nz = 0;
+      for (const [A, B, C] of tris) {
+        const cr = cross(sub(B, A), sub(C, A));
+        (nx += cr[0]), (ny += cr[1]), (nz += cr[2]);
+      }
+      const n = unit([nx, ny, nz]);
+      let spread = 0;
+      for (const [A, B, C] of tris) {
+        const m = triNormal(A, B, C);
+        if (m !== null && n !== null) spread = Math.max(spread, angleDeg(m, n));
+      }
+      // its boundary: the edges of one triangle only
+      const edges = new Map<string, { a: Vec3; b: Vec3; n: number }>();
+      for (const [A, B, C] of tris)
+        for (const [x, y] of [[A, B], [B, C], [C, A]] as const) {
+          const kx = kp(x), ky = kp(y);
+          const e = kx < ky ? `${kx}|${ky}` : `${ky}|${kx}`;
+          const got = edges.get(e);
+          if (got === undefined) edges.set(e, { a: x, b: y, n: 1 });
+          else got.n++;
+        }
+      const boundary = [...edges.entries()].filter(([, e]) => e.n === 1);
+      return { name: px.name, tris, n, spread, boundary, cap: isVirtualProxy(px.name) };
+    });
+    // R7 — one planar face a node
+    for (const f of faces) if (f.n === null || f.spread > R7_PLANAR_DEG) out.push({ rule: "R7", part: part.id, node: f.name, detail: `not ONE planar face: its triangles' normals ${f.spread.toFixed(1)}° apart (${R7_PLANAR_DEG}° at most) — a face its own node` });
+    const planar = faces.filter((f) => f.n !== null && f.spread <= R7_PLANAR_DEG);
+    // neighbours: two faces sharing a boundary edge
+    const byEdge = new Map<string, number[]>();
+    planar.forEach((f, i) => { for (const [e] of f.boundary) byEdge.set(e, [...(byEdge.get(e) ?? []), i]); });
+    const nbrs = planar.map(() => new Set<number>());
+    for (const ids of byEdge.values()) for (const i of ids) for (const j of ids) if (i !== j) nbrs[i]!.add(j);
+    // R4 — neighbours one face or ≥ 30° apart (each pair once); R7 — a face split into coplanar nodes
+    planar.forEach((f, i) => {
+      for (const j of nbrs[i]!) {
+        if (j <= i) continue;
+        const g = planar[j]!;
+        if (f.cap || g.cap) continue; // a virtual face (a cap flush with its rim, a resting proxy) is no split of a real one, no pair to space
+        const a = angleDeg(f.n!, g.n!);
+        if (a <= R7_PLANAR_DEG) out.push({ rule: "R7", part: part.id, node: `${f.name} + ${g.name}`, detail: `coplanar neighbours (${a.toFixed(1)}°): one face split in two nodes` });
+        else if (a < B6_APART_DEG - 1e-3) out.push({ rule: "R4", part: part.id, node: `${f.name} + ${g.name}`, detail: `neighbours ${a.toFixed(1)}° apart: one face, or ${B6_APART_DEG}° at least (B6)` });
+      }
+    });
+    // R4 — the elevation at the goal (the scene's y up)
+    const g = goals?.get(part.id);
+    if (g !== undefined)
+      for (const f of planar) {
+        const ns = qRot(g.rotation, f.n!);
+        const el = (Math.asin(Math.max(-1, Math.min(1, ns[1]))) * 180) / Math.PI;
+        if (Math.abs(Math.abs(el) - 45) < B6_ELEVATION_BAND_DEG - 1e-3) out.push({ rule: "R4", part: part.id, node: f.name, detail: `its elevation at the goal ${el.toFixed(1)}°: within ${B6_ELEVATION_BAND_DEG}° of 45° (B6)` });
+      }
+    // R3 — the inscribed width (twice the largest distance from a point of the face to its boundary)
+    planar.forEach((f, i) => {
+      if (f.cap) return;
+      let half = 0;
+      for (const [A, B, C] of f.tris)
+        for (let u = 1; u < 12; u++)
+          for (let v = 1; u + v < 12; v++) {
+            const p: Vec3 = [A[0] + (B[0] - A[0]) * (u / 12) + (C[0] - A[0]) * (v / 12), A[1] + (B[1] - A[1]) * (u / 12) + (C[1] - A[1]) * (v / 12), A[2] + (B[2] - A[2]) * (u / 12) + (C[2] - A[2]) * (v / 12)];
+            let d = Infinity;
+            for (const [, e] of f.boundary) d = Math.min(d, pointSegment(p, e.a, e.b));
+            half = Math.max(half, d);
+          }
+      const w = 2 * half;
+      if (w >= PROXY_FACE_MIN_MM) return;
+      const ns = [...nbrs[i]!].map((j) => planar[j]!.n!);
+      const riser = ns.some((a, x) => ns.some((b, y) => y > x && angleDeg(a, b) < 20 && angleDeg(a, f.n!) > 60 && angleDeg(b, f.n!) > 60));
+      if (riser) out.push({ rule: "R3", part: part.id, node: f.name, detail: `a RISER ${w.toFixed(1)} mm (an S26 step between two parallel faces) — information`, info: true });
+      else out.push({ rule: "R3", part: part.id, node: f.name, detail: `${w.toFixed(1)} mm across: under ${PROXY_FACE_MIN_MM} mm (a face the gizmo travels)` });
+    });
+    // R2 — each face against the real surface (the render meshes)
+    if (part.renders.length === 0) continue;
+    const rtris = part.renders.flatMap((r) => r.triangles.map(([a, b, c]) => [r.points[a]!, r.points[b]!, r.points[c]!] as [Vec3, Vec3, Vec3]));
+    const grid = triGrid(rtris, 8);
+    const rn = rtris.map(([a, b, c]) => triNormal(a, b, c));
+    for (const f of planar) {
+      if (f.cap) continue;
+      let dMax = 0, flat = true, span = 0, lost = false;
+      // the samples over the WHOLE face — to within 2 % of its edges (a facet's span is read at its edges, never only round its middle)
+      for (const [A, B, C] of f.tris)
+        for (let u = 0; u <= 6; u++)
+          for (let v = 0; u + v <= 6; v++) {
+            const g3 = (k: number) => (A[k]! + B[k]! + C[k]!) / 3;
+            const q = (k: number) => A[k]! + (B[k]! - A[k]!) * (u / 6) + (C[k]! - A[k]!) * (v / 6);
+            const p: Vec3 = [q(0) + (g3(0) - q(0)) * 0.02, q(1) + (g3(1) - q(1)) * 0.02, q(2) + (g3(2) - q(2)) * 0.02];
+            // ⭐ the real surface UNDER the point: the render meshes met along the face's normal, either side (never the nearest triangle: a thin wall's
+            // underside, a side face at an edge)
+            // ON a real face of its own normal (within the flush) — at a round rim too: flat there, no cast (a grazing ray meets the rim's side)
+            const on = grid.nearest(p, PROXY_FLUSH_MM);
+            if (on !== null && rn[on.t] != null && angleDeg(rn[on.t]!, f.n!) <= R7_PLANAR_DEG) {
+              dMax = Math.max(dMax, on.d);
+              continue;
+            }
+            let hit = grid.cast(p, f.n!, 4);
+            for (let r = 16; hit === null && r <= 256; r *= 4) hit = grid.cast(p, f.n!, r);
+            // a sample past the real face's rim by less than τ (two round outlines' tessellations — the 11-13 notes) is the rim, not a face floating
+            if (hit === null) {
+              if (grid.nearest(p, PROXY_CURVE_TOL_MM) === null) lost = true;
+              continue;
+            }
+            dMax = Math.max(dMax, hit.d);
+            const m = rn[hit.t];
+            if (m === null || m === undefined) continue;
+            const a = angleDeg(m, f.n!);
+            if (a > R7_PLANAR_DEG) flat = false;
+            span = Math.max(span, a);
+          }
+      if (lost) out.push({ rule: "R2", part: part.id, node: f.name, detail: `no real surface along its normal within 256 mm (a face floating)` });
+      else if (flat && dMax > PROXY_FLUSH_MM) out.push({ rule: "R2", part: part.id, node: f.name, detail: `${dMax.toFixed(2)} mm off its FLAT real face (ON it: ${PROXY_FLUSH_MM} mm at most)` });
+      else if (!flat && span > R4_HALF_STEP_DEG) out.push({ rule: "R2", part: part.id, node: f.name, detail: `the real surface under it turns ±${span.toFixed(0)}° from it (a curve's facet ±${R4_HALF_STEP_DEG}° at most; near 90°: it lies over an opening or a side; near 180°: it faces in)` });
+    }
+  }
+  return out;
+}
+/** the distance from `p` to the segment (a, b) */
+function pointSegment(p: Vec3, a: Vec3, b: Vec3): number {
+  const ab = sub(b, a), ap = sub(p, a);
+  const L = dot(ab, ab);
+  const t = L > 0 ? Math.max(0, Math.min(1, dot(ap, ab) / L)) : 0;
+  return Math.hypot(ap[0] - ab[0] * t, ap[1] - ab[1] * t, ap[2] - ab[2] * t);
 }

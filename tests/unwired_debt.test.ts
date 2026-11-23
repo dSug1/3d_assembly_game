@@ -125,6 +125,11 @@ const PENDING: Record<string, string> = {
   checkSolids: "S5 (`ORBIT_SURFACE_PART_CHECKS.md` §4, D1) — B1 run as vectors on each scene's .glb; its cheap subset at load owed (RND7)",
   readPartSolids: "S5 (`ORBIT_SURFACE_PART_CHECKS.md` §4, D1) — B1's reader of a scene's .glb, with `checkSolids`; at load owed (RND7)",
   exposedPerStage: "S5 (`ORBIT_SURFACE_PART_CHECKS.md` §3) — B2, the map per stage (and B1i, D7 proposed): a vector and the check script, never at load (the spec)",
+  // ⭐ (2026-11-23, S6 — `30_OBJECTS_3D/spec/PROXY_AND_COLLISION_RULES.md`, DECIDED) the proxy rules' checks run as vectors and by the check script; two of
+  // their scales wait for packet 2 (ρ: the closing, the caps) and packet 3 (τc: the collision pieces against the real shape)
+  checkProxyFaces: "S6 packet 1 (`PROXY_AND_COLLISION_RULES.md` §9) — R7, R3, R4, R2 on each proxy face: vectors and `check_part_solids.ts`, at the export gate",
+  PROXY_PROBE_MM: "S6 packet 2 (`PROXY_AND_COLLISION_RULES.md` §7.3) — ρ, read by the coverage at the ρ-closing and the caps (owed)",
+  COLLISION_TOL_MM: "S6 packet 3 (`PROXY_AND_COLLISION_RULES.md` §7.3) — τc, read by the collision pieces against the real shape (owed)",
   buildLandingMap: "S2 (`ORBIT_SURFACE_READOUT.md` §13) — the landing map's GRID: the readout reads its sums with no grid (`prepareLanding`); the grid serves the vectors and the offline comparison until the representation is chosen (`ORBIT_SURFACE_LANDING_MAP.md` §10.9)",
   // ✅ `qAngle` LEFT THIS LIST 2026-09-22 — `RotationFollower` reads it to decide a body has
   // ARRIVED at its detent, so it is wired and the guard reddened until this line was deleted.
