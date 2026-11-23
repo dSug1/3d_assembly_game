@@ -4,7 +4,7 @@
 > item 4 next — `ORBIT_SURFACE.md` §6 (4)). The rules are his of 2026-11-16 (P2, ⑤, Q2, Q10) and 2026-11-23 (*"Keep as held"*); the choices they leave
 > open are made in §8 and may be reversed on his look. ⭐ **BUILT AND GATED 2026-11-23** (`54e37d03` + fix round 1 `19fa42bf`, §9bis – §10): G0 green;
 > G1 his four records at 0 IDENTICAL to `3b7a479`; G2 a key change ~4 ms on this PC; G3 his front record: the gizmo moved on the top only (round
-> `Piece44`, +73.25 mm at the recess), the camera ≤ 2.9 mm, the piece ≤ 7.1 mm (F17); the audit: two defects, fixed. Local, not deployed; his look
+> `Piece44`, +73.25 mm at the recess), the camera ≤ 2.9 mm, the piece ≤ 7.1 mm (F17); the audit: two defects, fixed. ⭐ **DEPLOYED 2026-11-23** on his word *"Deploy"* (LIVE main `86a0e53` = `664f9c53`); his look
 > OWED. Branch `1.0.158from1.0.157-Orbit_surface`, worktree `../orbit_surface`.
 > **OWNS** · S4's design: where P2 drives the gizmo and the piece's support, what it reads, what stays, its switch, its vectors and gates.
 > **READ WITH** · [ORBIT_SURFACE.md](ORBIT_SURFACE.md) §2.2 P1, P2 (its ⑤), §5.2, §6; [ORBIT_SURFACE_READOUT.md](ORBIT_SURFACE_READOUT.md) §3, §14;

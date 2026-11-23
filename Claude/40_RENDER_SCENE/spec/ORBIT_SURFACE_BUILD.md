@@ -165,7 +165,7 @@ gizmo marks the contact — the correction of S2's side-facet consequence); the 
 * ⭐ **S2 — BUILT 2026-11-22 (P1 `dfeb7ef9`, P2 `fafbde6b`, P2b `d21a4826` — on `Scene_1` only), the gates G1 – G3 OWED** → [ORBIT_SURFACE_READOUT.md](ORBIT_SURFACE_READOUT.md) §13.
 * ⭐ **S4 — BUILT AND GATED 2026-11-23 (`54e37d03`, fix round 1 `19fa42bf`)** → [ORBIT_SURFACE_DRIVE.md](ORBIT_SURFACE_DRIVE.md) §9bis – §10: P2 drives the gizmo
   (its level less the piece's reach) and the support, read from where the piece is on the face it is over; G1 identical at 0; his front record: the
-  gizmo moved on the top round `Piece44` only (+73.25 mm), the camera ≤ 2.9 mm (F17); the support never active in his records. Local; his look owed.
+  gizmo moved on the top round `Piece44` only (+73.25 mm), the camera ≤ 2.9 mm (F17); the support never active in his records. ⭐ DEPLOYED 2026-11-23 (LIVE main `86a0e53` = `664f9c53`); his look owed.
 * ⭐ **S3 — BUILT 2026-11-23 (`d4b6c222`)** → [ORBIT_SURFACE_MOUTH_HOLD.md](ORBIT_SURFACE_MOUTH_HOLD.md) §7, §10: his four records never meet the hold (nothing he played changes); `Scene_1`'s scan: no cap
   mouth; H2 removes the hold at the 10 mm bottom slots (the piece never enters) and within half a piece of the top channel's walls — there the top's
   depth (not yet P2's) brings back the drop at the tilt: §8 row 11, his word. ⭐ DEPLOYED 2026-11-23 (LIVE main `e80a7b0` = `1bc13f70`); his look owed.
