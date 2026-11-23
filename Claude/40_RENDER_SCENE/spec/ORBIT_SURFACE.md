@@ -689,7 +689,7 @@ mapping: only the depth rule changes) → [ORBIT_SURFACE_AUDIT.md](ORBIT_SURFACE
 
 **Build first [DECIDED 2026-11-16 with Q2, Q4, Q7 — to be tested]:** (1) L2, the landing map (P2), as one pure function, its vectors against a brute-force drop, wired
 first as a READOUT beside today's depth on `Scene_1` (so the owner sees the difference before it drives anything) — the study's P reading is
-its second implementation (✅ built 2026-11-22, S2); (2) the mouth's hold restricted (Q4) (✅ built 2026-11-23, S3 — [ORBIT_SURFACE_MOUTH_HOLD.md](ORBIT_SURFACE_MOUTH_HOLD.md)); (3) the Blender checks B1, B2, B4 (§7bis); then (4) L2 driving the gizmo, the footprint support re-expressed on it with its wall kept
+its second implementation (✅ built 2026-11-22, S2); (2) the mouth's hold restricted (Q4) (✅ built 2026-11-23, S3 — [ORBIT_SURFACE_MOUTH_HOLD.md](ORBIT_SURFACE_MOUTH_HOLD.md)); (3) the Blender checks B1, B2, B4 (§7bis); then (4) L2 driving the gizmo, the footprint support re-expressed on it with its wall kept (designed 2026-11-23, S4 — [ORBIT_SURFACE_DRIVE.md](ORBIT_SURFACE_DRIVE.md))
 (a replay of `Scene_1` in contact range against `Piece44`: unchanged). The drop removed (Q10) is the contact's queue's, not this list's. *(alignment)* The far-foot step first listed here (the shell fed the contour point)
 is withdrawn: F17 and the mouth are defects recorded for the orbit's queue, F7 an event at a seat (§2.2 P1, Q1).
 

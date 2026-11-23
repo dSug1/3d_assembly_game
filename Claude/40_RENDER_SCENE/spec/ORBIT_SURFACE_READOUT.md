@@ -289,6 +289,10 @@ placed body the orbit reads is convex (its hull's volume = its mesh's)"* would m
     `tests/landing_readout.test.ts` V2 *on a side facet the piece AS HELD* — a 100 × 20 × 40 mm piece against a wall facing +x: Δ +50 mm along its
     length, +10 after a quarter turn about the vertical; shown RED on the mutant (b) (the held piece turned so its resting face faces the facet,
     in `prepareLanding`: *"expected +0 to be 50"*; built with S3 in `d4b6c222`, `ORBIT_SURFACE_MOUTH_HOLD.md` §10).
+  * ⚠ **A CORRECTION (2026-11-23, S4's design — [ORBIT_SURFACE_DRIVE.md](ORBIT_SURFACE_DRIVE.md) §2).** The consequence put to him with (a) — *"a side's gizmo
+    would stand half a piece out once P2 drives"* — does not hold: the game's gizmo marks the CONTACT (the piece hangs from it by its lift, `faceLift`,
+    which along the facet's normal is P2's reach), so P2 drives the gizmo at its level LESS the reach: on a flat side, aligned or not, today's level.
+    The side's constant Δ here is the reach itself. This ring keeps marking the piece's reference point.
 * **Lessons → rules** (§11, `SCENE_WORKFLOW.md` §10). The side-facet finding is a GAME rule's (P2's orientation: golden vectors once decided —
   `SCENE_WORKFLOW.md` §9.2), not a scene's: no scene rule. The builder's candidate (§13.8) IS a construction rule — **C4**: a part authored as data
   is convex (a box, a prism, a frustum — `PART_AUTHORING.md` §2), because the readout and the footprint support read each placed part as ONE convex

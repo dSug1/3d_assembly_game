@@ -95,7 +95,7 @@ G2), then ~3 µs a frame.
   `pieceEnters`: the opening against the piece's two smallest sizes, not where the piece stands), 21 mm lower: the drop at the tilt that *"build b"*
   removed (2026-11-10), back on 30 % of the channel's width (eased by the depth's glide). The root is the top's depth, not the hold: once P2 drives
   the gizmo (the build list's item 4) the top reads the rims there too and the two agree. → his word: keep 2 and build item 4 next (⭐ recommended),
-  or `mouthHoldDomain` 1 by default until item 4 (on `Scene_1` 1 = the hold as built: no cap mouth there).
+  or `mouthHoldDomain` 1 by default until item 4 (on `Scene_1` 1 = the hold as built: no cap mouth there). ✅ **his word (2026-11-23): *"Do as per your recommendation"*** — `mouthHoldDomain` stays 2; item 4 (P2 driving the gizmo) is built next.
 
 ## 8. Vectors and gates
 

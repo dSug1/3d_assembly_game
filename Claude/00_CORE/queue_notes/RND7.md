@@ -3,8 +3,8 @@
 > **STATUS** · 🔧 **S2 (the readout) BUILT AND GATED** (2026-11-22 night, the owner asleep; `ORBIT_SURFACE_READOUT.md` §13 – §14), ⭐ **DEPLOYED 2026-11-23** (LIVE main `ff41fc3` = `5d30edf5`); 🔧 **S3 (the mouth's hold restricted) BUILT AND GATED** 2026-11-23 (`d4b6c222`, `ORBIT_SURFACE_MOUTH_HOLD.md`), ⭐ **DEPLOYED 2026-11-23** (LIVE main `e80a7b0` = `1bc13f70`) — the workfront: branch `1.0.158from1.0.157-Orbit_surface` (pushed), the
 > worktree `../orbit_surface`. Built OFFLINE before the merge (2026-11-17): S0 (the entry sets on `Scene_2`'s real collision pieces) and S1 (the landing map,
 > `src/core/landing_map.ts` — NOT wired: nothing calls it). Nothing else built.
-> **NEXT** · his look (the readout and S3 deployed) and his word on S3's finding (`ORBIT_SURFACE_MOUTH_HOLD.md` §7: keep `mouthHoldDomain` 2 and
-> build item 4 next — recommended — or 1 until item 4); then the build list's item 4 (P2 driving) or 3 (the Blender checks). ✅ The side facets: AS HELD (his word). Before: the READOUT designed for his look, then
+> **NEXT** · ⭐ the build list's item 4, P2 DRIVING the gizmo — S4, designed: `ORBIT_SURFACE_DRIVE.md` (his word 2026-11-23 *"Do as per your recommendation"*: `mouthHoldDomain` stays 2,
+> item 4 next — S3's finding, `ORBIT_SURFACE_MOUTH_HOLD.md` §7); his look on the readout and S3 (deployed) owed; then item 3 (the Blender checks). ✅ The side facets: AS HELD (his word). Before: the READOUT designed for his look, then
 > built. ✅ §8's end asked again 2026-11-22, all four answered (`ORBIT_SURFACE_BUILD.md` §2bis).
 > **LAST VERIFIED** · 2026-11-22, on `c0e40f85` (docs) = LIVE `3b7a479`'s code
 
@@ -54,3 +54,5 @@
   the drop at the tilt: ledger row 11, his word); G1 IDENTICAL to `3b7a479` at the defaults; an independent audit: no defect (its nits fixed). Local.
 * **2026-11-23, later** — his word *"Deploy"*: the branch pushed at `1bc13f70`, merged into main with no working tree touched (main's tree = the
   branch's): LIVE main `e80a7b0` = `1bc13f70` — S2 and S3 live; his look owed, and his word on S3's finding (`ORBIT_SURFACE_MOUTH_HOLD.md` §7).
+* **2026-11-23, later** — his word *"Do as per your recommendation"* on S3's finding: `mouthHoldDomain` stays 2; the build list's item 4 (P2
+  driving the gizmo, the footprint support re-expressed on it) is designed and built next.

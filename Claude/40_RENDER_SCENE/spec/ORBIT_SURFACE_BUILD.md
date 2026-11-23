@@ -90,6 +90,11 @@ gizmo's place every frame, exact (no grid), beside today's depth on `Scene_1` �
 **S3 — THE MOUTH'S HOLD RESTRICTED** (the build list's item 2, his Q4 (a); designed and built 2026-11-23 on his *"Continue build"*) → [ORBIT_SURFACE_MOUTH_HOLD.md](ORBIT_SURFACE_MOUTH_HOLD.md):
 never on a cap (H1), only over a void P2 leaves open for the held piece (H2); behind `mouthHoldDomain` (0 = `3b7a479`'s hold).
 
+**S4 — P2 DRIVES THE GIZMO** (the build list's item 4; designed 2026-11-23 on his *"Do as per your recommendation"*) → [ORBIT_SURFACE_DRIVE.md](ORBIT_SURFACE_DRIVE.md):
+the gizmo's depth P2's, read from where the piece is (⑤: far = from outside, close in a proud part a wall), at its level LESS the piece's reach (the
+gizmo marks the contact — the correction of S2's side-facet consequence); the footprint support re-expressed on the same reading; behind `landingDrives`
+(0 = as deployed, `e80a7b0`).
+
 ## 6. Notes for the merges (filled by the packages)
 
 * **S1 — the one registration line** (the only existing file this branch's code touches): `tests/unwired_debt.test.ts` gains ONE line in `PENDING`,
@@ -192,7 +197,7 @@ marked? → its check, its control, its row in §8"*; a builder with nothing to 
 | 8 | The specification's own checks, from the shapes study: solids (B1), exposed per stage (B2), where each held piece first touches (B3), coverage (B5), features at a threshold (B6) | `PART_AUTHORING.md` §6.1, each with its pass rule | `PART_AUTHORING.md` §6.3's ten lines, put into §10.2's form when a build script applies them | specified there | ⏳ not built — B1, B2 first; B3, B5 once the landing map is wired |
 | 9 | On a side facet P2 (the piece AS HELD, resting face down) stands half the piece's size out: +22.5 mm across it, +51.8 mm along it (S2's G3 on his records, `ORBIT_SURFACE_READOUT.md` §14) | — a GAME rule's (P2's orientation), not a scene's | none — golden vectors once decided (`SCENE_WORKFLOW.md` §9.2) | none (a game rule) — its golden vector: `landing_readout.test.ts` V2 *on a side facet the piece AS HELD* | ✅ his word 2026-11-23: **(a) as held** |
 | 10 | The readout and the footprint support read each placed part as ONE convex body (S2's build, `ORBIT_SURFACE_READOUT.md` §13.8) | a part authored as data is convex | **C4** (construction) | ⏳ owed: its hull's volume = its mesh's | ⏳ the check owed |
-| 11 | Near the top channel's walls H2 lets the gizmo go (the piece cannot pass: P2 right), and the top's TODAY depth drops it 21 mm onto the channel's floor at the tilt (S3's scan, `ORBIT_SURFACE_MOUTH_HOLD.md` §7) | — a GAME rule's (the top's depth, item 4), not a scene's | none | none (a game rule) | ⏳ his word: keep `mouthHoldDomain` 2 and build item 4 next (recommended), or 1 until item 4 |
+| 11 | Near the top channel's walls H2 lets the gizmo go (the piece cannot pass: P2 right), and the top's TODAY depth drops it 21 mm onto the channel's floor at the tilt (S3's scan, `ORBIT_SURFACE_MOUTH_HOLD.md` §7) | — a GAME rule's (the top's depth, item 4), not a scene's | none | none (a game rule) | ✅ his word 2026-11-23: keep `mouthHoldDomain` 2, item 4 built next (it resolves the row) |
 
 ⭐ Rows are ADDED by each package and by each look of the owner; a row leaves only when its check is built AND has been seen failing.
 
