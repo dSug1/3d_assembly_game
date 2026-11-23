@@ -1,0 +1,110 @@
+{
+  "PROXY_PROBE_MM": {
+    "value": 3.5,
+    "unit": "mm",
+    "rule": "R0, R1: ρ — the probe; an opening narrower than 2ρ bridged",
+    "home": "src/core/units.ts"
+  },
+  "PROXY_FACE_MIN_MM": {
+    "value": 10,
+    "unit": "mm",
+    "rule": "R3: w — no face the gizmo travels narrower",
+    "home": "src/core/units.ts"
+  },
+  "PROXY_FLUSH_MM": {
+    "value": 0.25,
+    "unit": "mm",
+    "rule": "R2, R6: a planar proxy face ON its real face",
+    "home": "src/core/units.ts"
+  },
+  "PROXY_CURVE_TOL_MM": {
+    "value": 1.5,
+    "unit": "mm",
+    "rule": "R2, R4: τ — a curve's facet (its sagitta recorded beside it)",
+    "home": "src/core/units.ts"
+  },
+  "COLLISION_TOL_MM": {
+    "value": 1.5,
+    "unit": "mm",
+    "rule": "C-R2: τc — the collision pieces true to the part",
+    "home": "src/core/units.ts"
+  },
+  "B1_FIT_MM": {
+    "value": 0.5,
+    "unit": "mm",
+    "rule": "B1e, R6, D4: the proxy ON its collision pieces",
+    "home": "src/core/part_checks.ts"
+  },
+  "UCX_MAX_VERTICES": {
+    "value": 24,
+    "unit": "count",
+    "rule": "C-R1, B1d: a collision piece's vertices",
+    "home": "src/core/part_checks.ts"
+  },
+  "UCX_MAX_TRIANGLES": {
+    "value": 48,
+    "unit": "count",
+    "rule": "C-R1, B1d: a collision piece's triangles",
+    "home": "src/core/part_checks.ts"
+  },
+  "R7_PLANAR_DEG": {
+    "value": 1,
+    "unit": "deg",
+    "rule": "R7: one node one planar face",
+    "home": "src/core/part_checks.ts"
+  },
+  "B6_APART_DEG": {
+    "value": 30,
+    "unit": "deg",
+    "rule": "R4, B6: neighbouring faces one face or this far apart",
+    "home": "src/core/part_checks.ts"
+  },
+  "B6_ELEVATION_BAND_DEG": {
+    "value": 15,
+    "unit": "deg",
+    "rule": "R4, B6: no face within this of 45° of elevation at its goal",
+    "home": "src/core/part_checks.ts"
+  },
+  "R4_HALF_STEP_DEG": {
+    "value": 30,
+    "unit": "deg",
+    "rule": "R4, C-R3: a curve's facet (a hexagon's half step); a ring's",
+    "home": "src/core/part_checks.ts"
+  },
+  "COVER_STEP_MM": {
+    "value": 1.75,
+    "unit": "mm",
+    "rule": "R1: the voxel step of the ρ-closing (ρ / 2)",
+    "home": "src/core/voxels.ts"
+  },
+  "R1B_DEEP_DEG": {
+    "value": 22.5,
+    "unit": "deg",
+    "rule": "R1b: a point's sky under this — deeper than its mouth is wide (capped)",
+    "home": "src/core/proxy_cover.ts"
+  },
+  "R1B_AMBER_DEG": {
+    "value": 26.56505117707799,
+    "unit": "deg",
+    "rule": "R1b: the amber band's top (atan ½)",
+    "home": "src/core/proxy_cover.ts"
+  },
+  "CLOSED_STEP_MM": {
+    "value": 2,
+    "unit": "mm",
+    "rule": "R2: an edge read every this (closed)",
+    "home": "src/core/proxy_cover.ts"
+  },
+  "COLLISION_SAMPLE_MM": {
+    "value": 2,
+    "unit": "mm",
+    "rule": "C-R2: the render sampled at this spacing",
+    "home": "src/core/collision_cover.ts"
+  },
+  "RESTING_MIN_SHARE": {
+    "value": 0.25,
+    "unit": "share",
+    "rule": "decision 5: a resting candidate ≥ this of the largest (⏳ PROPOSED)",
+    "home": "src/core/collision_cover.ts"
+  }
+}

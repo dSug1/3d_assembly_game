@@ -130,6 +130,7 @@ const PENDING: Record<string, string> = {
   checkProxyFaces: "S6 packet 1 (`PROXY_AND_COLLISION_RULES.md` §9) — R7, R3, R4, R2 on each proxy face: vectors and `check_part_solids.ts`, at the export gate",
   checkProxyCover: "S6 packet 2 (`PROXY_AND_COLLISION_RULES.md` §9.2) — R1 coverage, R1b caps, R2 closed: vectors and `check_part_solids.ts`, at the export gate (≈ 46 s on `Scene_2`: never at load)",
   checkCollisionPieces: "S6 packet 3 (`PROXY_AND_COLLISION_RULES.md` §9.5) — C-R2 both ways and the resting candidates: vectors and `check_part_solids.ts`, at the export gate (≈ 29 s on `Scene_2`)",
+  rulesConstants: "SCENE_WORKFLOW.md §11.2 item 4 — the rules' constants as JSON for the Blender side (`export_rules_constants.ts`, its staleness vector); a generator's input, never the game's",
   buildLandingMap: "S2 (`ORBIT_SURFACE_READOUT.md` §13) — the landing map's GRID: the readout reads its sums with no grid (`prepareLanding`); the grid serves the vectors and the offline comparison until the representation is chosen (`ORBIT_SURFACE_LANDING_MAP.md` §10.9)",
   // ✅ `qAngle` LEFT THIS LIST 2026-09-22 — `RotationFollower` reads it to decide a body has
   // ARRIVED at its detent, so it is wired and the guard reddened until this line was deleted.

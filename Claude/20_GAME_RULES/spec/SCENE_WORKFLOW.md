@@ -585,10 +585,15 @@ the generator's test: it proves that what was generated obeys the rules (§10), 
    it, named after its question). **BUILT 2026-11-23 night**: `scripts/surface/check_scene.ts` (its `CHECKS` list: the reach, the parts; a new check
    joins it).
 2. **The build script calls it after its export, and stops on a FAIL** — today `build_engine.py` calls no game-side check and stops on none of its
-   own (its only stop: `--rev` before the export).
+   own (its only stop: `--rev` before the export). ⭐ **Its helper BUILT 2026-11-23 night**: `Assets/Blender/scripts/scene_gate.py` — `run_gate(glb)`
+   runs the one command and returns its verdict (plain Python: Blender's or any; tested alone — a missing file 2, `Scene_2` 1). ⏳ The call in a
+   build script itself: `import scene_gate; code = scene_gate.run_gate(glb); sys.exit(code) if code else None` after the export — not added to
+   `build_engine.py` (not run in Blender here; the next scene's build script carries it).
 3. **A GENERATOR that applies the rules**: the proxy and collision rules are WRITTEN (`PROXY_AND_COLLISION_RULES.md`; §10.2's status), none
    APPLIED — no script draws a proxy or a collision piece by them yet.
-4. **The Blender side reads the game's constants from the game's files** (`units.ts`, never retyped — B6's rule), so the two sides cannot disagree.
+4. ✅ **The Blender side reads the game's constants from the game's files** (`units.ts`, never retyped — B6's rule), so the two sides cannot disagree.
+   **BUILT 2026-11-23 night**: `src/core/rules_constants.ts` (every check's number, its unit, rule and home) → `Assets/Blender/scripts/rules_constants.json`
+   (`scripts/surface/export_rules_constants.ts`); `tests/rules_constants.test.ts` fails while the file is stale (shown red on a stale ρ).
 5. **The painting** (§7.2: each check's result coloured on the faces in the review `.blend`) — for the owner's review, not for the loop's verdict.
 
 ### 11.3 The other loops — OWED, each its own work (his words: *"we will need to work on other loops to automatize the other checks as well"*)

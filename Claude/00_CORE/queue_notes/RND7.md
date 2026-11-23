@@ -104,3 +104,5 @@
   `tri_geom.ts`. Local.
 * **2026-11-23, night (later)** — C4's check (the ledger's row 10): the format admits only convex kinds (box, frustum, prism ± tips) and
   refuses the rest; its guard `tests/data_parts_convex.test.ts` (95 bodies in 5 scenes; a new kind fails it until proved convex). Local.
+* **2026-11-23, night (later)** — the loop's items 2 and 4 (SCENE_WORKFLOW.md §11.2): `scene_gate.py` (a build script's call to the gate;
+  not yet in `build_engine.py`) and the rules' constants as JSON for the Blender side (`rules_constants.json`, its staleness vector). Local.
