@@ -163,6 +163,9 @@ gizmo marks the contact — the correction of S2's side-facet consequence); the 
   `scripts/probes/surface_study/shapes.ts`, which they import). ⚠ Built and checked by Fable alone, no second agent's audit; scripts are
   outside `npm run verify`.
 * ⭐ **S2 — BUILT 2026-11-22 (P1 `dfeb7ef9`, P2 `fafbde6b`, P2b `d21a4826` — on `Scene_1` only), the gates G1 – G3 OWED** → [ORBIT_SURFACE_READOUT.md](ORBIT_SURFACE_READOUT.md) §13.
+* ⭐ **S4 — BUILT AND GATED 2026-11-23 (`54e37d03`, fix round 1 `19fa42bf`)** → [ORBIT_SURFACE_DRIVE.md](ORBIT_SURFACE_DRIVE.md) §9bis – §10: P2 drives the gizmo
+  (its level less the piece's reach) and the support, read from where the piece is on the face it is over; G1 identical at 0; his front record: the
+  gizmo moved on the top round `Piece44` only (+73.25 mm), the camera ≤ 2.9 mm (F17); the support never active in his records. Local; his look owed.
 * ⭐ **S3 — BUILT 2026-11-23 (`d4b6c222`)** → [ORBIT_SURFACE_MOUTH_HOLD.md](ORBIT_SURFACE_MOUTH_HOLD.md) §7, §10: his four records never meet the hold (nothing he played changes); `Scene_1`'s scan: no cap
   mouth; H2 removes the hold at the 10 mm bottom slots (the piece never enters) and within half a piece of the top channel's walls — there the top's
   depth (not yet P2's) brings back the drop at the tilt: §8 row 11, his word. ⭐ DEPLOYED 2026-11-23 (LIVE main `e80a7b0` = `1bc13f70`); his look owed.
@@ -197,7 +200,9 @@ marked? → its check, its control, its row in §8"*; a builder with nothing to 
 | 8 | The specification's own checks, from the shapes study: solids (B1), exposed per stage (B2), where each held piece first touches (B3), coverage (B5), features at a threshold (B6) | `PART_AUTHORING.md` §6.1, each with its pass rule | `PART_AUTHORING.md` §6.3's ten lines, put into §10.2's form when a build script applies them | specified there | ⏳ not built — B1, B2 first; B3, B5 once the landing map is wired |
 | 9 | On a side facet P2 (the piece AS HELD, resting face down) stands half the piece's size out: +22.5 mm across it, +51.8 mm along it (S2's G3 on his records, `ORBIT_SURFACE_READOUT.md` §14) | — a GAME rule's (P2's orientation), not a scene's | none — golden vectors once decided (`SCENE_WORKFLOW.md` §9.2) | none (a game rule) — its golden vector: `landing_readout.test.ts` V2 *on a side facet the piece AS HELD* | ✅ his word 2026-11-23: **(a) as held** |
 | 10 | The readout and the footprint support read each placed part as ONE convex body (S2's build, `ORBIT_SURFACE_READOUT.md` §13.8) | a part authored as data is convex | **C4** (construction) | ⏳ owed: its hull's volume = its mesh's | ⏳ the check owed |
-| 11 | Near the top channel's walls H2 lets the gizmo go (the piece cannot pass: P2 right), and the top's TODAY depth drops it 21 mm onto the channel's floor at the tilt (S3's scan, `ORBIT_SURFACE_MOUTH_HOLD.md` §7) | — a GAME rule's (the top's depth, item 4), not a scene's | none | none (a game rule) | ✅ his word 2026-11-23: keep `mouthHoldDomain` 2, item 4 built next (it resolves the row) |
+| 11 | Near the top channel's walls H2 lets the gizmo go (the piece cannot pass: P2 right), and the top's TODAY depth drops it 21 mm onto the channel's floor at the tilt (S3's scan, `ORBIT_SURFACE_MOUTH_HOLD.md` §7) | — a GAME rule's (the top's depth, item 4), not a scene's | none | none (a game rule) | ✅ his word 2026-11-23: keep `mouthHoldDomain` 2, item 4 built next (it resolves the row) — ⭐ S4 built: the top reads the rims there |
+| 12 | P2 driving moves the far piece and the camera where the direction is oblique to the face (F17): on his front record the camera ≤ 2.9 mm, the piece ≤ 7.1 mm (S4's G3, `ORBIT_SURFACE_DRIVE.md` §10) | — the ORBIT's (F17, its queue), not a scene's | none | none | recorded — his look |
+| 13 | `Piece44` is an inverted frustum: the support on P2 equals today's where a part's widest extent is at its top; on a slant P2 reads the contact, lower (S4's V3) | — a GAME rule's (P2 is exact), not a scene's | none | V3 (`landing_drive.test.ts`) | ✅ vector |
 
 ⭐ Rows are ADDED by each package and by each look of the owner; a row leaves only when its check is built AND has been seen failing.
 

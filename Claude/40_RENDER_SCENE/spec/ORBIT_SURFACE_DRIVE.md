@@ -2,7 +2,10 @@
 
 > **STATUS** · ⭐ **DESIGNED 2026-11-23** on his word *"Do as per your recommendation"* (S3's finding: `mouthHoldDomain` stays 2, the build list's
 > item 4 next — `ORBIT_SURFACE.md` §6 (4)). The rules are his of 2026-11-16 (P2, ⑤, Q2, Q10) and 2026-11-23 (*"Keep as held"*); the choices they leave
-> open are made in §8 and may be reversed on his look. Built on branch `1.0.158from1.0.157-Orbit_surface`, worktree `../orbit_surface`.
+> open are made in §8 and may be reversed on his look. ⭐ **BUILT AND GATED 2026-11-23** (`54e37d03` + fix round 1 `19fa42bf`, §9bis – §10): G0 green;
+> G1 his four records at 0 IDENTICAL to `3b7a479`; G2 a key change ~4 ms on this PC; G3 his front record: the gizmo moved on the top only (round
+> `Piece44`, +73.25 mm at the recess), the camera ≤ 2.9 mm, the piece ≤ 7.1 mm (F17); the audit: two defects, fixed. Local, not deployed; his look
+> OWED. Branch `1.0.158from1.0.157-Orbit_surface`, worktree `../orbit_surface`.
 > **OWNS** · S4's design: where P2 drives the gizmo and the piece's support, what it reads, what stays, its switch, its vectors and gates.
 > **READ WITH** · [ORBIT_SURFACE.md](ORBIT_SURFACE.md) §2.2 P1, P2 (its ⑤), §5.2, §6; [ORBIT_SURFACE_READOUT.md](ORBIT_SURFACE_READOUT.md) §3, §14;
 > [ORBIT_SURFACE_MOUTH_HOLD.md](ORBIT_SURFACE_MOUTH_HOLD.md) §7; [ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md) §9 (the terms the closed orbit sets).
@@ -67,6 +70,9 @@ Its normal, host and mouth stay today's (§3.5). Pure: one function in `src/core
 piece's resting face's centre, model coordinates), **snapshotted at the start of the frame** (`assemblyFrame`, before `supportFrame`) so every query
 of the frame — the support's, the solver's 24, the sections', the frame's own gizmo — reads the same `F` (the frame's gizmo memo stays valid). None
 (the first frame of an orbit): read from outside. Far and medium the piece rides the shell (≥ 60 mm off the parts' box): from `F` = from outside.
+⭐ **(fix round 1, §9bis 1, 3)** the snapshot is taken FIRST in the frame (before the approach's coast) and read between frames too — a new stamp each,
+the gizmo's memo valid for one; and `F` is read ONLY along the face the piece is over (last frame's shown facet, within 2.6°): "far = from outside"
+held only for that face — on the others `F` stands behind the parts or between them. Every other direction: from outside.
 
 ### 3.3 The footprint support on P2 (⑤), its wall kept
 
@@ -176,6 +182,82 @@ On `Scene_1`: (1) the top channel near its walls — the gizmo stays on the rims
 the ring stays on its top ~20 mm past the edge with the piece; (3) the 10 mm slots — never entered; (4) the sides — nothing different. The slider
 `landingDrives`: 0 = as deployed. The readout's ring (if on) still marks the piece's reference point.
 
-## 10. As built
+## 9bis. The audit (independent, read only, on `54e37d03`) and fix round 1
 
-(filled by the build)
+**Clean** (each checked with its lines): the switch's 0 (no value, identity, cache behaviour or order changed); the split preparation (the same
+half-spaces in the same order, the same arithmetic: `prepareLanding`, `buildLandingMap` bit for bit; `top` the true highest depth along `n`); the
+level rule (`faceLift` = max(0, `heldReach`): the piece's reference at `D + d` — no double count, no sign error, the tilted frames' levels kept);
+the support (the window and the slack as before; `inside` → today's rule exactly; the drawn reference right).
+
+**Its findings, and what was done:**
+
+| # | finding | done |
+|---|---|---|
+| 1 | ⛔ DEFECT — `st.frames` advances at a frame's END, so a query between two frames (a pinch, an A + drag, the approach's coast — which ran before `landingDriveFrame`) read the gizmo UNDRIVEN (the frame check), and the gizmo memo (`GIZMO_MEMO`, keyed by the frame's number) carried that into the next frame: the support's anchor read today's gizmo, every other angle P2's | ⭐ `landingDriveFrame` FIRST in `assemblyFrame` (before the coast); between frames the stored snapshot is read (no frame check); the drive's STAMP (one a snapshot) is part of the memo's validity — a snapshot empties it |
+| 2 | ⛔ DEFECT — the lines' key changed on nearly every frame of motion: every direction the lines prepared carried `F`'s level where `F` stood below its `top` — the far faces included (the piece is in front of one face only) — the lines re-sampled each frame, never refined | ⭐ with 3: only the piece's own face can carry `F` |
+| 3 | ⛔ (a risk in its words; a defect for this design) P2 was read FROM `F` on EVERY face — on a face the piece is not over, `F` stands behind the parts (the back face, the piece in front: *nothing* — the gizmo on the plane over the back's channel and slots) or between two of them (a landing inside the nearer part). It reaches the lines, the edge blend's far end, the solver's queries across an edge, the map's catch-up | ⭐ §3.2 amended: read from `F` ONLY along the direction of the face the piece is over (last frame's shown facet, `asmShown`, within 2.6° — `levelOn`'s tolerance); every other direction FROM OUTSIDE (the piece reaches a face it is not over only round the contour's convex edges — from outside) |
+| 4 | risk — the model's orientation follows the drawn piece every frame of a turn (an alignment is a slerp), so the direction-free sums are prepared again on every frame of a turn, not once | measured (G2); the phone's figure owed |
+| 5 | nit — the support's index is the first body of its part | none: `asmSupport.index` is never read; noted |
+| 6 | nit — the readout's "today's blend" blends toward the next face's DRIVEN point, and is evaluated even with the readout off | ⭐ evaluated only when the readout runs; the blend's far end stated (the `band` flag only) |
+| 7 | risk — within one 0.1 mm step of `F` a sample may be stale | accepted (with 3 the key carries `F` only over a recess, the piece below a part's top) |
+
+## 10. As built (2026-11-23, `54e37d03`)
+
+**The files.** `src/core/landing_map.ts` — the preparation split (`formOf` + `project`; `prepareHeldSums`, `landingFor` with its `top`;
+`prepareLanding` = `landingFor(prepareHeldSums(…))`, `buildLandingMap` on the same), `driveLevel`, `landingSupport`. `src/render/landing_drive.ts`
+(new) — the state (`st.landingDrive`), `landingDriveFrame` (the sums by key, `F`), `driveGizmoLanding`, `driveSupport`, `driveKey`.
+`src/render/assembly_wiring.ts` — `landingDriveFrame` right before `supportFrame`; `rawGizmo` = `driveGizmo(rawGizmoToday(…))`; the frame's call
+keeps `mrT` (today's) for the readout and, where P2 moved the point, today's blend for its `band`; `supportOf` (twice: the solved piece, the drawn
+one); the lines' `optKey` + `driveKey`. `landing_readout.ts` exports `READOUT_SCENE` and `idOf` (one constant, one place). The switch
+(`gestureConfig.ts`), the menu: the surface's three switches in a subfolder **THE ORBIT'S SURFACE** of GIZMO & SECTIONS (a folder holds 9 at most —
+`landingReadout` and `mouthHoldDomain` moved there with it); 138 sliders.
+
+**Departures from §3.** (1) `Piece44` is not a box: it is the inverted frustum on Piece4's top (wide face up, its sides overhanging the goal's host).
+V3 is written on a `Piece44`-like inverted frustum: above its wide top the first contact is that face (P2 = `footprintSupport` + `supportTop`); beside
+it, the piece (48 mm) lower than its wide top meets the overhang — `inside`, today's rule — so the support is today's there too (§3.3's "over boxes" was
+too narrow: what matters is a part's widest extent at its top). (2) The lines' key carries, per direction prepared, "o" when `F` is above the
+direction's `top` (the reading from outside) else `F`'s level (0.1 mm).
+
+**The vectors** (`tests/landing_drive.test.ts`, 17), each RED on its mutant first — one mutant at a time on the built code, the file run, reverted:
+
+| mutant | red on |
+|---|---|
+| the reach left out (`driveLevel`) | V1: *"expected 50 to be close to +0"* (the side, as held), *"expected 0.3 to be close to 0.25"* |
+| nothing read as today | V1: *"expected 0.2 to be 0.4"* |
+| the support read from outside (`driveSupport`) | V5: *"expected { kind: 'land', part: 'P' } to deeply equal { kind: 'today' }"* (beside the proud box, low) |
+| the gizmo read from outside (`driveGizmoLanding`) | V5: *"expected 'land' to be 'inside'"* |
+| `top` without the held piece | V4: *"expected { kind: 'inside' } to deeply equal { kind: 'land', … }"* (3 tests) |
+| any scene | V5: *"expected { … } to be null"* |
+| the window dropped (`landingSupport`) | V3: *"expected 'land' to be 'none'"* |
+| `F` read on any frame | V5: *"expected { … } to be null"* |
+| `F` read after the support | V5 (the wiring): *"expected 41256 to be less than 41232"* |
+
+Pins amended (the code they pin changed on purpose): `footprint.test.ts`, `slide_rebuild.test.ts` (the support through `supportOf`),
+`landing_readout_switch.test.ts` (the frame's call; the drive imports the readout's module), `mouth_hold_domain.test.ts` (the call; the subfolder),
+`menu_layout.test.ts` (the subfolder, 138). **G0** `npm run verify`: 192 files / 2377 tests.
+
+**Fix round 1** (`19fa42bf`, §9bis): each change's vector RED on its mutant first — `F` read on every face (*"expected { kind: 'nothing' } to deeply
+equal { kind: 'land', … }"*: the bottom face, the piece above); the stamp not advanced (*"expected +0 to be 1"*); the drive's step after the coast
+(*"expected 41315 to be less than 41189"*); the memo without the stamp (its pin). **G0**: 192 files / 2378 tests.
+
+**G1 — identity: PASSED, bit for bit.** His four records of 2026-11-22 replayed from the worktree at `landingDrives` 0 (the kit's
+`fo3/surface/drive/run_s4.sh`, `run_s4f.sh`; the walker `walk_dr.mjs` = `walk_mh.mjs` + the support's level, the piece's place) against the `3b7a479`
+code's replays: the largest difference **0** on every frame — on `54e37d03` and again on `19fa42bf` (`Scene_1` back 2 916 frames, front 6 034;
+`Scene_0bis` back 5 011, front 8 381). `Scene_0bis` at 2 (on `54e37d03`): identical too (the scene's restriction). No probe profile left in %TEMP%.
+
+**G2 — the cost** (`scripts/surface/drive_cost.ts`, offline, `Scene_1`'s 36 boxes, the green piece as held): the direction-free sums **3.7 ms**
+(median; 5 ms cold); a direction's projection **0.05 – 0.13 ms**; a query **~1 µs** (0.7 – 1.5). A key change — a pick-up, a seat, ⚠ every frame of a
+turn (§9bis 4: an alignment is a slerp) — ~4 ms on this PC. The phone's figure owed.
+
+**G3 — on his records, 2 against 0** (the kit's `rd_s4.mjs`). Back record: nothing moved (> 1 µm: 0 frames). Front record: the gizmo on **2 444** of
+6 034 frames, all on the top — round `Piece44` and over the recess beside it (the largest **+73.25 mm**, as S2's readout measured: +73.3); the
+camera's position on 2 273 frames, at most **2.9 mm** (its target never); the piece on 2 278, at most **7.1 mm** — F17's share (far out, the
+direction oblique to the face: h × tan θ), the orbit's queue's. **The support was never active in his records** (they never come close in): the
+`Piece44` gate rests on V3 — his look close in round `Piece44` owed.
+
+**Known limits.** L1 — at the frame's previous angles the gizmo memo's shortcut returns last frame's gizmo (`st.asmG`, read with last frame's `F`): one
+frame's lag, as the map's own. L2 — a turn's frames each prepare the sums (G2); a cache of the placed parts' hulls apart from the held piece's would
+roughly halve it — not built. L3 — the readout's `band` flag reads a blend whose far end is the next face's driven point (the flag only). L4 — the
+support's index is its part's first body (never read). L5 — an edge band's middle is today's point cast (§3.5). L6 — the contact-range behaviour is
+proven by vectors only (V2, V3), not on a record.
+
