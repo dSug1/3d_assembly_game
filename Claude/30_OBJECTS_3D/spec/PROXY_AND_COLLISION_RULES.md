@@ -1,6 +1,7 @@
 # THE PROXY AND COLLISION RULES — universal, for any part (a study, 2026-11-23)
 
-> **STATUS** · ⭐ **A STUDY, PROPOSED 2026-11-23 — nothing built from it**; the patent-free methods surveyed (§5); his decisions owed (§8). The four-part method (`orbit-design-method`):
+> **STATUS** · ⭐ **A STUDY — HIS FIVE DECISIONS GIVEN 2026-11-23 (§8)**, written into §3 and §3bis; the patent-free methods surveyed (§5); the audit next
+> (§7), then the checks — nothing built from it yet. The four-part method (`orbit-design-method`):
 > the rules (§1 – §3), the obstacles and fallbacks (§4), a systematic design from patent-free prior art (§5), an audit (§7) — before any check.
 > **OWNS** · what a part's FACE PROXY (`UFM_`) and its COLLISION PIECES (`UCX_`) must be, for ANY shape — so that a generator (the Blender build
 > scripts, an automated workflow) delivers them right and a check proves it.
@@ -48,22 +49,33 @@ will seat, etc.). Check literature for patent-free methods. Proceed."*
 
 ## 3. The rules — PROPOSED (universal; each with its reader, its scale, its check)
 
-**R0 — THE SCALES, one home each (`units.ts`), all in mm of the MODEL:** **ρ** the probe — the narrowest opening the outside ENTERS (the gizmo's
-reach; ⏳ his word: a constant, or the smallest held piece's half-width); **τ** the proxy's tolerance to the real surface (⏳ ~1 – 2 mm: the 11-13
-fidelity was ≈ 0.7 mm, too strict for simplification); **τc** the collision pieces' tolerance; **w** the narrowest face the gizmo stands on (⑤'s
-≈ 7 mm, restated); **θ** the face map's merge angle (20°, read from `gestureConfig.ts` — never retyped).
+**R0 — THE SCALES, one home each (`units.ts`), all in mm of the MODEL** (✅ his decisions 1 – 2): **ρ = 3.5 mm**, a CONSTANT — the probe: an
+opening narrower than 2ρ is bridged; ρ also bounds the wrap's rounding of a concave corner (a 90° corner filled by ρ(√2 − 1) ≈ 1.4 mm ≤ τ);
+**τ = 1.5 mm** the proxy's tolerance to the real surface, **τc = 1.5 mm** the collision pieces' (his *"as proposed"*: 1 – 2 mm — the middle;
+the audit may move them); **w = 2ρ = 7 mm** the narrowest face or facet (⑤'s ≈ 7 mm, now derived); **θ** the face map's merge angle (20°, read from
+`gestureConfig.ts` — never retyped).
 
 **The proxy:**
 * **R1 — WHAT IS OUTER.** The part's surface a ball of radius ρ reaches from outside, the part ALONE (an alpha-wrap at α = ρ, §5: an opening
   narrower than ρ's ball closed, a wider one open) — computed, never "near the hull". The floor's contact apart. ⭐ A GOAL's mouth (another part's seat)
-  is BRIDGED by its ghost, flush (the 11-13 rule kept); ⏳ a wide hollow that is no goal: its inside outer (the gizmo may go in) or bridged — his word.
+  is BRIDGED by its ghost, flush (the 11-13 rule kept). ✅ **(his decision 3, 2026-11-23: *"bridged if this is in line with rules we have set for
+  hollows already"* — it is: the 11-13 coverage ② *"an open cavity … is no route"*; C25 *"P2 (its floor); inner walls approached"*; C6 the ghost at
+  the mouth)** **R1b — EVERY HOLLOW BRIDGED:** a cavity the outside reaches only through a MOUTH (narrower than what lies behind it) is CAPPED
+  flush at its mouth — a planar cap on the mouth's rim, as a goal's ghost without its plunge; the gizmo's DEPTH over the cap still reads P2 on the
+  collision pieces (which keep the hollow open, C-R2): its floor shows where the held piece fits (C25, Q10); its inner walls are approached (A + dy,
+  the plunge), never travelled. ⏳ **The test that tells a hollow from an open concavity** (an L's inner corner, a shaft's bend — followed, never
+  capped), for the audit: the region between the ρ-wrap and its cap is DEEPER than the cap is wide, or its inner surface ≥ 2 × the cap's area —
+  a borderline case flagged for the author.
 * **R2 — CLOSED, BOTH WAYS.** Every outer point within τ of the proxy (coverage), every proxy point within τ of the outer surface (fidelity — a
   ghost exempt); the proxy a closed surface over the outer surface (every edge shared, or on the floor's contact, or a ghost's rim).
-* **R3 — PLANAR AND FEW.** Planar faces only; two adjacent faces either one face (under θ) or clearly apart (over θ + a margin — B6's
-  conformance); every face at least w wide, except a thin feature's facets (R5); a face count per part from its size (⏳ a budget).
+* **R3 — PLANAR, NO FACE SMALLER THAN w.** Planar faces only; two adjacent faces either one face (under θ) or clearly apart (over θ + a margin —
+  B6's conformance). ✅ **(his decision 4: *"I would not set a limit in number of faces per proxy but rather a minimum size per face or facets since
+  large parts may require more than 16 faces if their geometry is complex (for example the hull of a car)"*)** — NO face count: EVERY proxy face,
+  and every FACET of the assembly's face map at every stage (§3bis), at least **w** across (its inscribed width) — a thin feature's facets too
+  (R5: n lowered, 4 at least); a feature under w even as a square is below the gizmo's scale: absorbed by its neighbour or bridged, and flagged.
 * **R4 — A CURVE AS FEW FLATS.** A curved surface of radius R becomes n flat facets, the smallest n whose sagitta R(1 − cos(π/n)) ≤ τ, n kept
   within [4, 12]; a doubly curved one, a polyhedron of planar regions within τ (§5: VSA's partition).
-* **R5 — A THIN FEATURE AS A PRISM ON ITS AXIS.** A feature narrower than 2w (a shaft, a rib, a pipe): an n-gon prism (n from R4, ≥ 4) along each
+* **R5 — A THIN FEATURE AS A PRISM ON ITS AXIS.** A feature narrower than 2w (a shaft, a rib, a pipe): an n-gon prism (n from R4, ≥ 4, each face ≥ w) along each
   straight segment of its axis; a bend a short joint facet; a lobe its own prism. So the camshaft is a few long prisms the gizmo rolls round in
   n steps, its layout the face map's spits / charts (C22).
 * **R6 — ONE OUTLINE.** The proxy and the collision pieces come from the SAME simplified shape: every proxy point within τ of the collision pieces'
@@ -73,8 +85,28 @@ fidelity was ≈ 0.7 mm, too strict for simplification); **τc** the collision p
 * **C-R1 — CONVEX, SIMPLE** (as built): closed, volume > 0, ≤ 24 vertices, ≤ 48 triangles (B1a – B1d).
 * **C-R2 — TRUE TO THE PART, BOTH WAYS:** the union within τc of the real shape (no visible part outside it, no gap the eye reads as contact); a
   cavity a part ENTERS left open (its walls pieces of their own).
-* **C-R3 — A BUDGET PER PART** (⏳ his word: e.g. 16 — `Scene_2`'s most), from the solver's 24 queries and the landing map's cost (C2).
+* **C-R3 — A BUDGET PER PART**, from the solver's 24 queries and the landing map's cost (C2): proposed 16 (`Scene_2`'s most) — ⏳ his decision 4
+  spoke of the proxy's faces; the pieces' budget is for the audit and C2's figures on the phone.
 * **C-R4 — A THIN FEATURE**, one convex piece per straight segment (a prism ≤ 24 vertices: a 12-gon at most), its lobes apart.
+
+## 3bis. ✅ THE ASSEMBLY'S SURFACE AS IT GROWS — how the faces are appended (his decision 4's question)
+
+The rules for it are written already — S2, S22 (*"exposed means reachable from outside, on the parts taken together"*), S19 (*"rebuilt at two kinds of
+event: the placed set changes …"*), C18 / C26 / C27 / C46 (`../../40_RENDER_SCENE/spec/ORBIT_SURFACE.md` §2.7, §3, §5.1 L1) — and the per-part rules fit them:
+
+1. **A part's proxy is authored ALONE**, closed over its own outer surface (R1 – R2) — whatever is placed around it, so it never changes when the
+   assembly grows.
+2. **The assembly's surface at a stage** = the union of the placed parts' proxies, **LESS** every face not exposed at that stage (S22: GLUED —
+   pressed on another part within the fit; BURIED — inside another part; SEALED — in a cavity the parts close), **PLUS** the CAP of every hollow the
+   stage forms BETWEEN parts (a cavity whose mouth spans two parts — R1b at the stage).
+3. **Appending a part (a SEAT)** — the one event that changes it (S19): its proxy's faces enter as authored; the faces it covers on the parts
+   already placed leave; a face PARTLY covered keeps its exposed part, SPLIT at the cover's edge — each piece at least w (R3), a smaller one dropped
+   (no sliver); two parts' coplanar faces meeting under θ merge into one facet of the face map (the contour, L3); the seat's ghost leaves with its
+   goal filled; the gizmo relocated once (C23, C46).
+4. **Where it is computed**: OFFLINE per stage by B2 (`exposedPerStage` — built: each proxy face exposed / glued / buried / sealed) — the generator's
+   check that EVERY stage's surface keeps R3 (every facet ≥ w, no sliver); IN THE GAME at each seat by L1 (§5.1: *"the faces reachable from
+   outside … rebuilt at a seat"*) — ⚠ today only GLUED, on each face's rectangle (`exposedRects`, R1 of 2026-11-09); SEALED, BURIED and the stage's
+   caps are OWED in the game (S22 is computed in Blender only).
 
 ## 4. The obstacles and the fallbacks
 
@@ -126,17 +158,19 @@ meshes not bound by it — ⏳ to confirm):
 | rule | check | its control | `Scene_2` (not rebuilt here — the expected findings) |
 |---|---|---|---|
 | R1, R2 | coverage of the outer surface (B1i, with R1's ρ-closing instead of the floods' 4 mm grid) AND fidelity (B1e) | a side without proxy; a proxy floating | the plinth's sides; every proxy a selection of faces |
-| R3 | faces planar, ≥ w, angles off θ, a count | a sliver; a 19° pair | ⏳ |
+| R3 | faces planar; EVERY face ≥ w (its inscribed width); angles off θ; per STAGE every facet ≥ w (B2 + the facets' sizes) | a sliver; a 19° pair; a cover that leaves a sliver | ⏳ |
 | R4, R5 | a curve's facets within τ; a thin feature's prism | a 32-gon; a shaft as a 3-gon | ⏳ |
 | R6 | B1e / B1f (as built) | a lifted / flipped proxy | the pistons' resting faces 17 – 37 mm off |
 | C-R1 – C-R4 | B1a – B1d (as built); the union within τc both ways; a cavity entered left open; the budget | a dent, a dense piece; a cavity filled | ⏳ |
 
 ## 7. The audit — owed (after his decisions, before any build)
 
-## 8. For his word
+## 8. His decisions (2026-11-23)
 
-1. **ρ** — the narrowest opening the outside enters: a constant (mm), or from the held pieces?
-2. **τ, τc** — the proxy's and the collision pieces' tolerances (proposed 1 – 2 mm).
-3. **A wide hollow that is no goal** — route (the gizmo goes in) or bridged?
-4. **The budgets** — proxy faces per part; collision pieces per part.
-5. **The resting-face quads** — the proxy's largest faces only (a share of its area), or a separate list?
+1. **ρ — a CONSTANT**: 3.5 mm (§3 R0; w = 2ρ = 7 mm).
+2. **τ, τc — as proposed** (1 – 2 mm): 1.5 mm each, the audit may move them.
+3. **A wide hollow that is no goal — BRIDGED**, *"if this is in line with rules we have set for hollows already"*: it is (R1b).
+4. **No face count — a MINIMUM SIZE per face and facet** (*"large parts may require more than 16 faces … the hull of a car"*), and *"clarify what
+   happens as the assembly gets assembled: how the proxy surface of the assembly evolves and how to append the faces"* → §3bis.
+5. **The resting-face candidates — the LARGEST faces**: the proxy's faces of at least a quarter of its largest face's area (⏳ the share, proposed
+   ¼ as the face map's, a constant of its own — for the audit).
