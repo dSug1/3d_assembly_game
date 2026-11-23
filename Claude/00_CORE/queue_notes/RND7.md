@@ -86,3 +86,8 @@
   gate and in `npm run verify`, never at play); his word *"capture what is missing for that loop … other loops to automatize the other checks as
   well"* → `SCENE_WORKFLOW.md` §11 (OWED: one command per scene, the build script calling it and stopping on a FAIL, a generator applying the
   rules; the construction, landing and headless loops). Then packet 2.
+* **2026-11-23, night** — his word *"Continue building the orbit's surface pipeline without stopping and without asking me questions. Commit
+  regularly, update the md files with the lessons learned"* (he went to bed). S6 packet 2 BUILT: `checkProxyCover` (`proxy_cover.ts`) — R1 the
+  outer surface at the ρ-closing covered, R1b every cavity deeper than wide / undercut capped (amber information), R2 closed, a cap's rim flush;
+  17 vectors, 15 mutants red; `Scene_2`: every proxy open (the plinth 58.6 % not covered), the pistons a resting face only, E02 / E13 / E14 cavities
+  uncapped (ledger rows 17 – 18). Seven lessons of measuring (`PROXY_AND_COLLISION_RULES.md` §9.3). D7 answered by D8. Local.

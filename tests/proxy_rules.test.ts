@@ -8,90 +8,12 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { glbBin, partGeometry, type Placement } from "../src/core/glb_geometry";
-import { convexHull3 } from "../src/core/hull3";
 import { glbJson, readModelCatalog } from "../src/core/model_catalog";
-import { B1_FIT_MM, checkProxyFaces, readPartSolids, type PartMesh, type PartSolids } from "../src/core/part_checks";
-import { cross, dot, sub, type Vec3 } from "../src/core/vec";
+import { checkProxyFaces, readPartSolids, type PartMesh, type PartSolids } from "../src/core/part_checks";
+import type { Vec3 } from "../src/core/vec";
+import { at0, face, hollowCase, hull, mesh, part, shaft } from "./helpers/proxy_shapes";
 
-/** a planar face from its outline (convex, any winding), turned to face `n` */
-const face = (name: string, pts: Vec3[], n: Vec3): PartMesh => {
-  const tris: [number, number, number][] = [];
-  for (let k = 1; k + 1 < pts.length; k++) {
-    const c = cross(sub(pts[k]!, pts[0]!), sub(pts[k + 1]!, pts[0]!));
-    tris.push(dot(c, n) >= 0 ? [0, k, k + 1] : [0, k + 1, k]);
-  }
-  return { name, points: pts, triangles: tris };
-};
-/** a mesh of several faces (for a render) */
-const mesh = (name: string, fs: PartMesh[]): PartMesh => {
-  const points: Vec3[] = [];
-  const triangles: [number, number, number][] = [];
-  for (const f of fs) {
-    const b = points.length;
-    points.push(...f.points);
-    for (const [a, c, d] of f.triangles) triangles.push([a + b, c + b, d + b]);
-  }
-  return { name, points, triangles };
-};
-const part = (id: string, proxy: PartMesh[], renders: PartMesh[]): PartSolids => ({ id, frozen: false, fitMm: B1_FIT_MM, pieces: [], proxy, renders });
 const rules = (p: PartSolids, goals?: ReadonlyMap<string, Placement>) => checkProxyFaces([p], goals).map((f) => f.rule + (f.info ? "(info)" : ""));
-
-// ── his three shapes, as clean reference parts ──
-/** a shaft along x (length L), its proxy an n-gon (vertices at k·360/n — a hexagon: a face UP), its render a round 24-gon of radius R */
-function shaft(n: number, R = 20, L = 200): PartSolids {
-  const ring = (m: number, x: number, r: number) => Array.from({ length: m }, (_, k): Vec3 => [x, r * Math.sin((2 * Math.PI * k) / m), r * Math.cos((2 * Math.PI * k) / m)]);
-  const sides = (m: number, r: number, tag: string) => Array.from({ length: m }, (_, k) => {
-    const a = ring(m, 0, r), b = ring(m, L, r);
-    const mid = (2 * Math.PI * (k + 0.5)) / m;
-    return face(`${tag}_${k}`, [a[k]!, a[(k + 1) % m]!, b[(k + 1) % m]!, b[k]!], [0, Math.sin(mid), Math.cos(mid)]);
-  });
-  const proxy = [...sides(n, R, "UFM_S_side"), face("UFM_S_end0", ring(n, 0, R), [-1, 0, 0]), face("UFM_S_end1", ring(n, L, R), [1, 0, 0])];
-  const render = mesh("S_render", [...sides(24, R, "r"), face("r0", ring(24, 0, R), [-1, 0, 0]), face("r1", ring(24, L, R), [1, 0, 0])]);
-  return part("S", proxy, [render]);
-}
-/** a hollow case: a 100 × 60 × 80 box, a pocket 60 × 40 in x, z, 50 deep from its top — its proxy the box with its top a RING and the pocket CAPPED */
-function hollowCase(capLift = 0): PartSolids {
-  const Y = 60, X = 50, Z = 40, x = 30, z = 20;
-  const up: Vec3 = [0, 1, 0];
-  const ring = [
-    face("UFM_C_top_f", [[-X, Y, -Z], [X, Y, -Z], [x, Y, -z], [-x, Y, -z]], up), face("UFM_C_top_b", [[-X, Y, Z], [X, Y, Z], [x, Y, z], [-x, Y, z]], up),
-    face("UFM_C_top_l", [[-X, Y, -Z], [-x, Y, -z], [-x, Y, z], [-X, Y, Z]], up), face("UFM_C_top_r", [[X, Y, -Z], [x, Y, -z], [x, Y, z], [X, Y, Z]], up),
-  ];
-  const top = mesh("UFM_C_top", ring);
-  const outer = [
-    face("UFM_C_bottom", [[-X, 0, -Z], [X, 0, -Z], [X, 0, Z], [-X, 0, Z]], [0, -1, 0]),
-    face("UFM_C_front", [[-X, 0, -Z], [X, 0, -Z], [X, Y, -Z], [-X, Y, -Z]], [0, 0, -1]), face("UFM_C_back", [[-X, 0, Z], [X, 0, Z], [X, Y, Z], [-X, Y, Z]], [0, 0, 1]),
-    face("UFM_C_left", [[-X, 0, -Z], [-X, 0, Z], [-X, Y, Z], [-X, Y, -Z]], [-1, 0, 0]), face("UFM_C_right", [[X, 0, -Z], [X, 0, Z], [X, Y, Z], [X, Y, -Z]], [1, 0, 0]),
-  ];
-  const cap = face("UFM_C_cap", [[-x, Y + capLift, -z], [x, Y + capLift, -z], [x, Y + capLift, z], [-x, Y + capLift, z]], up);
-  const pocket = [
-    face("p_floor", [[-x, 10, -z], [x, 10, -z], [x, 10, z], [-x, 10, z]], up),
-    face("p_f", [[-x, 10, -z], [x, 10, -z], [x, Y, -z], [-x, Y, -z]], [0, 0, 1]), face("p_b", [[-x, 10, z], [x, 10, z], [x, Y, z], [-x, Y, z]], [0, 0, -1]),
-    face("p_l", [[-x, 10, -z], [-x, 10, z], [-x, Y, z], [-x, Y, -z]], [1, 0, 0]), face("p_r", [[x, 10, -z], [x, 10, z], [x, Y, z], [x, Y, -z]], [-1, 0, 0]),
-  ];
-  return part("C", [...outer, top, cap], [mesh("C_render", [...outer, ...ring, ...pocket])]);
-}
-/** a chamfered hull: a 200 × 80 × 120 body, its top edges along x chamfered at 60° of elevation (`rise` mm) — its proxy its hull's faces, one node each */
-function hull(rise = 20, topLift = 0): PartSolids {
-  const run = rise / Math.tan(Math.PI / 6);
-  const pts: Vec3[] = [];
-  for (const x of [-100, 100]) for (const zz of [-60, 60]) pts.push([x, 0, zz], [x, 80 - rise, zz], [x, 80, zz - Math.sign(zz) * run]);
-  const h = convexHull3(pts)!;
-  const groups = new Map<string, [number, number, number][]>();
-  for (const t of h.triangles) {
-    const [a, b, c] = t.map((i) => h.points[i]!) as [Vec3, Vec3, Vec3];
-    const n = cross(sub(b, a), sub(c, a));
-    const l = Math.hypot(n[0], n[1], n[2]);
-    const k = n.map((v) => (v / l).toFixed(3)).join(",");
-    groups.set(k, [...(groups.get(k) ?? []), [t[0], t[1], t[2]]]);
-  }
-  const proxy = [...groups.entries()].map(([k, tris], i): PartMesh => {
-    const lift = k === "0.000,1.000,0.000" ? topLift : 0;
-    return { name: `UFM_H_${i}`, points: h.points.map((p): Vec3 => [p[0], p[1] + (p[1] > 79.999 ? lift : 0), p[2]]), triangles: tris };
-  });
-  return part("H", proxy, [{ name: "H_render", points: h.points, triangles: h.triangles.map((t) => [t[0], t[1], t[2]]) }]);
-}
-const at0 = (id: string) => new Map([[id, { position: [0, 0, 0] as Vec3, rotation: [1, 0, 0, 0] as const }]]);
 
 describe("⭐⭐⭐ V1 — his three shapes, CLEAN: every rule passes", () => {
   it("a shaft — a HEXAGON, a face up, over its round render (its facets within ±30° of the curve, their sagitta exempt; no face near 45°)", () => {

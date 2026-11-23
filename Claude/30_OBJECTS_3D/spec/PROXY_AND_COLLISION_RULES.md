@@ -2,7 +2,7 @@
 
 > **STATUS** · ⭐ **A STUDY — HIS FIVE DECISIONS GIVEN 2026-11-23 (§8)**, written into §3 and §3bis; the patent-free methods surveyed (§5); ⭐ **AUDITED
 > 2026-11-23 (§7): two blockers and seven should-fix, ADOPTED where they apply a recorded rule; four questions back to him (§7.2)** — ✅ **ANSWERED 2026-11-23: *"I agree with your recommendations. Capture, proceed"*** (§7.3): the RULES DECIDED;
-> the checks being built (§9: packet 1 BUILT — R7, R3, R4, R2; packets 2 – 3 owed). The four-part method (`orbit-design-method`):
+> the checks being built (§9: packet 1 BUILT — R7, R3, R4, R2; packet 2 BUILT — R1 coverage, R1b caps, R2 closed; packet 3 owed). The four-part method (`orbit-design-method`):
 > the rules (§1 – §3), the obstacles and fallbacks (§4), a systematic design from patent-free prior art (§5), an audit (§7) — before any check.
 > **OWNS** · what a part's FACE PROXY (`UFM_`) and its COLLISION PIECES (`UCX_`) must be, for ANY shape — so that a generator (the Blender build
 > scripts, an automated workflow) delivers them right and a check proves it.
@@ -264,13 +264,69 @@ made to say so.
 surface of many faces (R7: one node a face); **R2** E03's nose disc over its render's open end (±89°); E17's proxy half turned inward (±180°).
 The check script (`check_part_solids.ts`) counts them in its verdict (a riser apart).
 
-### 9.2 Owed — packets 2 and 3
+### 9.2 Packet 2 (2026-11-23) — COVERAGE, CLOSURE, CAPS: R1, R1b, R2 the other way
 
-* **Packet 2 — coverage and caps (R1, R1b, R2 the other way)**: the outer surface at the ρ-closing (the render voxelized at ≤ ρ / 2, closed at ρ)
-  covered by the real proxy faces within τ; every cavity deeper than its mouth is wide and every undercut CAPPED (B4's sweep with a ρ-ball); a cap's
-  rim on real proxy edges, flush. (B1i's 4 mm floods are its first form.)
-* **Packet 3 — the collision pieces (C-R2 – C-R4) and the resting candidates**: the pieces' union within τc of the render, both ways; a cavity a part
-  enters left open; rings by the angle rule; the resting-face candidates — the proxy's faces on its convex hull, the largest first.
+**`checkProxyCover`** (`src/core/proxy_cover.ts`; per part ALONE, in mm; the step ρ / 2 = 1.75 mm — §7.1 row 9):
+* **R1 — the OUTER SURFACE**: the render voxelized, the part's solid by a flood of the outside, CLOSED at ρ — the ball's centres are the outside
+  points farther than ρ from the REAL surface (exact, the render's triangles), the solid what lies farther than ρ from every centre (two exact distance
+  transforms — Felzenszwalb & Huttenlocher 2012): an opening under 2ρ bridged (resolved to about one step), an inner void filled.
+* **R1b — what must be CAPPED**: each point of that surface reads its SKY — the straight directions that leave the part (rays on a Fibonacci sphere of
+  800, refined at 2° where the reading straddles the amber line): NONE — an UNDERCUT; the widest free cone under **22.5°** — a cavity DEEPER than its
+  mouth is wide (a wall's foot sees (90° − atan(depth / width)) / 2: 22.5° at a ratio of 1); **22.5° – 26.6°** (atan ½) — AMBER, information. Every
+  such point must lie behind a CAP: the outside, flooded with the caps (`…_cap…`) as walls, never reaches it. ⛔ **A point FAILS only when SURELY deep**
+  (its reading's upper bound under 22.5°); one near the line reads amber — a failure is never a reading's error.
+* **R2 the other way — COVERAGE**: every point of the outer surface the outside reaches (the caps as walls; an uncapped deep cavity reported once, by
+  R1b) within τ of a proxy face — judged at the REAL surface's point nearest it (exact), or at the voxel over a bridged opening (+ its error, 1.87
+  steps); a face accepted by ITS OWN tolerance (any face, not only the nearest): τ, or for a TRUE curve's facet (one planar face, its real surface
+  within ±30° — R7, R2) its recorded sagitta + τ.
+* **R2 — CLOSED**: every edge of the proxy's faces (real and caps; a resting proxy apart) has a face on its other side within the flush, read every
+  2 mm (a T-junction shared).
+* **R1b — a CAP ON its mouth**: its rim on the real proxy's edges within the flush.
+* A part whose proxy is ONLY virtual (a resting face) is REPORTED (R1: 100 % not covered) — never skipped (§7.1 row 5: every proxy closed).
+* **The findings, one line per rule and part** (R1: the area, its share, the largest region; R1b: the places, their area, the largest and its narrowest
+  sky; R2: the open length, the places) — every place counted, the largest named.
+
+**The vectors** (`tests/proxy_cover.test.ts`, 17; the shapes shared with packet 1 in `tests/helpers/proxy_shapes.ts`): PASSING — his three shapes; an
+L's inner corner, a 90° V, a pocket shallower than wide; a 5 mm slot bridged; a 9 mm slot capped; a pocket 0.6 as deep as wide clean (its foot ±29.5°,
+by hand); 0.75 never deep (±26.6°, the amber line exactly). DEFECTS — the case's pocket followed, not capped (R1b); a 30° V 60 deep (R1b); a 44° V
+(1.05 as deep as wide after the closing) DEEP and a 50° V (0.93) amber; a T-slot's chamber (R1b, UNDERCUT); a pocket 0.9 (amber); a 9 mm slot under a
+real face (R1b + R1); his plinth's defect, a box with its top proxy only (R1 + R2); the hull without its top (R1 + R2); a resting face only (R1); the
+case's cap lifted 1 mm (R2 + its rim). **15 mutants, each RED**: no ρ-closing; the dilation from the voxel surface; caps not walls; the sky blind; an
+undercut read as deep; no refinement at the amber line; rays from the voxel centre; rays against the voxels' staircase; a sample failing when only maybe
+deep; no curve allowance; coverage by the nearest face only; coverage blind; closure blind; the cap's rim blind; a virtual-only proxy skipped.
+
+**`Scene_2`** (`check_part_solids.ts`, ≈ 58 s; the vector pins its quick parts — E02, E05, E06 take 4 – 23 s each and stay in the script): every part
+FAILS R1 (its proxy a selection of faces — the convention so far): the plinth **E01 58.6 % of its outer surface not covered** (its sides and bottom —
+his issue, at its root) and its proxy open (1432 mm of edges); E02 52.1 %, E03 98.9 % (its nose disc only), E04 43.9 %, E05 / E06 35.5 %, E13 / E14
+66.8 %, E17 42.1 %; **the pistons E07 – E12 and E15 / E16 carry a resting face only** (100 %); **cavities deeper than wide, uncapped**: E02 (3 places,
+≈ 66 300 mm² — its crank chamber), E13 / E14 (8 places each — ports and pockets of the heads); amber: E02, E13, E14. 32 findings; with B1 and packet 1:
+FAIL, 47.
+
+### 9.3 ⭐ Lessons of packet 2 (how to MEASURE a part — each found on a control before the vectors were written)
+
+1. **A voxel surface is thick**: rasterized by its voxels' centres (within half a voxel's diagonal), it narrowed every opening by ≈ 3 mm — a 9 mm slot
+   read bridged. Distances that decide a rule are measured to the REAL surface (the triangles), the voxels only carry the topology.
+2. **A tolerance borrowed from a measure that failed its own rule hides defects**: the "sagitta" of a node holding a whole surface (E02 / E04 / E05 /
+   E06's `…_outer`) or of a face over an opening (E03's nose) was hundreds of mm — every gap near it read covered, and every query was slow. Only a
+   face that PASSES its rule (one planar face, within ±30° of the curve) carries an exemption.
+3. **A grid's staircase biases angles toward "deeper"**: rays tested against voxel cubes and started beside them lost ≈ 3° of sky (a 40° V's floor
+   read ±21° for ±23.6°) — a false FAILURE. Rays test the SMOOTH closing (its exact distance field, interpolated) and start one step off the surface.
+4. **Judge a reading by the rule's own words**: the Vs' "truth" first computed with the rectangular cavity's yardstick was wrong — after the ρ-closing
+   lifts a V's floor, its depth against its mouth's width (1.30 – 0.86 for 36° – 54°) is what the readings follow (deep, deep, deep, amber, amber, clean).
+5. **A vector must fail on the mutant of the path it names**: two did not (the refinement's vector passed without the refinement — the region-level
+   step saved it); they were replaced by shapes where only that path decides. A path no shape could show (the region-level refinement) was REMOVED,
+   and the rule made simpler: fail only when surely deep.
+6. **A part skipped is a finding hidden**: a part with no real proxy face was first passed over; it is reported (100 % not covered).
+7. **Cost**: measured per part before optimizing (counters): coverage's queries bounded by the corrected tolerance (lesson 2), the sky read on a
+   sub-lattice of the shell (samples 2 steps apart, each point its sample's class), rays sphere-traced on the solid's distance field — `Scene_2` 5 min →
+   58 s; never at load.
+
+### 9.4 Owed — packet 3
+
+* **The collision pieces (C-R2 – C-R4) and the resting candidates**: the pieces' union within τc of the render, both ways; a cavity a part enters left
+  open; rings by the angle rule; the resting-face candidates — the proxy's faces on its convex hull, the largest first.
+* ⏳ **R2's fidelity against the ρ-closing** (§7.1 row 4): packet 1 reads the render, so a face spanning a bridged slot (under 2ρ) reads its floor as
+  "off its flat face" — owed with the packet 2 field (the closing) handed to packet 1.
 * ⏳ **The loop** (his word, 2026-11-23): these checks run by hand today — the loop that runs them after every export and stops on a FAIL, and the
   other loops owed: `../../20_GAME_RULES/spec/SCENE_WORKFLOW.md` §11.
 

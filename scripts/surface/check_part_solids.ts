@@ -12,6 +12,7 @@ import { readFileSync } from "node:fs";
 import { glbBin, partGeometry, type Placement } from "../../src/core/glb_geometry";
 import { glbJson, readModelCatalog } from "../../src/core/model_catalog";
 import { B1_FIT_MM, checkProxyFaces, checkSolids, exposedPerStage, readPartSolids } from "../../src/core/part_checks";
+import { checkProxyCover } from "../../src/core/proxy_cover";
 
 const file = process.argv.slice(2).find((a) => a.endsWith(".glb")) ?? process.env["GLB"];
 if (file === undefined) {
@@ -46,6 +47,12 @@ for (const f of map.uncovered) console.log(`  (D7, PROPOSED) ${f.check} ${f.part
 const rulesFound = checkProxyFaces(parts, new Map(partGeometry(j.json, glbBin(bytes), catalog).map((g) => [g.id, { position: [0, 0, 0], rotation: g.goal.rotation }])));
 console.log(`the proxy rules (R7 one face a node, R3 no travelled face under 10 mm, R4 30° apart / not near 45°, R2 ON its real face): ${rulesFound.length} finding(s)`);
 for (const f of rulesFound) console.log(`  ${f.rule}${f.info ? " (information)" : ""} ${f.part} ${f.node}: ${f.detail}`);
-const failing = found.length + rulesFound.filter((f) => !f.info).length;
+// ⭐⭐ (S6 packet 2) COVERAGE, CLOSURE, CAPS — R1 the outer surface (the render closed at ρ) covered, R1b every cavity deeper than its mouth is wide and
+// every undercut capped (amber: information), R2 every edge shared, a cap's rim on the real edges (≈ 46 s on Scene_2)
+const t1 = performance.now();
+const cover = checkProxyCover(parts);
+console.log(`coverage, closure, caps (R1, R1b, R2): ${cover.length} finding(s), ${((performance.now() - t1) / 1000).toFixed(0)} s`);
+for (const f of cover) console.log(`  ${f.rule}${f.info ? " (information)" : ""} ${f.part} ${f.node}: ${f.detail}`);
+const failing = found.length + rulesFound.filter((f) => !f.info).length + cover.filter((f) => !f.info).length;
 console.log(failing === 0 ? "PASS" : `FAIL — ${failing} finding(s): fix the file in Blender (PROXY_AND_COLLISION_RULES.md), or write an exemption per piece`);
 process.exit(failing === 0 ? 0 : 1);

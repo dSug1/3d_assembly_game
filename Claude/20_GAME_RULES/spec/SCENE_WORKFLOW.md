@@ -351,6 +351,8 @@ takes 5 s in full on `Scene_2`, the coverage the heavy part) — printed, never 
 ⭐ **THE PROXY RULES** (`../../30_OBJECTS_3D/spec/PROXY_AND_COLLISION_RULES.md`, DECIDED 2026-11-23) — packet 1 in the same script and its verdict:
 R7 one face a node, R3 no travelled face under 10 mm (a riser information), R4 30° apart and none near 45°, R2 a proxy ON its real face (a
 resting proxy and a cap virtual); his three shapes its clean reference parts.
+⭐ **Packet 2** (`proxy_cover.ts`, the same script and verdict, ≈ 58 s on `Scene_2`): R1 the outer surface (the render closed at ρ) COVERED, R1b every
+cavity deeper than its mouth is wide and every undercut CAPPED (amber: information), R2 every edge shared, a cap's rim on the real edges.
 
 ### 7.4 The design-for-playability checklist (whoever draws a part)
 
@@ -563,7 +565,8 @@ the generator's test: it proves that what was generated obeys the rules (§10), 
 | B1 the solids and the proxy on them (D4 – D6; S5) | `scripts/surface/check_part_solids.ts` (`src/core/part_checks.ts`) | by hand at the gate; `npm run verify` on `Scene_2` (its findings pinned) | exit 0 / 1 / 2 | called by no build; at load, its cheap subset (§7.3) |
 | B2 exposed per stage; B1i (D7) | the same | the same | a map — information, no pass rule | — (it feeds B5 and the stage's surface, `PROXY_AND_COLLISION_RULES.md` §3bis) |
 | the proxy rules R7, R3, R4, R2 (S6 packet 1) | the same | the same | in the same verdict | — |
-| S6 packets 2 – 3 (coverage, caps; the collision pieces against the render; the resting candidates) | the same — being built | — | — | — |
+| S6 packet 2 — R1 coverage, R1b caps, R2 closed (`src/core/proxy_cover.ts`) | the same | the same (`Scene_2`'s quick parts in the vector; ≈ 58 s in all) | in the same verdict | — |
+| S6 packet 3 (the collision pieces against the render; the resting candidates) | being built | — | — | — |
 | B3 the landing per stage (the game's L2 on the `.glb`); B5 the coverage list | not built | — | — | L2 is now wired (S2, S4): they can be built |
 | B6 the thresholds | R4's angles built; the closing radius and the share not | — | — | — |
 | the Blender build's own checks (`../../30_OBJECTS_3D/spec/PART_AUTHORING.md` §4.2: the seats, the way in, collision simplicity, the proxy sanity …) | `Assets/Blender/scripts/build_<scene>.py` | every build run, inside Blender | PRINTED — a failure does not stop the run | an exit code ≠ 0 on a FAIL |

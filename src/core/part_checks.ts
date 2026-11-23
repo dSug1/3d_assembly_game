@@ -133,27 +133,31 @@ function convexOf(points: readonly Vec3[]): Convex | null {
   }
   return { planes, tris, volume };
 }
-/** the distance from `p` to the triangle (a, b, c) — Ericson, Real-Time Collision Detection §5.1.5 */
-function pointTriangle(p: Vec3, a: Vec3, b: Vec3, c: Vec3): number {
+/** the point of the triangle (a, b, c) closest to `p` — Ericson, Real-Time Collision Detection §5.1.5 */
+export function closestOnTriangle(p: Vec3, a: Vec3, b: Vec3, c: Vec3): Vec3 {
   const ab = sub(b, a), ac = sub(c, a), ap = sub(p, a);
   const d1 = dot(ab, ap), d2 = dot(ac, ap);
-  const dist = (q: Vec3) => Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
-  if (d1 <= 0 && d2 <= 0) return dist(a);
+  if (d1 <= 0 && d2 <= 0) return a;
   const bp = sub(p, b), d3 = dot(ab, bp), d4 = dot(ac, bp);
-  if (d3 >= 0 && d4 <= d3) return dist(b);
+  if (d3 >= 0 && d4 <= d3) return b;
   const vc = d1 * d4 - d3 * d2;
-  if (vc <= 0 && d1 >= 0 && d3 <= 0) { const v = d1 / (d1 - d3); return dist([a[0] + ab[0] * v, a[1] + ab[1] * v, a[2] + ab[2] * v]); }
+  if (vc <= 0 && d1 >= 0 && d3 <= 0) { const v = d1 / (d1 - d3); return [a[0] + ab[0] * v, a[1] + ab[1] * v, a[2] + ab[2] * v]; }
   const cp = sub(p, c), d5 = dot(ab, cp), d6 = dot(ac, cp);
-  if (d6 >= 0 && d5 <= d6) return dist(c);
+  if (d6 >= 0 && d5 <= d6) return c;
   const vb = d5 * d2 - d1 * d6;
-  if (vb <= 0 && d2 >= 0 && d6 <= 0) { const w = d2 / (d2 - d6); return dist([a[0] + ac[0] * w, a[1] + ac[1] * w, a[2] + ac[2] * w]); }
+  if (vb <= 0 && d2 >= 0 && d6 <= 0) { const w = d2 / (d2 - d6); return [a[0] + ac[0] * w, a[1] + ac[1] * w, a[2] + ac[2] * w]; }
   const va = d3 * d6 - d5 * d4;
   if (va <= 0 && d4 - d3 >= 0 && d5 - d6 >= 0) {
     const w = (d4 - d3) / (d4 - d3 + (d5 - d6));
-    return dist([b[0] + (c[0] - b[0]) * w, b[1] + (c[1] - b[1]) * w, b[2] + (c[2] - b[2]) * w]);
+    return [b[0] + (c[0] - b[0]) * w, b[1] + (c[1] - b[1]) * w, b[2] + (c[2] - b[2]) * w];
   }
   const den = 1 / (va + vb + vc), v = vb * den, w = vc * den;
-  return dist([a[0] + ab[0] * v + ac[0] * w, a[1] + ab[1] * v + ac[1] * w, a[2] + ab[2] * v + ac[2] * w]);
+  return [a[0] + ab[0] * v + ac[0] * w, a[1] + ab[1] * v + ac[1] * w, a[2] + ab[2] * v + ac[2] * w];
+}
+/** the distance from `p` to the triangle (a, b, c) */
+export function pointTriangle(p: Vec3, a: Vec3, b: Vec3, c: Vec3): number {
+  const q = closestOnTriangle(p, a, b, c);
+  return Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
 }
 /** the signed distance from `p` to a convex piece: negative inside (its depth), positive outside (exact) */
 function signedTo(p: Vec3, k: Convex): number {
@@ -480,7 +484,7 @@ export function exposedPerStage(parts: readonly PartSolids[], goals: ReadonlyMap
 // ── S6 — THE PROXY RULES, packet 1 (`30_OBJECTS_3D/spec/PROXY_AND_COLLISION_RULES.md` §3, §7.1, §7.3 — DECIDED 2026-11-23) ─────────────────────
 /** ⭐ (S6) one finding of the proxy rules; `info`: reported, not a failure (a riser — an S26 step). */
 export interface ProxyFinding {
-  readonly rule: "R2" | "R3" | "R4" | "R7";
+  readonly rule: "R1" | "R1b" | "R2" | "R3" | "R4" | "R7";
   readonly part: string;
   readonly node: string;
   readonly detail: string;
@@ -496,7 +500,7 @@ export const B6_ELEVATION_BAND_DEG = 15;
 export const R4_HALF_STEP_DEG = 30;
 
 /** a uniform grid of triangles for nearest-point queries (cell `c` mm) */
-function triGrid(tris: readonly (readonly [Vec3, Vec3, Vec3])[], c: number) {
+export function triGrid(tris: readonly (readonly [Vec3, Vec3, Vec3])[], c: number) {
   const cells = new Map<string, number[]>();
   const key = (i: number, j: number, k: number) => `${i},${j},${k}`;
   tris.forEach(([a, b, d], t) => {
@@ -546,7 +550,22 @@ function triGrid(tris: readonly (readonly [Vec3, Vec3, Vec3])[], c: number) {
     }
     return best;
   };
-  return { cast, nearest };
+  /** ⭐ (S6 packet 2) is there a triangle within `r` mm of `p` that `ok` accepts at its distance? (a face judged by its own tolerance, not only the nearest) */
+  const some = (p: Vec3, r: number, ok: (t: number, d: number) => boolean): boolean => {
+    const lo = p.map((x) => Math.floor((x - r) / c)), hi = p.map((x) => Math.floor((x + r) / c));
+    const seen = new Set<number>();
+    for (let i = lo[0]!; i <= hi[0]!; i++) for (let j = lo[1]!; j <= hi[1]!; j++) for (let k = lo[2]!; k <= hi[2]!; k++) {
+      for (const t of cells.get(key(i, j, k)) ?? []) {
+        if (seen.has(t)) continue;
+        seen.add(t);
+        const [a, b, d] = tris[t]!;
+        const dd = pointTriangle(p, a, b, d);
+        if (dd <= r && ok(t, dd)) return true;
+      }
+    }
+    return false;
+  };
+  return { cast, nearest, some };
 }
 const angleDeg = (a: Vec3, b: Vec3) => (Math.acos(Math.max(-1, Math.min(1, dot(a, b)))) * 180) / Math.PI;
 
@@ -561,34 +580,8 @@ const angleDeg = (a: Vec3, b: Vec3) => (Math.acos(Math.max(-1, Math.min(1, dot(a
  */
 export function checkProxyFaces(parts: readonly PartSolids[], goals?: ReadonlyMap<string, Placement>): ProxyFinding[] {
   const out: ProxyFinding[] = [];
-  const kp = (p: Vec3) => `${p[0].toFixed(3)},${p[1].toFixed(3)},${p[2].toFixed(3)}`;
   for (const part of parts) {
-    const faces = part.proxy.map((px) => {
-      const tris = px.triangles.map(([a, b, c]) => [px.points[a]!, px.points[b]!, px.points[c]!] as [Vec3, Vec3, Vec3]);
-      let nx = 0, ny = 0, nz = 0;
-      for (const [A, B, C] of tris) {
-        const cr = cross(sub(B, A), sub(C, A));
-        (nx += cr[0]), (ny += cr[1]), (nz += cr[2]);
-      }
-      const n = unit([nx, ny, nz]);
-      let spread = 0;
-      for (const [A, B, C] of tris) {
-        const m = triNormal(A, B, C);
-        if (m !== null && n !== null) spread = Math.max(spread, angleDeg(m, n));
-      }
-      // its boundary: the edges of one triangle only
-      const edges = new Map<string, { a: Vec3; b: Vec3; n: number }>();
-      for (const [A, B, C] of tris)
-        for (const [x, y] of [[A, B], [B, C], [C, A]] as const) {
-          const kx = kp(x), ky = kp(y);
-          const e = kx < ky ? `${kx}|${ky}` : `${ky}|${kx}`;
-          const got = edges.get(e);
-          if (got === undefined) edges.set(e, { a: x, b: y, n: 1 });
-          else got.n++;
-        }
-      const boundary = [...edges.entries()].filter(([, e]) => e.n === 1);
-      return { name: px.name, tris, n, spread, boundary, cap: isVirtualProxy(px.name) };
-    });
+    const faces = proxyFaceModels(part);
     // R7 — one planar face a node
     for (const f of faces) if (f.n === null || f.spread > R7_PLANAR_DEG) out.push({ rule: "R7", part: part.id, node: f.name, detail: `not ONE planar face: its triangles' normals ${f.spread.toFixed(1)}° apart (${R7_PLANAR_DEG}° at most) — a face its own node` });
     const planar = faces.filter((f) => f.n !== null && f.spread <= R7_PLANAR_DEG);
@@ -642,36 +635,7 @@ export function checkProxyFaces(parts: readonly PartSolids[], goals?: ReadonlyMa
     const rn = rtris.map(([a, b, c]) => triNormal(a, b, c));
     for (const f of planar) {
       if (f.cap) continue;
-      let dMax = 0, flat = true, span = 0, lost = false;
-      // the samples over the WHOLE face — to within 2 % of its edges (a facet's span is read at its edges, never only round its middle)
-      for (const [A, B, C] of f.tris)
-        for (let u = 0; u <= 6; u++)
-          for (let v = 0; u + v <= 6; v++) {
-            const g3 = (k: number) => (A[k]! + B[k]! + C[k]!) / 3;
-            const q = (k: number) => A[k]! + (B[k]! - A[k]!) * (u / 6) + (C[k]! - A[k]!) * (v / 6);
-            const p: Vec3 = [q(0) + (g3(0) - q(0)) * 0.02, q(1) + (g3(1) - q(1)) * 0.02, q(2) + (g3(2) - q(2)) * 0.02];
-            // ⭐ the real surface UNDER the point: the render meshes met along the face's normal, either side (never the nearest triangle: a thin wall's
-            // underside, a side face at an edge)
-            // ON a real face of its own normal (within the flush) — at a round rim too: flat there, no cast (a grazing ray meets the rim's side)
-            const on = grid.nearest(p, PROXY_FLUSH_MM);
-            if (on !== null && rn[on.t] != null && angleDeg(rn[on.t]!, f.n!) <= R7_PLANAR_DEG) {
-              dMax = Math.max(dMax, on.d);
-              continue;
-            }
-            let hit = grid.cast(p, f.n!, 4);
-            for (let r = 16; hit === null && r <= 256; r *= 4) hit = grid.cast(p, f.n!, r);
-            // a sample past the real face's rim by less than τ (two round outlines' tessellations — the 11-13 notes) is the rim, not a face floating
-            if (hit === null) {
-              if (grid.nearest(p, PROXY_CURVE_TOL_MM) === null) lost = true;
-              continue;
-            }
-            dMax = Math.max(dMax, hit.d);
-            const m = rn[hit.t];
-            if (m === null || m === undefined) continue;
-            const a = angleDeg(m, f.n!);
-            if (a > R7_PLANAR_DEG) flat = false;
-            span = Math.max(span, a);
-          }
+      const { dMax, flat, span, lost } = fidelityOf(f, grid, rn);
       if (lost) out.push({ rule: "R2", part: part.id, node: f.name, detail: `no real surface along its normal within 256 mm (a face floating)` });
       else if (flat && dMax > PROXY_FLUSH_MM) out.push({ rule: "R2", part: part.id, node: f.name, detail: `${dMax.toFixed(2)} mm off its FLAT real face (ON it: ${PROXY_FLUSH_MM} mm at most)` });
       else if (!flat && span > R4_HALF_STEP_DEG) out.push({ rule: "R2", part: part.id, node: f.name, detail: `the real surface under it turns ±${span.toFixed(0)}° from it (a curve's facet ±${R4_HALF_STEP_DEG}° at most; near 90°: it lies over an opening or a side; near 180°: it faces in)` });
@@ -679,8 +643,85 @@ export function checkProxyFaces(parts: readonly PartSolids[], goals?: ReadonlyMa
   }
   return out;
 }
+/** ⭐ (S6) one proxy node as a FACE: its triangles, its mean normal, how far its triangles' normals spread, its boundary edges, virtual or real */
+export interface ProxyFaceModel {
+  readonly name: string;
+  readonly tris: readonly [Vec3, Vec3, Vec3][];
+  readonly n: Vec3 | null;
+  readonly spread: number;
+  readonly boundary: readonly [string, { readonly a: Vec3; readonly b: Vec3; readonly n: number }][];
+  readonly cap: boolean;
+}
+/** ⭐ (S6) each proxy node of a part read as a face (packets 1 and 2) */
+export function proxyFaceModels(part: PartSolids): ProxyFaceModel[] {
+  const kp = (p: Vec3) => `${p[0].toFixed(3)},${p[1].toFixed(3)},${p[2].toFixed(3)}`;
+  return part.proxy.map((px) => {
+    const tris = px.triangles.map(([a, b, c]) => [px.points[a]!, px.points[b]!, px.points[c]!] as [Vec3, Vec3, Vec3]);
+    let nx = 0, ny = 0, nz = 0;
+    for (const [A, B, C] of tris) {
+      const cr = cross(sub(B, A), sub(C, A));
+      (nx += cr[0]), (ny += cr[1]), (nz += cr[2]);
+    }
+    const n = unit([nx, ny, nz]);
+    let spread = 0;
+    for (const [A, B, C] of tris) {
+      const m = triNormal(A, B, C);
+      if (m !== null && n !== null) spread = Math.max(spread, angleDeg(m, n));
+    }
+    // its boundary: the edges of one triangle only
+    const edges = new Map<string, { a: Vec3; b: Vec3; n: number }>();
+    for (const [A, B, C] of tris)
+      for (const [x, y] of [[A, B], [B, C], [C, A]] as const) {
+        const kx = kp(x), ky = kp(y);
+        const e = kx < ky ? `${kx}|${ky}` : `${ky}|${kx}`;
+        const got = edges.get(e);
+        if (got === undefined) edges.set(e, { a: x, b: y, n: 1 });
+        else got.n++;
+      }
+    const boundary = [...edges.entries()].filter(([, e]) => e.n === 1);
+    return { name: px.name, tris, n, spread, boundary, cap: isVirtualProxy(px.name) };
+  });
+}
+/**
+ * ⭐ (S6, R2) a face against the real surface under it (the render meshes' grid `grid`, their normals `rn`): `dMax` the farthest the real surface lies
+ * along its normal, `flat` every sample over a real face of its own normal, `span` how far the real surface's normals turn from it, `lost` a sample
+ * with no real surface along its normal within 256 mm
+ */
+export function fidelityOf(f: ProxyFaceModel, grid: ReturnType<typeof triGrid>, rn: readonly (Vec3 | null)[]): { dMax: number; flat: boolean; span: number; lost: boolean } {
+  let dMax = 0, flat = true, span = 0, lost = false;
+  // the samples over the WHOLE face — to within 2 % of its edges (a facet's span is read at its edges, never only round its middle)
+  for (const [A, B, C] of f.tris)
+    for (let u = 0; u <= 6; u++)
+      for (let v = 0; u + v <= 6; v++) {
+        const g3 = (k: number) => (A[k]! + B[k]! + C[k]!) / 3;
+        const q = (k: number) => A[k]! + (B[k]! - A[k]!) * (u / 6) + (C[k]! - A[k]!) * (v / 6);
+        const p: Vec3 = [q(0) + (g3(0) - q(0)) * 0.02, q(1) + (g3(1) - q(1)) * 0.02, q(2) + (g3(2) - q(2)) * 0.02];
+        // ⭐ the real surface UNDER the point: the render meshes met along the face's normal, either side (never the nearest triangle: a thin wall's
+        // underside, a side face at an edge)
+        // ON a real face of its own normal (within the flush) — at a round rim too: flat there, no cast (a grazing ray meets the rim's side)
+        const on = grid.nearest(p, PROXY_FLUSH_MM);
+        if (on !== null && rn[on.t] != null && angleDeg(rn[on.t]!, f.n!) <= R7_PLANAR_DEG) {
+          dMax = Math.max(dMax, on.d);
+          continue;
+        }
+        let hit = grid.cast(p, f.n!, 4);
+        for (let r = 16; hit === null && r <= 256; r *= 4) hit = grid.cast(p, f.n!, r);
+        // a sample past the real face's rim by less than τ (two round outlines' tessellations — the 11-13 notes) is the rim, not a face floating
+        if (hit === null) {
+          if (grid.nearest(p, PROXY_CURVE_TOL_MM) === null) lost = true;
+          continue;
+        }
+        dMax = Math.max(dMax, hit.d);
+        const m = rn[hit.t];
+        if (m === null || m === undefined) continue;
+        const a = angleDeg(m, f.n!);
+        if (a > R7_PLANAR_DEG) flat = false;
+        span = Math.max(span, a);
+      }
+  return { dMax, flat, span, lost };
+}
 /** the distance from `p` to the segment (a, b) */
-function pointSegment(p: Vec3, a: Vec3, b: Vec3): number {
+export function pointSegment(p: Vec3, a: Vec3, b: Vec3): number {
   const ab = sub(b, a), ap = sub(p, a);
   const L = dot(ab, ab);
   const t = L > 0 ? Math.max(0, Math.min(1, dot(ap, ab) / L)) : 0;

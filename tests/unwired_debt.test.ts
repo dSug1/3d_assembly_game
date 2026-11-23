@@ -128,7 +128,7 @@ const PENDING: Record<string, string> = {
   // ⭐ (2026-11-23, S6 — `30_OBJECTS_3D/spec/PROXY_AND_COLLISION_RULES.md`, DECIDED) the proxy rules' checks run as vectors and by the check script; two of
   // their scales wait for packet 2 (ρ: the closing, the caps) and packet 3 (τc: the collision pieces against the real shape)
   checkProxyFaces: "S6 packet 1 (`PROXY_AND_COLLISION_RULES.md` §9) — R7, R3, R4, R2 on each proxy face: vectors and `check_part_solids.ts`, at the export gate",
-  PROXY_PROBE_MM: "S6 packet 2 (`PROXY_AND_COLLISION_RULES.md` §7.3) — ρ, read by the coverage at the ρ-closing and the caps (owed)",
+  checkProxyCover: "S6 packet 2 (`PROXY_AND_COLLISION_RULES.md` §9.2) — R1 coverage, R1b caps, R2 closed: vectors and `check_part_solids.ts`, at the export gate (≈ 46 s on `Scene_2`: never at load)",
   COLLISION_TOL_MM: "S6 packet 3 (`PROXY_AND_COLLISION_RULES.md` §7.3) — τc, read by the collision pieces against the real shape (owed)",
   buildLandingMap: "S2 (`ORBIT_SURFACE_READOUT.md` §13) — the landing map's GRID: the readout reads its sums with no grid (`prepareLanding`); the grid serves the vectors and the offline comparison until the representation is chosen (`ORBIT_SURFACE_LANDING_MAP.md` §10.9)",
   // ✅ `qAngle` LEFT THIS LIST 2026-09-22 — `RotationFollower` reads it to decide a body has

@@ -184,3 +184,10 @@ without reading that rule (§11's third reason, again). Now `isVirtualProxy` (`p
 B1i's covering; `Scene_2`'s B1 report: **12 findings** (was 21) — the plinth (B1e 1.42 mm, B1h its corners), E02 (2.7 mm), E04 (42 mm), E05 / E06
 (12.3 mm) outer proxies off their collision pieces, E03 / E13 / E14 small holes (B1h), E17 (B1e, B1f, B1h). The vector re-pinned.
 
+## 13. ⭐ (2026-11-23, later) B1i's successor — R1's COVERAGE (S6 packet 2)
+
+The universal rules (`../../30_OBJECTS_3D/spec/PROXY_AND_COLLISION_RULES.md`, DECIDED) choose D7's option 2 — every part's proxy CLOSED over its
+outer surface (§7.1 row 5 there) — so §10's question is answered by them, and B1i's 4 mm floods have their exact successor: `checkProxyCover`
+(R1 at the ρ-closing, R2 closed, R1b caps; §9.2 there). The plinth: **58.6 % of its outer surface not covered, its proxy open** (1432 mm of edges).
+B1i stays, printed as information, until the next scene is built by the rules.
+
