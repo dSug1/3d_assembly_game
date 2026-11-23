@@ -4,12 +4,14 @@
 // on — a strip at the face's edges told from a hole inside it (B1h). NOTHING of the game is changed. Run at the export gate (SCENE_WORKFLOW.md
 // §6.3 item 5, §7.3), for every new scene and again on the scenes built.
 //
-// Usage (one process; Scene_2's 17 parts: about 5 s on the owner's PC):
+// ⭐ And B2 (the map per stage: each proxy face exposed, glued, buried or sealed) with B1i (D7, PROPOSED: the proxy over every face the outside
+// reaches) — printed as information, outside the verdict until his word.
+// Usage (one process; Scene_2's 17 parts: about 10 s on the owner's PC):
 //   npx vite-node scripts/surface/check_part_solids.ts -- <scene.glb>        exit 0: PASS · 1: findings · 2: no file / not read
 import { readFileSync } from "node:fs";
-import { glbBin } from "../../src/core/glb_geometry";
+import { glbBin, partGeometry, type Placement } from "../../src/core/glb_geometry";
 import { glbJson, readModelCatalog } from "../../src/core/model_catalog";
-import { B1_FIT_MM, checkSolids, readPartSolids } from "../../src/core/part_checks";
+import { B1_FIT_MM, checkSolids, exposedPerStage, readPartSolids } from "../../src/core/part_checks";
 
 const file = process.argv.slice(2).find((a) => a.endsWith(".glb")) ?? process.env["GLB"];
 if (file === undefined) {
@@ -32,5 +34,13 @@ const parts = readPartSolids(j.json, glbBin(bytes), catalog);
 const found = checkSolids(parts);
 console.log(`B1 on ${file}: ${parts.length} parts, the fit ${B1_FIT_MM} mm (a part's extras.fit_tol above it), ${(performance.now() - t0).toFixed(0)} ms`);
 for (const f of found) console.log(`  ${f.check} ${f.part} ${f.node}: ${f.detail}`);
+// ⭐ (S5) B2 — the map per stage (no pass rule: a map), and B1i (D7, PROPOSED — information, not counted in the verdict until his word)
+const mm = catalog.unitM * 1000;
+const goals = new Map<string, Placement>(partGeometry(j.json, glbBin(bytes), catalog).map((g) => [g.id, { position: [g.goal.position[0] * mm, g.goal.position[1] * mm, g.goal.position[2] * mm], rotation: g.goal.rotation }]));
+const map = exposedPerStage(parts, goals, new Set(catalog.parts.filter((p) => p.frozen).map((p) => p.id)));
+const last = map.stages[map.stages.length - 1];
+console.log(`B2 at ${map.stepMm} mm (a gap under it reads closed): ${map.stages.length} stages; the last — each part's proxy triangles e(xposed) / g(lued) / b(uried) / s(ealed):`);
+if (last !== undefined) console.log("  " + last.parts.map((p) => `${p.id} e${p.exposed}/g${p.glued}/b${p.buried}/s${p.sealed}`).join(" "));
+for (const f of map.uncovered) console.log(`  (D7, PROPOSED) ${f.check} ${f.part}: ${f.detail}`);
 console.log(found.length === 0 ? "PASS" : `FAIL — ${found.length} finding(s): fix the file in Blender, or write an exemption per piece (ORBIT_SURFACE_PART_CHECKS.md §8)`);
 process.exit(found.length === 0 ? 0 : 1);

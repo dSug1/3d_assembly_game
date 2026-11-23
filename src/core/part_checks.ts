@@ -45,7 +45,7 @@ export interface PartSolids {
 }
 /** one finding: the check, the part, the node, what was measured */
 export interface B1Finding {
-  readonly check: "B1a" | "B1b" | "B1c" | "B1d" | "B1e" | "B1f" | "B1h";
+  readonly check: "B1a" | "B1b" | "B1c" | "B1d" | "B1e" | "B1f" | "B1h" | "B1i";
   readonly part: string;
   readonly node: string;
   readonly detail: string;
@@ -287,4 +287,180 @@ export function checkSolids(parts: readonly PartSolids[]): B1Finding[] {
     }
   }
   return out;
+}
+
+// ── B2 — EXPOSED PER STAGE (S22), and B1i — the proxy over every exposed face (D7) ─────────────────────────────────────────────────────
+/** ⭐ (B2, `ORBIT_SURFACE_PART_CHECKS.md` §3, D4) the grid's step (mm): a gap under it reads closed — said in the map. */
+export const B2_STEP_MM = 4;
+
+/** a part at its goal, in the SCENE frame (y up), in mm: its pieces (as convex bodies) and its proxy's triangles */
+interface Placed {
+  readonly id: string;
+  readonly index: number;
+  readonly ks: readonly Convex[];
+  readonly proxy: readonly { readonly t: readonly [Vec3, Vec3, Vec3]; readonly n: Vec3 }[];
+}
+/** one stage of the plan: the part placed (the frozen ones first, together), and per placed part its proxy triangles' states */
+export interface B2Stage {
+  readonly placed: string;
+  readonly parts: readonly { readonly id: string; readonly exposed: number; readonly glued: number; readonly buried: number; readonly sealed: number }[];
+}
+export interface B2Map {
+  readonly stepMm: number;
+  readonly cells: readonly [number, number, number];
+  readonly stages: readonly B2Stage[];
+  /** B1i (D7): per part, its solids' samples the outside reaches at some stage and NOT under its proxy */
+  readonly uncovered: readonly B1Finding[];
+}
+
+/**
+ * ⭐⭐⭐ B2 — per stage of the plan, the placed parts' pieces at their goals VOXELIZED (`B2_STEP_MM`), the floor (below the lowest part) solid, the
+ * OUTSIDE flooded from the grid's border (6-neighbour) through the empty cells; each placed part's proxy triangle read in front of it: EXPOSED (a
+ * flooded cell), GLUED (another part's or the floor's), BURIED (its own part's), SEALED (empty, not reached). ⭐ And B1i (D7, PROPOSED): each part's
+ * solids sampled at its goal; a sample the outside reaches at some stage from its placing on must be under its proxy (within the fit, its normal).
+ * `parts`: `readPartSolids`; `goals`: each part's goal placement in the scene frame, its position in mm; `frozen`: the parts placed from the start.
+ */
+export function exposedPerStage(parts: readonly PartSolids[], goals: ReadonlyMap<string, Placement>, frozen: ReadonlySet<string>, stepMm: number = B2_STEP_MM): B2Map {
+  const placed: Placed[] = parts.map((p, index) => {
+    const g = goals.get(p.id)!;
+    const at = (q: Vec3): Vec3 => apply(g, q);
+    const ks = p.pieces.map((pc) => convexOf(pc.points.map(at))).filter((k): k is Convex => k !== null);
+    const proxy: { t: [Vec3, Vec3, Vec3]; n: Vec3 }[] = [];
+    for (const px of p.proxy)
+      for (const [a, b, c] of px.triangles) {
+        const t: [Vec3, Vec3, Vec3] = [at(px.points[a]!), at(px.points[b]!), at(px.points[c]!)];
+        const n = triNormal(t[0], t[1], t[2]);
+        if (n !== null) proxy.push({ t, n });
+      }
+    return { id: p.id, index, ks, proxy };
+  });
+  // the grid: the parts' box grown by two cells
+  const lo: number[] = [Infinity, Infinity, Infinity], hi: number[] = [-Infinity, -Infinity, -Infinity];
+  for (const p of placed) for (const k of p.ks) for (const t of k.tris) for (const q of t) for (let d = 0; d < 3; d++) (lo[d] = Math.min(lo[d]!, q[d]!)), (hi[d] = Math.max(hi[d]!, q[d]!));
+  for (let d = 0; d < 3; d++) (lo[d] = lo[d]! - 2 * stepMm), (hi[d] = hi[d]! + 2 * stepMm);
+  const n = [0, 1, 2].map((d) => Math.ceil((hi[d]! - lo[d]!) / stepMm)) as [number, number, number];
+  const N = n[0] * n[1] * n[2];
+  const idx = (i: number, j: number, k: number) => (i * n[1] + j) * n[2] + k;
+  const cellOf = (q: Vec3): number => {
+    const i = Math.floor((q[0] - lo[0]!) / stepMm), j = Math.floor((q[1] - lo[1]!) / stepMm), k = Math.floor((q[2] - lo[2]!) / stepMm);
+    return i < 0 || j < 0 || k < 0 || i >= n[0] || j >= n[1] || k >= n[2] ? -1 : idx(i, j, k);
+  };
+  const owner = new Int16Array(N).fill(-1); // -1 empty, -2 the floor, else the part's index
+  const floorY = lo[1]! + 2 * stepMm; // the lowest part point
+  for (let i = 0; i < n[0]; i++) for (let j = 0; j < n[1]; j++) if (lo[1]! + (j + 0.5) * stepMm < floorY) for (let k = 0; k < n[2]; k++) owner[idx(i, j, k)] = -2;
+  const fill = (p: Placed): void => {
+    for (const kv of p.ks) {
+      const bl: number[] = [Infinity, Infinity, Infinity], bh: number[] = [-Infinity, -Infinity, -Infinity];
+      for (const t of kv.tris) for (const q of t) for (let d = 0; d < 3; d++) (bl[d] = Math.min(bl[d]!, q[d]!)), (bh[d] = Math.max(bh[d]!, q[d]!));
+      const r = (d: number, v: number) => Math.max(0, Math.min(n[d]! - 1, Math.floor((v - lo[d]!) / stepMm)));
+      for (let i = r(0, bl[0]!); i <= r(0, bh[0]!); i++)
+        for (let j = r(1, bl[1]!); j <= r(1, bh[1]!); j++)
+          for (let k = r(2, bl[2]!); k <= r(2, bh[2]!); k++) {
+            const c: Vec3 = [lo[0]! + (i + 0.5) * stepMm, lo[1]! + (j + 0.5) * stepMm, lo[2]! + (k + 0.5) * stepMm];
+            if (planeDepth(c, kv) <= 0 && owner[idx(i, j, k)] === -1) owner[idx(i, j, k)] = p.index;
+          }
+    }
+  };
+  const flooded = new Uint8Array(N);
+  const queue = new Int32Array(N);
+  const flood = (): void => {
+    flooded.fill(0);
+    let head = 0, tail = 0;
+    const push = (c: number) => {
+      if (owner[c] === -1 && flooded[c] === 0) (flooded[c] = 1), (queue[tail++] = c);
+    };
+    for (let i = 0; i < n[0]; i++)
+      for (let j = 0; j < n[1]; j++)
+        for (let k = 0; k < n[2]; k++) if (i === 0 || j === 0 || k === 0 || i === n[0] - 1 || j === n[1] - 1 || k === n[2] - 1) push(idx(i, j, k));
+    const s1 = n[2], s0 = n[1] * n[2];
+    while (head < tail) {
+      const c = queue[head++]!;
+      const k = c % n[2], j = Math.floor(c / s1) % n[1], i = Math.floor(c / s0);
+      if (i > 0) push(c - s0);
+      if (i < n[0] - 1) push(c + s0);
+      if (j > 0) push(c - s1);
+      if (j < n[1] - 1) push(c + s1);
+      if (k > 0) push(c - 1);
+      if (k < n[2] - 1) push(c + 1);
+    }
+  };
+  const front = (q: Vec3, nn: Vec3): number => cellOf([q[0] + nn[0] * 0.75 * stepMm, q[1] + nn[1] * 0.75 * stepMm, q[2] + nn[2] * 0.75 * stepMm]);
+  // B1i's samples: each part's solids' OUTER surface at its goal (each hull face on a 20 × 20 grid; inside another piece of the part: no surface)
+  const samplesOf = (p: Placed): { readonly q: Vec3; readonly n: Vec3 }[] => {
+    const out: { q: Vec3; n: Vec3 }[] = [];
+    p.ks.forEach((k, ki) => {
+      for (const [a, b, c] of k.tris) {
+        const nn = triNormal(a, b, c);
+        if (nn === null) continue;
+        const at = (u: number, v: number): Vec3 => [a[0] + (b[0] - a[0]) * u + (c[0] - a[0]) * v, a[1] + (b[1] - a[1]) * u + (c[1] - a[1]) * v, a[2] + (b[2] - a[2]) * u + (c[2] - a[2]) * v];
+        for (let i = 1; i < 20; i++)
+          for (let j = 1; i + j < 20; j++) {
+            const q = at(i / 20, j / 20);
+            if (!p.ks.some((o, oi) => oi !== ki && planeDepth(q, o) < -B1_TOL_MM)) out.push({ q, n: nn });
+          }
+      }
+    });
+    return out;
+  };
+  const cosSame = Math.cos((B1_SAME_FACE_DEG * Math.PI) / 180);
+  const fitOf = new Map(parts.map((p) => [p.id, p.fitMm]));
+  const order = [...placed.filter((p) => frozen.has(p.id)), ...placed.filter((p) => !frozen.has(p.id))];
+  const nFrozen = order.filter((p) => frozen.has(p.id)).length;
+  const reached = new Map<string, Uint8Array>(); // per part: its samples the outside reached at some stage
+  const samples = new Map(placed.map((p) => [p.id, samplesOf(p)]));
+  const stages: B2Stage[] = [];
+  for (let s = Math.max(1, nFrozen); s <= order.length; s++) {
+    const now = order.slice(0, s);
+    if (s === Math.max(1, nFrozen)) now.forEach(fill);
+    else fill(order[s - 1]!);
+    flood();
+    const rows = now.map((p) => {
+      let exposed = 0, glued = 0, buried = 0, sealed = 0;
+      for (const { t, n: nn } of p.proxy) {
+        const g: Vec3 = [(t[0][0] + t[1][0] + t[2][0]) / 3, (t[0][1] + t[1][1] + t[2][1]) / 3, (t[0][2] + t[1][2] + t[2][2]) / 3];
+        const cs = [g, ...t.map((v): Vec3 => [v[0] + (g[0] - v[0]) * 0.2, v[1] + (g[1] - v[1]) * 0.2, v[2] + (g[2] - v[2]) * 0.2])].map((q) => front(q, nn)).filter((c) => c >= 0);
+        if (cs.some((c) => flooded[c] === 1)) exposed++;
+        else if (cs.some((c) => (owner[c]! >= 0 && owner[c] !== p.index) || owner[c] === -2)) glued++;
+        else if (cs.some((c) => owner[c] === p.index)) buried++;
+        else sealed++;
+      }
+      const sm = samples.get(p.id)!;
+      const r = reached.get(p.id) ?? new Uint8Array(sm.length);
+      sm.forEach(({ q, n: nn }, i) => {
+        const c = front(q, nn);
+        if (c >= 0 && flooded[c] === 1) r[i] = 1;
+      });
+      reached.set(p.id, r);
+      return { id: p.id, exposed, glued, buried, sealed };
+    });
+    stages.push({ placed: s === Math.max(1, nFrozen) ? now.map((p) => p.id).join("+") : order[s - 1]!.id, parts: rows });
+  }
+  // B1i — the reached samples not under the part's proxy
+  const uncovered: B1Finding[] = [];
+  for (const p of placed) {
+    const sm = samples.get(p.id)!, r = reached.get(p.id);
+    if (r === undefined) continue;
+    const fit = fitOf.get(p.id)!;
+    let total = 0, miss = 0;
+    const bl: number[] = [Infinity, Infinity, Infinity], bh: number[] = [-Infinity, -Infinity, -Infinity];
+    sm.forEach(({ q, n: nn }, i) => {
+      if (r[i] !== 1) return;
+      total++;
+      let d = Infinity;
+      for (const x of p.proxy) {
+        if (dot(x.n, nn) < cosSame) continue;
+        d = Math.min(d, pointTriangle(q, x.t[0], x.t[1], x.t[2]));
+        if (d <= fit) break;
+      }
+      if (d > fit) {
+        miss++;
+        for (let k = 0; k < 3; k++) (bl[k] = Math.min(bl[k]!, q[k]!)), (bh[k] = Math.max(bh[k]!, q[k]!));
+      }
+    });
+    if (miss > 0) {
+      const box = [0, 1, 2].map((k) => `${bl[k]!.toFixed(0)}…${bh[k]!.toFixed(0)}`).join(" × ");
+      uncovered.push({ check: "B1i", part: p.id, node: "UFM_*", detail: `${miss} of the ${total} samples of its solids the outside reaches NOT under its proxy (${((100 * miss) / total).toFixed(1)} %, in the scene's frame within ${box} mm)` });
+    }
+  }
+  return { stepMm, cells: n, stages, uncovered };
 }

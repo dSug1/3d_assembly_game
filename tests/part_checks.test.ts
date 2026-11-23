@@ -5,10 +5,10 @@
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { glbBin } from "../src/core/glb_geometry";
+import { glbBin, partGeometry } from "../src/core/glb_geometry";
 import { convexHull3 } from "../src/core/hull3";
 import { glbJson, readModelCatalog } from "../src/core/model_catalog";
-import { B1_FIT_MM, checkSolids, readPartSolids, UCX_MAX_VERTICES, type PartMesh, type PartSolids } from "../src/core/part_checks";
+import { B1_FIT_MM, checkSolids, exposedPerStage, readPartSolids, UCX_MAX_VERTICES, type PartMesh, type PartSolids } from "../src/core/part_checks";
 import type { Vec3 } from "../src/core/vec";
 
 const GLB = new URL("../Assets/Blender/World0_Scene2_engine/world0_scene_2_engine.glb", import.meta.url);
@@ -89,5 +89,84 @@ describe("⭐⭐⭐ V2 — each check's CONTROL: a clean part passes; one plante
     const f = checkSolids([part([BOX], [quad("UFM_P_top", -48, -48, 48, 48, 40)])]);
     expect(f.map((x) => x.check)).toEqual(["B1h"]);
     expect(f[0]!.detail).toMatch(/none inside the faces \(a strip along their edges\)/);
+  });
+});
+
+// ─────────────────────────────── B2 — EXPOSED PER STAGE, and B1i (D7, PROPOSED) ───────────────────────────────
+const quadsOfBox = (name: string, x0: number, x1: number, y0: number, y1: number, z0: number, z1: number, faces = "xXyYzZ"): PartMesh => {
+  const P: Vec3[] = [];
+  const T: [number, number, number][] = [];
+  const add = (q: Vec3[]) => { const b = P.length; P.push(...q); T.push([b, b + 1, b + 2], [b, b + 2, b + 3]); };
+  if (faces.includes("x")) add([[x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0]]);
+  if (faces.includes("X")) add([[x1, y0, z0], [x1, y1, z0], [x1, y1, z1], [x1, y0, z1]]);
+  if (faces.includes("y")) add([[x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1]]);
+  if (faces.includes("Y")) add([[x0, y1, z0], [x0, y1, z1], [x1, y1, z1], [x1, y1, z0]]);
+  if (faces.includes("z")) add([[x0, y0, z0], [x0, y1, z0], [x1, y1, z0], [x1, y0, z0]]);
+  if (faces.includes("Z")) add([[x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]]);
+  return { name, points: P, triangles: T };
+};
+const solidBox = (name: string, x0: number, x1: number, y0: number, y1: number, z0: number, z1: number): PartMesh => {
+  const pts: Vec3[] = [];
+  for (const a of [x0, x1]) for (const b of [y0, y1]) for (const c of [z0, z1]) pts.push([a, b, c]);
+  const h = convexHull3(pts)!;
+  return { name, points: h.points, triangles: h.triangles };
+};
+const at0 = (ids: string[]) => new Map(ids.map((id) => [id, { position: [0, 0, 0] as Vec3, rotation: [1, 0, 0, 0] as const }]));
+const solids = (id: string, pieces: PartMesh[], proxy: PartMesh[], frozen = false): PartSolids => ({ id, frozen, fitMm: B1_FIT_MM, pieces, proxy });
+
+describe("⭐⭐⭐ V3 — B2 on `Scene_2`: the map per stage, and B1i (D7) on the plinth", () => {
+  const bytes = new Uint8Array(readFileSync(GLB));
+  const j = glbJson(bytes);
+  if (!("json" in j)) throw new Error(j.refusal);
+  const { catalog } = readModelCatalog(j.json);
+  if (catalog === null) throw new Error("refused");
+  const bin = glbBin(bytes);
+  const mm = catalog.unitM * 1000;
+  const goals = new Map(partGeometry(j.json, bin, catalog).map((g) => [g.id, { position: [g.goal.position[0] * mm, g.goal.position[1] * mm, g.goal.position[2] * mm] as Vec3, rotation: g.goal.rotation }]));
+  const m = exposedPerStage(readPartSolids(j.json, bin, catalog), goals, new Set(catalog.parts.filter((p) => p.frozen).map((p) => p.id)));
+  it("17 stages (the plinth placed from the start, then each part); the plinth's bottom GLUED to the floor, its top exposed", () => {
+    expect(m.stages.map((s) => s.placed)).toEqual(["E01", ...Array.from({ length: 16 }, (_, k) => `E${String(k + 2).padStart(2, "0")}`)]);
+    expect(m.stages[0]!.parts).toEqual([{ id: "E01", exposed: 34, glued: 0, buried: 0, sealed: 0 }]);
+  });
+  it("the last stage, pinned — ⭐ E03's nose GLUED once E17 seats on it (a seat that seals a face); E17's proxy half BURIED (the half B1f finds inward)", () => {
+    const last = m.stages[m.stages.length - 1]!.parts.map((p) => `${p.id} e${p.exposed}/g${p.glued}/b${p.buried}/s${p.sealed}`).join(" ");
+    expect(last).toBe("E01 e34/g0/b0/s0 E02 e54/g2/b0/s0 E03 e2/g14/b0/s0 E04 e177/g39/b0/s0 E05 e173/g7/b0/s0 E06 e173/g7/b0/s0 E07 e2/g0/b0/s0 E08 e2/g0/b0/s0 E09 e2/g0/b0/s0 E10 e2/g0/b0/s0 E11 e2/g0/b0/s0 E12 e2/g0/b0/s0 E13 e68/g0/b0/s0 E14 e68/g0/b0/s0 E15 e30/g0/b0/s0 E16 e30/g0/b0/s0 E17 e22/g0/b22/s0");
+  });
+  it("⭐ B1i (D7, PROPOSED) — the PLINTH's sides, which the outside reaches, have no proxy (his reading: *\"not a closed mesh but a quad\"*)", () => {
+    const p = m.uncovered.find((f) => f.part === "E01");
+    expect(p, "the plinth's open sides must be found").toBeDefined();
+    expect(p!.detail).toMatch(/within -258…258 × 3…58 × -269…270 mm/); // its whole height: its four sides
+    expect(m.uncovered.length).toBe(17); // ⚠ read literally D7 flags every part (each proxy a selection of faces) — his word owed on the rule
+  });
+});
+
+describe("⭐⭐⭐ V4 — B2's and B1i's CONTROLS (one planted case each)", () => {
+  it("EXPOSED and GLUED: two boxes side by side — the face between them glued, the others exposed (the bottoms glued to the floor)", () => {
+    const a = solids("A", [solidBox("UCX_A", 0, 40, 0, 40, 0, 40)], [quadsOfBox("UFM_A", 0, 40, 0, 40, 0, 40, "XY")]);
+    const b = solids("B", [solidBox("UCX_B", 40, 80, 0, 40, 0, 40)], [quadsOfBox("UFM_B", 40, 80, 0, 40, 0, 40, "y")]);
+    const m = exposedPerStage([a, b], at0(["A", "B"]), new Set());
+    expect(m.stages.map((s) => s.placed)).toEqual(["A", "B"]);
+    expect(m.stages[0]!.parts).toEqual([{ id: "A", exposed: 4, glued: 0, buried: 0, sealed: 0 }]);
+    expect(m.stages[1]!.parts).toEqual([{ id: "A", exposed: 2, glued: 2, buried: 0, sealed: 0 }, { id: "B", exposed: 0, glued: 2, buried: 0, sealed: 0 }]);
+  });
+  it("SEALED: a proxy on a cavity's floor once the lid closes it", () => {
+    const walls = [solidBox("UCX_C1", 0, 80, 0, 8, 0, 80), solidBox("UCX_C2", 0, 8, 8, 60, 0, 80), solidBox("UCX_C3", 72, 80, 8, 60, 0, 80), solidBox("UCX_C4", 8, 72, 8, 60, 0, 8), solidBox("UCX_C5", 8, 72, 8, 60, 72, 80)];
+    const box = solids("C", walls, [quadsOfBox("UFM_C", 8, 72, 0, 8, 8, 72, "Y")]);
+    const lid = solids("L", [solidBox("UCX_L", 0, 80, 60, 68, 0, 80)], []);
+    const m = exposedPerStage([box, lid], at0(["C", "L"]), new Set());
+    expect(m.stages[0]!.parts[0]).toEqual({ id: "C", exposed: 2, glued: 0, buried: 0, sealed: 0 });
+    expect(m.stages[1]!.parts[0]).toEqual({ id: "C", exposed: 0, glued: 0, buried: 0, sealed: 2 });
+  });
+  it("BURIED: a proxy turned into its own part", () => {
+    const flipped = quadsOfBox("UFM_D", 0, 40, 0, 40, 0, 40, "Y");
+    const d = solids("D", [solidBox("UCX_D", 0, 40, 0, 40, 0, 40)], [{ ...flipped, triangles: flipped.triangles.map(([x, y, z]) => [x, z, y] as [number, number, number]) }]);
+    expect(exposedPerStage([d], at0(["D"]), new Set()).stages[0]!.parts[0]).toEqual({ id: "D", exposed: 0, glued: 0, buried: 2, sealed: 0 });
+  });
+  it("⭐ B1i: a box whose proxy is its top only — its sides reached, not covered; its proxy closed (the bottom on the floor apart) — none", () => {
+    const top = solids("E", [solidBox("UCX_E", 0, 60, 0, 30, 0, 60)], [quadsOfBox("UFM_E", 0, 60, 0, 30, 0, 60, "Y")]);
+    const m1 = exposedPerStage([top], at0(["E"]), new Set());
+    expect(m1.uncovered.map((f) => f.check + " " + f.part)).toEqual(["B1i E"]);
+    const closed = solids("E", [solidBox("UCX_E", 0, 60, 0, 30, 0, 60)], [quadsOfBox("UFM_E", 0, 60, 0, 30, 0, 60, "xXYzZ")]);
+    expect(exposedPerStage([closed], at0(["E"]), new Set()).uncovered).toEqual([]);
   });
 });

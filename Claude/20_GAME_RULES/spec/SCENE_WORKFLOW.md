@@ -345,6 +345,8 @@ function. Each new vector shown failing first (`CLAUDE.md` rule 2).
 scene's `.glb` by `npx vite-node scripts/surface/check_part_solids.ts -- <scene.glb>` (PASS / FAIL, every finding named) at the export gate (§6.3
 item 5), and as vectors on `Scene_2` (`part_checks.test.ts`); its drawing rules D4 – D7 (`PART_AUTHORING.md` §6.4). At load: ⏳ its cheap subset (it
 takes 5 s in full on `Scene_2`, the coverage the heavy part) — printed, never a refusal, until `Scene_2` passes or its findings are answered.
+⭐ **B2 BUILT** the same day (`exposedPerStage`, a 4 mm grid, the floor solid): the map per stage — each proxy face exposed, glued, buried or sealed
+— printed by the same script, a vector on `Scene_2` (a seat that seals a face shows: E03's nose under E17); with it B1i (D7, PROPOSED).
 
 ### 7.4 The design-for-playability checklist (whoever draws a part)
 

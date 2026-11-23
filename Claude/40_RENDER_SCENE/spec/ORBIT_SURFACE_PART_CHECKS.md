@@ -5,6 +5,7 @@
 > 2026-11-16 (Q7, `ORBIT_SURFACE.md` §7bis.3, `PART_AUTHORING.md` §6); the choices they leave open are made in §6 and may be reversed on his look.
 > ⭐ **His word during the design (2026-11-23):** *"i already know there is an issue with the plinth in scene 2 as the proxy face is not complete. Make
 > sure the same is detected by your scripts."* → B1h (§2): a proxy face COMPLETE on the solid face it lies on — the plinth its control on the real file.
+> ⭐ **B1 AND B2 BUILT 2026-11-23** (`20e318d8`, `d690fcd2`, §8 – §9; local): the plinth DETECTED (B1h, and B1i — its sides); D7's rule asked of him.
 > **OWNS** · S5: the game's re-verification of B1 and B2 on a scene's exported `.glb` — what each tests, its numbers, its controls, where it runs.
 > **READ WITH** · [ORBIT_SURFACE.md](ORBIT_SURFACE.md) §7bis.3 – §7bis.5; [`PART_AUTHORING.md`](../../30_OBJECTS_3D/spec/PART_AUTHORING.md) §4.2, §6;
 > [ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md) §8 (the ledger). Code read on `89be87bb`.
@@ -117,3 +118,36 @@ proposed (D7, `PART_AUTHORING.md` §6.4): the proxy covers every face of the par
 B1i = B2 × B1h, built with B2. **The lessons** → D4 – D7 (`PART_AUTHORING.md` §6.4), the Blender build's per-run table (§4.2), `SCENE_WORKFLOW.md`
 §7.3 (B1 built; the check script) and §9.1 (a check calibrated on the real file and the owner's known defect), the ledger's rows 14 – 16.
 **The check script**: `npx vite-node scripts/surface/check_part_solids.ts -- <scene.glb>` (exit 0 PASS, 1 findings) — `Scene_2`: FAIL, 21.
+
+## 9. As built — B2 and B1i (2026-11-23, his *"continue the build"*)
+
+**`exposedPerStage`** (`part_checks.ts`): per stage (the frozen parts first, together; then each part in the plan's order), the placed parts'
+pieces at their goals voxelized at **4 mm** (`B2_STEP_MM`; `Scene_2`: a 133 × 83 × 139 grid, 1.5 M cells), the FLOOR solid below the lowest part
+(so a face resting on it reads glued, never exposed), the outside flooded from the border (6-neighbour); each proxy triangle read 3 mm in front
+of it (its centroid and three points toward its corners): exposed / glued (another part, or the floor) / buried (its own part) / sealed. **B1i**
+(D7, PROPOSED) on the same floods: each part's solids sampled at its goal (a 20 × 20 grid a hull face); a sample the outside reaches at some stage
+from its placing on, not under its proxy, counted. **5 s** on `Scene_2` (17 floods). The check script prints both, outside its verdict.
+
+**`Scene_2`'s map** (pinned, V3): the plinth's top exposed, its bottom glued to the floor; at the last stage ⭐ **E03's nose GLUED once E17 seats on
+it** (14 of 16 — a seat that seals a face: S19's relocation, C46); E17's proxy half BURIED (the half B1f finds facing in); E04 39, E05 / E06 7,
+E02 2 triangles glued to their neighbours; nothing sealed (no closed cavity at 4 mm).
+
+**⭐ B1i — his reading of the plinth, measured:** 71.8 % of the plinth's solids that the outside reaches are under no proxy, within its whole
+height (y 3 … 58 mm): its FOUR SIDES. ⚠ **But read literally, D7 flags EVERY part (33 – 100 %)**: every `Scene_2` proxy is a SELECTION of its
+part's faces (a piston's its resting quad, its crown and sides none; the cases' outer surface only) — and B1e's offsets (§8) put even those off the
+solids. So D7 as written would demand every part's proxy rebuilt: **the rule is his to choose** (§10).
+
+**The vectors** (V3 the map and the plinth's sides, V4 the controls: two boxes side by side — glued and exposed; a cavity's floor once its lid
+closes — sealed; a proxy turned into its part — buried; a box with its top proxy only — B1i, closed — none), each RED on its mutant first: no floor
+(*"expected '5886 of the 7524 …' to match /within -258…258 × 3…58/"*), no flood (*"expected [ { id: 'E01', exposed: +0 } ] …"*), glued never
+read, the front on the wrong side, B1i on every sample (*"expected [ { check: 'B1i', part: 'E' } ] to deeply equal []"*), the later parts never
+filled. **G0**: 193 files / 2399 tests.
+
+## 10. For his word — D7, which faces a proxy must cover
+
+1. **Every face the outside reaches** (D7 as proposed): the plinth's sides AND every other part's — all 17 proxies rebuilt in Blender.
+2. **The anchor's faces only** (a frozen part — its sides are the assembly's contour, where the gizmo travels round the base): the plinth's top and
+   four sides; the other parts keep their selected faces.
+3. **The faces the part's playability brief names** (`SCENE_WORKFLOW.md` §7.1): each part declares its surface faces; B1i checks the proxy covers
+   those — the plinth's brief names its sides.
+

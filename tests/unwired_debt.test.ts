@@ -124,6 +124,7 @@ const PENDING: Record<string, string> = {
   // the plinth's incomplete proxy); at load its cheap subset is owed (D1: printed, never refused — 5 s in full on this PC, B1h the heavy part)
   checkSolids: "S5 (`ORBIT_SURFACE_PART_CHECKS.md` §4, D1) — B1 run as vectors on each scene's .glb; its cheap subset at load owed (RND7)",
   readPartSolids: "S5 (`ORBIT_SURFACE_PART_CHECKS.md` §4, D1) — B1's reader of a scene's .glb, with `checkSolids`; at load owed (RND7)",
+  exposedPerStage: "S5 (`ORBIT_SURFACE_PART_CHECKS.md` §3) — B2, the map per stage (and B1i, D7 proposed): a vector and the check script, never at load (the spec)",
   buildLandingMap: "S2 (`ORBIT_SURFACE_READOUT.md` §13) — the landing map's GRID: the readout reads its sums with no grid (`prepareLanding`); the grid serves the vectors and the offline comparison until the representation is chosen (`ORBIT_SURFACE_LANDING_MAP.md` §10.9)",
   // ✅ `qAngle` LEFT THIS LIST 2026-09-22 — `RotationFollower` reads it to decide a body has
   // ARRIVED at its detent, so it is wired and the guard reddened until this line was deleted.

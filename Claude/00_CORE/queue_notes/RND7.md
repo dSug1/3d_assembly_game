@@ -69,3 +69,7 @@
   proxy face is not complete. Make sure the same is detected"*: S5 designed (`ORBIT_SURFACE_PART_CHECKS.md`); B1 built (`part_checks.ts`, 5 s on
   `Scene_2`): ⭐ the plinth's incomplete proxy DETECTED (B1h: its four corners cut, a hole), 20 more findings (proxies off their collision pieces up to
   42 mm, E17's half turned inward) — the ledger's rows 14, 15, his word. B2 next.
+* **2026-11-23, later** — his *"Capture those lessons … the plinth: the proxy is not a closed mesh but a quad: check that. Then continue the build"*:
+  CHECKED — the plinth's proxy is ONE open face (its top); no `Scene_2` proxy is closed (a selection of faces by convention). Lessons → D4 – D7
+  (`PART_AUTHORING.md` §6.4, §4.2), `SCENE_WORKFLOW.md` §7.3, §9.1, the ledger 14 – 16; `check_part_solids.ts`. B2 + B1i built (5 s): the plinth's
+  sides uncovered (71.8 %) — but D7 read literally flags every part: his word on the rule (`ORBIT_SURFACE_PART_CHECKS.md` §10). Local.
