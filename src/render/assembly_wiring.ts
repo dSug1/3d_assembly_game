@@ -47,6 +47,8 @@ import { carriedHold, lawHalfTurn } from "../input/upright";
 import { dirGap, easedDir, easeRest, poleYawKept, seamOutPaced, seamOutShare, seamOutStep, seamOutTarget, seamTurnPace, seamTurnStep, seamWholeRad, tiltLeavesNow, turnHoldsGizmo } from "../input/seam_turn";
 import { bandedFacet } from "../input/face_band";
 import { landingReadoutFrame, type ReadoutSource, mouthP2 } from "./landing_readout";
+import { driveGizmoLanding, driveKey, driveSupport, landingDriveFrame } from "./landing_drive";
+import { driveLevel } from "../core/landing_map";
 import { contourFaceAt, crossingEvent, entryBlendHeading, entryDepth, entryEdgeOf, exitHoldSign, headingStep, pictureOffset, transportUp, viewLevelTurned, exitTurnRad, faceOwnUp, freeEdges, freeEntryHeading, freeHeadingAngle, isFreeFace } from "../input/free_face";
 import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, capTilt, gizmoGlide, mouthHold, mouthHoldDomain, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, swingEase, tiltAutoLatch, frameBox, tiltDir, tiltFaces, onTiltedFacet, type Mat3 } from "../input/orbit_tilt";
 
@@ -889,7 +891,8 @@ function supportFrame(st: SceneState, dtMs: number): void {
   }
   // ⭐⭐ at its SOLVED place (`pieceQ`, the level as last read) — ⛔ its drawn pose: on the spring's lag a high part read as under its bottom, the piece
   // raised by the whole lag (197 mm in a frame, the walks)
-  const at = placeByFaceCentre(ringAnchorAt(st, st.pieceQ), place.orientation, rc);
+  const anchor = ringAnchorAt(st, st.pieceQ);
+  const at = placeByFaceCentre(anchor, place.orientation, rc);
   const piece = local.map((p) => {
     const w = qRotate(place.orientation, p);
     return [at[0] + w[0], at[1] + w[1], at[2] + w[2]] as Vec3;
@@ -903,14 +906,16 @@ function supportFrame(st: SceneState, dtMs: number): void {
     return;
   }
   // ⭐⭐ only a part within the shell's offset under the piece (`orbitShellOffsetMm`: where the piece hangs from the gizmo itself) — far out, none
-  const i = footprintSupport(piece, parts.parts, u, undefined, st.cfg.orbitShellOffsetMm / 1000);
-  st.asmSupport = i === null ? null : { key: parts.key, index: i };
+  // ⭐⭐⭐ (2026-11-23, S4 — `ORBIT_SURFACE_DRIVE.md` §3.3) read on P2 from the piece's reference (`landingDrives` ≥ 1) — the same rule as the gizmo's
+  const win = st.cfg.orbitShellOffsetMm / 1000;
+  const ps = supportOf(st, piece, anchor, parts, u, win);
+  st.asmSupport = ps === null ? null : { key: parts.key, index: ps.index };
   // ⭐⭐ the level: the support's top; none — a level left by a support eases down to the gizmo's own (last frame's) and then clears; never one made from
   // the gizmo alone (⛔ it was: far out, with no support, the piece held at last frame's gizmo height whenever the gizmo went down — the walks)
   const g = st.asmG;
   const lv = st.asmSupportLevel;
   const gl = g !== null && lv !== null ? g[0] * u[0] + g[1] * u[1] + g[2] * u[2] : null;
-  let target = i !== null ? supportTop(parts.parts[i]!, u) : gl !== null && lv!.h > gl + 1e-4 ? gl : null;
+  let target = ps !== null ? ps.top : gl !== null && lv!.h > gl + 1e-4 ? gl : null;
   const same = lv !== null && u[0] * lv.n[0] + u[1] * lv.n[1] + u[2] * lv.n[2] > 0.999;
   // ⭐⭐⭐ (2026-11-12, the slide's rebuild) A DROP WAITS FOR THE DRAWN PIECE TOO: the drawn piece lags the solved one (the orbit's spring) — dropped as soon as
   // the SOLVED footprint cleared a part, the drawn one, still over its edge, came down through its corner (walked: `Piece31` beside the channel, `Piece45`
@@ -921,8 +926,9 @@ function supportFrame(st: SceneState, dtMs: number): void {
       const w = qRotate(place.orientation, p);
       return [place.position[0] + w[0], place.position[1] + w[1], place.position[2] + w[2]] as Vec3;
     });
-    const j = footprintSupport(drawn, parts.parts, u, undefined, st.cfg.orbitShellOffsetMm / 1000);
-    if (j !== null) target = Math.min(lv.h, Math.max(target, supportTop(parts.parts[j]!, u)));
+    const rd = qRotate(place.orientation, rc);
+    const js = supportOf(st, drawn, [place.position[0] + rd[0], place.position[1] + rd[1], place.position[2] + rd[2]], parts, u, win);
+    if (js !== null) target = Math.min(lv.h, Math.max(target, js.top));
   }
   // ⭐⭐ (the rebuild) the drop's ease on at most 33 ms a frame — ⛔ the whole frame's time: at a low frame rate (the headless walks, ~200 ms) the τ = 40 ms ease
   // was one step, 41 mm in a frame
@@ -942,6 +948,18 @@ function supportFrame(st: SceneState, dtMs: number): void {
     }
   }
   st.asmSupportLevel = next;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-23, S4 — `ORBIT_SURFACE_DRIVE.md` §3.3) THE SUPPORT under the piece (its world points `piece`, its reference point `ref`) along `u`: P2
+ * read from `ref` (`driveSupport`: the part first touched within the window, its level the contact's plane; a part above the piece a wall) — or, where
+ * P2 does not drive or reads the piece inside a part, `footprintSupport` and the part's top as built. Its index in `parts` and its level.
+ */
+function supportOf(st: SceneState, piece: readonly Vec3[], ref: Vec3, parts: PlacedParts, u: Vec3, win: number): { readonly index: number; readonly top: number } | null {
+  const d = driveSupport(st, u, ref, win);
+  if (d !== null && d.kind !== "today") return d.kind === "none" ? null : { index: parts.ids.indexOf(d.part), top: d.level };
+  const i = footprintSupport(piece, parts.parts, u, undefined, win);
+  return i === null ? null : { index: i, top: supportTop(parts.parts[i]!, u) };
 }
 
 /** ⭐⭐⭐ (2026-11-05) The piece's lift along `u` (`faceLift`): its hull past its resting face's centre toward the gizmo, at its pose; none: 0. */
@@ -1119,6 +1137,33 @@ function heldFoot(st: SceneState): readonly [number, number] | undefined {
  * its floor, the green down and across it) — unless the held piece cannot enter it.
  */
 function rawGizmo(st: SceneState, yaw: number, pitch: number): MapGizmo | null {
+  return driveGizmo(st, rawGizmoToday(st, yaw, pitch));
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-23, S4 — `ORBIT_SURFACE_DRIVE.md` §3.1) P2 DRIVES THE GIZMO'S DEPTH (`landingDrives` 2, `Scene_1`, a piece held): today's gizmo `here`
+ * (the rule as built — its normal, host and mouth kept) put on the level P2 reads at its place from where the piece is (`driveLevel`: a landing less
+ * the piece's reach — the contact; nothing → the facet's plane; a wall beside the piece → today's), the place's two other coordinates kept. In the
+ * map's frame (a turn keeps the dot: the world's depth is the frame's level). Not driving: `here` itself.
+ */
+function driveGizmo(st: SceneState, here: MapGizmo | null): MapGizmo | null {
+  if (here === null) return null;
+  const R = mapFrame(st);
+  const n = here.t.normal;
+  const sf = here.t.surface;
+  const d = driveGizmoLanding(st, R === null ? n : mulM(R, n), R === null ? sf : mulM(R, sf));
+  if (d === null) return here;
+  const level = (q: Vec3): number => q[0] * n[0] + q[1] * n[1] + q[2] * n[2];
+  const today = level(here.hit.point);
+  const to = driveLevel(d.landing, d.reach, level(sf), today);
+  if (to === today) return here;
+  const k = to - level(sf);
+  const p: Vec3 = [sf[0] + n[0] * k, sf[1] + n[1] * k, sf[2] + n[2] * k];
+  return { ...here, hit: { point: p, normal: here.hit.normal, host: here.hit.host } };
+}
+
+/** ⭐ (2026-11-23, S4) THE GIZMO AS BUILT — the rule below, before P2 drives it (`driveGizmo`); the readout's "today". */
+function rawGizmoToday(st: SceneState, yaw: number, pitch: number): MapGizmo | null {
   const map = faceMapOf(st);
   if (map === null) return null;
   const t = mapTarget(map, yaw, pitch, mapOpts(st));
@@ -1301,6 +1346,9 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     const s = st.approachInertia.step(dtMs, st.cfg.boxSmoothMs * 4);
     approachMove(st, s.dV);
   }
+  // ⭐⭐⭐ (2026-11-23, S4 — `ORBIT_SURFACE_DRIVE.md` §3.2) P2 DRIVING: the held piece's sums and `F` (last frame's solved anchor) — before anything
+  // reads the gizmo or the support, so every query of the frame reads one `F`
+  landingDriveFrame(st, READOUT_SOURCE);
   // ⭐⭐⭐ (2026-11-12, CLOSE_IN_CONTACT.md §6) the footprint support, from where the piece is — before anything reads the foot
   supportFrame(st, dtMs);
   // ⭐⭐⭐ (2026-11-10, §9.4) the tilted facet left last frame: the WORLD's frame from this one (`tiltOff` — the angles turned, the gizmo kept)
@@ -1392,12 +1440,15 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     const mq = { yaw: mqs.yaw, pitch: Math.max(-ORBIT_PITCH_MAX_RAD, Math.min(ORBIT_PITCH_MAX_RAD, mqs.pitch)) };
     st.asmMapQ = mq;
     // ⭐⭐⭐ (2026-11-22, S2) the frame's gizmo as `mapGizmo` makes it (`rawGizmo`, then `gizmoOf`), `rawGizmo`'s own result kept for the readout
-    const mr0 = rawGizmo(st, mq.yaw, mq.pitch);
+    // ⭐⭐⭐ (2026-11-23, S4) today's gizmo kept beside the driven one: the readout compares P2 with the rule as built (its Δ, S3's answer unchanged)
+    const mrT = rawGizmoToday(st, mq.yaw, mq.pitch);
+    const mr0 = driveGizmo(st, mrT);
     const m0g = gizmoOf(st, mq.yaw, mq.pitch, mr0);
     // ⭐⭐⭐ (2026-11-22, `ORBIT_SURFACE_READOUT.md` §4 — S2) THE READOUT, ONCE A FRAME, for the frame's own gizmo only (⛔ never in the sections' samples, the
     // edge blend's or the solver's queries): P2 beside today's depth — ⛔ NOTHING READS IT BACK (the gizmo, the piece, the calm, the camera untouched);
     // at `landingReadout` 0 it returns before any computation — ⭐⭐ (2026-11-23, S3) unless the mouth's hold asks P2 at a mouth (`mouthHoldDomain` 2)
-    landingReadoutFrame(st, mr0, m0g, READOUT_SOURCE, st.cfg.mouthHoldDomain === 2 && m0g !== null && m0g.mouth !== undefined);
+    // ⭐ (S4) fed today's point, and today's blend where P2 moved it (the readout's `band` reads the blend against today's point)
+    landingReadoutFrame(st, mrT, mr0 === mrT ? m0g : gizmoOf(st, mq.yaw, mq.pitch, mrT), READOUT_SOURCE, st.cfg.mouthHoldDomain === 2 && m0g !== null && m0g.mouth !== undefined);
     if (m0g !== null) {
       // ⭐⭐⭐ (2026-11-10, the owner: *"the tilt shall happen when the red section reaches the edge at the bottom of the mouth"* → *"build b"*) A VOID'S MOUTH:
       // a dy toward its open end HOLDS the gizmo where it last was — the void's floor edge, the red's end there (`mouthHold`) — and hands over: the automatic
@@ -1533,7 +1584,8 @@ function sectionLinesFrame(st: SceneState): void {
   }
   const parts = `${st.asmParts?.key ?? ""}#T${st.asmTilt?.id ?? 0}#Z${st.asmZone?.id ?? 0}`; // ⭐ (§9.4) a frame's lines are its own
   const o = mapOpts(st);
-  const optKey = `${o.edgeMm}|${o.edgeDeg}`;
+  // ⭐⭐ (2026-11-23, S4 — `ORBIT_SURFACE_DRIVE.md` §3.6) + the drive's signature: where P2 reads from the piece, a part becoming a wall re-samples the lines
+  const optKey = `${o.edgeMm}|${o.edgeDeg}|${driveKey(st)}`;
   // ⭐⭐⭐ (2026-11-09, I17) the samples REFINED where the line leaves its chord by more than 1 mm (`refineStart`, `refineStep`): a narrow face (Piece42's
   // slanted sides, 6.5° of yaw against a sample every 3.75°) is drawn on its surface, never as a chord through the part — drawing only.
   // ⭐⭐⭐ (§8.7) THE JOINS: an interval is drawn only where the gizmo's path is CONTINUOUS — the same real face at both ends at once, a face change once

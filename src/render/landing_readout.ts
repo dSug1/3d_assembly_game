@@ -28,7 +28,7 @@ import { GIZMO_RING_PX, RING_POINTS, type SceneState } from "./scene_state";
 
 /** ⭐ (§1, §9; §13.4 D1 — a decision of the build, the owner asleep) the one scene the readout runs on: `Scene_1` (each placed part one convex body). ⛔ Not
  *  `Scene_2` (its `UCX_` pieces later — §9): there `placedParts` hulls whole meshes, so its Δ would not be P2's, at an unmeasured cost. */
-const READOUT_SCENE = "Scene_1";
+export const READOUT_SCENE = "Scene_1"; // ⭐ (2026-11-23, S4) also where P2 drives (`landing_drive.ts`, `ORBIT_SURFACE_DRIVE.md` §3.7): one constant, one place
 /** ⭐ (§10 choice 1, his word *"proceed"*) the ring's size: the gizmo's × this. */
 const LANDING_RING_SHARE = 0.7;
 /** ⭐ the HUD's query time: an exponential mean over this many frames (the `solver` field's). */
@@ -72,7 +72,7 @@ export interface LandingReadoutState {
 /** ⭐ each object its own number (the cache key's identities — a face map, a held piece's points list): a rebuilt one is a new object, a new number */
 const IDS = new WeakMap<object, number>();
 let ID_SEQ = 0;
-function idOf(o: object): number {
+export function idOf(o: object): number {
   let k = IDS.get(o);
   if (k === undefined) IDS.set(o, (k = ++ID_SEQ));
   return k;

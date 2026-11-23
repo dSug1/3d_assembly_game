@@ -573,6 +573,7 @@ export function createScene(
   st.boxSpring = null;
   st.pinkRing = null;
   st.landing = null; // ⭐ (2026-11-22, S2) the readout: its state and its ring, made at its first frame at `landingReadout` 1
+  st.landingDrive = null; // ⭐ (2026-11-23, S4) P2 driving: its state, made at its first frame at `landingDrives` ≥ 1
   st.landingMarker = null;
   st.orbitPieces = [];
   st.restingFaces = new Map();

@@ -129,6 +129,8 @@ export interface SceneState {
   /** ⭐⭐⭐ (2026-11-22, S2 — `ORBIT_SURFACE_READOUT.md`) THE READOUT's state (`render/landing_readout.ts`): its cache, the frame's readout, its cost — `null`
    *  until its first frame at `landingReadout` 1. ⛔ Nothing in the frame reads it: the HUD's `landing` line and its ring only */
   landing: import("./landing_readout").LandingReadoutState | null;
+  /** ⭐⭐⭐ (2026-11-23, S4 — `ORBIT_SURFACE_DRIVE.md`) P2 driving the gizmo and the support: its preparations by direction, the frame's `F` */
+  landingDrive: import("./landing_drive").LandingDriveState | null;
   /** ⭐ …its ring (white: land, magenta: nothing to land on), drawn by the gizmo ring's path (`landingMarkerFrame`) */
   landingMarker: LinesMesh | null;
   /** ⭐ Prototype: the pieces the orbit can carry — [0] the green frustum, [1] the turquoise hexagonal prism — each with its logical

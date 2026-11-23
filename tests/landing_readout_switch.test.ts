@@ -51,8 +51,10 @@ describe("⭐⭐⭐ V4 — the switch `landingReadout`", () => {
 
   it("READ and in the menu's GIZMO & SECTIONS: the readout's three entry points read the switch first", () => {
     const m = raw("render/tuning_menu.ts");
-    const sub = m.indexOf('title: "GIZMO & SECTIONS"');
+    // ⭐ (2026-11-23, S4 — `ORBIT_SURFACE_DRIVE.md` §3.7) in GIZMO & SECTIONS' subfolder THE ORBIT'S SURFACE (the surface's three switches together)
+    const sub = m.indexOf(`title: "THE ORBIT'S SURFACE"`);
     const at = m.indexOf('"landingReadout", 0, 1, 1)');
+    expect(sub).toBeGreaterThan(m.indexOf('title: "GIZMO & SECTIONS"'));
     expect(at).toBeGreaterThan(sub);
     expect(m.lastIndexOf("title:", at)).toBe(sub);
     const r = code("render/landing_readout.ts");
@@ -65,8 +67,10 @@ describe("⭐⭐⭐ V4 — the switch `landingReadout`", () => {
   it("⭐ THE HOOK: once a frame, right after the frame's own gizmo (`rawGizmo` kept, `gizmoOf` its blend — `mapGizmo`'s same two steps), nowhere else", () => {
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("export function mapGizmo(st: SceneState, yaw: number, pitch: number): MapGizmo | null { return gizmoOf(st, yaw, pitch, rawGizmo(st, yaw, pitch)); }");
-    expect(a).toContain("const mr0 = rawGizmo(st, mq.yaw, mq.pitch); const m0g = gizmoOf(st, mq.yaw, mq.pitch, mr0);");
-    expect(a).toMatch(/const m0g = gizmoOf\(st, mq\.yaw, mq\.pitch, mr0\);( \/\/[^\n]*)? landingReadoutFrame\(st, mr0, m0g, READOUT_SOURCE, st\.cfg\.mouthHoldDomain === 2 && m0g !== null && m0g\.mouth !== undefined\); if \(m0g !== null\) \{/);
+    // ⭐ (2026-11-23, S4 — `ORBIT_SURFACE_DRIVE.md` §3.5) the frame's gizmo = today's (`rawGizmoToday`) driven (`driveGizmo`); the readout fed TODAY's point and,
+    // where P2 moved it, today's blend — at `landingDrives` 0 `mr0 === mrT`: the call as before
+    expect(a).toContain("const mrT = rawGizmoToday(st, mq.yaw, mq.pitch); const mr0 = driveGizmo(st, mrT); const m0g = gizmoOf(st, mq.yaw, mq.pitch, mr0);");
+    expect(a).toMatch(/const m0g = gizmoOf\(st, mq\.yaw, mq\.pitch, mr0\);( \/\/[^\n]*)? landingReadoutFrame\(st, mrT, mr0 === mrT \? m0g : gizmoOf\(st, mq\.yaw, mq\.pitch, mrT\), READOUT_SOURCE, st\.cfg\.mouthHoldDomain === 2 && m0g !== null && m0g\.mouth !== undefined\); if \(m0g !== null\) \{/);
     // ⛔ exactly one call in the product (not in the sections' samples, the edge blend's, the solver's queries)
     const calls = srcFiles().reduce((n, f) => n + (strip(readFileSync(f, "utf8")).match(/\blandingReadoutFrame\(/g) ?? []).length, 0);
     expect(calls).toBe(2); // its definition and its one call
@@ -86,7 +90,8 @@ describe("⭐⭐⭐ V4 — the switch `landingReadout`", () => {
     expect(readers).toEqual([]);
     // the module's three entry points, each with its one reader: the hook, the ring after the gizmo's, the HUD
     const importers = srcFiles().filter((f) => /from "\.\/landing_readout"/.test(readFileSync(f, "utf8"))).map((f) => f.replace(/\\/g, "/")).sort();
-    expect(importers).toEqual(["src/render/assembly_wiring.ts", "src/render/green_box_wiring.ts", "src/render/hud_paint.ts"]);
+    // ⭐ (2026-11-23, S4) + the drive (`landing_drive.ts`): it imports the scene constant, the identities and the source's type — never `st.landing`
+    expect(importers).toEqual(["src/render/assembly_wiring.ts", "src/render/green_box_wiring.ts", "src/render/hud_paint.ts", "src/render/landing_drive.ts"]);
   });
 });
 

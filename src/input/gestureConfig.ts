@@ -513,6 +513,10 @@ export interface GestureConfig {
   /** ⭐⭐⭐ (2026-11-23, `ORBIT_SURFACE_MOUTH_HOLD.md` §6 — package S3, his Q4 (a)) WHERE THE MOUTH'S HOLD ACTS: 0 the hold as built (`3b7a479` frame for frame);
    *  1 never on a cap (H1); 2 never on a cap and only over a void the landing map's P2 leaves open for the held piece (H1 + H2) */
   mouthHoldDomain: number;
+  /** ⭐⭐⭐ (2026-11-23, `ORBIT_SURFACE_DRIVE.md` §3.7 — package S4, the build list's item 4) P2 DRIVES: 0 as deployed (`e80a7b0` frame for frame — no
+   *  landing query made); 1 the footprint support read on P2 from where the piece is (its wall kept); 2 the support and the gizmo's depth (P2's level less
+   *  the piece's reach). `Scene_1` only */
+  landingDrives: number;
   orbitTurnCapDegMm: number;
   /** ⭐⭐ (2026-10-19) …and on any other curve (a vertical face, no face): the view between rings 2 and 3 slowed to this (°/mm). */
   orbitTurnCapVerticalDegMm: number;
@@ -955,6 +959,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   gizmoEdgeMarginMm: 5, // ⭐ (2026-10-28) the face's switch 5 mm past an edge
   sectionLines: 1, // ⭐ (2026-10-28) the sections drawn
   mouthHoldDomain: 2, // ⭐⭐⭐ (2026-11-23, S3 — `ORBIT_SURFACE_MOUTH_HOLD.md` §6, D3) H1 + H2 by default; 0 = `3b7a479`'s hold
+  landingDrives: 2, // ⭐⭐⭐ (2026-11-23, S4 — `ORBIT_SURFACE_DRIVE.md` §3.7, D6) the support and the gizmo on P2 by default; 0 = as deployed (`e80a7b0`)
   landingReadout: 1, // ⭐⭐⭐ (2026-11-22, S2 — his word *"proceed"* on `ORBIT_SURFACE_READOUT.md` §10: default 1 on this branch, his look needs it) 0 = `3b7a479`: no readout
   orbitTurnCapDegMm: 12.5, // ⭐ (2026-10-19, the owner: *"set the turn governor horizontal face to 12.5"*; first 40) the horizontal face's turn over the top (96°/mm at the shipped gains, view and roll) capped
   orbitTurnCapVerticalDegMm: 12.5, // ⭐ (2026-10-19, the owner: *"same for vertical faces"* — 12.5; first 10) the vertical face's view between rings 2 and 3 (20°/mm at the shipped gains) slowed
@@ -1135,6 +1140,7 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (cfg.sectionLines !== 0 && cfg.sectionLines !== 1) throw new Error(`sectionLines (${cfg.sectionLines}) must be 0 or 1.`);
   if (cfg.landingReadout !== 0 && cfg.landingReadout !== 1) throw new Error(`landingReadout (${cfg.landingReadout}) must be 0 or 1.`);
   if (cfg.mouthHoldDomain !== 0 && cfg.mouthHoldDomain !== 1 && cfg.mouthHoldDomain !== 2) throw new Error(`mouthHoldDomain (${cfg.mouthHoldDomain}) must be 0, 1 or 2.`);
+  if (cfg.landingDrives !== 0 && cfg.landingDrives !== 1 && cfg.landingDrives !== 2) throw new Error(`landingDrives (${cfg.landingDrives}) must be 0, 1 or 2.`);
   if (!(cfg.gizmoEdgeMarginMm >= 0 && cfg.gizmoEdgeMarginMm <= 20)) throw new Error(`gizmoEdgeMarginMm (${cfg.gizmoEdgeMarginMm}) must be in [0, 20] mm.`);
   if (!(cfg.orbitTurnCapDegMm >= 5 && cfg.orbitTurnCapDegMm <= 300)) throw new Error(`orbitTurnCapDegMm (${cfg.orbitTurnCapDegMm}) must be in [5, 300]°/mm.`);
   if (!(cfg.orbitTurnCapVerticalDegMm >= 5 && cfg.orbitTurnCapVerticalDegMm <= 300)) throw new Error(`orbitTurnCapVerticalDegMm (${cfg.orbitTurnCapVerticalDegMm}) must be in [5, 300]°/mm.`);
