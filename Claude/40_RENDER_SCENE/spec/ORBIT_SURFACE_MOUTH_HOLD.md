@@ -3,7 +3,7 @@
 > **STATUS** · ⭐ **DESIGNED 2026-11-23** on his word *"Keep as held. Continue build"* (the build list's next item, `ORBIT_SURFACE.md` §6 (2)) — the
 > rule decided 2026-11-16 (Q4, his answer (a)); nothing here asks him a new question: the choices the rule leaves open are made in §9 and may be
 > reversed on his look. ⭐ **BUILT AND GATED 2026-11-23 (`d4b6c222` + the audit's follow-up, §10)**: G0 green; G1 his four records IDENTICAL to `3b7a479`;
-> G2 measured (§7: one FINDING for his look); the audit: no defect; his look OWED. Branch `1.0.158from1.0.157-Orbit_surface`, worktree `../orbit_surface`.
+> G2 measured (§7: one FINDING for his look); the audit: no defect. ⭐ **DEPLOYED 2026-11-23** on his word *"Deploy"* (LIVE main `e80a7b0` = `1bc13f70`); his look OWED. Branch `1.0.158from1.0.157-Orbit_surface`, worktree `../orbit_surface`.
 > **OWNS** · S3: where the mouth's hold acts (its domain), its switch, its vectors and gates. ⛔ Not the hold itself (his S10, `mouthHold`), not the
 > tilt it hands over to, not the camera — the orbit is closed (`ORBIT_SURFACE_BUILD.md` §9).
 > **READ WITH** · [ORBIT_SURFACE.md](ORBIT_SURFACE.md) §2.4 (S18: where the hold comes from), §8 Q4; [ORBIT_SURFACE_AUDIT.md](ORBIT_SURFACE_AUDIT.md) §5.2

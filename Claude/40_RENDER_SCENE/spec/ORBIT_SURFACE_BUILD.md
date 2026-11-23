@@ -160,7 +160,7 @@ never on a cap (H1), only over a void P2 leaves open for the held piece (H2); be
 * ⭐ **S2 — BUILT 2026-11-22 (P1 `dfeb7ef9`, P2 `fafbde6b`, P2b `d21a4826` — on `Scene_1` only), the gates G1 – G3 OWED** → [ORBIT_SURFACE_READOUT.md](ORBIT_SURFACE_READOUT.md) §13.
 * ⭐ **S3 — BUILT 2026-11-23 (`d4b6c222`)** → [ORBIT_SURFACE_MOUTH_HOLD.md](ORBIT_SURFACE_MOUTH_HOLD.md) §7, §10: his four records never meet the hold (nothing he played changes); `Scene_1`'s scan: no cap
   mouth; H2 removes the hold at the 10 mm bottom slots (the piece never enters) and within half a piece of the top channel's walls — there the top's
-  depth (not yet P2's) brings back the drop at the tilt: §8 row 11, his word. His look owed.
+  depth (not yet P2's) brings back the drop at the tilt: §8 row 11, his word. ⭐ DEPLOYED 2026-11-23 (LIVE main `e80a7b0` = `1bc13f70`); his look owed.
 * ⭐ **S2 — AUDITED, FIXED (`e91d3e82`), GATED 2026-11-22 night** → [ORBIT_SURFACE_READOUT.md](ORBIT_SURFACE_READOUT.md) §13.7, §14: G1 bit for bit on his four
   records at 1 and 0; G2 offline 2.5 – 6.6 ms a preparation, 2 – 4 preparations a record, ~3 µs a frame; G3 met on the top, ONE FINDING on the side
   facets (P2 as held: half a piece out until the player aligns — his word, §8 row 9). ⭐ DEPLOYED 2026-11-23 (LIVE main `ff41fc3` = `5d30edf5`); his look owed.
