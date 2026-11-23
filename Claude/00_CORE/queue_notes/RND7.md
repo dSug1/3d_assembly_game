@@ -102,3 +102,5 @@
 * **2026-11-23, night (later)** — R2's fidelity against the rho-closing (the audit's §7.1 row 4, owed since packet 1) BUILT: a failing face
   re-read with its samples skipped where the render is far and the closing lies under (`insideClosing`); the primitives moved to `voxels.ts`,
   `tri_geom.ts`. Local.
+* **2026-11-23, night (later)** — C4's check (the ledger's row 10): the format admits only convex kinds (box, frustum, prism ± tips) and
+  refuses the rest; its guard `tests/data_parts_convex.test.ts` (95 bodies in 5 scenes; a new kind fails it until proved convex). Local.
