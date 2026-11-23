@@ -494,6 +494,10 @@ The owner left both ways open (above): a script for all the surface's findings, 
 each check stays its own file, named after the question it answers — as he asked for the first (*"so we know what the script is about when we
 re-use it later on"*) — so widening the scope does not make that name untrue. Until then the gate runs §8's command.
 ⭐ (2026-11-23) The loops that will run them with no hand step — and what each lacks: §11.
+⭐ **(2026-11-23 night) THE ONE COMMAND BUILT on this proposal** (his *"continue building the orbit's surface pipeline"*; ⏳ his word on §9.3 still
+owed — reversible): `npx vite-node scripts/surface/check_scene.ts -- <scene.glb> [<plan.json>]` runs each check as its own file and process, prints
+one table and one VERDICT, exits 0 PASS · 1 FAIL · 2 NOT READ (`SELF=1`: its own controls). `Scene_2`: the reach PASS (48 s), the parts FAIL
+(100 s) → FAIL, exit 1.
 
 ## 10. ⛔ THE RULE — EVERY LESSON OF THE ORBIT'S SURFACE WORK BECOMES A RULE OF CONSTRUCTION OR OF DRAWING, WRITTEN SO A SCRIPT CAN APPLY IT (2026-11-22)
 
@@ -572,12 +576,14 @@ the generator's test: it proves that what was generated obeys the rules (§10), 
 | B3 the landing per stage (the game's L2 on the `.glb`); B5 the coverage list | not built | — | — | L2 is now wired (S2, S4): they can be built |
 | B6 the thresholds | R4's angles built; the closing radius and the share not | — | — | — |
 | the Blender build's own checks (`../../30_OBJECTS_3D/spec/PART_AUTHORING.md` §4.2: the seats, the way in, collision simplicity, the proxy sanity …) | `Assets/Blender/scripts/build_<scene>.py` | every build run, inside Blender | PRINTED — a failure does not stop the run | an exit code ≠ 0 on a FAIL |
+| ⭐ THE ONE COMMAND — the export gate (§11.2 item 1) | `scripts/surface/check_scene.ts` | by hand (the build script does not call it yet: §11.2 item 2) | exit 0 / 1 / 2, the worst of its checks | the build script calling it |
 | the plan's rules on the level data (W5); the headless proof (W6) | vectors; the probes | `npm run verify`; the probes by hand | vectors red / green | the probes run by the loop |
 
 ### 11.2 The part-drawing loop — what it lacks (the first to build)
 
-1. **ONE command per scene** running every check of the export gate: one verdict, one exit code — §9.3's proposal (each check its own file behind
-   it, named after its question).
+1. ✅ **ONE command per scene** running every check of the export gate: one verdict, one exit code — §9.3's proposal (each check its own file behind
+   it, named after its question). **BUILT 2026-11-23 night**: `scripts/surface/check_scene.ts` (its `CHECKS` list: the reach, the parts; a new check
+   joins it).
 2. **The build script calls it after its export, and stops on a FAIL** — today `build_engine.py` calls no game-side check and stops on none of its
    own (its only stop: `--rev` before the export).
 3. **A GENERATOR that applies the rules**: the proxy and collision rules are WRITTEN (`PROXY_AND_COLLISION_RULES.md`; §10.2's status), none

@@ -96,3 +96,6 @@
   14 vectors (a tube's bore lined by six / three slabs; a slab pushed 5 mm), 10 of 11 mutants red (the 11th a pure speed shortcut); `Scene_2`:
   render outside pieces (E04 42 mm, pistons 29 mm), pieces sticking out (crank webs, piston skirts), 12 parts without a resting candidate
   (ledger 19 – 20). Six lessons (`PROXY_AND_COLLISION_RULES.md` §9.5). The S6 checks complete: packets 1 – 3. Local.
+* **2026-11-23, night (later)** — the pipeline's first loop piece: THE ONE COMMAND `scripts/surface/check_scene.ts` (SCENE_WORKFLOW.md
+  §9.3 – §11.2 item 1; on the proposal, his word owed — reversible): each check its own process, one verdict, exit 0 / 1 / 2; `SELF=1` its controls
+  (red on a mutant); `Scene_2`: reach PASS, parts FAIL → FAIL. Local.
