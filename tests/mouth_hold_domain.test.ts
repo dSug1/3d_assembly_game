@@ -79,6 +79,10 @@ describe("⭐⭐⭐ V1b — P2's OPEN at a mouth (`heldReach`, `voidOpenFor`)", 
     const shallow = readSide(side(60, 0.4));
     expect(mm(shallow)).toBe(49.6);
     expect(voidOpenFor(shallow, heldReach(HELD, N))).toBe(false);
+    // ⭐ (the audit, nit 4) the threshold pinned from BOTH sides: entering by 0.6 mm (Δ +49.4) is open
+    const just = readSide(side(60, 0.6));
+    expect(mm(just)).toBe(49.4);
+    expect(voidOpenFor(just, heldReach(HELD, N))).toBe(true);
   });
 });
 
@@ -136,5 +140,13 @@ describe("⭐⭐ V3 — the switch `mouthHoldDomain` and the wiring", () => {
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("landingReadoutFrame(st, mr0, m0g, READOUT_SOURCE, st.cfg.mouthHoldDomain === 2 && m0g !== null && m0g.mouth !== undefined);");
     expect(a).toContain("const mouthIn = m0g.mouth !== undefined && mouthHoldDomain(st.cfg.mouthHoldDomain, m0g.t.band, mouthP2(st)) ? m0g.mouth : null; const holdNow = mouthHold(wasHeld, mouthIn, dP, dY);");
+  });
+  it("⛔ (the audit, nit 5) P2 READ BACK BY ONE READER ONLY: `mouthP2` defined once and called once in the product — the hold's domain", () => {
+    const strip = (t: string) => t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+    const src = (f: string) => strip(readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8"));
+    const n = (f: string) => (src(f).match(/\bmouthP2\(/g) ?? []).length;
+    expect(n("render/landing_readout.ts")).toBe(1); // its definition
+    expect(n("render/assembly_wiring.ts")).toBe(1); // its one call
+    for (const f of ["render/green_box_wiring.ts", "render/hud_paint.ts", "render/scene.ts", "input/orbit_tilt.ts", "input/assembly_orbit.ts"]) expect(n(f), f).toBe(0);
   });
 });

@@ -436,7 +436,7 @@ export function heldReach(held: readonly (readonly Vec3[])[], n: Vec3): number {
  * Δ = `reach` (`heldReach`) — by at least Q6's step (`SURFACE_STEP_MIN_MM`). Otherwise the piece rests on the rims: the void is CLOSED for it.
  */
 export function voidOpenFor(r: Readout, reach: number): boolean {
-  return r.kind === "nothing" || r.delta < reach - SURFACE_STEP_MIN_MM / 1000;
+  return r.kind === "nothing" || r.delta < reach - SURFACE_STEP_MIN_MM * M_PER_MM;
 }
 
 /** ⭐ (S2, §4) what the readout's cache is keyed by: the face map's identity and its frame, the placed set's key, the held piece's id and orientation. */

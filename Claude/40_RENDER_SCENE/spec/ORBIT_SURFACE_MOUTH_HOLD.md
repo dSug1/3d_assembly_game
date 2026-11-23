@@ -2,7 +2,8 @@
 
 > **STATUS** · ⭐ **DESIGNED 2026-11-23** on his word *"Keep as held. Continue build"* (the build list's next item, `ORBIT_SURFACE.md` §6 (2)) — the
 > rule decided 2026-11-16 (Q4, his answer (a)); nothing here asks him a new question: the choices the rule leaves open are made in §9 and may be
-> reversed on his look. ⭐ **BUILT 2026-11-23 (`d4b6c222`, §10)**; G0 green, G2 measured (§7: one FINDING for his look); G1 below §10; his look OWED. Branch `1.0.158from1.0.157-Orbit_surface`, worktree `../orbit_surface`.
+> reversed on his look. ⭐ **BUILT AND GATED 2026-11-23 (`d4b6c222` + the audit's follow-up, §10)**: G0 green; G1 his four records IDENTICAL to `3b7a479`;
+> G2 measured (§7: one FINDING for his look); the audit: no defect; his look OWED. Branch `1.0.158from1.0.157-Orbit_surface`, worktree `../orbit_surface`.
 > **OWNS** · S3: where the mouth's hold acts (its domain), its switch, its vectors and gates. ⛔ Not the hold itself (his S10, `mouthHold`), not the
 > tilt it hands over to, not the camera — the orbit is closed (`ORBIT_SURFACE_BUILD.md` §9).
 > **READ WITH** · [ORBIT_SURFACE.md](ORBIT_SURFACE.md) §2.4 (S18: where the hold comes from), §8 Q4; [ORBIT_SURFACE_AUDIT.md](ORBIT_SURFACE_AUDIT.md) §5.2
@@ -108,6 +109,15 @@ G2), then ~3 µs a frame.
   study's emulation (F5) with the domain: the cap's held cells and the path-dependent places, before / after. **His look** (rule 5).
 * ⚠ **Not studied:** a side whose `b` end meets a set-back side rather than the cap (H1 holds there; the hand-over then tilts onto the map's cap);
   a mouth at a pole (C41, Q02 — the cap: H1 removes it).
+* ⚠ **G2 as run** (the audit's finding 1): not the study's F5 emulation re-run but `Scene_1`'s scan (§7). F5's cap cells (32, up to 479 mm) are removed by
+  H1 BY CONSTRUCTION (V1: no mouth on a TOP / BOTTOM band at 1 or 2); the study's side cases (Q02's designed mouth, its path-dependent places) were NOT
+  re-run with H2 — owed if his look asks for it.
+* ⚠ **Known limits** (the audit, 2026-11-23): (L1) today's level at a mouth is the frontmost group within `MAP_COPLANAR_M` (0.5 mm) of the plane, not
+  the plane itself — two near-coplanar planes up to 1 mm apart can read a closed void OPEN (Δ = reach − 1 mm); never the other way; not on `Scene_1`'s
+  aligned boxes. (L2) where P2 changes along `b` inside one mouth (a void narrowing up the facet, a back wall changing), a pure dy can leave the domain
+  and come back: the hold lets go (the dx's release: the gizmo to the place moved on) and restarts from the last place shown — in steps; not on
+  `Scene_1`'s channel (P2 the same along `b` there: the piece stands up from the place). (L3) H1 reads the MAP's frame: under a tilt the world's top is a
+  side of the tilted frame, so a mouth there is judged by H2 alone (by design: §4).
 
 ## 9. Decisions made in the design (2026-11-23 — on his "continue build"; reversible on his look)
 
@@ -144,6 +154,16 @@ G2), then ~3 µs a frame.
   | (b) the held piece turned onto the facet (`prepareLanding`) | `landing_readout.test.ts` V2 side facet: *"expected +0 to be 50"* |
 * **Pins amended:** `orbit_tilt.test.ts` (the hold's line: `mouthHold(wasHeld, mouthIn, dP, dY)`), `landing_readout_switch.test.ts` (`forHold`; the
   hook's call), `menu_layout.test.ts` (137).
-* **G0** `npm run verify`: 191 files / 2359 tests. **G1:** below. **G2:** §7 (the scan). **His look:** owed.
+* **G0** `npm run verify`: 191 files / 2359 tests; after the follow-up 2360. **G1** (the kit's `fo3/surface/mouth/run_g1s3.sh`): his four records
+  of 2026-11-22 replayed on `d4b6c222` at the DEFAULTS (`mouthHoldDomain` 2, `landingReadout` 1) against the `3b7a479` code's replays
+  (`follow/cap/runs_r/L1_*`, `cmp_id.mjs`): **IDENTICAL**, largest difference 0, on 2916 + 6034 + 5011 + 8381 frames; the hold never held (as on
+  `d57dee5b`). At 0 the same by construction (the audit's item 1). **G2:** §7 (the scan; §8 *G2 as run*). **His look:** owed.
+* **The audit** (independent, read-only, 2026-11-23, on `d4b6c222`): **no defect**. The switch at 0 is the build before (`forHold` false, every mouth
+  kept, `mouthHold` null ≡ undefined); the readout the hold reads is this frame's, at the same stack, normal and place (`gizmoOf` carries `mr0`'s `t` and
+  `mouth`); the reach and Δ in one frame; at `landingReadout` 0 the ring hidden and the line empty, at most one preparation a frame (a 2.5 – 6.6 ms
+  hitch at the first mouth of a facet even with the readout off); a release mid-hold takes the dx's path, the hand-over always from a valid hold. Its
+  three risks are §8's *G2 as run* and *Known limits*; its two nits fixed in the follow-up (the threshold pinned from both sides: entering by 0.6 mm is
+  OPEN — red on twice Q6's step: *"expected false to be true"*; `mouthP2` pinned to its one caller — red on a second reader in the wiring:
+  *"expected 2 to be 1"*; `M_PER_MM` for the step).
 * **Lessons → rules** (`SCENE_WORKFLOW.md` §10): nothing for a scene — the misfire at the 10 mm slot was the game's rule (now H2), not the scene's
   drawing; the near-wall finding is the top's depth rule (item 4). No new rule; no ledger row but §7's finding (`ORBIT_SURFACE_BUILD.md` §8 row 11).

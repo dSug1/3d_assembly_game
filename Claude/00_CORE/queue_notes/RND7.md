@@ -1,10 +1,10 @@
 # RND7 — The orbit's surface: where the gizmo travels
 
-> **STATUS** · 🔧 **S2 (the readout) BUILT AND GATED** (2026-11-22 night, the owner asleep; `ORBIT_SURFACE_READOUT.md` §13 – §14), ⭐ **DEPLOYED 2026-11-23** (LIVE main `ff41fc3` = `5d30edf5`) — the workfront: branch `1.0.158from1.0.157-Orbit_surface` (pushed), the
+> **STATUS** · 🔧 **S2 (the readout) BUILT AND GATED** (2026-11-22 night, the owner asleep; `ORBIT_SURFACE_READOUT.md` §13 – §14), ⭐ **DEPLOYED 2026-11-23** (LIVE main `ff41fc3` = `5d30edf5`); 🔧 **S3 (the mouth's hold restricted) BUILT AND GATED** 2026-11-23 (`d4b6c222`, `ORBIT_SURFACE_MOUTH_HOLD.md`) — the workfront: branch `1.0.158from1.0.157-Orbit_surface` (pushed), the
 > worktree `../orbit_surface`. Built OFFLINE before the merge (2026-11-17): S0 (the entry sets on `Scene_2`'s real collision pieces) and S1 (the landing map,
 > `src/core/landing_map.ts` — NOT wired: nothing calls it). Nothing else built.
-> **NEXT** · his look on the readout (deployed) and his word on the side facets' question (`ORBIT_SURFACE_READOUT.md` §14: P2 as held,
-> as it would land, or both); then the build list's item 2 (the mouth's hold) or item 4 (P2 driving). Before: the READOUT designed for his look, then
+> **NEXT** · his look (the readout deployed; S3 local) and his word on S3's finding (`ORBIT_SURFACE_MOUTH_HOLD.md` §7: keep `mouthHoldDomain` 2 and
+> build item 4 next — recommended — or 1 until item 4); then the build list's item 4 (P2 driving) or 3 (the Blender checks). ✅ The side facets: AS HELD (his word). Before: the READOUT designed for his look, then
 > built. ✅ §8's end asked again 2026-11-22, all four answered (`ORBIT_SURFACE_BUILD.md` §2bis).
 > **LAST VERIFIED** · 2026-11-22, on `c0e40f85` (docs) = LIVE `3b7a479`'s code
 
@@ -47,3 +47,8 @@
   Lessons → rules: C4 (a data part is convex). Nothing pushed or deployed.
 * **2026-11-23** — his word *"deploy"*: the branch pushed at `5d30edf5`, merged into main with no working tree touched (main's tree = the branch's): LIVE main `ff41fc3` = `5d30edf5`.
   His look and his word on the side facets owed.
+* **2026-11-23, later** — his word *"Keep as held. Continue build"*: the side facets AS HELD (its golden vector, `ORBIT_SURFACE_READOUT.md` §14); the build
+  list's item 2, S3 — the mouth's hold restricted (Q4 (a): never on a cap, only over a void P2 leaves open for the held piece) — designed and built
+  (`d4b6c222`; `mouthHoldDomain`, default 2; 0 = `3b7a479`); measured first: his four records never meet the hold; `Scene_1`'s scan: no cap mouth,
+  H2 removes the hold at the 10 mm bottom slots and within half a piece of the top channel's walls (there the top's depth, not yet P2's, brings back
+  the drop at the tilt: ledger row 11, his word); G1 IDENTICAL to `3b7a479` at the defaults; an independent audit: no defect (its nits fixed). Local.
