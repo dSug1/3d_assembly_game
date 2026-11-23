@@ -191,3 +191,36 @@ outer surface (§7.1 row 5 there) — so §10's question is answered by them, an
 (R1 at the ρ-closing, R2 closed, R1b caps; §9.2 there). The plinth: **58.6 % of its outer surface not covered, its proxy open** (1432 mm of edges).
 B1i stays, printed as information, until the next scene is built by the rules.
 
+## 14. ⏳ B3 AND B5 — THE LANDING PER STAGE, THE COVERAGE LIST: A STUDY (2026-11-23 night — PROPOSED; his word before the build)
+
+> Written during his overnight word (*"continue building … without asking me questions"*); by his rules (docs before build; the four-part method) a
+> check with open definitions is studied first, its questions kept for his morning. **Nothing of it is built.**
+
+**What reads them.** B3 (`ORBIT_SURFACE.md` §7bis.3): per stage, per held piece, per facet direction — where the piece FIRST TOUCHES (P2), the game's
+own L2 run on the exported file (one implementation: `landing_map.ts`'s `prepareLanding` / `landingFor`, as the readout and the drive use it). B5: per
+stage, every exposed face (B2) that is NO PLACE, with its reason. Their reader: the author's review (the faces painted, a list), and B3's pass rule
+— *"every face a later step needs as a place is landable for the piece that needs it"*.
+
+**The definitions it needs (PROPOSED):**
+1. **The stage and the held piece** — the plan's order (B2's: the frozen parts first, then each part in its `step`); at stage *k* the held piece is
+   the part placed at *k* (the one that needs places then).
+2. **The held orientation** — P2 reads the piece AS HELD (his word, the side facets, 2026-11-23): at a face of normal *n*, the piece with its RESTING
+   face against it (its `…_rest` proxy's normal = −*n*; without one, its largest resting candidate — packet 3), turned about *n* at 0° and 90° of its
+   own axes (a place for either turn counts).
+3. **"Landable"** — at some place over the face, P2's first contact lies ON the face's plane, within the fit (`B1_FIT_MM`, 0.5 mm): the piece rests on
+   it. **"Closed for the piece"** — exposed, but at every place over it the first contact lies above it (narrower than the piece's footprint, or held
+   up by a neighbour). The places: the face's polygon sampled every `LANDING_STEP_MM` (4 mm), the frame its own (u, v in its plane, *n*).
+4. **B5's reasons**, each one test: *capped* (behind a cap — R1b), *closed for the piece* (B3), *below the share* (the face map's ¼, `facetMinShare`),
+   *under an overhang* (exposed, but P2 along *n* meets another part first everywhere over it); *parallel to the cast* does not arise (each face is read
+   along its own normal).
+
+**Its pass rule** — the playability brief (§7bis.2: the faces later parts need as places) does not exist in any scene yet. ⭐ PROPOSED: until it does,
+B3 and B5 are INFORMATION (a map and a list in the gate's output, never a failure); the brief's `needed` faces then make B3 a pass rule.
+
+**Obstacles and fallbacks** — the cost: per stage × the held piece's two turns × each exposed face's samples, one `prepareLanding` per (placed set,
+held key) as S4b shares them — offline, ⏳ measured on `Scene_2` before the gate carries it (a budget like packet 2's); a part with neither a resting
+proxy nor a candidate: no orientation — reported, never guessed; a face smaller than the footprint: closed by definition (R3 already flags < w).
+
+**For his word (three questions):** (Q1) the held orientation — the resting face against the face, both turns (recommended), or every resting
+candidate? (Q2) "landable" within the fit, 0.5 mm (recommended), or the flush, 0.25 mm? (Q3) B3 / B5 information until the playability brief exists
+(recommended), or a pass rule now from the seats (each part's goal host face landable for it)?

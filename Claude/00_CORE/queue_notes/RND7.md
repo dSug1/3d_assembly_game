@@ -108,3 +108,6 @@
   not yet in `build_engine.py`) and the rules' constants as JSON for the Blender side (`rules_constants.json`, its staleness vector). Local.
 * **2026-11-23, night (later)** — `ORBIT_SURFACE.md` §5.3's missing shapes added to the landing map's vectors (a round hole through and blind,
   a 12-sided cylinder, a dome, a thin bar, an oblique facet — against the brute force); M7 now 2 red; the brute's bound includes a corner's √2. Local.
+* **2026-11-23, night (later)** — B3 / B5 STUDIED, not built (`ORBIT_SURFACE_PART_CHECKS.md` §14): the definitions proposed (the stage's held piece
+  as held, its resting face against each exposed face, both turns; landable within the fit; B5's reasons), information until the playability
+  brief exists; three questions for his word. Local.
