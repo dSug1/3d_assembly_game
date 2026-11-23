@@ -66,3 +66,14 @@ collision pieces (one measurement before the plunge is built); the frozen plinth
   drivers and readers (`walk_c.mjs` serves the main folder; `CHECKPOINT_CAP.md`), `ARCHIVED.md` the closed folders; the runbook
   `scripts/probes/ORBIT_GATES.md`; the surface study's scripts `scripts/probes/surface_study/` (its `library.json`, `sweep.json` gitignored, present).
 * The archived lines: the pushed `archive/*` tags (`HANDOVER_2026-11-22.md` §4).
+
+## ⭐ 2026-11-23 night — the state for the morning (his overnight word: *"continue building the orbit's surface pipeline without stopping and without asking me questions. Commit regularly, update the md files with the lessons learned"*)
+
+* **Where**: worktree `../orbit_surface`, branch `1.0.158from1.0.157-Orbit_surface`, head `8be12136`+ (LOCAL — nothing pushed or deployed since `7f69e034`;
+  LIVE main `86a0e53`). `npm run verify`: 198 files / 2457 tests.
+* **Built tonight**: S6 packets 2 – 3 (`proxy_cover.ts`, `collision_cover.ts` — coverage, closure, caps; the collision pieces both ways, the resting
+  candidates); THE ONE COMMAND `scripts/surface/check_scene.ts` (the export gate: `Scene_2` FAIL), `scene_gate.py`, `rules_constants.json`; R2 against
+  the ρ-closing; C4's guard; `ORBIT_SURFACE.md` §5.3's shapes in the landing map's vectors. The lessons: `PROXY_AND_COLLISION_RULES.md` §9.3, §9.5.
+* **For his word**: B3 / B5's three questions (`ORBIT_SURFACE_PART_CHECKS.md` §14); the one command (`SCENE_WORKFLOW.md` §9.3, built on its proposal —
+  reversible); the resting share ¼ (PROPOSED); `Scene_2`'s findings (ledger rows 14 – 20: the file or the rule — not rebuilt here); a deploy of S4b
+  (the stutter fix) for his phone look.
