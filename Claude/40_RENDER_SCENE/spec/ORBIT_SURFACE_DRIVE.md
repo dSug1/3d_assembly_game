@@ -265,3 +265,18 @@ proven by vectors only (V2, V3), not on a record.
 *"I am not able to judge in details all the points but the overall feel is ok. Alignment tap: there is a small stutter on the green contour but
 nothing alarming. Commit, continue."* — the stutter is L2's (a turn's frames each prepare the sums — and the readout its facet: S2's key holds the
 orientation too): G2 put it at ~4 ms a turn frame on this PC for the drive alone.
+
+## 12. S4b — the alignment's stutter (`9b028396`, his *"continue"*)
+
+**The root, measured.** A turn of the held piece changes the held key on EVERY frame (an alignment is a slerp: the model's orientation follows the
+drawn piece), so the drive prepared its direction-free sums again on every frame of the turn — and the readout its facet's preparation, on top. Three
+quarters of those sums are the PLACED parts' hulls (2.1 of 2.7 ms on `Scene_1`, 36 boxes), which a turn never changes. **The change** (no new rule —
+the same results, the work done once): `preparePlaced` (the placed hulls, held-free) + `heldSumsOn` (the held piece's part) — `prepareHeldSums` =
+`heldSumsOn(preparePlaced(…))`, bit for bit — and ONE shared preparation, `heldSumsFor` (`landing_readout.ts`): the placed hulls once per placed set
+(its arrays' identity — `placedParts`' cache, a seat makes new ones), the held sums once per held key, read by the readout AND the drive.
+**Measured:** a turn frame's sums **2.90 → 0.70 ms** on this PC, and the readout's own preparation gone (it projects the shared sums). The phone's
+figure: his look. `prepareLanding` is now the vectors' and the offline scripts' one call (`unwired_debt.test.ts`, its reason).
+**Vectors** (V6), each RED on its mutant first: the placed refused dropped (*"expected [] to deeply equal [ 'Flat' ]"*); no placed cache (the hulls'
+identity: *"expected { … } to be { … }"*); the held key ignored (*"… not to be …"*). **G0**: 192 files / 2380 tests.
+**G1 / G3 on `9b028396`** (the kit's `run_s4b.sh`): his four records at `landingDrives` 0 IDENTICAL to `3b7a479`'s replays; his two `Scene_1`
+records at 2 IDENTICAL to the fix round's (`19fa42bf`) — the same results, the work done once. Local, not deployed: the phone's stutter is his look.

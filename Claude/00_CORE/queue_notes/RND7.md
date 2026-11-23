@@ -62,3 +62,6 @@
 * **2026-11-23, later** — his word *"Deploy"*: the branch pushed at `664f9c53`, merged into main with no working tree touched (main's tree = the
   branch's): LIVE main `86a0e53` = `664f9c53` — S4 live (`landingDrives` 2; 0 = `e80a7b0`); his look owed (the phone's turn cost too).
 * **2026-11-23, later** — his look 2026-11-23: *"the overall feel is ok"*; the alignment tap: *"a small stutter on the green contour but nothing alarming"*; *"Commit, continue"* (`ORBIT_SURFACE_DRIVE.md` §11: the stutter is L2's).
+* **2026-11-23, later** — S4b (`9b028396`, `ORBIT_SURFACE_DRIVE.md` §12): the alignment's stutter at its root — the placed parts' hulls prepared once
+  per placed set, one preparation shared by the readout and the drive: a turn frame's sums 2.90 → 0.70 ms on this PC; G1 identical at 0, his `Scene_1`
+  records at 2 identical to the fix round's. Local. Next on the build list: item 3, the Blender checks — their scope asked of him.
