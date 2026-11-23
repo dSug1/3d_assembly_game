@@ -99,3 +99,6 @@
 * **2026-11-23, night (later)** — the pipeline's first loop piece: THE ONE COMMAND `scripts/surface/check_scene.ts` (SCENE_WORKFLOW.md
   §9.3 – §11.2 item 1; on the proposal, his word owed — reversible): each check its own process, one verdict, exit 0 / 1 / 2; `SELF=1` its controls
   (red on a mutant); `Scene_2`: reach PASS, parts FAIL → FAIL. Local.
+* **2026-11-23, night (later)** — R2's fidelity against the rho-closing (the audit's §7.1 row 4, owed since packet 1) BUILT: a failing face
+  re-read with its samples skipped where the render is far and the closing lies under (`insideClosing`); the primitives moved to `voxels.ts`,
+  `tri_geom.ts`. Local.

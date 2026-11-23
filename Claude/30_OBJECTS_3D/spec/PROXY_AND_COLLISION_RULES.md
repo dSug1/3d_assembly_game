@@ -368,8 +368,13 @@ E15, E16). With B1 and packets 1 – 2: FAIL, 109.
 
 ### 9.6 Owed
 
-* ⏳ **R2's fidelity against the ρ-closing** (§7.1 row 4): packet 1 reads the render, so a face spanning a bridged slot (under 2ρ) reads its floor as
-  "off its flat face" — owed with the packet 2 field (the closing) handed to packet 1.
+* ✅ **R2's fidelity against the ρ-closing** (§7.1 row 4) — BUILT 2026-11-23 night: a face failing against the render is re-read with its samples
+  skipped where the render is FAR along its normal (none within a step + τ) while the render CLOSED at ρ lies right under it (`insideClosing`,
+  `voxels.ts`): one face over a 5 mm slot passes, over a 9 mm slot still R2 (vectors in `proxy_rules.test.ts`; mutants RED: no re-read; skipped
+  wherever the closing lies under — the lifted hull's 0.5 mm and the square's ±45° vanished —; skipped wherever the render is far). ⚠ Its first
+  form (the closing's FILL: closed, outside the render's solid) found nothing in a 5 mm slot — the voxel surface, thickened half a voxel's
+  diagonal a side, leaves it no flooded air: lesson 1 of §9.3 again. The voxel and triangle primitives moved to `voxels.ts` and `tri_geom.ts`
+  (shared by packets 1 – 3 without a cycle); packet 2's closing mutants re-run there, RED.
 * ⏳ **The loop** (his word, 2026-11-23): these checks run by hand today — the loop that runs them after every export and stops on a FAIL, and the
   other loops owed: `../../20_GAME_RULES/spec/SCENE_WORKFLOW.md` §11.
 

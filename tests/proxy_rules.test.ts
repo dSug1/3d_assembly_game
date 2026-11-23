@@ -11,7 +11,7 @@ import { glbBin, partGeometry, type Placement } from "../src/core/glb_geometry";
 import { glbJson, readModelCatalog } from "../src/core/model_catalog";
 import { checkProxyFaces, readPartSolids, type PartMesh, type PartSolids } from "../src/core/part_checks";
 import type { Vec3 } from "../src/core/vec";
-import { at0, face, hollowCase, hull, mesh, part, shaft } from "./helpers/proxy_shapes";
+import { at0, face, hollowCase, hull, mesh, part, pocketBox, shaft } from "./helpers/proxy_shapes";
 
 const rules = (p: PartSolids, goals?: ReadonlyMap<string, Placement>) => checkProxyFaces([p], goals).map((f) => f.rule + (f.info ? "(info)" : ""));
 
@@ -59,6 +59,10 @@ describe("⭐⭐⭐ V2 — one planted defect each reads exactly its rule", () =
   it("R2 — a SQUARE over a round shaft: each facet spans ±45° of the curve (the hexagon's ±30° at most)", () => {
     expect(rules(shaft(4))).toEqual(["R2", "R2", "R2", "R2"]);
   });
+  it("⭐ R2 against the ρ-CLOSING (§7.1 row 4): one face over a 5 mm slot (under 2ρ: bridged) is ON the outer surface — no finding; over a 9 mm slot (open) its floor 20 mm under it — R2", () => {
+    expect(rules(pocketBox({ proxy: "span", x: 2.5, depth: 20 }))).toEqual([]);
+    expect(rules(pocketBox({ proxy: "span", x: 4.5, depth: 20 }))).toEqual(["R2"]);
+  }, 60_000);
   it("a VIRTUAL face exempt: the case's cap lifted 30 mm off its mouth, and a resting proxy floating — no finding", () => {
     const p = hollowCase(30);
     const rest = face("UFM_C_rest", [[-10, 200, -10], [10, 200, -10], [10, 200, 10], [-10, 200, 10]], [0, 1, 0]);
