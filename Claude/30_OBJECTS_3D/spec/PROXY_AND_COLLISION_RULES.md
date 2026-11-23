@@ -1,7 +1,7 @@
 # THE PROXY AND COLLISION RULES — universal, for any part (a study, 2026-11-23)
 
-> **STATUS** · ⭐ **A STUDY — HIS FIVE DECISIONS GIVEN 2026-11-23 (§8)**, written into §3 and §3bis; the patent-free methods surveyed (§5); the audit next
-> (§7), then the checks — nothing built from it yet. The four-part method (`orbit-design-method`):
+> **STATUS** · ⭐ **A STUDY — HIS FIVE DECISIONS GIVEN 2026-11-23 (§8)**, written into §3 and §3bis; the patent-free methods surveyed (§5); ⭐ **AUDITED
+> 2026-11-23 (§7): two blockers and seven should-fix, ADOPTED where they apply a recorded rule; four questions back to him (§7.2)** — nothing built yet. The four-part method (`orbit-design-method`):
 > the rules (§1 – §3), the obstacles and fallbacks (§4), a systematic design from patent-free prior art (§5), an audit (§7) — before any check.
 > **OWNS** · what a part's FACE PROXY (`UFM_`) and its COLLISION PIECES (`UCX_`) must be, for ANY shape — so that a generator (the Blender build
 > scripts, an automated workflow) delivers them right and a check proves it.
@@ -67,19 +67,23 @@ the audit may move them); **w = 2ρ = 7 mm** the narrowest face or facet (⑤'s 
   capped), for the audit: the region between the ρ-wrap and its cap is DEEPER than the cap is wide, or its inner surface ≥ 2 × the cap's area —
   a borderline case flagged for the author.
 * **R2 — CLOSED, BOTH WAYS.** Every outer point within τ of the proxy (coverage), every proxy point within τ of the outer surface (fidelity — a
-  ghost exempt); the proxy a closed surface over the outer surface (every edge shared, or on the floor's contact, or a ghost's rim).
+  ghost exempt); the proxy a closed surface over the outer surface (every edge shared, or on the floor's contact, or a ghost's rim). ⚠ **(audit 1, 4)**
+  a PLANAR real face's proxy ON it (≤ 0.25 mm); τ for a curve's facets only; a CAP and a ghost exempt; fidelity read against the ρ-closing.
 * **R3 — PLANAR, NO FACE SMALLER THAN w.** Planar faces only; two adjacent faces either one face (under θ) or clearly apart (over θ + a margin —
   B6's conformance). ✅ **(his decision 4: *"I would not set a limit in number of faces per proxy but rather a minimum size per face or facets since
   large parts may require more than 16 faces if their geometry is complex (for example the hull of a car)"*)** — NO face count: EVERY proxy face,
   and every FACET of the assembly's face map at every stage (§3bis), at least **w** across (its inscribed width) — a thin feature's facets too
   (R5: n lowered, 4 at least); a feature under w even as a square is below the gizmo's scale: absorbed by its neighbour or bridged, and flagged.
-* **R4 — A CURVE AS FEW FLATS.** A curved surface of radius R becomes n flat facets, the smallest n whose sagitta R(1 − cos(π/n)) ≤ τ, n kept
-  within [4, 12]; a doubly curved one, a polyhedron of planar regions within τ (§5: VSA's partition).
+* **R4 — A CURVE AS FEW FLATS.** ⚠ **(audit 2: an ANGLE rule, §7.2 Q2)** a curved surface becomes flat facets stepping by a fixed angle whatever its
+  radius, their sagitta recorded (exempt from R2 / R6: the depth is P2's); a doubly curved one, planar regions (§5: VSA's partition) under the
+  same angles. (First written as the smallest n with a sagitta ≤ τ: no answer past R ≈ 44 mm.)
 * **R5 — A THIN FEATURE AS A PRISM ON ITS AXIS.** A feature narrower than 2w (a shaft, a rib, a pipe): an n-gon prism (n from R4, ≥ 4, each face ≥ w) along each
   straight segment of its axis; a bend a short joint facet; a lobe its own prism. So the camshaft is a few long prisms the gizmo rolls round in
   n steps, its layout the face map's spits / charts (C22).
-* **R6 — ONE OUTLINE.** The proxy and the collision pieces come from the SAME simplified shape: every proxy point within τ of the collision pieces'
-  union surface (B1e, D4), facing out (B1f, D5).
+* **R6 — ONE OUTLINE.** The proxy and the collision pieces come from the SAME simplified shape: every proxy point within **D4's 0.5 mm** of the
+  collision pieces' union surface (B1e, D4 — audit 1), facing out (B1f, D5); a curve's facets and a cap exempt (audit 2, 4).
+* **R7 — EACH PROXY FACE ITS OWN NODE** (audit 10): in the export, one `UFM_` node per face (or a face id per triangle) — the per-face rules (planar,
+  its width, the resting candidates) cannot be checked once the faces are merged into one mesh.
 
 **The collision pieces:**
 * **C-R1 — CONVEX, SIMPLE** (as built): closed, volume > 0, ≤ 24 vertices, ≤ 48 triangles (B1a – B1d).
@@ -163,7 +167,37 @@ meshes not bound by it — ⏳ to confirm):
 | R6 | B1e / B1f (as built) | a lifted / flipped proxy | the pistons' resting faces 17 – 37 mm off |
 | C-R1 – C-R4 | B1a – B1d (as built); the union within τc both ways; a cavity entered left open; the budget | a dent, a dense piece; a cavity filled | ⏳ |
 
-## 7. The audit — owed (after his decisions, before any build)
+## 7. The audit (independent, read only, 2026-11-23) — and what it changes
+
+Its claims checked before use: the flush tolerance (`MAP_COPLANAR_M` 0.5 mm, `face_map.ts:32`), *"the 7 mm goes"* (`ORBIT_SURFACE.md` §3.3, decided
+2026-11-16 with Q6), B6's 30° (`SCENE_WORKFLOW.md` §4) — all three as it says.
+
+### 7.1 Adopted — each a recorded rule's consequence (the rules above read with these amendments)
+
+| # | the finding | the amendment |
+|---|---|---|
+| 1 ⛔ | τ = 1.5 mm is three times the FLUSH tolerance (`MAP_COPLANAR_M`, S26's 0.5 mm, D4's fit): two flush faces 3 mm apart — a seat's glued face kept, a coplanar front split, a false step | **R2, R6: a PLANAR real face's proxy lies ON it** (≤ 0.25 mm, half the coplanar tolerance); **τ applies only to a curve's facets** (their sagitta, recorded); R6 keeps D4's 0.5 mm |
+| 2 ⛔ | a curve wider than R ≈ 44 mm has no answer: R4's sagitta and R3's angles cannot both hold (a car's body, a case's fillets); under θ the face map makes a staircase | **R4 becomes an ANGLE rule**: a curve's facets step by a fixed angle whatever its radius (§7.2 Q2), their sagitta RECORDED and exempt from R2 / R6; the depth over them is P2's on the collision pieces (within τc) |
+| 4 | caps, bridges and ghosts mixed: R1b's cap "for every hollow" vs the 11-13 ghost for ONE part (`for_part`); R2 exempts only ghosts; a non-planar mouth | **A CAP class**: virtual, for EVERY held piece, its rim on real proxy edges, flush (⑩), exempt from R2's fidelity and R6; the GHOST stays a goal's, per part; fidelity measured against the part's ρ-closing; a non-planar mouth capped by a wrap at a larger α |
+| 5 | R1's *"the part ALONE"* silently answers D7's question (every part's proxy closed); the floor's contact depends on the pose | **Said**: the universal rules choose D7's option 2 — every part's proxy closed over its outer surface (his *"universal"*, the future workflows); authored CLOSED, the floor-glued face dropped by B2 / L1 at its stage (as `exposedPerStage` does) |
+| 7 | §3bis against the code: rectangles only (`exposedRects`), slivers dropped at 1.6 mm, cracks of 3 – 7 mm, sub-w risers, caps on a phone, a seated goal's cap, put-downs | **§3bis amended**: polygons from the triangles, exact clipping (Greiner – Hormann 1998, Vatti 1992); a small remnant MERGED into its neighbour, never dropped (no false gap); the ρ-closing per stage absorbs `MAP_GROW_M`; near-flush offsets between parts are SCENE authoring's (§6.3 item 5), "every facet ≥ w" a REPORTED check (L3); stage caps PRECOMPUTED per placed set offline and shipped (no wrap on the phone); a cap leaves with its goal seated; L1 rebuilt at a seat, a put-down, an undo |
+| 8 | the collision budget against τc: a ø40 bore within 1.5 mm needs 9 pieces — a 4-bore case 36+; a car shell hundreds | **C-R3**: no fixed count (as his decision 4 for the faces) — a concave wall a ring of convex pieces by an ANGLE rule (as R4); the cost measured per scene (C2); the 11-13 overlap at bends (half a radius) and *"circumscribed"* restored in C-R4 |
+| 9 | the numbers: B2's 4 mm cannot resolve 2ρ; a prism's ROLL makes 45° faces; the charts' thresholds uncited; lobes 5 – 8 mm make ring jumps | B2's step ≤ ρ / 2 in the check script (the vector keeps 4 mm on `Scene_2`, said); a horizontal prism lies FACE UP (B6: no face within 15° of 45°); `CHART_CAP_DEG`, `CHART_HEADING_DEG` cited; a lobe's step an S26 event |
+| 10 | the checks: per-face tests need the face partition (lost in the `.glb` — why B1g was dropped); no rows for R1 / R1b; "θ + margin" unnumbered; R from what; no PASSING control; decision 5 on a car | **R7 (new) — each proxy FACE its own node** (or a face-id per triangle) in the export; R1 / R1b rows with controls (slots 6.9 / 7.1 mm; an undercut against an L, a V, a U); the margin = B6's 30°; R4 reads its angle, not R; the three shapes he named as CLEAN reference parts (passing controls); decision 5: the candidates the proxy's faces ON ITS CONVEX HULL, the largest first |
+
+### 7.2 Back to him — four questions the audit opens
+
+* **Q1 — the minimum face size w.** He retired *"≈ 7 mm too narrow to stand on"* on 2026-11-16 (P2 now judges what the piece can stand on);
+  the minimum his decision 4 asks for is for SIMPLICITY, and binds only the faces the gizmo travels (a riser is an S26 step, not a face). A value
+  of its own — proposed **10 mm** — or none (the face map's merge and ¼ share only)?
+* **Q2 — a curve's facets** (the angle rule): proposed a **HEXAGON, a face up, for every cylinder** (60° steps: no face near 45°, none near the
+  30° threshold, few crossings round a shaft; the sagitta 13 % of the radius — the depth P2's); a doubly curved surface (a car's body): planar
+  regions whose normals stay within 20° (merged), neighbours ≥ 30° apart.
+* **Q3 — what is capped** (R1b): **(a)** every cavity DEEPER than its mouth is wide, and every UNDERCUT (a region no straight direction through its
+  mouth can see — mould visibility, Chen, Chou & Woo 1993; Woo 1994: B4's own sweep with a ρ-ball) — in line with his *"an open cavity is no
+  route"*; over-capping a V-notch or the gap between two lobes costs nothing (P2 still dives where the piece fits) — ⭐ proposed; or **(b)** only the
+  undercuts (a straight bore, a pocket, a slot followed by the proxy: their walls become faces).
+* **Q4 — the collision pieces' count**: none fixed (as the faces'), a concave wall a ring by the angle rule, the cost measured per scene (C2)?
 
 ## 8. His decisions (2026-11-23)
 
