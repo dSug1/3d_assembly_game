@@ -32,3 +32,10 @@ export function pxToMm(px: number): number {
  * sums with no grid (`prepareLanding`): the step serves `buildLandingMap` — the vectors and the offline comparison.
  */
 export const LANDING_STEP_MM = 4;
+
+/**
+ * ⭐ THE SURFACE'S SMALLEST STEP — millimetres of the MODEL: his Q6 (2026-11-16, `ORBIT_SURFACE.md` §8), *"a step ≥ 0.5 mm a wall in contact range"* —
+ * the first member of the noise family (S26, S27). ⭐ (2026-11-23, package S3 — `ORBIT_SURFACE_MOUTH_HOLD.md` §4 H2) its first use: a void the held piece
+ * enters by at least this is OPEN for it (`voidOpenFor`).
+ */
+export const SURFACE_STEP_MIN_MM = 0.5;

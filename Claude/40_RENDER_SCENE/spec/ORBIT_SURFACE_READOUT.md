@@ -2,7 +2,7 @@
 
 > **STATUS** · ⭐ **DESIGNED 2026-11-22; his word *"proceed"* (2026-11-22): §10's three choices as proposed — BUILT 2026-11-22 (P1 `dfeb7ef9`,
 > P2 `fafbde6b`, P2b `d21a4826`, §13; the audit's fix round 1 `e91d3e82`, §13.7); ⭐ GATED 2026-11-22 night (§14: G1 bit for bit; G2 3 – 7 ms
-> a facet on this PC; G3 met on the top, ONE FINDING on the side facets — a question for him); his look OWED** (branch `1.0.158from1.0.157-Orbit_surface`, worktree `../orbit_surface`).
+> a facet on this PC; G3 met on the top, ONE FINDING on the side facets — ✅ his word 2026-11-23: (a) AS HELD); ⭐ DEPLOYED 2026-11-23 on his word (LIVE main `ff41fc3` = `5d30edf5`); his look OWED** (branch `1.0.158from1.0.157-Orbit_surface`, worktree `../orbit_surface`).
 > **OWNS** · S2's design: what the readout shows, what it reads, where it hooks, its switch, its cost readout, its vectors and gates.
 > **READ WITH** · [ORBIT_SURFACE.md](ORBIT_SURFACE.md) §2.2 P2 and §6 (the build list, item 1); [ORBIT_SURFACE_LANDING_MAP.md](ORBIT_SURFACE_LANDING_MAP.md)
 > §10.6 (what the wiring must know), §10.9 (the representation); [ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md) §2bis (his answers), §9 (the terms
@@ -285,10 +285,14 @@ placed body the orbit reads is convex (its hull's volume = its mesh's)"* would m
     side whatever the player did; one preparation per facet AND its landing orientation. **(c)** both on the HUD. ⭐ Recommended: **(a)** — it is
     what the game does (the turn is the player's), and the readout shows him the cost of not aligning; his look: on a side facet, the HUD's Δ
     before and after the alignment tap. The ledger: `ORBIT_SURFACE_BUILD.md` §8 row 9.
+  * ✅ **His word (2026-11-23):** *"Keep as held. Continue build"* — **(a) AS HELD**, the rule as built. Its golden vector (`SCENE_WORKFLOW.md` §9.2: a game rule's):
+    `tests/landing_readout.test.ts` V2 *on a side facet the piece AS HELD* — a 100 × 20 × 40 mm piece against a wall facing +x: Δ +50 mm along its
+    length, +10 after a quarter turn about the vertical; shown RED on the mutant (b) (the held piece turned so its resting face faces the facet,
+    in `prepareLanding`: *"expected +0 to be 50"*; built with S3 in `d4b6c222`, `ORBIT_SURFACE_MOUTH_HOLD.md` §10).
 * **Lessons → rules** (§11, `SCENE_WORKFLOW.md` §10). The side-facet finding is a GAME rule's (P2's orientation: golden vectors once decided —
   `SCENE_WORKFLOW.md` §9.2), not a scene's: no scene rule. The builder's candidate (§13.8) IS a construction rule — **C4**: a part authored as data
   is convex (a box, a prism, a frustum — `PART_AUTHORING.md` §2), because the readout and the footprint support read each placed part as ONE convex
   body; its check OWED (the ledger's row 10).
 * **How he looks** (rule 5): `npm run dev:usb` from `../orbit_surface` with `adb reverse` (`50_BUILD_DEPLOY/DEVICE_TESTING_USB.md`), `Scene_1`; or his
-  word to deploy (⛔ not done: deploy only on his word). The ring and the HUD's `landing` line; the slider `landingReadout` (GIZMO & SECTIONS): 0 =
+  word to deploy (⭐ done 2026-11-23: LIVE main `ff41fc3` = `5d30edf5`). The ring and the HUD's `landing` line; the slider `landingReadout` (GIZMO & SECTIONS): 0 =
   `3b7a479`.

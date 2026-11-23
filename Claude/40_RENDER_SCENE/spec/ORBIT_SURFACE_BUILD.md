@@ -87,6 +87,9 @@ like `Scene_1`'s), as a figure for the wiring step. A new file under `src`, a ne
 gizmo's place every frame, exact (no grid), beside today's depth on `Scene_1` — a second ring and a HUD line with its cost; driving nothing; behind
 `landingReadout` (0 = `3b7a479` frame for frame).
 
+**S3 — THE MOUTH'S HOLD RESTRICTED** (the build list's item 2, his Q4 (a); designed and built 2026-11-23 on his *"Continue build"*) → [ORBIT_SURFACE_MOUTH_HOLD.md](ORBIT_SURFACE_MOUTH_HOLD.md):
+never on a cap (H1), only over a void P2 leaves open for the held piece (H2); behind `mouthHoldDomain` (0 = `3b7a479`'s hold).
+
 ## 6. Notes for the merges (filled by the packages)
 
 * **S1 — the one registration line** (the only existing file this branch's code touches): `tests/unwired_debt.test.ts` gains ONE line in `PENDING`,
@@ -155,9 +158,12 @@ gizmo's place every frame, exact (no grid), beside today's depth on `Scene_1` �
   `scripts/probes/surface_study/shapes.ts`, which they import). ⚠ Built and checked by Fable alone, no second agent's audit; scripts are
   outside `npm run verify`.
 * ⭐ **S2 — BUILT 2026-11-22 (P1 `dfeb7ef9`, P2 `fafbde6b`, P2b `d21a4826` — on `Scene_1` only), the gates G1 – G3 OWED** → [ORBIT_SURFACE_READOUT.md](ORBIT_SURFACE_READOUT.md) §13.
+* ⭐ **S3 — BUILT 2026-11-23 (`d4b6c222`)** → [ORBIT_SURFACE_MOUTH_HOLD.md](ORBIT_SURFACE_MOUTH_HOLD.md) §7, §10: his four records never meet the hold (nothing he played changes); `Scene_1`'s scan: no cap
+  mouth; H2 removes the hold at the 10 mm bottom slots (the piece never enters) and within half a piece of the top channel's walls — there the top's
+  depth (not yet P2's) brings back the drop at the tilt: §8 row 11, his word. His look owed.
 * ⭐ **S2 — AUDITED, FIXED (`e91d3e82`), GATED 2026-11-22 night** → [ORBIT_SURFACE_READOUT.md](ORBIT_SURFACE_READOUT.md) §13.7, §14: G1 bit for bit on his four
   records at 1 and 0; G2 offline 2.5 – 6.6 ms a preparation, 2 – 4 preparations a record, ~3 µs a frame; G3 met on the top, ONE FINDING on the side
-  facets (P2 as held: half a piece out until the player aligns — his word, §8 row 9). His look owed (USB, or his deploy word).
+  facets (P2 as held: half a piece out until the player aligns — his word, §8 row 9). ⭐ DEPLOYED 2026-11-23 (LIVE main `ff41fc3` = `5d30edf5`); his look owed.
 
 ## 8. ⛔ FINDINGS → RULES → CHECKS: THE LEDGER (the owner's rules, 2026-11-17 and 2026-11-22)
 
@@ -184,8 +190,9 @@ marked? → its check, its control, its row in §8"*; a builder with nothing to 
 | 6 | The orbited piece's collision ignores every FROZEN body, and `Scene_2`'s plinth is frozen (read in the code at the review; not seen in the game) | ⏳ to decide once seen in the game: the game's rule changes, or a scene's frozen parts other than its floor are reported | **C3** — OWED | none yet | ⏳ owed — first to check in the pick-up flow (later, with `Scene_2`: §2bis) |
 | 7 | The landing map's cost grows with the placed parts' convex pieces (S1: 36 – 270 ms a direction on `Scene_1` for a whole map) | ⏳ proposed: a budget per scene, once the wiring has chosen the map's representation | **C2** — OWED | none yet (B3 will run the game's own function on the `.glb`) | ⏳ owed — after the wiring's choice |
 | 8 | The specification's own checks, from the shapes study: solids (B1), exposed per stage (B2), where each held piece first touches (B3), coverage (B5), features at a threshold (B6) | `PART_AUTHORING.md` §6.1, each with its pass rule | `PART_AUTHORING.md` §6.3's ten lines, put into §10.2's form when a build script applies them | specified there | ⏳ not built — B1, B2 first; B3, B5 once the landing map is wired |
-| 9 | On a side facet P2 (the piece AS HELD, resting face down) stands half the piece's size out: +22.5 mm across it, +51.8 mm along it (S2's G3 on his records, `ORBIT_SURFACE_READOUT.md` §14) | — a GAME rule's (P2's orientation), not a scene's | none — golden vectors once decided (`SCENE_WORKFLOW.md` §9.2) | none (a game rule) | ⏳ his word: (a) as held — recommended, (b) as it would land, (c) both |
+| 9 | On a side facet P2 (the piece AS HELD, resting face down) stands half the piece's size out: +22.5 mm across it, +51.8 mm along it (S2's G3 on his records, `ORBIT_SURFACE_READOUT.md` §14) | — a GAME rule's (P2's orientation), not a scene's | none — golden vectors once decided (`SCENE_WORKFLOW.md` §9.2) | none (a game rule) — its golden vector: `landing_readout.test.ts` V2 *on a side facet the piece AS HELD* | ✅ his word 2026-11-23: **(a) as held** |
 | 10 | The readout and the footprint support read each placed part as ONE convex body (S2's build, `ORBIT_SURFACE_READOUT.md` §13.8) | a part authored as data is convex | **C4** (construction) | ⏳ owed: its hull's volume = its mesh's | ⏳ the check owed |
+| 11 | Near the top channel's walls H2 lets the gizmo go (the piece cannot pass: P2 right), and the top's TODAY depth drops it 21 mm onto the channel's floor at the tilt (S3's scan, `ORBIT_SURFACE_MOUTH_HOLD.md` §7) | — a GAME rule's (the top's depth, item 4), not a scene's | none | none (a game rule) | ⏳ his word: keep `mouthHoldDomain` 2 and build item 4 next (recommended), or 1 until item 4 |
 
 ⭐ Rows are ADDED by each package and by each look of the owner; a row leaves only when its check is built AND has been seen failing.
 

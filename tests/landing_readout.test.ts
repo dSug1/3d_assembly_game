@@ -138,6 +138,17 @@ describe("⭐⭐⭐ V2 — `readoutAt`'s SIGN and SIZE (Δ = P2's level − toda
     expect(read(parts, 9, 0, 40).kind).toBe("nothing"); // 9 + 50 = 59 < 60
     expect(deltaMm(read(parts, 11, 0, 40))).toBe(0); // 61 > 60: the rim, at the plate's level
   });
+  it("⭐⭐ (his word 2026-11-23: *\"Keep as held\"* — `ORBIT_SURFACE_READOUT.md` §14) ON A SIDE FACET the piece AS HELD, never turned onto the facet: P2 stands half its size along the normal out — +50 mm along its 100 mm, +10 across its 20 mm", () => {
+    const wall = [bx("wall", -200, 0, 0, 400, -200, 200)]; // its face at x = 0, facing +x
+    const at = (q: Quat) => {
+      const prep = prepareLanding(toConvex(wall), [heldPiece(LOCAL, q, RC)], landingAxes([1, 0, 0], [0, 0, -1], [0, 1, 0], null));
+      return readoutAt(prep, [0, 200 * M, 0], [0, 200 * M, 0]);
+    };
+    const along = at(Q_HELD);
+    expect(along.kind === "land" && along.part).toBe("wall");
+    expect(deltaMm(along)).toBe(50); // its 100 mm length along the normal: the resting face (down) never turned toward the wall
+    expect(deltaMm(at(qmul(qFromAxisAngle([0, 1, 0], Math.PI / 2), Q_HELD)))).toBe(10); // a quarter turn about the vertical: its 20 mm across
+  });
   it("⭐ THE MAP'S FRAME (tilted or zoned): the whole scene turned by R, the facet in the map's frame turned by `landingAxes` — the same Δ, to 1e-12 m", () => {
     const qR = qFromAxisAngle([1, 2, 3], 0.7);
     const R: Turn = [0, 1, 2].map((i) => [0, 1, 2].map((j) => qRotate(qR, [j === 0 ? 1 : 0, j === 1 ? 1 : 0, j === 2 ? 1 : 0])[i]!)) as unknown as Turn;

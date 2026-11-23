@@ -510,6 +510,9 @@ export interface GestureConfig {
   /** ⭐⭐⭐ (2026-11-22, `ORBIT_SURFACE_READOUT.md` §5 — package S2) THE READOUT: the landing map's P2 beside today's depth at the gizmo's place — a second
    *  ring (white: land, magenta: nothing to land on) and the HUD's `landing` line (1); 0 = nothing computed, nothing drawn, no line: `3b7a479` frame for frame */
   landingReadout: number;
+  /** ⭐⭐⭐ (2026-11-23, `ORBIT_SURFACE_MOUTH_HOLD.md` §6 — package S3, his Q4 (a)) WHERE THE MOUTH'S HOLD ACTS: 0 the hold as built (`3b7a479` frame for frame);
+   *  1 never on a cap (H1); 2 never on a cap and only over a void the landing map's P2 leaves open for the held piece (H1 + H2) */
+  mouthHoldDomain: number;
   orbitTurnCapDegMm: number;
   /** ⭐⭐ (2026-10-19) …and on any other curve (a vertical face, no face): the view between rings 2 and 3 slowed to this (°/mm). */
   orbitTurnCapVerticalDegMm: number;
@@ -951,6 +954,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   faceSpanZoneMinVCm: 3,
   gizmoEdgeMarginMm: 5, // ⭐ (2026-10-28) the face's switch 5 mm past an edge
   sectionLines: 1, // ⭐ (2026-10-28) the sections drawn
+  mouthHoldDomain: 2, // ⭐⭐⭐ (2026-11-23, S3 — `ORBIT_SURFACE_MOUTH_HOLD.md` §6, D3) H1 + H2 by default; 0 = `3b7a479`'s hold
   landingReadout: 1, // ⭐⭐⭐ (2026-11-22, S2 — his word *"proceed"* on `ORBIT_SURFACE_READOUT.md` §10: default 1 on this branch, his look needs it) 0 = `3b7a479`: no readout
   orbitTurnCapDegMm: 12.5, // ⭐ (2026-10-19, the owner: *"set the turn governor horizontal face to 12.5"*; first 40) the horizontal face's turn over the top (96°/mm at the shipped gains, view and roll) capped
   orbitTurnCapVerticalDegMm: 12.5, // ⭐ (2026-10-19, the owner: *"same for vertical faces"* — 12.5; first 10) the vertical face's view between rings 2 and 3 (20°/mm at the shipped gains) slowed
@@ -1130,6 +1134,7 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (cfg.faceSpanShareVOn !== 0 && cfg.faceSpanShareVOn !== 1) throw new Error(`faceSpanShareVOn (${cfg.faceSpanShareVOn}) must be 0 or 1.`);
   if (cfg.sectionLines !== 0 && cfg.sectionLines !== 1) throw new Error(`sectionLines (${cfg.sectionLines}) must be 0 or 1.`);
   if (cfg.landingReadout !== 0 && cfg.landingReadout !== 1) throw new Error(`landingReadout (${cfg.landingReadout}) must be 0 or 1.`);
+  if (cfg.mouthHoldDomain !== 0 && cfg.mouthHoldDomain !== 1 && cfg.mouthHoldDomain !== 2) throw new Error(`mouthHoldDomain (${cfg.mouthHoldDomain}) must be 0, 1 or 2.`);
   if (!(cfg.gizmoEdgeMarginMm >= 0 && cfg.gizmoEdgeMarginMm <= 20)) throw new Error(`gizmoEdgeMarginMm (${cfg.gizmoEdgeMarginMm}) must be in [0, 20] mm.`);
   if (!(cfg.orbitTurnCapDegMm >= 5 && cfg.orbitTurnCapDegMm <= 300)) throw new Error(`orbitTurnCapDegMm (${cfg.orbitTurnCapDegMm}) must be in [5, 300]°/mm.`);
   if (!(cfg.orbitTurnCapVerticalDegMm >= 5 && cfg.orbitTurnCapVerticalDegMm <= 300)) throw new Error(`orbitTurnCapVerticalDegMm (${cfg.orbitTurnCapVerticalDegMm}) must be in [5, 300]°/mm.`);
