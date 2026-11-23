@@ -341,6 +341,10 @@ item 3) gets their colours.
 At load, a `src/core` checker beside `readModelCatalog`: B1's subset (convex, closed, the budget, the proxy planar and outward). In vectors on each
 scene's `.glb` (W5): B2 on a coarse grid; B4's sweep with the game's GJK over the `UCX_` pairs, the seat pairs from `mates_with`; B3 the game's own
 function. Each new vector shown failing first (`CLAUDE.md` rule 2).
+⭐ (2026-11-23, S5 — `../../40_RENDER_SCENE/spec/ORBIT_SURFACE_PART_CHECKS.md`) **B1 BUILT on the game's side**: `src/core/part_checks.ts`, run on any
+scene's `.glb` by `npx vite-node scripts/surface/check_part_solids.ts -- <scene.glb>` (PASS / FAIL, every finding named) at the export gate (§6.3
+item 5), and as vectors on `Scene_2` (`part_checks.test.ts`); its drawing rules D4 – D7 (`PART_AUTHORING.md` §6.4). At load: ⏳ its cheap subset (it
+takes 5 s in full on `Scene_2`, the coverage the heavy part) — printed, never a refusal, until `Scene_2` passes or its findings are answered.
 
 ### 7.4 The design-for-playability checklist (whoever draws a part)
 
@@ -455,6 +459,10 @@ the owner's look on the device — is not left as a sentence in a document. For 
 It is §6.3 item 3 (*every finding the owner makes that a check missed → a new check and a planted control*) widened from the Blender
 build's own checks to everything the surface rebuild learns.
 ⭐ (2026-11-22) §10 adds the step BEFORE the check: the lesson's RULE of construction or drawing, in a form a script applies.
+⭐ (2026-11-23, S5's lesson) **A check is CALIBRATED on the scene's real file and on a defect the owner already knows, before its rule is pinned**:
+the first coverage check read *"the proxy covers its solids"* and flagged all 17 parts of `Scene_2` — a proxy is a SET of the part's faces by the
+convention, not a closed mesh; read again as *"complete on each face it lies on"*, it found the plinth (his known issue) and little else. A check
+that flags everything is read as noise and turned off: the owner's known defect is its first control on a real file.
 
 ### 9.2 What counts — read as follows (Claude's reading, to correct)
 

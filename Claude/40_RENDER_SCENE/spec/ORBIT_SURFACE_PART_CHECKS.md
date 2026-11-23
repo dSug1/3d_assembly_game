@@ -108,3 +108,12 @@ expected undefined to be defined"*); B1h's hole read as a strip (*"expected '162
 (*"expected [] to deeply equal [ 'B1a' ]"* …); B1e at any distance; B1f on the wrong side. The controls (V2): a clean part passes; a dent, a missing
 triangle, a flat piece, a dense piece, a lifted proxy, a flipped proxy, a cut corner (a hole), a set-in proxy (a strip) — each exactly its check.
 **G0** `npm run verify`: 193 files / 2392 tests.
+
+**His reading of the plinth, checked (2026-11-23):** *"I believe the issue is that the proxy is not a closed mesh but a quad: check that."* —
+CONFIRMED: `UFM_E01_top` is ONE open flat face (36 vertices, 34 triangles, one normal, 36 boundary edges — a rounded 36-sided outline), its top
+only: no side, no bottom. ⚠ No proxy of `Scene_2` is closed: each is a SET of the part's faces by the convention so far (a piston's its resting
+quad — its sides end inside its cylinder; E02's its outer surface). What the plinth lacks is its four SIDES, which the outside reaches. ⭐ The rule
+proposed (D7, `PART_AUTHORING.md` §6.4): the proxy covers every face of the part the outside reaches at some stage — B2's map tells which; its check
+B1i = B2 × B1h, built with B2. **The lessons** → D4 – D7 (`PART_AUTHORING.md` §6.4), the Blender build's per-run table (§4.2), `SCENE_WORKFLOW.md`
+§7.3 (B1 built; the check script) and §9.1 (a check calibrated on the real file and the owner's known defect), the ledger's rows 14 – 16.
+**The check script**: `npx vite-node scripts/surface/check_part_solids.ts -- <scene.glb>` (exit 0 PASS, 1 findings) — `Scene_2`: FAIL, 21.
