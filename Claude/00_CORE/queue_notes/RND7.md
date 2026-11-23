@@ -65,3 +65,7 @@
 * **2026-11-23, later** — S4b (`9b028396`, `ORBIT_SURFACE_DRIVE.md` §12): the alignment's stutter at its root — the placed parts' hulls prepared once
   per placed set, one preparation shared by the readout and the drive: a turn frame's sums 2.90 → 0.70 ms on this PC; G1 identical at 0, his `Scene_1`
   records at 2 identical to the fix round's. Local. Next on the build list: item 3, the Blender checks — their scope asked of him.
+* **2026-11-23, later** — his word *"Game side first"* on item 3 (the Blender build scripts are not in this repository), then *"the plinth in scene 2 … the
+  proxy face is not complete. Make sure the same is detected"*: S5 designed (`ORBIT_SURFACE_PART_CHECKS.md`); B1 built (`part_checks.ts`, 5 s on
+  `Scene_2`): ⭐ the plinth's incomplete proxy DETECTED (B1h: its four corners cut, a hole), 20 more findings (proxies off their collision pieces up to
+  42 mm, E17's half turned inward) — the ledger's rows 14, 15, his word. B2 next.

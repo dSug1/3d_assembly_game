@@ -90,6 +90,10 @@ gizmo's place every frame, exact (no grid), beside today's depth on `Scene_1` �
 **S3 — THE MOUTH'S HOLD RESTRICTED** (the build list's item 2, his Q4 (a); designed and built 2026-11-23 on his *"Continue build"*) → [ORBIT_SURFACE_MOUTH_HOLD.md](ORBIT_SURFACE_MOUTH_HOLD.md):
 never on a cap (H1), only over a void P2 leaves open for the held piece (H2); behind `mouthHoldDomain` (0 = `3b7a479`'s hold).
 
+**S5 — THE PARTS' CHECKS, THE GAME'S SIDE** (the build list's item 3; his *"Game side first"*, 2026-11-23) → [ORBIT_SURFACE_PART_CHECKS.md](ORBIT_SURFACE_PART_CHECKS.md):
+B1 the solids (convex, closed, volume, budget; the proxy on its solids, outward, ⭐ COMPLETE — the plinth, his word) and B2 exposed per stage, pure
+functions in `src/core`, vectors on `Scene_2`'s `.glb`; the Blender side waits for the build scripts.
+
 **S4 — P2 DRIVES THE GIZMO** (the build list's item 4; designed 2026-11-23 on his *"Do as per your recommendation"*) → [ORBIT_SURFACE_DRIVE.md](ORBIT_SURFACE_DRIVE.md):
 the gizmo's depth P2's, read from where the piece is (⑤: far = from outside, close in a proud part a wall), at its level LESS the piece's reach (the
 gizmo marks the contact — the correction of S2's side-facet consequence); the footprint support re-expressed on the same reading; behind `landingDrives`
@@ -202,6 +206,8 @@ marked? → its check, its control, its row in §8"*; a builder with nothing to 
 | 10 | The readout and the footprint support read each placed part as ONE convex body (S2's build, `ORBIT_SURFACE_READOUT.md` §13.8) | a part authored as data is convex | **C4** (construction) | ⏳ owed: its hull's volume = its mesh's | ⏳ the check owed |
 | 11 | Near the top channel's walls H2 lets the gizmo go (the piece cannot pass: P2 right), and the top's TODAY depth drops it 21 mm onto the channel's floor at the tilt (S3's scan, `ORBIT_SURFACE_MOUTH_HOLD.md` §7) | — a GAME rule's (the top's depth, item 4), not a scene's | none | none (a game rule) | ✅ his word 2026-11-23: keep `mouthHoldDomain` 2, item 4 built next (it resolves the row) — ⭐ S4 built: the top reads the rims there |
 | 12 | P2 driving moves the far piece and the camera where the direction is oblique to the face (F17): on his front record the camera ≤ 2.9 mm, the piece ≤ 7.1 mm (S4's G3, `ORBIT_SURFACE_DRIVE.md` §10) | — the ORBIT's (F17, its queue), not a scene's | none | none | recorded — his look |
+| 14 | `Scene_2`'s face proxies stand OFF their collision pieces — the resting faces 16.6 – 36.8 mm (E03, E07 – E14), the outer surfaces up to 42 mm (E04); E17's proxy half turned inward (S5's B1, `ORBIT_SURFACE_PART_CHECKS.md` §8) | the proxy ON its solids within the fit, facing out (B1e, B1f) | **D2** (drawing: the collision pieces follow the drawn part) | B1e, B1f (`part_checks.ts`, a vector) | ⏳ his word: the file, or the rule |
+| 15 | ⭐ The plinth's top proxy is NOT complete: its four corners cut (a rounded rectangle on a square collision top), set in ~2 mm (his known issue; S5's B1h) | a proxy face complete on the solid face it lies on (B1h) | **D2** (drawing) | B1h (a vector: the plinth must be found) | ✅ detected — ⏳ the file's fix, his word |
 | 13 | `Piece44` is an inverted frustum: the support on P2 equals today's where a part's widest extent is at its top; on a slant P2 reads the contact, lower (S4's V3) | — a GAME rule's (P2 is exact), not a scene's | none | V3 (`landing_drive.test.ts`) | ✅ vector |
 
 ⭐ Rows are ADDED by each package and by each look of the owner; a row leaves only when its check is built AND has been seen failing.
