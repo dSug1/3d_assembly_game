@@ -17,7 +17,7 @@ import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import type { LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
-import { heldPiece, heldReach, landingAxes, prepareLanding, readoutAt, readoutKey, voidOpenFor, type PreparedLanding, type Readout, type Turn } from "../core/landing_map";
+import { heldPiece, heldReach, heldSumsOn, landingAxes, landingFor, preparePlaced, readoutAt, readoutKey, voidOpenFor, type HeldSums, type PlacedPolys, type PreparedLanding, type Readout, type Turn } from "../core/landing_map";
 import { worldPlacementOf } from "../core/object_model";
 import type { Vec3 } from "../core/vec";
 import { trackingMetresPerPx } from "../input";
@@ -67,6 +67,27 @@ export interface LandingReadoutState {
   prepWorstMs: number;
   prepWorstAt: number;
   queryUs: number;
+}
+
+/**
+ * ⭐⭐ (2026-11-23, S4b — `ORBIT_SURFACE_DRIVE.md` §12; his look: *"a small stutter"* at the alignment) THE SHARED PREPARATION — the readout's and the
+ * drive's one: the placed parts' hulls (`preparePlaced`) once per placed set (its arrays' identity: `placedParts`' cache — a seat makes new ones), the
+ * held piece's sums (`heldSumsOn`) once per held key (`readoutKey` without the map and its frame: the piece's id, points, orientation, resting face's
+ * centre and the placed set) — a turn's frames pay the held piece's part only. `held` is read only when the sums are made.
+ */
+const PLACED = new WeakMap<object, PlacedPolys>();
+const HELD = new WeakMap<PlacedPolys, { readonly key: string; readonly sums: HeldSums }>();
+export function heldSumsFor(parts: { readonly parts: readonly (readonly Vec3[])[]; readonly ids: readonly string[] }, heldKey: string, held: () => readonly (readonly Vec3[])[]): HeldSums {
+  let pp = PLACED.get(parts.parts);
+  if (pp === undefined) {
+    pp = preparePlaced(parts.parts.map((points, k) => ({ id: parts.ids[k]!, points })));
+    PLACED.set(parts.parts, pp);
+  }
+  const known = HELD.get(pp);
+  if (known !== undefined && known.key === heldKey) return known.sums;
+  const sums = heldSumsOn(pp, held());
+  HELD.set(pp, { key: heldKey, sums });
+  return sums;
 }
 
 /** ⭐ each object its own number (the cache key's identities — a face map, a held piece's points list): a rebuilt one is a new object, a new number */
@@ -124,8 +145,10 @@ function readFrame(st: SceneState, s: LandingReadoutState, raw: GizmoRead | null
   let prep = s.prepared.get(entry);
   if (prep === undefined) {
     const t0 = performance.now();
-    const placed = parts.parts.map((points, k) => ({ id: parts.ids[k]!, points }));
-    prep = prepareLanding(placed, held, landingAxes(raw.t.normal, f.t, f.b, R));
+    // ⭐⭐ (2026-11-23, S4b — `ORBIT_SURFACE_DRIVE.md` §12) on the SHARED preparation (`heldSumsFor`): the placed parts' hulls once per placed set, the held
+    // piece's sums once per held key — the drive's own; `prepareLanding` bit for bit
+    const hk = readoutKey({ map: 0, frame: null, placed: parts.key, held: id, shape: idOf(local), orientation: place.orientation, restingCentre: rc });
+    prep = landingFor(heldSumsFor(parts, hk, () => held), landingAxes(raw.t.normal, f.t, f.b, R));
     prepMs = performance.now() - t0;
     s.prepLastMs = prepMs;
     s.prepared.set(entry, prep);

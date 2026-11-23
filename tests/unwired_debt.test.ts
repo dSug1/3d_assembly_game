@@ -117,6 +117,9 @@ const PENDING: Record<string, string> = {
   // ⭐ (2026-11-22, S2 — `ORBIT_SURFACE_READOUT.md` §13) the readout WIRED the map's sums and exact evaluation with NO GRID (`prepareLanding`, read by
   // `render/landing_readout.ts`; `prepareLanding`, `readoutAt`, `readoutKey`, `landingAxes`, `heldPiece` left this list with it) — the GRID stays unwired
   // by his answer (no grid, `ORBIT_SURFACE_BUILD.md` §2bis), so this line stays, its reason rewritten (⚠ the design expected it to leave: it cannot)
+  // ⭐ (2026-11-23, S4b — `ORBIT_SURFACE_DRIVE.md` §12) the readout and the drive read the SHARED preparation (`heldSumsFor`: the placed parts' hulls once
+  // per placed set — the alignment's stutter); `prepareLanding` stays the one call of the vectors and the offline scripts (`landingFor(prepareHeldSums(…))`)
+  prepareLanding: "S4b (`ORBIT_SURFACE_DRIVE.md` §12) — the vectors' and the offline scripts' one call; the product reads the shared preparation (`heldSumsFor`) since S4b",
   buildLandingMap: "S2 (`ORBIT_SURFACE_READOUT.md` §13) — the landing map's GRID: the readout reads its sums with no grid (`prepareLanding`); the grid serves the vectors and the offline comparison until the representation is chosen (`ORBIT_SURFACE_LANDING_MAP.md` §10.9)",
   // ✅ `qAngle` LEFT THIS LIST 2026-09-22 — `RotationFollower` reads it to decide a body has
   // ARRIVED at its detent, so it is wired and the guard reddened until this line was deleted.
