@@ -47,7 +47,7 @@ import { carriedHold, lawHalfTurn } from "../input/upright";
 import { dirGap, easedDir, easeRest, poleYawKept, seamOutPaced, seamOutShare, seamOutStep, seamOutTarget, seamTurnPace, seamTurnStep, seamWholeRad, tiltLeavesNow, turnHoldsGizmo } from "../input/seam_turn";
 import { bandedFacet } from "../input/face_band";
 import { landingReadoutFrame, type ReadoutSource, mouthP2 } from "./landing_readout";
-import { driveGizmoLanding, driveKey, driveSupport, landingDriveFrame } from "./landing_drive";
+import { driveGizmoLanding, driveKey, driveStamp, driveSupport, landingDriveFrame } from "./landing_drive";
 import { driveLevel } from "../core/landing_map";
 import { contourFaceAt, crossingEvent, entryBlendHeading, entryDepth, entryEdgeOf, exitHoldSign, headingStep, pictureOffset, transportUp, viewLevelTurned, exitTurnRad, faceOwnUp, freeEdges, freeEntryHeading, freeHeadingAngle, isFreeFace } from "../input/free_face";
 import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, capTilt, gizmoGlide, mouthHold, mouthHoldDomain, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, swingEase, tiltAutoLatch, frameBox, tiltDir, tiltFaces, onTiltedFacet, type Mat3 } from "../input/orbit_tilt";
@@ -1264,8 +1264,9 @@ function gizmoAtAngles(st: SceneState, yaw: number, v: number): Vec3 {
   if (q0 === null || mq === null) return gizmoFor(st);
   if (yaw === q0.yaw && v === q0.v && st.asmG !== null) return st.asmG;
   let memo = GIZMO_MEMO.get(st);
-  if (memo === undefined || memo.frame !== st.frames) {
-    memo = { frame: st.frames, at: new Map() };
+  // ⭐⭐ (2026-11-23, S4 — §9bis 1) valid for one frame AND one snapshot of the drive (`driveStamp`: a query between frames read the stored one)
+  if (memo === undefined || memo.frame !== st.frames || memo.drive !== driveStamp(st)) {
+    memo = { frame: st.frames, drive: driveStamp(st), at: new Map() };
     GIZMO_MEMO.set(st, memo);
   }
   const key = `${yaw}|${v}`;
@@ -1277,7 +1278,7 @@ function gizmoAtAngles(st: SceneState, yaw: number, v: number): Vec3 {
   if (memo.at.size < 512) memo.at.set(key, g);
   return g;
 }
-const GIZMO_MEMO = new WeakMap<SceneState, { frame: number; at: Map<string, Vec3> }>();
+const GIZMO_MEMO = new WeakMap<SceneState, { frame: number; drive: number; at: Map<string, Vec3> }>();
 
 /** ⭐ The DRAWN piece's place from the shown gizmo: along its direction at the approach's distance (the gizmo's ease carries it — never a jump). */
 export function shownOffset(st: SceneState, yaw: number, v: number): Vec3 {
@@ -1340,15 +1341,15 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     return;
   }
   ensureAssembly(st);
+  // ⭐⭐⭐ (2026-11-23, S4 — `ORBIT_SURFACE_DRIVE.md` §3.2, §9bis 1) P2 DRIVING: the held piece's sums and `F` (last frame's solved anchor) — FIRST, before
+  // the coast, the support or anything that reads the gizmo, so every query of the frame reads one `F` (a new stamp: the gizmo's memo emptied)
+  landingDriveFrame(st, READOUT_SOURCE);
   const a = st.asm!;
   // ⭐ the approach's coast — ⭐⭐ (2026-11-01) under the slide mode too: a flick out leaves it
   if (st.approachInertia.coasting) {
     const s = st.approachInertia.step(dtMs, st.cfg.boxSmoothMs * 4);
     approachMove(st, s.dV);
   }
-  // ⭐⭐⭐ (2026-11-23, S4 — `ORBIT_SURFACE_DRIVE.md` §3.2) P2 DRIVING: the held piece's sums and `F` (last frame's solved anchor) — before anything
-  // reads the gizmo or the support, so every query of the frame reads one `F`
-  landingDriveFrame(st, READOUT_SOURCE);
   // ⭐⭐⭐ (2026-11-12, CLOSE_IN_CONTACT.md §6) the footprint support, from where the piece is — before anything reads the foot
   supportFrame(st, dtMs);
   // ⭐⭐⭐ (2026-11-10, §9.4) the tilted facet left last frame: the WORLD's frame from this one (`tiltOff` — the angles turned, the gizmo kept)
@@ -1447,8 +1448,10 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     // ⭐⭐⭐ (2026-11-22, `ORBIT_SURFACE_READOUT.md` §4 — S2) THE READOUT, ONCE A FRAME, for the frame's own gizmo only (⛔ never in the sections' samples, the
     // edge blend's or the solver's queries): P2 beside today's depth — ⛔ NOTHING READS IT BACK (the gizmo, the piece, the calm, the camera untouched);
     // at `landingReadout` 0 it returns before any computation — ⭐⭐ (2026-11-23, S3) unless the mouth's hold asks P2 at a mouth (`mouthHoldDomain` 2)
-    // ⭐ (S4) fed today's point, and today's blend where P2 moved it (the readout's `band` reads the blend against today's point)
-    landingReadoutFrame(st, mrT, mr0 === mrT ? m0g : gizmoOf(st, mq.yaw, mq.pitch, mrT), READOUT_SOURCE, st.cfg.mouthHoldDomain === 2 && m0g !== null && m0g.mouth !== undefined);
+    // ⭐ (S4) fed today's point, and — where P2 moved it and the readout runs (§9bis 6) — today's blend (its `band` flag: the blend's far end is the next
+    // face's driven point, the flag only)
+    const askHold = st.cfg.mouthHoldDomain === 2 && m0g !== null && m0g.mouth !== undefined;
+    landingReadoutFrame(st, mrT, mr0 === mrT || (st.cfg.landingReadout !== 1 && !askHold) ? m0g : gizmoOf(st, mq.yaw, mq.pitch, mrT), READOUT_SOURCE, askHold);
     if (m0g !== null) {
       // ⭐⭐⭐ (2026-11-10, the owner: *"the tilt shall happen when the red section reaches the edge at the bottom of the mouth"* → *"build b"*) A VOID'S MOUTH:
       // a dy toward its open end HOLDS the gizmo where it last was — the void's floor edge, the red's end there (`mouthHold`) — and hands over: the automatic

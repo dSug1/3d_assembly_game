@@ -70,7 +70,7 @@ describe("⭐⭐⭐ V4 — the switch `landingReadout`", () => {
     // ⭐ (2026-11-23, S4 — `ORBIT_SURFACE_DRIVE.md` §3.5) the frame's gizmo = today's (`rawGizmoToday`) driven (`driveGizmo`); the readout fed TODAY's point and,
     // where P2 moved it, today's blend — at `landingDrives` 0 `mr0 === mrT`: the call as before
     expect(a).toContain("const mrT = rawGizmoToday(st, mq.yaw, mq.pitch); const mr0 = driveGizmo(st, mrT); const m0g = gizmoOf(st, mq.yaw, mq.pitch, mr0);");
-    expect(a).toMatch(/const m0g = gizmoOf\(st, mq\.yaw, mq\.pitch, mr0\);( \/\/[^\n]*)? landingReadoutFrame\(st, mrT, mr0 === mrT \? m0g : gizmoOf\(st, mq\.yaw, mq\.pitch, mrT\), READOUT_SOURCE, st\.cfg\.mouthHoldDomain === 2 && m0g !== null && m0g\.mouth !== undefined\); if \(m0g !== null\) \{/);
+    expect(a).toMatch(/const m0g = gizmoOf\(st, mq\.yaw, mq\.pitch, mr0\);( \/\/[^\n]*)? const askHold = st\.cfg\.mouthHoldDomain === 2 && m0g !== null && m0g\.mouth !== undefined; landingReadoutFrame\(st, mrT, mr0 === mrT \|\| \(st\.cfg\.landingReadout !== 1 && !askHold\) \? m0g : gizmoOf\(st, mq\.yaw, mq\.pitch, mrT\), READOUT_SOURCE, askHold\); if \(m0g !== null\) \{/); // ⭐ (S4 §9bis 6) today's blend only when the readout runs
     // ⛔ exactly one call in the product (not in the sections' samples, the edge blend's, the solver's queries)
     const calls = srcFiles().reduce((n, f) => n + (strip(readFileSync(f, "utf8")).match(/\blandingReadoutFrame\(/g) ?? []).length, 0);
     expect(calls).toBe(2); // its definition and its one call

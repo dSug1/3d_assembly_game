@@ -5,7 +5,10 @@
  * its lift — §2's correction); the footprint support the same reading (§3.3). The rules are `core/landing_map.ts`'s (`driveLevel`, `landingSupport`,
  * `prepareHeldSums`, `landingFor`); here the state, the frame's `F`, the cache.
  *
- * ⭐ `F` (§3.2): the anchor the solver left LAST frame (`pieceHoldPrev`), snapshotted once at the frame's start — every query of the frame reads it.
+ * ⭐ `F` (§3.2): the anchor the solver left LAST frame (`pieceHoldPrev`), snapshotted once at the frame's start — every query of the frame reads it;
+ * ⭐⭐ (fix round 1, §9bis 1) between two frames the stored snapshot (a pinch, an A + drag, the coast), and each snapshot a new STAMP (`driveStamp`): the
+ * gizmo's memo is valid for one stamp. ⭐⭐ (§9bis 3) read from `F` ONLY along the face the piece is over (last frame's shown facet); every other
+ * direction from outside.
  * ⭐ THE CACHE (§3.4): the direction-free sums once per placed set and held piece (the readout's key less the map and its frame); a preparation per WORLD
  * direction on demand (a projection: four dots a half-space) — never a facet read today's way while waiting for "its turn".
  * ⭐ `Scene_1` only (`READOUT_SCENE`); `landingDrives` 0 = as deployed (no query made), 1 = the support, 2 = the support and the gizmo.
@@ -33,9 +36,11 @@ export interface LandingDriveState {
   /** the held piece AS HELD (`heldPiece`: relative to its reference point) — its reach toward a direction */
   held: readonly (readonly Vec3[])[];
   readonly dirs: Map<string, DirEntry>;
-  /** the frame `F` was read in, and `F` (none: read from outside) */
-  frame: number;
+  /** the snapshot's stamp (one a `landingDriveFrame`), `F` (none: read from outside), the world direction of the face the piece is over (last frame's
+   *  shown facet; none: every direction from outside) */
+  stamp: number;
   from: Vec3 | null;
+  facetN: Vec3 | null;
 }
 
 const dot = (a: Vec3, b: Vec3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
@@ -54,16 +59,19 @@ function level(st: SceneState): number {
  */
 export function landingDriveFrame(st: SceneState, src: ReadoutSource): void {
   if (level(st) === 0) {
-    if (st.landingDrive !== null) (st.landingDrive.from = null), (st.landingDrive.frame = st.frames);
+    if (st.landingDrive !== null) (st.landingDrive.from = null), (st.landingDrive.facetN = null);
     return;
   }
-  const s = st.landingDrive ?? (st.landingDrive = { key: "", sums: null, held: [], dirs: new Map(), frame: -1, from: null });
+  const s = st.landingDrive ?? (st.landingDrive = { key: "", sums: null, held: [], dirs: new Map(), stamp: 0, from: null, facetN: null });
   const id = st.greenBox?.name;
   const local = id === undefined ? undefined : st.world.objects.get(id)?.shape?.points;
   const place = id === undefined ? null : worldPlacementOf(st.world, id);
   const rc = st.orbitPieces.find((o) => o.mesh === st.greenBox)?.restingCentre;
-  s.frame = st.frames;
+  s.stamp++;
   s.from = st.pieceHoldPrev?.anchor ?? null;
+  const sh = st.asmShown;
+  const R = src.frame(st);
+  s.facetN = sh === null ? null : R === null ? sh.t.normal : [dot(R[0], sh.t.normal), dot(R[1], sh.t.normal), dot(R[2], sh.t.normal)];
   if (id === undefined || local === undefined || place === null || rc === undefined) {
     s.key = "";
     s.sums = null;
@@ -93,6 +101,16 @@ function dirOf(s: LandingDriveState, n: Vec3): DirEntry | null {
   return e;
 }
 
+/** ⭐ (§9bis 3) `F` where the landing along `n` is read from it: the face the piece is over (within 2.6° — `levelOn`'s tolerance); else none (from outside) */
+function fromAlong(s: LandingDriveState, n: Vec3): Vec3 | null {
+  return s.from !== null && s.facetN !== null && dot(n, s.facetN) > 0.999 ? s.from : null;
+}
+
+/** ⭐ (§9bis 1) the drive's snapshot stamp (0: none) — the gizmo's memo is valid for one */
+export function driveStamp(st: SceneState): number {
+  return st.landingDrive?.stamp ?? 0;
+}
+
 /** the landing at the world place `p` along the world direction `n`, read from `from` (+ the support's slack; none: from outside) */
 function landingFrom(e: DirEntry, n: Vec3, p: Vec3, from: Vec3 | null): Landing {
   const f = e.prep.frame;
@@ -105,9 +123,9 @@ function landingFrom(e: DirEntry, n: Vec3, p: Vec3, from: Vec3 | null): Landing 
  */
 export function driveGizmoLanding(st: SceneState, n: Vec3, p: Vec3): { readonly landing: Landing; readonly reach: number } | null {
   const s = st.landingDrive;
-  if (level(st) < 2 || s === null || s.frame !== st.frames) return null;
+  if (level(st) < 2 || s === null) return null;
   const e = dirOf(s, n);
-  return e === null ? null : { landing: landingFrom(e, n, p, s.from), reach: e.reach };
+  return e === null ? null : { landing: landingFrom(e, n, p, fromAlong(s, n)), reach: e.reach };
 }
 
 /**
@@ -116,15 +134,15 @@ export function driveGizmoLanding(st: SceneState, n: Vec3, p: Vec3): { readonly 
  */
 export function driveSupport(st: SceneState, u: Vec3, ref: Vec3, windowM: number): LandingSupport | null {
   const s = st.landingDrive;
-  if (level(st) < 1 || s === null || s.frame !== st.frames) return null;
+  if (level(st) < 1 || s === null) return null;
   const e = dirOf(s, u);
   if (e === null) return null;
   return landingSupport(landingFrom(e, u, ref, ref), dot(ref, u), e.reach, windowM);
 }
 
 /**
- * ⭐⭐ (§3.6) THE SECTIONS' KEY: the held piece's sums and, per direction prepared, whether `F` stands above every first contact (then the reading is the
- * one from outside — far out, always) or where it is (0.1 mm). "" where P2 does not drive the gizmo.
+ * ⭐⭐ (§3.6) THE SECTIONS' KEY: the held piece's sums and, per direction prepared, whether it is read from outside — a face the piece is not over, or `F`
+ * above every first contact (far out, always) — or `F`'s level (0.1 mm). "" where P2 does not drive the gizmo.
  */
 export function driveKey(st: SceneState): string {
   const s = st.landingDrive;
@@ -132,7 +150,8 @@ export function driveKey(st: SceneState): string {
   const out: string[] = [];
   for (const [k, e] of [...s.dirs.entries()].sort((x, y) => (x[0] < y[0] ? -1 : x[0] > y[0] ? 1 : 0))) {
     const n = e.prep.frame.n;
-    const f = s.from === null ? Infinity : dot(s.from, n) + SUPPORT_SLACK_M;
+    const F = fromAlong(s, n);
+    const f = F === null ? Infinity : dot(F, n) + SUPPORT_SLACK_M;
     out.push(f >= e.prep.top ? `${k}:o` : `${k}:${f.toFixed(4)}`);
   }
   return `D${idOf(s.sums)}|${out.join(";")}`;

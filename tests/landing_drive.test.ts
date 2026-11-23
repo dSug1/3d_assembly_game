@@ -11,7 +11,7 @@ import { qFromAxisAngle, type Quat, type Vec3 } from "../src/core/vec";
 import { planeAxes } from "../src/input/contact";
 import { footprintSupport, supportTop, SUPPORT_SLACK_M } from "../src/input/footprint";
 import { DEFAULT_CONFIG, validateGestureConfig } from "../src/input/gestureConfig";
-import { driveGizmoLanding, driveKey, driveSupport, landingDriveFrame } from "../src/render/landing_drive";
+import { driveGizmoLanding, driveKey, driveStamp, driveSupport, landingDriveFrame } from "../src/render/landing_drive";
 import type { ReadoutSource } from "../src/render/landing_readout";
 import type { SceneState } from "../src/render/scene_state";
 import { bx, hullPart, toConvex, type Part } from "./helpers/surface_shapes";
@@ -151,7 +151,7 @@ describe("⭐⭐ V5 — the switch, the drive's module, the wiring", () => {
   const stub = (cfg: Record<string, number>, scene = "Scene_1") => {
     const greenBox = { name: "g" };
     const objects = new Map<string, unknown>([["g", { id: "g", parent: null, local: { position: [0, 0.2, 0], orientation: [1, 0, 0, 0] }, shape: { points: GREEN } }]]);
-    return { cfg, landingDrive: null, greenBox, world: { objects }, orbitPieces: [{ mesh: greenBox, restingCentre: [0, 0, 0] }], orbitPiecePlaced: false, frames: 5, sceneSpec: { id: scene }, pieceHoldPrev: { anchor: [-10 * M, 110 * M, 0], approach: 0 } } as unknown as SceneState;
+    return { cfg, landingDrive: null, greenBox, world: { objects }, orbitPieces: [{ mesh: greenBox, restingCentre: [0, 0, 0] }], orbitPiecePlaced: false, frames: 5, sceneSpec: { id: scene }, pieceHoldPrev: { anchor: [-10 * M, 110 * M, 0], approach: 0 }, asmShown: { t: { normal: UP }, yaw: 0, pitch: 0 } } as unknown as SceneState;
   };
   const conv = toConvex(PROUD);
   const src: ReadoutSource = { map: () => null, frame: () => null, placed: () => ({ key: "k", parts: conv.map((p) => p.points), ids: conv.map((p) => p.id) }) };
@@ -177,20 +177,34 @@ describe("⭐⭐ V5 — the switch, the drive's module, the wiring", () => {
     expect(driveGizmoLanding(s2, UP, [-30 * M, 0, 0])?.landing).toEqual({ kind: "land", depth: expect.closeTo(0.1, 9), part: "H" });
     expect(driveKey(s2)).toMatch(/:0\.1105$/); // F below the box's top: its level in the sections' key
   });
-  it("a frame not started by `landingDriveFrame` reads nothing (one `F` a frame)", () => {
+  it("(fix round 1, §9bis 1) between two frames the STORED snapshot is read; each snapshot a new stamp — the gizmo's memo is valid for one", () => {
     const st = stub({ landingDrives: 2 });
     landingDriveFrame(st, src);
-    (st as { frames: number }).frames = 6;
-    expect(driveGizmoLanding(st, UP, [-10 * M, 0, 0])).toBe(null);
+    const s1 = driveStamp(st);
+    (st as { frames: number }).frames = 6; // the frame's end: a pinch, an A + drag between frames
+    expect(driveGizmoLanding(st, UP, [-10 * M, 0, 0])?.landing.kind).toBe("inside");
+    landingDriveFrame(st, src);
+    expect(driveStamp(st)).toBe(s1 + 1);
+  });
+  it("(fix round 1, §9bis 3) a face the piece is NOT over reads FROM OUTSIDE — the bottom, the piece above: its first contact, never `nothing`", () => {
+    const st = stub({ landingDrives: 2 });
+    landingDriveFrame(st, src);
+    const DOWN: Vec3 = [0, -1, 0];
+    // along −y the host's underside (y 0) is first touched by the piece's top (48 mm over its reference): depth 0 + 48 mm along −y
+    expect(driveGizmoLanding(st, DOWN, [-30 * M, 0, 0])?.landing).toEqual({ kind: "land", depth: expect.closeTo(0.048, 9), part: "H" });
+    expect(driveKey(st)).toMatch(/^D\d+\|/);
+    expect(driveKey(st)).toContain("0.000000000,-1.000000000,0.000000000:o"); // a face the piece is not over: "from outside" in the lines' key
   });
   const strip = (t: string) => t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
   const A = strip(readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8")).replace(/\s+/g, " ");
   it("the wiring: `F` before the support; the gizmo = today's driven; the readout fed today's; the support through `supportOf` (twice); the lines' key", () => {
     expect(A.indexOf("landingDriveFrame(st, READOUT_SOURCE);")).toBeGreaterThan(0);
     expect(A.indexOf("landingDriveFrame(st, READOUT_SOURCE);")).toBeLessThan(A.indexOf("supportFrame(st, dtMs);"));
+    expect(A.indexOf("landingDriveFrame(st, READOUT_SOURCE);")).toBeLessThan(A.indexOf("if (st.approachInertia.coasting) {")); // (§9bis 1) before the coast
+    expect(A).toContain("if (memo === undefined || memo.frame !== st.frames || memo.drive !== driveStamp(st)) {"); // (§9bis 1) the memo, one snapshot
     expect(A).toContain("return driveGizmo(st, rawGizmoToday(st, yaw, pitch));");
     expect(A).toContain("const mrT = rawGizmoToday(st, mq.yaw, mq.pitch); const mr0 = driveGizmo(st, mrT);");
-    expect(A).toContain("landingReadoutFrame(st, mrT, mr0 === mrT ? m0g : gizmoOf(st, mq.yaw, mq.pitch, mrT), READOUT_SOURCE,");
+    expect(A).toContain("landingReadoutFrame(st, mrT, mr0 === mrT || (st.cfg.landingReadout !== 1 && !askHold) ? m0g : gizmoOf(st, mq.yaw, mq.pitch, mrT), READOUT_SOURCE, askHold);");
     expect(A.split("supportOf(st, ").length - 1).toBe(2);
     expect(A.split("footprintSupport(").length - 1).toBe(1);
     expect(A).toContain("const optKey = `${o.edgeMm}|${o.edgeDeg}|${driveKey(st)}`;");
