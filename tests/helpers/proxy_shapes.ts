@@ -158,3 +158,45 @@ export function cellPart(id: string, s: number, nn: readonly [number, number, nu
   return part(id, [...proxy, ...caps], [mesh(`${id}_render`, quads)]);
 }
 export const at0 = (id: string) => new Map([[id, { position: [0, 0, 0] as Vec3, rotation: [1, 0, 0, 0] as const }]]);
+/** ⭐ (S6 packet 3) a convex collision piece from its points (their hull) */
+export const piece = (name: string, pts: Vec3[]): PartMesh => {
+  const h = convexHull3(pts)!;
+  return { name, points: h.points, triangles: h.triangles.map((t) => [t[0], t[1], t[2]]) };
+};
+/** an axis-aligned box piece */
+export const boxPiece = (name: string, lo: Vec3, hi: Vec3): PartMesh =>
+  piece(name, [0, 1, 2, 3, 4, 5, 6, 7].map((m): Vec3 => [m & 1 ? hi[0] : lo[0], m & 2 ? hi[1] : lo[1], m & 4 ? hi[2] : lo[2]]));
+/** a prism piece along x (from 0 to L) of an n-gon of circumradius r (vertices at k·360/n) */
+export const ngonPiece = (name: string, n: number, r: number, L = 200): PartMesh =>
+  piece(name, Array.from({ length: n }, (_, k) => [0, L].map((x): Vec3 => [x, r * Math.sin((2 * Math.PI * k) / n), r * Math.cos((2 * Math.PI * k) / n)])).flat());
+export const withPieces = (p: PartSolids, pieces: PartMesh[]): PartSolids => ({ ...p, pieces });
+/**
+ * ⭐ (S6 packet 3) a thick TUBE along x (length L): a round 24-gon outside (radius Ro), a round 24-gon BORE (radius Ri) — its render; its proxy the same
+ * faces (each its node); its collision pieces a RING of `m` slabs round the bore by the angle rule (each slab: the bore's chord on its inside, the
+ * outside circumscribed every 15°)
+ */
+export function tube(m: number, Ri = 20, Ro = 40, L = 120, pushIn = 0): PartSolids {
+  const N = 24;
+  const ring = (r: number, x: number, k: number): Vec3 => [x, r * Math.sin((2 * Math.PI * k) / N), r * Math.cos((2 * Math.PI * k) / N)];
+  const fs: PartMesh[] = [];
+  for (let k = 0; k < N; k++) {
+    const mid = (2 * Math.PI * (k + 0.5)) / N, out: Vec3 = [0, Math.sin(mid), Math.cos(mid)];
+    fs.push(face(`o${k}`, [ring(Ro, 0, k), ring(Ro, 0, k + 1), ring(Ro, L, k + 1), ring(Ro, L, k)], out));
+    fs.push(face(`i${k}`, [ring(Ri, 0, k), ring(Ri, 0, k + 1), ring(Ri, L, k + 1), ring(Ri, L, k)], [0, -out[1], -out[2]]));
+    fs.push(face(`a${k}`, [ring(Ri, 0, k), ring(Ri, 0, k + 1), ring(Ro, 0, k + 1), ring(Ro, 0, k)], [-1, 0, 0]));
+    fs.push(face(`b${k}`, [ring(Ri, L, k), ring(Ri, L, k + 1), ring(Ro, L, k + 1), ring(Ro, L, k)], [1, 0, 0]));
+  }
+  const rOut = Ro / Math.cos(Math.PI / 24);
+  const slabs = Array.from({ length: m }, (_, s2) => {
+    const a0 = (2 * Math.PI * s2) / m, a1 = (2 * Math.PI * (s2 + 1)) / m;
+    const pts: Vec3[] = [];
+    // (`pushIn`: the first slab's chord moved that far into the bore — a control)
+    const ri = s2 === 0 && pushIn > 0 ? (Ri * Math.cos(Math.PI / m) - pushIn) / Math.cos(Math.PI / m) : Ri;
+    for (const x of [0, L]) {
+      pts.push([x, ri * Math.sin(a0), ri * Math.cos(a0)], [x, ri * Math.sin(a1), ri * Math.cos(a1)]);
+      for (let a = a0; a <= a1 + 1e-9; a += Math.PI / 12) pts.push([x, rOut * Math.sin(a), rOut * Math.cos(a)]);
+    }
+    return piece(`UCX_T_${s2}`, pts);
+  });
+  return withPieces(part("T", fs.map((f, i) => ({ ...f, name: `UFM_T_${i}` })), [mesh("T_render", fs)]), slabs);
+}

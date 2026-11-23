@@ -2,7 +2,7 @@
 
 > **STATUS** · ⭐ **A STUDY — HIS FIVE DECISIONS GIVEN 2026-11-23 (§8)**, written into §3 and §3bis; the patent-free methods surveyed (§5); ⭐ **AUDITED
 > 2026-11-23 (§7): two blockers and seven should-fix, ADOPTED where they apply a recorded rule; four questions back to him (§7.2)** — ✅ **ANSWERED 2026-11-23: *"I agree with your recommendations. Capture, proceed"*** (§7.3): the RULES DECIDED;
-> the checks being built (§9: packet 1 BUILT — R7, R3, R4, R2; packet 2 BUILT — R1 coverage, R1b caps, R2 closed; packet 3 owed). The four-part method (`orbit-design-method`):
+> the checks being built (§9: packet 1 BUILT — R7, R3, R4, R2; packet 2 BUILT — R1 coverage, R1b caps, R2 closed; packet 3 BUILT — C-R2 both ways, the resting candidates). The four-part method (`orbit-design-method`):
 > the rules (§1 – §3), the obstacles and fallbacks (§4), a systematic design from patent-free prior art (§5), an audit (§7) — before any check.
 > **OWNS** · what a part's FACE PROXY (`UFM_`) and its COLLISION PIECES (`UCX_`) must be, for ANY shape — so that a generator (the Blender build
 > scripts, an automated workflow) delivers them right and a check proves it.
@@ -321,10 +321,53 @@ FAIL, 47.
    sub-lattice of the shell (samples 2 steps apart, each point its sample's class), rays sphere-traced on the solid's distance field — `Scene_2` 5 min →
    58 s; never at load.
 
-### 9.4 Owed — packet 3
+### 9.4 Packet 3 (2026-11-23) — THE COLLISION PIECES (C-R2 – C-R4) AND THE RESTING CANDIDATES (decision 5)
 
-* **The collision pieces (C-R2 – C-R4) and the resting candidates**: the pieces' union within τc of the render, both ways; a cavity a part enters left
-  open; rings by the angle rule; the resting-face candidates — the proxy's faces on its convex hull, the largest first.
+**`checkCollisionPieces`** (`src/core/collision_cover.ts`; per part, in mm; τc = `COLLISION_TOL_MM` 1.5):
+* **C-R2 (a) — no visible part OUTSIDE its pieces**: every point of the render (area-proportional samples, ≈ one per 4 mm²; its vertices and edges'
+  midpoints) inside a piece or within τc of the union — STRICT, curves too: a thin feature's prism CIRCUMSCRIBES it (C-R4), a ring's slabs lie behind
+  a bore's wall.
+* **C-R2 (b) — no false contact**: where a piece's surface lies OUTSIDE the render's solid (the outside's voxels — packet 2's flood) farther than τc
+  from the render, it sticks out — unless it lies in a RING facet's SAGITTA BAND: a face of the piece judged over its WHOLE extent as over a curve
+  within ±30° (the angle rule, §7.3 Q4: a bore's wall six slabs, as its hexagon), its sagitta GEOMETRIC — (w / 2)·tan(span / 2), w its narrowest
+  width — plus τc; the band reaches the facet's lens at the piece's ends. Faces between pieces, inside the part, are never read.
+* **The resting candidates** (`restingCandidates`, decision 5 + §7.1 row 10): the real planar proxy faces on a supporting plane of the proxy's hull
+  (within the flush), each ≥ `RESTING_MIN_SHARE` (¼ — ⏳ PROPOSED, a constant of its own) of the largest, the largest first. None: a finding (REST);
+  the list: information.
+
+**The vectors** (`tests/collision_cover.test.ts`, 14; the shapes in `tests/helpers/proxy_shapes.ts` — `boxPiece`, `ngonPiece`, `tube`): PASSING — his
+case as five slabs (its pocket open, the slabs face to face), the shaft in a circumscribed 12-gon, the hull as its own hull, ⭐ a tube's bore lined by
+a ring of SIX slabs (each chord 2.7 mm off the bore — exempt). DEFECTS — the case as ONE box (it fills the pocket: (b)); the shaft in an inscribed
+hexagon ((a): 2.7 mm outside); the bottom slab inset 3 mm ((a)); no piece; ⭐ a ring of THREE slabs (±60°, 9.9 mm: (b)); ⭐ one slab of six pushed 5 mm
+into the bore (its span still ±30° — past its geometric sagitta); a resting face only (REST); the candidates — the hull's six faces ≥ ¼ (its 6 mm
+chamfers out), the case's pocket faces (followed) off the hull. **11 mutants: 10 RED** ((a) blind, (b) blind, no ring exemption, the sagitta measured,
+a rim read by its nearest triangle only, samples inside the part judged, a facet judged on its outside samples only, no candidate unreported, no share
+filter, faces off the hull kept); the 11th — the inside-a-piece shortcut removed — GREEN by construction: a pure speed shortcut (the distance to a
+piece is negative inside it), no vector can see it.
+
+**`Scene_2`** (`check_part_solids.ts`, ≈ 26 s; the vector pins E01, E03, E07, E17): **(a) the render outside its pieces** — E04 22 % up to **42 mm**
+(the 42 mm S5 found between its proxy and its pieces), E05 / E06 29 % up to 12.4 mm, the pistons E07 – E12 9 % up to 29.4 mm, the heads E13 / E14 13 %
+up to 16.6 mm, the plinth 1.9 % (3.5 mm), E15 / E16 ≈ 3 % (3.7 mm), E02 0.1 %, E17 0.7 %; **(b) pieces sticking out** — the crankshaft's 13 web
+pieces 3.1 – 5.6 mm (hulls round its webs), each piston's two pieces 9 – 15 mm (its skirt filled), E15 / E16 four each 4.2 – 8.6 mm, E17 4.2 mm;
+**no resting candidate** — E02, E04, E05, E06 (their `…_outer` node not one planar face, R7) and every part with a resting face only (E07 – E12,
+E15, E16). With B1 and packets 1 – 2: FAIL, 109.
+
+### 9.5 ⭐ Lessons of packet 3 (how to MEASURE a part — each found on a control or the real file before the vectors were written)
+
+1. **Judge only what the rule's reader meets**: the first (b) read every piece face — the faces BETWEEN pieces, inside the part, cast onto the far side
+   of the part and read *"turning ±180°"* on every piece of `Scene_2` (a check flagging everything: the measure, not the files). A false contact can
+   only be where the union sticks OUT of the part.
+2. **"Curved" is a property of a whole face, never of one point** — a chord's middle over a smooth arc sees its own normal; and of the WHOLE face, not
+   its samples outside the part (its ends, nearest the curve, turn the most: judged without them, a ring's span read 7.5° for 22.5°).
+3. **An exemption's size is geometric, never measured**: a "sagitta" measured under a facet carries any offset — a slab pushed 5 mm into the bore
+   passed. (w / 2)·tan(span / 2).
+4. **At an edge the nearest point is shared**: a rim's nearest triangle may be the flat end, not the curve — read every triangle at that distance.
+5. **Grid queries search cubes; samples follow area**: a 256 mm reach searched 262 000 cells a sample (13.5 s → 0.4 s once capped and grown outward);
+   samples by the longest edge put 1891 on a sliver (by area: a part 20 s → 1.4 s).
+6. **A pure speed shortcut has no vector** (C11): recorded as such — its behaviour unchanged by construction, never a path a shape decides.
+
+### 9.6 Owed
+
 * ⏳ **R2's fidelity against the ρ-closing** (§7.1 row 4): packet 1 reads the render, so a face spanning a bridged slot (under 2ρ) reads its floor as
   "off its flat face" — owed with the packet 2 field (the closing) handed to packet 1.
 * ⏳ **The loop** (his word, 2026-11-23): these checks run by hand today — the loop that runs them after every export and stops on a FAIL, and the

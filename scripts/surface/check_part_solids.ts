@@ -13,6 +13,7 @@ import { glbBin, partGeometry, type Placement } from "../../src/core/glb_geometr
 import { glbJson, readModelCatalog } from "../../src/core/model_catalog";
 import { B1_FIT_MM, checkProxyFaces, checkSolids, exposedPerStage, readPartSolids } from "../../src/core/part_checks";
 import { checkProxyCover } from "../../src/core/proxy_cover";
+import { checkCollisionPieces } from "../../src/core/collision_cover";
 
 const file = process.argv.slice(2).find((a) => a.endsWith(".glb")) ?? process.env["GLB"];
 if (file === undefined) {
@@ -53,6 +54,12 @@ const t1 = performance.now();
 const cover = checkProxyCover(parts);
 console.log(`coverage, closure, caps (R1, R1b, R2): ${cover.length} finding(s), ${((performance.now() - t1) / 1000).toFixed(0)} s`);
 for (const f of cover) console.log(`  ${f.rule}${f.info ? " (information)" : ""} ${f.part} ${f.node}: ${f.detail}`);
-const failing = found.length + rulesFound.filter((f) => !f.info).length + cover.filter((f) => !f.info).length;
+// ⭐⭐ (S6 packet 3) THE COLLISION PIECES — C-R2 (a) no render outside them, (b) none sticking out past τc (a ring's facet: its geometric sagitta exempt);
+// the resting candidates (none: a finding; the list: information)
+const t2 = performance.now();
+const pieces = checkCollisionPieces(parts);
+console.log(`the collision pieces and the resting candidates (C-R2, REST): ${pieces.filter((f) => !f.info).length} finding(s), ${((performance.now() - t2) / 1000).toFixed(0)} s`);
+for (const f of pieces) console.log(`  ${f.rule}${f.info ? " (information)" : ""} ${f.part} ${f.node}: ${f.detail}`);
+const failing = found.length + rulesFound.filter((f) => !f.info).length + cover.filter((f) => !f.info).length + pieces.filter((f) => !f.info).length;
 console.log(failing === 0 ? "PASS" : `FAIL — ${failing} finding(s): fix the file in Blender (PROXY_AND_COLLISION_RULES.md), or write an exemption per piece`);
 process.exit(failing === 0 ? 0 : 1);

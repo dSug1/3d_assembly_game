@@ -106,7 +106,7 @@ export function readPartSolids(json: unknown, bin: Uint8Array, catalog: ModelCat
 }
 
 // ── geometry ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-interface Convex {
+export interface Convex {
   readonly planes: readonly { readonly n: Vec3; readonly d: number }[];
   readonly tris: readonly (readonly [Vec3, Vec3, Vec3])[];
   readonly volume: number;
@@ -116,7 +116,7 @@ const unit = (a: Vec3): Vec3 | null => {
   return l > 1e-12 ? [a[0] / l, a[1] / l, a[2] / l] : null;
 };
 const triNormal = (a: Vec3, b: Vec3, c: Vec3): Vec3 | null => unit(cross(sub(b, a), sub(c, a)));
-function convexOf(points: readonly Vec3[]): Convex | null {
+export function convexOf(points: readonly Vec3[]): Convex | null {
   const h = convexHull3(points);
   if (h === null) return null;
   const P = h.points;
@@ -169,13 +169,13 @@ function signedTo(p: Vec3, k: Convex): number {
   return m;
 }
 /** how deep `p` is inside a convex piece (its largest plane distance: negative inside — exact there; positive outside, a lower bound) — cheap */
-function planeDepth(p: Vec3, k: Convex): number {
+export function planeDepth(p: Vec3, k: Convex): number {
   let s = -Infinity;
   for (const pl of k.planes) s = Math.max(s, dot(pl.n, p) - pl.d);
   return s;
 }
 /** the signed distance from `p` to the UNION of the pieces: its deepest inside, else its nearest outside */
-const toUnion = (p: Vec3, ks: readonly Convex[]): number => ks.reduce((m, k) => Math.min(m, signedTo(p, k)), Infinity);
+export const toUnion = (p: Vec3, ks: readonly Convex[]): number => ks.reduce((m, k) => Math.min(m, signedTo(p, k)), Infinity);
 
 // ── B1 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 /** ⭐⭐⭐ B1 on a scene's parts (`readPartSolids`): every finding, named; [] = the scene passes */
@@ -687,7 +687,7 @@ export function proxyFaceModels(part: PartSolids): ProxyFaceModel[] {
  * along its normal, `flat` every sample over a real face of its own normal, `span` how far the real surface's normals turn from it, `lost` a sample
  * with no real surface along its normal within 256 mm
  */
-export function fidelityOf(f: ProxyFaceModel, grid: ReturnType<typeof triGrid>, rn: readonly (Vec3 | null)[]): { dMax: number; flat: boolean; span: number; lost: boolean } {
+export function fidelityOf(f: ProxyFaceModel, grid: ReturnType<typeof triGrid>, rn: readonly (Vec3 | null)[], skip?: (p: Vec3) => boolean, reach = 256): { dMax: number; flat: boolean; span: number; lost: boolean } {
   let dMax = 0, flat = true, span = 0, lost = false;
   // the samples over the WHOLE face — to within 2 % of its edges (a facet's span is read at its edges, never only round its middle)
   for (const [A, B, C] of f.tris)
@@ -696,6 +696,7 @@ export function fidelityOf(f: ProxyFaceModel, grid: ReturnType<typeof triGrid>, 
         const g3 = (k: number) => (A[k]! + B[k]! + C[k]!) / 3;
         const q = (k: number) => A[k]! + (B[k]! - A[k]!) * (u / 6) + (C[k]! - A[k]!) * (v / 6);
         const p: Vec3 = [q(0) + (g3(0) - q(0)) * 0.02, q(1) + (g3(1) - q(1)) * 0.02, q(2) + (g3(2) - q(2)) * 0.02];
+        if (skip?.(p)) continue; // (S6 packet 3) a sample the caller does not judge (a collision face's samples inside the part)
         // ⭐ the real surface UNDER the point: the render meshes met along the face's normal, either side (never the nearest triangle: a thin wall's
         // underside, a side face at an edge)
         // ON a real face of its own normal (within the flush) — at a round rim too: flat there, no cast (a grazing ray meets the rim's side)
@@ -705,7 +706,7 @@ export function fidelityOf(f: ProxyFaceModel, grid: ReturnType<typeof triGrid>, 
           continue;
         }
         let hit = grid.cast(p, f.n!, 4);
-        for (let r = 16; hit === null && r <= 256; r *= 4) hit = grid.cast(p, f.n!, r);
+        for (let r = 16; hit === null && r <= reach; r *= 4) hit = grid.cast(p, f.n!, r);
         // a sample past the real face's rim by less than τ (two round outlines' tessellations — the 11-13 notes) is the rim, not a face floating
         if (hit === null) {
           if (grid.nearest(p, PROXY_CURVE_TOL_MM) === null) lost = true;

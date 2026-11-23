@@ -353,6 +353,8 @@ R7 one face a node, R3 no travelled face under 10 mm (a riser information), R4 3
 resting proxy and a cap virtual); his three shapes its clean reference parts.
 ⭐ **Packet 2** (`proxy_cover.ts`, the same script and verdict, ≈ 58 s on `Scene_2`): R1 the outer surface (the render closed at ρ) COVERED, R1b every
 cavity deeper than its mouth is wide and every undercut CAPPED (amber: information), R2 every edge shared, a cap's rim on the real edges.
+⭐ **Packet 3** (`collision_cover.ts`, the same script and verdict, ≈ 26 s on `Scene_2`): C-R2 the collision pieces within τc of the render both ways
+(a curve by the angle rule's ring, its geometric sagitta exempt), the resting candidates (none: a finding).
 
 ### 7.4 The design-for-playability checklist (whoever draws a part)
 
@@ -566,7 +568,7 @@ the generator's test: it proves that what was generated obeys the rules (§10), 
 | B2 exposed per stage; B1i (D7) | the same | the same | a map — information, no pass rule | — (it feeds B5 and the stage's surface, `PROXY_AND_COLLISION_RULES.md` §3bis) |
 | the proxy rules R7, R3, R4, R2 (S6 packet 1) | the same | the same | in the same verdict | — |
 | S6 packet 2 — R1 coverage, R1b caps, R2 closed (`src/core/proxy_cover.ts`) | the same | the same (`Scene_2`'s quick parts in the vector; ≈ 58 s in all) | in the same verdict | — |
-| S6 packet 3 (the collision pieces against the render; the resting candidates) | being built | — | — | — |
+| S6 packet 3 — C-R2 the collision pieces both ways, the resting candidates (`src/core/collision_cover.ts`) | the same | the same (`Scene_2`'s E01, E03, E07, E17 in the vector; ≈ 26 s in all) | in the same verdict | — |
 | B3 the landing per stage (the game's L2 on the `.glb`); B5 the coverage list | not built | — | — | L2 is now wired (S2, S4): they can be built |
 | B6 the thresholds | R4's angles built; the closing radius and the share not | — | — | — |
 | the Blender build's own checks (`../../30_OBJECTS_3D/spec/PART_AUTHORING.md` §4.2: the seats, the way in, collision simplicity, the proxy sanity …) | `Assets/Blender/scripts/build_<scene>.py` | every build run, inside Blender | PRINTED — a failure does not stop the run | an exit code ≠ 0 on a FAIL |

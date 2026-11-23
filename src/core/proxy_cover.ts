@@ -162,6 +162,31 @@ function sky(n: number, capDeg: number): { dirs: Vec3[]; nb: Int32Array[]; ang: 
 }
 let SKY: ReturnType<typeof sky> | null = null;
 
+/**
+ * ⭐ (S6 packet 3) is a point OUTSIDE the part's render — the voxels (step `stepMm`) the outside reaches round the render's triangles (a point within
+ * half a voxel's diagonal of the surface reads not outside). Built once per part.
+ */
+export function outsideOfRender(rtris: readonly (readonly [Vec3, Vec3, Vec3])[], stepMm: number = COVER_STEP_MM): (p: Vec3) => boolean {
+  if (rtris.length === 0) return () => true;
+  const h = stepMm;
+  const lo = [Infinity, Infinity, Infinity] as [number, number, number], hi = [-Infinity, -Infinity, -Infinity] as [number, number, number];
+  for (const t of rtris) for (const p of t) for (let x = 0; x < 3; x++) (lo[x] = Math.min(lo[x]!, p[x]!)), (hi[x] = Math.max(hi[x]!, p[x]!));
+  const margin = 3 * h;
+  const o: Vec3 = [lo[0] - margin, lo[1] - margin, lo[2] - margin];
+  const g: Grid = { nx: Math.ceil((hi[0] - lo[0] + 2 * margin) / h) + 1, ny: Math.ceil((hi[1] - lo[1] + 2 * margin) / h) + 1, nz: Math.ceil((hi[2] - lo[2] + 2 * margin) / h) + 1, h, o };
+  const n = g.nx * g.ny * g.nz;
+  const surf = new Uint8Array(n);
+  raster(g, rtris, h * (Math.sqrt(3) / 2), surf);
+  const free = new Uint8Array(n);
+  for (let x = 0; x < n; x++) free[x] = surf[x] ? 0 : 1;
+  const out = flood(g, free);
+  return (p: Vec3) => {
+    const i = Math.round((p[0] - o[0]) / h), j = Math.round((p[1] - o[1]) / h), k = Math.round((p[2] - o[2]) / h);
+    if (i < 0 || j < 0 || k < 0 || i >= g.nx || j >= g.ny || k >= g.nz) return true;
+    return out[i + g.nx * (j + g.ny * k)] === 1;
+  };
+}
+
 /** one finding's place, rounded */
 const at = (p: Vec3) => `(${p.map((x) => x.toFixed(0)).join(", ")})`;
 

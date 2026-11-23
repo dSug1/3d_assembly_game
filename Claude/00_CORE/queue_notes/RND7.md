@@ -91,3 +91,8 @@
   outer surface at the ρ-closing covered, R1b every cavity deeper than wide / undercut capped (amber information), R2 closed, a cap's rim flush;
   17 vectors, 15 mutants red; `Scene_2`: every proxy open (the plinth 58.6 % not covered), the pistons a resting face only, E02 / E13 / E14 cavities
   uncapped (ledger rows 17 – 18). Seven lessons of measuring (`PROXY_AND_COLLISION_RULES.md` §9.3). D7 answered by D8. Local.
+* **2026-11-23, night (later)** — S6 packet 3 BUILT: `checkCollisionPieces` (`collision_cover.ts`) — C-R2 (a) the render inside its pieces within
+  tau_c (strict), (b) no piece sticking out past tau_c (a ring's facet: its GEOMETRIC sagitta exempt), the resting candidates (decision 5);
+  14 vectors (a tube's bore lined by six / three slabs; a slab pushed 5 mm), 10 of 11 mutants red (the 11th a pure speed shortcut); `Scene_2`:
+  render outside pieces (E04 42 mm, pistons 29 mm), pieces sticking out (crank webs, piston skirts), 12 parts without a resting candidate
+  (ledger 19 – 20). Six lessons (`PROXY_AND_COLLISION_RULES.md` §9.5). The S6 checks complete: packets 1 – 3. Local.
