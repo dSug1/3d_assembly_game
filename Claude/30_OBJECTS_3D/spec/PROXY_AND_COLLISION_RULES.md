@@ -1,7 +1,8 @@
 # THE PROXY AND COLLISION RULES — universal, for any part (a study, 2026-11-23)
 
 > **STATUS** · ⭐ **A STUDY — HIS FIVE DECISIONS GIVEN 2026-11-23 (§8)**, written into §3 and §3bis; the patent-free methods surveyed (§5); ⭐ **AUDITED
-> 2026-11-23 (§7): two blockers and seven should-fix, ADOPTED where they apply a recorded rule; four questions back to him (§7.2)** — nothing built yet. The four-part method (`orbit-design-method`):
+> 2026-11-23 (§7): two blockers and seven should-fix, ADOPTED where they apply a recorded rule; four questions back to him (§7.2)** — ✅ **ANSWERED 2026-11-23: *"I agree with your recommendations. Capture, proceed"*** (§7.3): the RULES DECIDED;
+> the checks being built (§9). The four-part method (`orbit-design-method`):
 > the rules (§1 – §3), the obstacles and fallbacks (§4), a systematic design from patent-free prior art (§5), an audit (§7) — before any check.
 > **OWNS** · what a part's FACE PROXY (`UFM_`) and its COLLISION PIECES (`UCX_`) must be, for ANY shape — so that a generator (the Blender build
 > scripts, an automated workflow) delivers them right and a check proves it.
@@ -172,7 +173,7 @@ meshes not bound by it — ⏳ to confirm):
 Its claims checked before use: the flush tolerance (`MAP_COPLANAR_M` 0.5 mm, `face_map.ts:32`), *"the 7 mm goes"* (`ORBIT_SURFACE.md` §3.3, decided
 2026-11-16 with Q6), B6's 30° (`SCENE_WORKFLOW.md` §4) — all three as it says.
 
-### 7.1 Adopted — each a recorded rule's consequence (the rules above read with these amendments)
+### 7.1 Adopted — each a recorded rule's consequence (the rules above read with these amendments and §7.3's answers)
 
 | # | the finding | the amendment |
 |---|---|---|
@@ -198,6 +199,23 @@ Its claims checked before use: the flush tolerance (`MAP_COPLANAR_M` 0.5 mm, `fa
   route"*; over-capping a V-notch or the gap between two lobes costs nothing (P2 still dives where the piece fits) — ⭐ proposed; or **(b)** only the
   undercuts (a straight bore, a pocket, a slot followed by the proxy: their walls become faces).
 * **Q4 — the collision pieces' count**: none fixed (as the faces'), a concave wall a ring by the angle rule, the cost measured per scene (C2)?
+
+### 7.3 ✅ His answers (2026-11-23: *"I agree with your recommendations. Capture, proceed"*) — THE RULES AS DECIDED
+
+* **Q1 — w = 10 mm**, a constant of its own (SIMPLICITY — not the retired *"too narrow to stand on"*): every proxy face the gizmo TRAVELS at least
+  10 mm across (its inscribed width); a RISER — a narrow face joining two faces between which it is a step — is an S26 depth event, reported,
+  not a travelled face; a thin feature's faces under w: its prism a 4-gon at least, flagged.
+* **Q2 — every cylinder a HEXAGON, a face up** (60° steps), whatever its radius: no face within 15° of 45° of elevation, none near the 30° threshold;
+  its sagitta (13 % of the radius) recorded, exempt from R2 / R6 — the depth P2's. A doubly curved surface: planar regions whose normals stay within
+  20° (θ, merged), neighbours at least 30° apart (B6).
+* **Q3 — (a) CAPPED**: every cavity DEEPER than its mouth is wide, and every UNDERCUT (no straight direction through its mouth sees it — mould
+  visibility; B4's sweep with a ρ-ball): a flush CAP (§7.1 row 4), the depth below it P2's; a borderline ratio flagged amber for the author.
+* **Q4 — no fixed count of collision pieces**: a concave wall a ring of convex pieces by the angle rule (a bore's wall six slabs, as its hexagon);
+  the cost measured per scene (C2).
+
+**The constants** (`units.ts`, one home, mm of the model): ρ 3.5 (`PROXY_PROBE_MM`); w 10 (`PROXY_FACE_MIN_MM`); the flush fidelity of a planar
+face 0.25 (`PROXY_FLUSH_MM`, half `MAP_COPLANAR_M`); τ 1.5 for a curve's facets — the hexagon's sagitta recorded beside it; τc 1.5; the cylinder's
+step 60° and B6's 30° apart, read where they live.
 
 ## 8. His decisions (2026-11-23)
 
