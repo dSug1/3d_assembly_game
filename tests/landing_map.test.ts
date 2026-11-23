@@ -361,6 +361,17 @@ describe("⭐⭐ §5.3 — the specification's missing shapes, each against the 
   });
   it("C38 — a DOME on the top (r 60): every slanted facet of a doubly curved shape", () => expect(againstBrute([...base(), dome(60, 30, -20)], TOP_F, -140, 140, -140, 140).places).toBeGreaterThan(1000));
   it("C22 — a long THIN BAR (400 × 8 × 20) on the top, narrower than either piece", () => expect(againstBrute([...base(), bx("bar", -200, 200, 240, 260, -4, 4)], TOP_F, -220, 220, -60, 60).places).toBeGreaterThan(1000));
+  it("C16 — a FAN: a pyramid's four faces meeting at its APEX (base 120, apex 60 up, off centre)", () => {
+    expect(againstBrute([...base(), hullPart("pyr", [[-60, 240, -60], [60, 240, -60], [60, 240, 60], [-60, 240, 60], [20, 300, -10]])], TOP_F, -120, 120, -120, 120).places).toBeGreaterThan(1000);
+  });
+  it("C20 — the FLOOR beyond the block's edge: a thin slab under everything, read past the block's side — the floor where the piece clears the block", () => {
+    const r = againstBrute([bx("floor", -480, 480, -10, 0, -480, 480), ...base()], TOP_F, 160, 340, -60, 60);
+    expect(r.nothing).toBe(0);
+  });
+  it("a NARROWING profile: a V trench in the top (two wedge prisms, 80 wide at its mouth, 60 deep) — the piece held up by its walls where it is wider", () => {
+    const wedge = (id: string, sx: number) => hullPart(id, [[sx * 240, 180, -240], [sx * 240, 240, -240], [sx * 40, 240, -240], [0, 180, -240], [sx * 240, 180, 240], [sx * 240, 240, 240], [sx * 40, 240, 240], [0, 180, 240]]);
+    expect(againstBrute([bx("under", -240, 240, 0, 180, -240, 240), wedge("vL", -1), wedge("vR", 1)], TOP_F, -120, 120, -60, 60).places).toBe(992); // 31 × 16 samples, two pieces
+  });
   it("⭐ an OBLIQUE facet (its normal 30° off the vertical, toward +z) over the cylinder and a pin — a frame neither the top nor the front", () => {
     const c = Math.cos(R6(30)), sn = Math.sin(R6(30));
     const f = { n: [0, c, sn] as [number, number, number], t: [1, 0, 0] as [number, number, number], b: [0, -sn, c] as [number, number, number] };

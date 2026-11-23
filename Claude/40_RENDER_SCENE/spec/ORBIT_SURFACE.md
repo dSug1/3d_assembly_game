@@ -669,8 +669,9 @@ A + dy or a plunge. "⏳ open" = no principle answers it yet.
   ROUND HOLE through the top and a round BLIND hole (C19: 24 convex wedges), a 12-sided CYLINDER lying (C15; from the top and the front), a DOME (C38),
   a long THIN BAR (C22), an OBLIQUE facet (30° off the vertical). The mutant M7 (the edge-against-edge facets left out) now turns 2 red (the dome
   with the slanted ridge). ⚠ The brute force's convention bound (its footprint shrunk 1e-4 mm) is now derived per shape and includes a CORNER's
-  diagonal (√2): the dome's band (slope 5.03) read 7.1e-4 mm — exactly 5.03 × √2 × 1e-4. Still to add: `void_sim`'s families, fans and apexes
-  (C16), the floor (C20), a narrowing profile, the frames across a tilt or a zone switch (S19 (ii)), the relocation at a seat (C46), F17's bump.
+  diagonal (√2): the dome's band (slope 5.03) read 7.1e-4 mm — exactly 5.03 × √2 × 1e-4. ⭐ Then a FAN at an apex (C16: a pyramid), the FLOOR
+  past the block's edge (C20) and a NARROWING profile (a V trench of two wedges). Still to add: `void_sim`'s families, the frames across a tilt or a
+  zone switch (S19 (ii)), the relocation at a seat (C46), F17's bump — the orbit's and the game's, not the map's alone.
 * **Per shape, for two pieces** (41 × 45 and 80 × 80 mm): L2's landing depth against a brute-force drop of the piece's `UCX_` (the second
   implementation that falsifies the first); the L5 gizmo on a 1 mm sweep — no jump outside a named event; the same after the shape is moved
   and turned; the same for every order of placing its parts; the same classes in every frame (S19 (ii)).
