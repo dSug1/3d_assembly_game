@@ -18,7 +18,7 @@
  * code unit), ties to the smaller id — the input's order never reaches the result. Engine-free (`tests/boundary.test.ts`).
  */
 import { convexHull3 } from "./hull3";
-import { LANDING_STEP_MM } from "./units";
+import { LANDING_STEP_MM, SURFACE_STEP_MIN_MM } from "./units";
 import { cross, dot, qRotate, type Quat, type Vec3 } from "./vec";
 
 /** ⭐ The grid's step, millimetres (`ORBIT_SURFACE.md` §5.1) — ⭐ (2026-11-22, S2) its one home is `src/core/units.ts` (`ORBIT_SURFACE_BUILD.md` §6), re-exported. */
@@ -417,6 +417,26 @@ export function readoutAt(prep: PreparedLanding, place: Vec3, today: Vec3): Read
   const k = l.depth - dot(d, f.n);
   const level = dot([today[0] - o[0], today[1] - o[1], today[2] - o[2]], f.n);
   return { kind: "land", level: l.depth, delta: l.depth - level, part: l.part, point: [place[0] + f.n[0] * k, place[1] + f.n[1] * k, place[2] + f.n[2] * k] };
+}
+
+/**
+ * ⭐⭐ (2026-11-23, S3 — `ORBIT_SURFACE_MOUTH_HOLD.md` §4 H2) THE HELD PIECE'S REACH toward a facet of normal `n`: where its reference point stands above
+ * a plane it rests on along `n` — the max over its points (relative to the reference, `heldPiece`) of −p·n (metres). On its resting face 0; on a side,
+ * as held, half the piece (his word of 2026-11-23, *"Keep as held"*).
+ */
+export function heldReach(held: readonly (readonly Vec3[])[], n: Vec3): number {
+  let r = -Infinity;
+  for (const piece of held) for (const p of piece) r = Math.max(r, -dot(p, n));
+  return r;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-23, S3 — `ORBIT_SURFACE_MOUTH_HOLD.md` §4 H2, his Q4 (a)) A VOID OPEN FOR THE HELD PIECE at a mouth: P2 reads NOTHING (the piece passes right
+ * through), or lands deeper than the piece resting on the facet's plane — today's point at a mouth IS the plane's (the bridge), so resting there is
+ * Δ = `reach` (`heldReach`) — by at least Q6's step (`SURFACE_STEP_MIN_MM`). Otherwise the piece rests on the rims: the void is CLOSED for it.
+ */
+export function voidOpenFor(r: Readout, reach: number): boolean {
+  return r.kind === "nothing" || r.delta < reach - SURFACE_STEP_MIN_MM / 1000;
 }
 
 /** ⭐ (S2, §4) what the readout's cache is keyed by: the face map's identity and its frame, the placed set's key, the held piece's id and orientation. */

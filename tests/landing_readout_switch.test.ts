@@ -1,6 +1,6 @@
 /**
  * ⭐⭐⭐ V4 — THE READOUT'S SWITCH, `landingReadout` (package S2, `ORBIT_SURFACE_READOUT.md` §5, §7): 0 / 1 only, 1 by default (his word *"proceed"*); READ
- * (`config_debt.test.ts`); in GIZMO & SECTIONS (`menu_layout.test.ts` pins the tree and the count, 136); ⛔ at 0 the module returns BEFORE ANY COMPUTATION —
+ * (`config_debt.test.ts`); in GIZMO & SECTIONS (`menu_layout.test.ts` pins the tree and the count, 136 then — 137 with S3's `mouthHoldDomain`); ⛔ at 0 the module returns BEFORE ANY COMPUTATION —
  * proved on a state that throws at any read but `cfg`; the hook ONCE a frame, for the frame's own gizmo only; and ⛔ NOTHING READS ITS RESULT back.
  * RED on its mutant first (the switch read after the state is made: the guarded state's read throws) — the design document §13.
  */
@@ -56,7 +56,8 @@ describe("⭐⭐⭐ V4 — the switch `landingReadout`", () => {
     expect(at).toBeGreaterThan(sub);
     expect(m.lastIndexOf("title:", at)).toBe(sub);
     const r = code("render/landing_readout.ts");
-    expect(r).toContain("export function landingReadoutFrame(st: SceneState, raw: GizmoRead | null, drawn: GizmoRead | null, src: ReadoutSource): void { if (st.cfg.landingReadout !== 1) return;");
+    // ⭐ (2026-11-23, S3 — `ORBIT_SURFACE_MOUTH_HOLD.md` §5) …or the mouth's hold asks (`forHold`, `mouth_hold_domain.test.ts` V2)
+    expect(r).toContain("export function landingReadoutFrame(st: SceneState, raw: GizmoRead | null, drawn: GizmoRead | null, src: ReadoutSource, forHold = false): void { if (st.cfg.landingReadout !== 1 && !forHold) return;");
     expect(r).toContain("export function landingMarkerFrame(st: SceneState): void { if (st.cfg.landingReadout !== 1) {");
     expect(r).toContain('export function landingLine(st: SceneState): string { if (st.cfg.landingReadout !== 1) return "";');
   });
@@ -65,7 +66,7 @@ describe("⭐⭐⭐ V4 — the switch `landingReadout`", () => {
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("export function mapGizmo(st: SceneState, yaw: number, pitch: number): MapGizmo | null { return gizmoOf(st, yaw, pitch, rawGizmo(st, yaw, pitch)); }");
     expect(a).toContain("const mr0 = rawGizmo(st, mq.yaw, mq.pitch); const m0g = gizmoOf(st, mq.yaw, mq.pitch, mr0);");
-    expect(a).toMatch(/const m0g = gizmoOf\(st, mq\.yaw, mq\.pitch, mr0\);( \/\/[^\n]*)? landingReadoutFrame\(st, mr0, m0g, READOUT_SOURCE\); if \(m0g !== null\) \{/);
+    expect(a).toMatch(/const m0g = gizmoOf\(st, mq\.yaw, mq\.pitch, mr0\);( \/\/[^\n]*)? landingReadoutFrame\(st, mr0, m0g, READOUT_SOURCE, st\.cfg\.mouthHoldDomain === 2 && m0g !== null && m0g\.mouth !== undefined\); if \(m0g !== null\) \{/);
     // ⛔ exactly one call in the product (not in the sections' samples, the edge blend's, the solver's queries)
     const calls = srcFiles().reduce((n, f) => n + (strip(readFileSync(f, "utf8")).match(/\blandingReadoutFrame\(/g) ?? []).length, 0);
     expect(calls).toBe(2); // its definition and its one call

@@ -2,7 +2,9 @@
  * ⭐⭐⭐ (2026-11-22, package S2 — `ORBIT_SURFACE_READOUT.md`) **THE READOUT, WIRED** — the landing map's P2 (*the gizmo's depth is where the held piece,
  * moved along the face's normal, first touches the placed parts*) computed once a frame at the gizmo's place and SHOWN beside today's depth: a second
  * ring (white: land, magenta: nothing to land on) and the HUD's `landing` line with its own cost. ⛔ It DRIVES NOTHING: no module of the frame reads
- * `st.landing` (the gizmo, the piece, the calm and the camera are `3b7a479`'s at `landingReadout` 1 as at 0). The rules are `core/landing_map.ts`'s
+ * `st.landing` (the gizmo, the piece, the calm and the camera are `3b7a479`'s at `landingReadout` 1 as at 0) — ⭐⭐ (2026-11-23, S3 —
+ * `ORBIT_SURFACE_MOUTH_HOLD.md` §5) but ONE reader by name: the mouth's hold's domain (`mouthP2`, H2), which asks the evaluation at a mouth (`forHold`)
+ * even at `landingReadout` 0 — the display (the ring, the line) stays the readout's switch's alone. The rules are `core/landing_map.ts`'s
  * (`prepareLanding`, `readoutAt`, `readoutKey`, `landingAxes`, `heldPiece`); here only the state, the call, the ring and the line.
  *
  * ⭐ THE CACHE: one preparation per facet and normal, under one key (`readoutKey` — the face map's identity and frame, the placed set's key, the held
@@ -15,7 +17,7 @@ import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import type { LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
-import { heldPiece, landingAxes, prepareLanding, readoutAt, readoutKey, type PreparedLanding, type Readout, type Turn } from "../core/landing_map";
+import { heldPiece, heldReach, landingAxes, prepareLanding, readoutAt, readoutKey, voidOpenFor, type PreparedLanding, type Readout, type Turn } from "../core/landing_map";
 import { worldPlacementOf } from "../core/object_model";
 import type { Vec3 } from "../core/vec";
 import { trackingMetresPerPx } from "../input";
@@ -57,8 +59,9 @@ export interface LandingReadoutState {
   /** the cache's key (`readoutKey`) — and its preparations, one per facet and normal (`facetEntry`: the map's facet index, the exact normal) */
   key: string;
   readonly prepared: Map<string, PreparedLanding>;
-  /** the frame's readout (in the world): the frame it was read in, P2's answer, whether the drawn gizmo is the edge blend, the pieces refused */
-  shown: { readonly frame: number; readonly readout: Readout; readonly band: boolean; readonly refused: readonly string[] } | null;
+  /** the frame's readout (in the world): the frame it was read in, P2's answer, whether the drawn gizmo is the edge blend, the pieces refused; ⭐ (S3) the
+   *  held piece's reach toward the facet (`heldReach`: Δ when it rests on the facet's plane) */
+  shown: { readonly frame: number; readonly readout: Readout; readonly band: boolean; readonly refused: readonly string[]; readonly reach: number } | null;
   /** the last preparation (ms), the worst over 2 s and when it was set, the query (µs, a mean over ~30 frames) */
   prepLastMs: number;
   prepWorstMs: number;
@@ -79,12 +82,12 @@ const facetEntry = (stack: number, n: Vec3): string => `${stack}:${n[0]},${n[1]}
 
 /**
  * ⭐⭐⭐ THE READOUT, ONCE A FRAME — called by `assemblyFrame` right after the frame's own gizmo (`raw`: `rawGizmo`'s result, `drawn`: `mapGizmo`'s), never
- * elsewhere. ⛔ At `landingReadout` 0 it returns BEFORE ANY COMPUTATION (nothing read, prepared or allocated). At 1: the cache's key, the frame's facet
- * prepared if it is not yet (at most one preparation a frame, timed), the readout at the facet's place (timed) — into `st.landing`, read by nothing but
- * its ring and the HUD.
+ * elsewhere. ⛔ At `landingReadout` 0 — unless the mouth's hold asks (`forHold`: `mouthHoldDomain` 2 at a mouth, S3) — it returns BEFORE ANY COMPUTATION
+ * (nothing read, prepared or allocated). Else: the cache's key, the frame's facet prepared if it is not yet (at most one preparation a frame, timed), the
+ * readout at the facet's place (timed) — into `st.landing`, read by nothing but its ring, the HUD and the hold's domain (`mouthP2`).
  */
-export function landingReadoutFrame(st: SceneState, raw: GizmoRead | null, drawn: GizmoRead | null, src: ReadoutSource): void {
-  if (st.cfg.landingReadout !== 1) return;
+export function landingReadoutFrame(st: SceneState, raw: GizmoRead | null, drawn: GizmoRead | null, src: ReadoutSource, forHold = false): void {
+  if (st.cfg.landingReadout !== 1 && !forHold) return;
   const s = st.landing ?? (st.landing = { key: "", prepared: new Map(), shown: null, prepLastMs: 0, prepWorstMs: 0, prepWorstAt: 0, queryUs: 0 });
   s.shown = null;
   const prepMs = readFrame(st, s, raw, drawn, src);
@@ -116,12 +119,13 @@ function readFrame(st: SceneState, s: LandingReadoutState, raw: GizmoRead | null
     s.prepared.clear();
   }
   let prepMs = 0;
+  const held = [heldPiece(local, place.orientation, rc)];
   const entry = facetEntry(raw.t.stack, raw.t.normal);
   let prep = s.prepared.get(entry);
   if (prep === undefined) {
     const t0 = performance.now();
     const placed = parts.parts.map((points, k) => ({ id: parts.ids[k]!, points }));
-    prep = prepareLanding(placed, [heldPiece(local, place.orientation, rc)], landingAxes(raw.t.normal, f.t, f.b, R));
+    prep = prepareLanding(placed, held, landingAxes(raw.t.normal, f.t, f.b, R));
     prepMs = performance.now() - t0;
     s.prepLastMs = prepMs;
     s.prepared.set(entry, prep);
@@ -134,8 +138,19 @@ function readFrame(st: SceneState, s: LandingReadoutState, raw: GizmoRead | null
   s.queryUs += ((performance.now() - t1) * 1000 - s.queryUs) / QUERY_MEAN_FRAMES;
   // ⭐ (§10 choice 3) in an edge band the drawn gizmo is the blend (`gizmoOf`): not today's point — the readout keeps the facet's place and says `band`
   const d = drawn.hit.point;
-  s.shown = { frame: st.frames, readout, band: d[0] !== today[0] || d[1] !== today[1] || d[2] !== today[2], refused: prep.refused };
+  s.shown = { frame: st.frames, readout, band: d[0] !== today[0] || d[1] !== today[1] || d[2] !== today[2], refused: prep.refused, reach: heldReach(held, prep.frame.n) };
   return prepMs;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-23, S3 — `ORBIT_SURFACE_MOUTH_HOLD.md` §4 H2) P2'S ANSWER AT A MOUTH, for the hold's domain (`mouthHoldDomain`): THIS frame's readout only —
+ * "open" (`voidOpenFor`: nothing to land on, or the piece entering deeper than it rests on the plane), "closed" (it rests on the rims), "unread" (no
+ * readout this frame: another scene than the readout's, no piece, placed, no map — D2).
+ */
+export function mouthP2(st: SceneState): "open" | "closed" | "unread" {
+  const sh = st.landing?.shown ?? null;
+  if (sh === null || sh.frame !== st.frames) return "unread";
+  return voidOpenFor(sh.readout, sh.reach) ? "open" : "closed";
 }
 
 /**

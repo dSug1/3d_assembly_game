@@ -335,6 +335,20 @@ export function mouthHold(wasHeld: boolean, mouth: { readonly lo: boolean; reado
 }
 
 /**
+ * ⭐⭐⭐ (2026-11-23, package S3 — `ORBIT_SURFACE_MOUTH_HOLD.md` §4, his Q4 (a) of 2026-11-16: *"never on a cap — now; over a void P2 leaves open for the
+ * held piece — once the landing map exists"*) THE MOUTH'S HOLD, ITS DOMAIN — whether a void's mouth at the frame's place may hold the gizmo (`mouthHold`):
+ * **H1** never on a cap (`band` TOP / BOTTOM of the map's own frame); **H2** only over a void P2 leaves open for the held piece (`p2` "closed": the
+ * piece rests on the rims — no mouth; "unread": no P2 at the place — not restricted, D2: his S10 where P2 cannot judge). `level` the switch
+ * `mouthHoldDomain`: 0 the hold as built (every mouth kept: `3b7a479`), 1 H1 alone, 2 H1 + H2. ⛔ Outside the domain the caller passes no mouth — the
+ * hold's own rule then lets go (*"no mouth, no hold"*): nothing after it undoes a hold.
+ */
+export function mouthHoldDomain(level: number, band: "SIDE" | "TOP" | "BOTTOM", p2: "open" | "closed" | "unread"): boolean {
+  if (level === 0) return true;
+  if (band !== "SIDE") return false;
+  return level === 1 || p2 !== "closed";
+}
+
+/**
  * ⭐⭐⭐ (2026-11-10, branch `1.0.120b-`, the owner: *"do we need a calm when the automatic tilt is toggled on? … on orthogonal red-green sections, we already
  * have a mechanism to cross the edges"* → *"build the square camera close in"*) THE SQUARE CAMERA'S TURN, one frame: the camera's direction `n` turned
  * toward the gizmo's face's normal `target` at ONE SPEED (`degS`, the tilts' — 90° in 0.25 s at 360°/s), about their common perpendicular (`fallback`

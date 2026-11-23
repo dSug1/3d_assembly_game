@@ -343,6 +343,8 @@ export function installTuningMenu(st: SceneState): void {
         tunable(st, "resting-face quads: growth steepness (log curve) with the gizmo's distance", "quadGrowthLogK", 0, 50, 0.5),
         // ⭐⭐⭐ (2026-11-22, `ORBIT_SURFACE_READOUT.md` §5 — S2) the landing map's P2 beside today's depth: the second ring and the HUD's `landing` line
         tunable(st, "landing readout: P2 beside today's depth, ring + HUD line (1; 0 = 3b7a479)", "landingReadout", 0, 1, 1),
+        // ⭐⭐⭐ (2026-11-23, `ORBIT_SURFACE_MOUTH_HOLD.md` §6 — S3, his Q4 (a)) where the mouth's hold acts
+        tunable(st, "mouth's hold: where (0 = as built, 3b7a479; 1 = never on a cap; 2 = + only over a void the piece enters)", "mouthHoldDomain", 0, 2, 1),
       ],
     },
     {

@@ -46,9 +46,9 @@ import { gapStep, restShare } from "../input/roll_follow";
 import { carriedHold, lawHalfTurn } from "../input/upright";
 import { dirGap, easedDir, easeRest, poleYawKept, seamOutPaced, seamOutShare, seamOutStep, seamOutTarget, seamTurnPace, seamTurnStep, seamWholeRad, tiltLeavesNow, turnHoldsGizmo } from "../input/seam_turn";
 import { bandedFacet } from "../input/face_band";
-import { landingReadoutFrame, type ReadoutSource } from "./landing_readout";
+import { landingReadoutFrame, type ReadoutSource, mouthP2 } from "./landing_readout";
 import { contourFaceAt, crossingEvent, entryBlendHeading, entryDepth, entryEdgeOf, exitHoldSign, headingStep, pictureOffset, transportUp, viewLevelTurned, exitTurnRad, faceOwnUp, freeEdges, freeEntryHeading, freeHeadingAngle, isFreeFace } from "../input/free_face";
-import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, capTilt, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, swingEase, tiltAutoLatch, frameBox, tiltDir, tiltFaces, onTiltedFacet, type Mat3 } from "../input/orbit_tilt";
+import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, capTilt, gizmoGlide, mouthHold, mouthHoldDomain, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, swingEase, tiltAutoLatch, frameBox, tiltDir, tiltFaces, onTiltedFacet, type Mat3 } from "../input/orbit_tilt";
 
 /** ⭐ The look point's ease (ms). */
 const LOOK_TAU_MS = 120;
@@ -1396,8 +1396,8 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     const m0g = gizmoOf(st, mq.yaw, mq.pitch, mr0);
     // ⭐⭐⭐ (2026-11-22, `ORBIT_SURFACE_READOUT.md` §4 — S2) THE READOUT, ONCE A FRAME, for the frame's own gizmo only (⛔ never in the sections' samples, the
     // edge blend's or the solver's queries): P2 beside today's depth — ⛔ NOTHING READS IT BACK (the gizmo, the piece, the calm, the camera untouched);
-    // at `landingReadout` 0 it returns before any computation
-    landingReadoutFrame(st, mr0, m0g, READOUT_SOURCE);
+    // at `landingReadout` 0 it returns before any computation — ⭐⭐ (2026-11-23, S3) unless the mouth's hold asks P2 at a mouth (`mouthHoldDomain` 2)
+    landingReadoutFrame(st, mr0, m0g, READOUT_SOURCE, st.cfg.mouthHoldDomain === 2 && m0g !== null && m0g.mouth !== undefined);
     if (m0g !== null) {
       // ⭐⭐⭐ (2026-11-10, the owner: *"the tilt shall happen when the red section reaches the edge at the bottom of the mouth"* → *"build b"*) A VOID'S MOUTH:
       // a dy toward its open end HOLDS the gizmo where it last was — the void's floor edge, the red's end there (`mouthHold`) — and hands over: the automatic
@@ -1408,7 +1408,10 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
       const dP = sh0 === null ? 0 : mq.pitch - sh0.pitch;
       const dY = sh0 === null ? 0 : Math.atan2(Math.sin(mq.yaw - sh0.yaw), Math.cos(mq.yaw - sh0.yaw));
       const wasHeld = st.asmMouth !== null;
-      const holdNow = mouthHold(wasHeld, m0g.mouth, dP, dY);
+      // ⭐⭐⭐ (2026-11-23, S3 — `ORBIT_SURFACE_MOUTH_HOLD.md` §4, his Q4 (a)) THE HOLD'S DOMAIN: never on a cap (H1), only over a void P2 leaves open for
+      // the held piece (H2) — outside it no mouth is passed, and the hold lets go; at `mouthHoldDomain` 0 the mouth as built
+      const mouthIn = m0g.mouth !== undefined && mouthHoldDomain(st.cfg.mouthHoldDomain, m0g.t.band, mouthP2(st)) ? m0g.mouth : null;
+      const holdNow = mouthHold(wasHeld, mouthIn, dP, dY);
       if (holdNow && st.asmMouth === null && st.asmRawPrev !== null) st.asmMouth = { point: st.asmRawPrev, hi: dP > 0 };
       if (!holdNow) st.asmMouth = null;
       const m = st.asmMouth === null ? m0g : { ...m0g, hit: { ...m0g.hit, point: st.asmMouth.point } };
