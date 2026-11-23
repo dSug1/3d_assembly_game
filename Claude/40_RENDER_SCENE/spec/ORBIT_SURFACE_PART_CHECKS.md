@@ -165,6 +165,10 @@ filled. **G0**: 193 files / 2399 tests.
    found only by B1i, after he named it again (*"not a closed mesh but a quad"*). The narrowing hid it, and the claim was not verified against what
    he meant. **Corrected** here, in §8, the ledger's row 15, D6 and `SCENE_WORKFLOW.md` §9.1 (whose lesson said the narrowing was right).
 
+3. **His own rule was not read first.** `PART_AUTHORING.md` §3 item 3 already held his principle of 2026-11-13 — *"a face proxy is the part's
+   REAL OUTER SURFACE, SIMPLIFIED … covering every real face the gizmo may run on"* — and its sanity check ② COVERAGE: B1 was designed from §6's
+   table row alone. (② itself defines "outer" as near the convex hull — wrong for a bent or hollow part: `PROXY_AND_COLLISION_RULES.md` §2.)
+
 **What changes** (his word: no rebuild of `Scene_2` in this worktree; the lessons captured, the PROPER checks built, so the future automated
 workflows deliver proper parts and proxies; *"the proxies shall be simplified otherwise the gizmo movements will be very complex: we will need to
 define proper rules for the proxies (and maybe also for the collision surfaces)"*): the proxy's and the collision pieces' RULES are written FIRST

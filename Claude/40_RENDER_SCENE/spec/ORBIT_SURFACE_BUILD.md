@@ -92,7 +92,9 @@ never on a cap (H1), only over a void P2 leaves open for the held piece (H2); be
 
 **S5 — THE PARTS' CHECKS, THE GAME'S SIDE** (the build list's item 3; his *"Game side first"*, 2026-11-23) → [ORBIT_SURFACE_PART_CHECKS.md](ORBIT_SURFACE_PART_CHECKS.md):
 B1 the solids (convex, closed, volume, budget; the proxy on its solids, outward, ⭐ COMPLETE — the plinth, his word) and B2 exposed per stage, pure
-functions in `src/core`, vectors on `Scene_2`'s `.glb`; the Blender side waits for the build scripts.
+functions in `src/core`, vectors on `Scene_2`'s `.glb`; the Blender side waits for the build scripts. ⭐ Next, on his word (2026-11-23): the
+UNIVERSAL proxy and collision rules first — [`PROXY_AND_COLLISION_RULES.md`](../../30_OBJECTS_3D/spec/PROXY_AND_COLLISION_RULES.md) (a study) —
+then the checks built both ways; `Scene_2` not rebuilt in this worktree.
 
 **S4 — P2 DRIVES THE GIZMO** (the build list's item 4; designed 2026-11-23 on his *"Do as per your recommendation"*) → [ORBIT_SURFACE_DRIVE.md](ORBIT_SURFACE_DRIVE.md):
 the gizmo's depth P2's, read from where the piece is (⑤: far = from outside, close in a proud part a wall), at its level LESS the piece's reach (the

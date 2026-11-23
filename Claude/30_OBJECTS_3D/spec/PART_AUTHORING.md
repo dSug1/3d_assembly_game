@@ -387,6 +387,10 @@ placed parts' and the part's face normals (a tight slot's single direction is mi
 
 ### 6.4 ⛔ The drawing rules the orbit's surface work teaches — the register (the owner, 2026-11-22)
 
+⭐ (2026-11-23) **The UNIVERSAL rules for a part's proxy and collision pieces** — any shape (a bent camshaft, a hollow case), simplified for the
+gizmo, from patent-free methods (an alpha-wrap, a planar partition, an axis sweep): [`PROXY_AND_COLLISION_RULES.md`](PROXY_AND_COLLISION_RULES.md)
+— a study PROPOSED, his decisions owed; D4 – D7 below are its first cases.
+
 ⭐ His words and the rule: `../../20_GAME_RULES/spec/SCENE_WORKFLOW.md` §10 — every lesson of the surface work becomes a rule of construction
 (there, §10.3) or of DRAWING (here), in the form of its §10.2 so that a Blender script can apply it; its check by its §9; its row in
 `../../40_RENDER_SCENE/spec/ORBIT_SURFACE_BUILD.md` §8. ⭐ §6.3's ten lines are the first drawing rules (2026-11-16): each is put into this form
