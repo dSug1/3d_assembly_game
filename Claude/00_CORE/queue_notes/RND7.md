@@ -114,3 +114,6 @@
 * **2026-11-24** — his word *"do 1, 2 and 3 and 5 as you recommend. Scene 2 need a separate work in a separate worktree. Then finish the orbit's
   surface work"*: B3 / B5's three questions, the one command and the resting share ¼ DECIDED (`bd5e69b4`); `Scene_2`'s findings → `GM13` (its own
   worktree); S4b DEPLOYED (LIVE main `6a2da88` = `bd5e69b4`; his phone look owed: the alignment tap); the rest of the surface work planned → `ORBIT_SURFACE_BUILD.md` §10.
+* **2026-11-24** — S7 BUILT: B3 + B5 (`src/core/landing_per_stage.ts`, `src/input/face_map_membership.ts`; the check
+  `check_where_each_part_lands.ts`, the third in the one command, information); 10 vectors, 11 mutants red; `Scene_2` 77 s: four parts NO
+  ORIENTATION, the plinth's top NO PLACE in the game (the face map skips a frozen part — ledger row 21, his word with GM13). Local.

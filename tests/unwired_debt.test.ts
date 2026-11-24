@@ -124,7 +124,8 @@ const PENDING: Record<string, string> = {
   // the plinth's incomplete proxy); at load its cheap subset is owed (D1: printed, never refused — 5 s in full on this PC, B1h the heavy part)
   checkSolids: "S5 (`ORBIT_SURFACE_PART_CHECKS.md` §4, D1) — B1 run as vectors on each scene's .glb; its cheap subset at load owed (RND7)",
   readPartSolids: "S5 (`ORBIT_SURFACE_PART_CHECKS.md` §4, D1) — B1's reader of a scene's .glb, with `checkSolids`; at load owed (RND7)",
-  exposedPerStage: "S5 (`ORBIT_SURFACE_PART_CHECKS.md` §3) — B2, the map per stage (and B1i, D7 proposed): a vector and the check script, never at load (the spec)",
+  landingPerStage: "S7 (`ORBIT_SURFACE_PART_CHECKS.md` §14 – §16) — B3 + B5, the landing per stage and the faces no place (it calls B2's `exposedPerStage`): its vectors and its check at the export gate (`check_where_each_part_lands.ts`), information; never the game's",
+  inGameFaceMap: "S7 (`ORBIT_SURFACE_PART_CHECKS.md` §15 item 7) — B5's share read with the game's own face map, offline: its vectors and the landing check; never the game's",
   // ⭐ (2026-11-23, S6 — `30_OBJECTS_3D/spec/PROXY_AND_COLLISION_RULES.md`, DECIDED) the proxy rules' checks run as vectors and by the check script; two of
   // their scales wait for packet 2 (ρ: the closing, the caps) and packet 3 (τc: the collision pieces against the real shape)
   checkProxyFaces: "S6 packet 1 (`PROXY_AND_COLLISION_RULES.md` §9) — R7, R3, R4, R2 on each proxy face: vectors and `check_part_solids.ts`, at the export gate",

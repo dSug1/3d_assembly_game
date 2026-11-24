@@ -227,3 +227,53 @@ candidate? (Q2) "landable" within the fit, 0.5 mm (recommended), or the flush, 0
 
 **✅ His answers (2026-11-24, *"do 1, 2 and 3 and 5 as you recommend"*):** Q1 the resting face against the face, both turns; Q2 landable within the fit (0.5 mm);
 Q3 information until the playability brief exists. The definitions above are DECIDED as written → the build: §15.
+
+## 15. ⭐ S7 — B3 AND B5 AS DESIGNED (2026-11-24, before the build; §14's definitions decided)
+
+The choices §14 leaves to the build, written before the code (reversible on his look):
+1. **The stage** — B2's own walk (`exposedPerStage`, its states read by a visitor — one voxel walk, never a second one): at the stage whose placed set
+   is the plan's first *s* parts, the held piece is part *s* + 1; the last stage holds none.
+2. **The faces** — each placed part's REAL proxy triangles EXPOSED at the stage (B2's state), grouped per node by plane (normals within
+   `R7_PLANAR_DEG`, levels within the flush): one face each.
+3. **The held orientation** — its resting proxy (`…_rest`, the largest) or, without one, its largest resting candidate (packet 3); none: *no
+   orientation*, reported, its stage not read. The least turn taking the resting face's normal onto −*n*, then 0° and 90° about *n*.
+4. **The reference** — the resting face's centre over each sample; the piece's CONTACT level = P2's depth less its reach along −*n* (`heldReach`), so a
+   resting proxy off its pieces (`Scene_2`'s, 16 – 37 mm, ledger row 14) cannot hide a landing: the piece's own lowest point is read.
+5. **The samples** — every `LANDING_STEP_MM` (4 mm) on the face's exposed triangles in its plane, and each triangle's centre.
+6. **Landable** — at some sample, for either turn, P2 lands and the contact lies within `B1_FIT_MM` (0.5 mm) of the face's plane. Below the plane
+   by more (nothing under the proxy — B1e's) is counted apart, as information.
+7. **B5's reasons, in this order** (the first that holds): *capped* (every sample's line along *n* meets a placed part's cap); *frozen* (⚠ the game's
+   face map skips a FROZEN part's faces today — `placedFaces`; §8 row 6, C3 — `Scene_2`'s plinth); *below the share* (no facet of the face map — the
+   game's `buildFaceMap` on the stage's exposed faces of the parts it reads, its merge and share — within the merge angle of the face's normal; the
+   face map lives in `src/input`, so the caller passes it in: `src/core` imports none); *under an overhang* (not landable, and at every sample the
+   first contact is ANOTHER part's, above the face); *closed for the piece* (not landable otherwise). A face landable and none of the first three is a
+   PLACE.
+8. **The pass rule** — information (his Q3): its own check in the one command, `scripts/surface/check_where_each_part_lands.ts` (exit 0 read, 2 not
+   read), never a failure until the playability brief exists.
+9. **The cost** — one `preparePlaced` a stage, one `heldSumsOn` per (normal, turn); measured on `Scene_2` before it joins the gate (S10's figure).
+
+## 16. ⭐ S7 — AS BUILT (2026-11-24): B3 and B5
+
+**The code.** `src/core/landing_per_stage.ts` — `landingPerStage` (the stages from B2's walk: `exposedPerStage` now takes a visitor, its counts
+unchanged — its vectors V3 / V4 pass), `stageFaces`, `faceSamples`, `restingFaceOf`; `src/input/face_map_membership.ts` — `inGameFaceMap` (B5's share
+with the game's own `buildFaceMap`, its defaults and the charts' layout: `CHART_MAP_OPTS` moved to `input/face_map.ts`, its one home — the game's two
+calls import it, the same value). The check: `scripts/surface/check_where_each_part_lands.ts`, the third in the one command (`check_scene.ts`'s
+`CHECKS`), information (exit 0 read, 2 not read).
+**The vectors** (`tests/landing_per_stage.test.ts`, 10): a box's top and sides landable, its bottom glued and never read (V1); a resting proxy 5 mm
+off its piece still lands (V1b — the reach); a slot narrower than the piece CLOSED (V2); a slot wide enough only turned 90° LANDABLE at 90° (V3); a
+slab under another part's table UNDER AN OVERHANG (V4); a pocket CAPPED (V5); a FROZEN part's faces (V6); BELOW THE SHARE from the caller's map, and the
+game's map on a box — a frozen part's faces out even beside another's facet (V7); NO ORIENTATION (V8); a proxy 3 mm over its solid, every sample BELOW
+(V9). **11 mutants, all RED** (the reach, the 90° turn, the overhang, the caps, frozen, a contact below accepted, the held piece the last placed, the
+exposure ignored, the share ignored, the face map reading frozen parts — first GREEN: the vector had no other part's facet beside the frozen one;
+added —, the below count).
+**`Scene_2` (77 s; 16 stages):** E02, E04, E05, E06 — NO ORIENTATION (no resting proxy, no candidate: the ledger's row 20); the pistons' stages 12
+places over 25 exposed faces (2093 cm²), the rest: the plinth FROZEN (2719 cm²), 7 faces BELOW THE SHARE (the crankcase's ±z sides once the banks
+stand — no facet within 20° of them), 3 – 5 UNDER AN OVERHANG (the crankcase's top under the banks), 1 – 2 CLOSED (the banks' slants); samples
+falling BELOW their face where a proxy stands off its solid (row 14). ⭐ A FINDING — the ledger's row 21: the game's face map skips a FROZEN part's
+faces (`placedFaces`), so `Scene_2`'s plinth top (2719 cm², the largest face) is NO PLACE in the game at any stage.
+**The lessons** (§8 rows 6, 8, 21; no new drawing rule — D4 holds them): (1) a reader that takes a resting PROXY as the piece's support inherits the
+proxy's error — read the piece's own pieces (its reach); (2) B2's grid is the solids' box grown by two cells: a proxy far off its solids reads
+SEALED, never exposed — B1e is what finds it; (3) a filter whose vector meets no case where it matters is a filter no vector guards (M10: the
+frozen parts' faces beside another part's facet — the same lesson as `PROXY_AND_COLLISION_RULES.md` §9.3.5).
+**The cost**: one `preparePlaced` a stage, one `heldSumsOn` per (normal, turn): 0.1 – 1.6 s a stage, 10 – 21 s where the held heads' and covers'
+pieces meet every placed part's (stages 13 – 16) — S10's figure for the budget.

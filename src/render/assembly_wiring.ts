@@ -12,7 +12,7 @@ import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { approachDistance, approachStep, easePoint, faceSwitches, farDistance, approachStepFree, lookShare, offsetFrame, modelNormal, orbitDir, ORBIT_PITCH_MAX_RAD, pitchOfV, swayRay, unswayHit, vOfPitch, gizmoLag } from "../input/assembly_orbit";
 import { gizmoJoins, insertIndex, joinsKnown, joinStep, LINE_REFINE_BUDGET, refineNow, refineStart, refineStep, sectionFixed, type RefineState } from "../input/section_hull";
-import { blendThroughEdges, buildFaceMap, castPoint, mapAnglesStep, poleBeyondPitch, facetOfNormal, mapAngles, mapTarget, stackDepthAt, type FaceMap, type FacetOpts, type MapFace, type MapOpts, type MapTarget } from "../input/face_map";
+import { blendThroughEdges, buildFaceMap, castPoint, mapAnglesStep, poleBeyondPitch, facetOfNormal, mapAngles, mapTarget, stackDepthAt, type FaceMap, type MapFace, type MapOpts, type MapTarget } from "../input/face_map";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { Color4 } from "@babylonjs/core/Maths/math.color";
@@ -28,7 +28,7 @@ import type { LineSample, SceneState } from "./scene_state";
 import { faceTrianglesWorld } from "./contact_wiring";
 import { calmHeading, calmLevelHeading, calmShown, calmStep as calmStepEase, calmTarget, cameraHeading, capEdgePitch, heldOffsetStep, poleWeight, type CalmKnobs, type CalmState } from "../input/orbit_calm";
 import { askedCalm, calmInFrame, calmWorld, farReading, followTurnHoldsGizmo, levelledHeading, placeCrossings, type CalmAskTarget } from "../input/camera_follow";
-import { facetFrame } from "../input/face_map";
+import { CHART_MAP_OPTS, facetFrame } from "../input/face_map";
 import { qRotate, type Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
@@ -1092,7 +1092,7 @@ function worldFaceMap(st: SceneState): FaceMap | null {
  * ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §2.2 / §5.2, step 2.2) THE CHARTS' LAYOUT: both face maps built as the COLUMNS chart, the pole the shape's top /
  * bottom set and the pitch scale read from the faces' normals. ⛔ (2026-11-16, step 2.5) its switch (`chartLayout`) deleted with the maps as built before.
  */
-const CHART_MAP_OPTS: Pick<FacetOpts, "layout" | "scale"> = { layout: "chart", scale: "normals" };
+// (2026-11-24, S7) its one home is now `input/face_map.ts` (`CHART_MAP_OPTS`): B5's reading of the face map offline builds it the same way
 
 /** ⭐ The placed parts' faces on their model pose (the slide's own: `faceWorld`, `faceTrianglesWorld`), in the world. */
 function placedFaces(st: SceneState): MapFace[] {
