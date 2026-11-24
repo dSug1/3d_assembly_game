@@ -117,3 +117,7 @@
 * **2026-11-24** — S7 BUILT: B3 + B5 (`src/core/landing_per_stage.ts`, `src/input/face_map_membership.ts`; the check
   `check_where_each_part_lands.ts`, the third in the one command, information); 10 vectors, 11 mutants red; `Scene_2` 77 s: four parts NO
   ORIENTATION, the plinth's top NO PLACE in the game (the face map skips a frozen part — ledger row 21, his word with GM13). Local.
+* **2026-11-24** — S8 BUILT: B4's second half — does a part's way in start at a place? (a real facet of the stage's face map within 20° of
+  its withdrawal, over its seat; PROPOSED reading, information); the way in shared with the reach check (its `Scene_2` report identical); V10,
+  3 mutants red; `Scene_2`: ten ways in start at no place (E02 the frozen plinth, E06 after E05, the pistons and heads 4.6 mm short) —
+  ledger row 22, rule C5 PROPOSED. Local.

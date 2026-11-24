@@ -10,7 +10,9 @@ import { glbBin, partGeometry, type Placement } from "../../src/core/glb_geometr
 import { landingPerStage } from "../../src/core/landing_per_stage";
 import { glbJson, readModelCatalog } from "../../src/core/model_catalog";
 import { readPartSolids } from "../../src/core/part_checks";
-import { inGameFaceMap } from "../../src/input/face_map_membership";
+import type { FaceMap } from "../../src/input/face_map";
+import { facetTowardGoal, gameFaceMap, inFaceMapOf } from "../../src/input/face_map_membership";
+import { wayIn } from "./check_parts_reach_their_seat_way";
 
 const file = process.argv.slice(2).find((a) => a.endsWith(".glb")) ?? process.env["GLB"];
 if (file === undefined) {
@@ -39,7 +41,14 @@ const parts = readPartSolids(j.json, glbBin(bytes), catalog);
 const mm = catalog.unitM * 1000;
 const goals = new Map<string, Placement>(partGeometry(j.json, glbBin(bytes), catalog).map((g) => [g.id, { position: [g.goal.position[0] * mm, g.goal.position[1] * mm, g.goal.position[2] * mm], rotation: g.goal.rotation }]));
 const frozen = new Set(catalog.parts.filter((p) => p.frozen).map((p) => p.id));
-const stages = landingPerStage(parts, goals, frozen, { inFaceMap: (faces) => inGameFaceMap(faces, frozen) });
+const maps = new Map<string, FaceMap | null>();
+const stages = landingPerStage(parts, goals, frozen, {
+  inFaceMap: (faces, placed) => {
+    const m = gameFaceMap(faces, frozen);
+    maps.set(placed.join("+"), m);
+    return inFaceMapOf(m, faces, frozen);
+  },
+});
 const total = (performance.now() - t0) / 1000;
 console.log(`B3 / B5 on ${file}: ${stages.length} stages, ${total.toFixed(1)} s — INFORMATION (ORBIT_SURFACE_PART_CHECKS.md §14 Q3: no pass rule until the playability brief)`);
 const counts = new Map<string, number>();
@@ -57,5 +66,26 @@ for (const s of stages) {
   console.log(`  stage ${s.placed.length + 1}: ${s.held} resting on ${s.resting}, over ${s.faces.length} exposed faces — PLACES ${places.length} (${(area(places) / 100).toFixed(0)} cm²; landable ${s.faces.filter((f) => f.landable).length}); no place: ${reasons || "none"}${below > 0 ? `; ${below} samples fall BELOW their face (no solid under the proxy)` : ""} — ${(s.ms / 1000).toFixed(1)} s`);
   for (const [r, fs] of by) counts.set(r, (counts.get(r) ?? 0) + fs.length);
 }
-console.log(`VERDICT: READ (information) — no place by reason over the stages: ${[...counts.entries()].map(([r, n]) => `${r} ${n}`).join(", ") || "none"}`);
+// ⭐⭐ (S8 — ORBIT_SURFACE_PART_CHECKS.md §17, B4's second half, PROPOSED reading) DOES ITS WAY IN START AT A PLACE? — the way in the reach check reads
+// (`check_parts_reach_their_seat_way.ts`), its withdrawal against the stage's face map: a real facet within the merge angle of it, over the goal
+const byCat = new Map(catalog.parts.map((p) => [p.id, p] as const));
+const noStart: string[] = [];
+console.log("B4 — does each part's way in start at a place? (a real facet of the stage's face map within 20° of its withdrawal, over its seat — information)");
+for (const s of stages) {
+  const part = byCat.get(s.held)!;
+  const placedParts = s.placed.map((id) => byCat.get(id)!);
+  const ghosts = catalog.parts.flatMap((host) => host.ghosts.filter((g) => g.forPart === part.id).map((g) => ({ g, host: host.id })));
+  const way = wayIn(part, placedParts, ghosts, undefined, mm);
+  const map = maps.get(s.placed.join("+")) ?? null;
+  const reads = way.markers.map((m) => {
+    const w: [number, number, number] = [-m.normal[0], -m.normal[1], -m.normal[2]];
+    const f = facetTowardGoal(map, w, [m.position[0] * mm, m.position[1] * mm, m.position[2] * mm]);
+    return { m: m.node, w, f };
+  });
+  const ok = reads.some((r) => r.f !== null && r.f.outMm === 0);
+  if (!ok) noStart.push(s.held);
+  const fmt = (v: readonly number[]) => `(${v.map((x) => (Math.abs(x) < 5e-4 ? 0 : x).toFixed(2)).join(", ")})`;
+  console.log(`  ${s.held} (way in: ${way.how}): ${reads.length === 0 ? "no way in named — not read" : reads.map((r) => `${r.m} withdrawal ${fmt(r.w)} ${r.f === null ? "starts at NO place (no real facet within 20° of it)" : r.f.outMm === 0 ? `starts on the facet ${fmt(r.f.n)} (${r.f.deg.toFixed(1)}°)` : `starts at NO place (the nearest facet within 20°, ${fmt(r.f.n)}, misses its seat by ${r.f.outMm.toFixed(1)} mm)`}`).join("; ")}`);
+}
+console.log(`VERDICT: READ (information) — no place by reason over the stages: ${[...counts.entries()].map(([r, n]) => `${r} ${n}`).join(", ") || "none"}; a way in starting at no place: ${noStart.join(" ") || "none"}`);
 process.exit(0);

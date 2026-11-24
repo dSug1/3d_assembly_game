@@ -428,8 +428,8 @@ ghost off by more than 1 mm (the owner's word on the first two is owed, `ORBIT_S
 
 ### 8.5 What it does not check, and where it lives
 
-**Not checked** (the script says so at every run): whether the GIZMO can bring the part to where its way in starts (it needs the landing map
-wired: B3, B5); the DRAWN meshes — only the `UCX_` pieces are read (B1); ways in that need a TURN (straight withdrawals only, the part at its
+**Not checked** (the script says so at every run): whether the GIZMO can bring the part to where its way in starts (⭐ 2026-11-24: read by the
+landing check, `check_where_each_part_lands.ts` — B4's second half, `ORBIT_SURFACE_PART_CHECKS.md` §17); the DRAWN meshes — only the `UCX_` pieces are read (B1); ways in that need a TURN (straight withdrawals only, the part at its
 goal's orientation); other orders than the one run; the floor and the play volume.
 
 **`Scene_2`'s result** (2026-11-17): PASS — no goal shut, every way in free, the six pistons NARROW, 19 warnings →
@@ -551,6 +551,7 @@ rule; each line is put into this form when a build script first applies it.
 | **C1** | A part placed after what closes its seat cannot be placed (S0; `Scene_2`'s first plan slid the pistons in sideways; ledger row 1) | W1, W5 | the plan's order (each part's `step`; the frozen parts pre-placed); the parts' `UCX_` at their goals | the sphere's sampling (`ENTRY_SPHERE_N`, the study's, `scripts/probes/surface_study/`); the contact skin (`collisionSkinMm`, `gestureConfig.ts`, mm on the glass, converted as `collision_wiring.ts` does) | order the steps so that at each part's stage its goal's entry set is not empty and contains the way in the plan names; a part that closes another's seat comes after it | `check_parts_reach_their_seat.ts` — FAIL: SHUT, way in BLOCKED (control: a head before its pistons) | WRITTEN (= §2.3 rule 2); checked |
 | **C2** | The landing map's cost grows with the placed parts' convex pieces (S1: 36 – 270 ms a direction for a whole map on `Scene_1`; ledger row 7) | W2, W5 | the placed set's convex pieces, per stage | ⏳ a budget per scene, from the readout's cost on the phone (`ORBIT_SURFACE_BUILD.md` §2bis) | ⏳ keep the placed set's convex pieces within the budget at every stage | ⏳ none yet (B3 runs the game's own function) | OWED — after the readout's phone measurement |
 | **C3** | The orbited piece's collision ignores every FROZEN body, and `Scene_2`'s plinth is frozen (read in the code at the S1 review; ledger row 6) | W1, W5 | the plan's frozen parts | — | ⏳ to write once seen in the game: only the floor frozen, or the game's rule changed | ⏳ none yet | OWED — later, with `Scene_2` (`ORBIT_SURFACE_BUILD.md` §2bis) |
+| **C5** | ⭐ (2026-11-24, S8; ledger row 22) ten `Scene_2` ways in start at no place of the game's face map — E06 once E05 stands, the pistons and heads 4.6 mm short | W1, W2 | the plan's order, the seat faces' normals, the parts placed between a seat face and the outside | the merge angle (20°, `facetMergeDeg`) | at its stage a part's way in starts on a facet of the face map over its seat: no part placed before it stands between its seat face and the outside 30° or more off that face; a bore's mouth inside its deck's facet (⏳ PROPOSED — his word) | B4's second half (`check_where_each_part_lands.ts`; V10) — information | PROPOSED |
 | **C4** | The readout and the footprint support read each placed part as ONE convex body (S2's build, 2026-11-22; ledger row 10) | W2, W5 | a data scene's bodies (`src/content/<scene>.ts`) | — | author a part as data only when it is convex — a box, a prism, a frustum (`PART_AUTHORING.md` §2); anything else is a Blender part with `UCX_` pieces | ✅ (2026-11-23) THE FORMAT itself: `parseSceneDescriptor` admits only a box, a frustum, a regular prism (tipped or not) — each convex by construction — and refuses the rest (its vectors); its GUARD `tests/data_parts_convex.test.ts`: every registered scene's body one of those kinds, no field outside them (a new kind fails it until its convexity is proved — the planted controls) | APPLIED (the format) — its check BUILT |
 
 ## 11. ⏳ THE AUTOMATION LOOPS — every check run with no hand step (OWED; the owner, 2026-11-23)
@@ -567,7 +568,7 @@ the generator's test: it proves that what was generated obeys the rules (§10), 
 
 | the check | its file | where it runs today | its verdict | what its loop lacks |
 |---|---|---|---|---|
-| the reach (C1; B4's game side; S0 — §8) | `scripts/surface/check_parts_reach_their_seat.ts` | by hand at the export gate | exit 0 / 1 | called by no build; B4's *"a direction starts at a landing"* waits for B3 |
+| the reach (C1; B4's game side; S0 — §8) | `scripts/surface/check_parts_reach_their_seat.ts` | by hand at the export gate | exit 0 / 1 | called by no build; B4's *"a direction starts at a landing"*: the landing check (S8) |
 | B1 the solids and the proxy on them (D4 – D6; S5) | `scripts/surface/check_part_solids.ts` (`src/core/part_checks.ts`) | by hand at the gate; `npm run verify` on `Scene_2` (its findings pinned) | exit 0 / 1 / 2 | called by no build; at load, its cheap subset (§7.3) |
 | B2 exposed per stage; B1i (D7) | the same | the same | a map — information, no pass rule | — (it feeds B5 and the stage's surface, `PROXY_AND_COLLISION_RULES.md` §3bis) |
 | the proxy rules R7, R3, R4, R2 (S6 packet 1) | the same | the same | in the same verdict | — |

@@ -277,3 +277,23 @@ SEALED, never exposed — B1e is what finds it; (3) a filter whose vector meets 
 frozen parts' faces beside another part's facet — the same lesson as `PROXY_AND_COLLISION_RULES.md` §9.3.5).
 **The cost**: one `preparePlaced` a stage, one `heldSumsOn` per (normal, turn): 0.1 – 1.6 s a stage, 10 – 21 s where the held heads' and covers'
 pieces meet every placed part's (stages 13 – 16) — S10's figure for the budget.
+
+## 17. ⭐ S8 — B4'S SECOND HALF: DOES A PART'S WAY IN START AT A PLACE? (2026-11-24 — the reading PROPOSED, built; information)
+
+**What is asked** (`ORBIT_SURFACE.md` §7bis.3, B4): *"at least one direction starting at a landing of B3"* — the reach check (S0, `SCENE_WORKFLOW.md`
+§8) finds each goal's entry set and its way in, and said what it could not see: *"whether the GIZMO can bring the part to where its way in starts"*.
+**The reading (⏳ PROPOSED — his look):** the game moves the held piece over a FACET of the face map, along that facet's normal; so a way in starts at
+a place when, at the part's stage, a REAL facet of the game's face map (`gameFaceMap` — S7's, the same build) lies within the merge angle (20°) of
+the way in's withdrawal and its polygon holds the seat seen along its normal (`facetTowardGoal`: else how far outside, in mm). Information, as B3
+(his Q3); it would become B4's failure (*"no direction starts at a place"*) with the playability brief.
+**Built**: the way in moved to `scripts/surface/check_parts_reach_their_seat_way.ts` (the reach check reads it there — its report on `Scene_2`
+IDENTICAL, text and JSON, before and after); `facetTowardGoal` (`src/input/face_map_membership.ts`); the landing check prints B4 per part. The
+landing check's `inFaceMap` now runs at every stage with exposed faces (a held piece without orientation too). **Vector** V10 (the box's top: 0 mm
+out; past its edge 50 mm; 15° off still it; 30° off none; a virtual facet never; a frozen part's map none) — 3 mutants RED (the merge angle, the
+containment, a virtual facet read).
+**`Scene_2`:** E03, E04, E05, E15, E16, E17 start on their facet (0°, inside). ⭐ **TEN do not** — the ledger's row 22: E02 (onto the frozen plinth:
+no face map — row 21); **E06** (once E05 stands, the face map's +z bank facet shrinks to a sliver — E05's face 30° off it passes over E04's bank
+deck: the seat 55 mm outside it; E05 at its stage, before E06, starts on it — the ORDER decides); **the six pistons and the two heads** (their
+bank's facet ends 4.6 mm short of their seats: the TOP facet takes the bores' mouths — their plunge starts from a facet 30° off their axis).
+**The lesson** (construction, `SCENE_WORKFLOW.md` §10.3 **C5**, PROPOSED): at its stage a part's way in starts on a facet of the face map over its
+seat — a part placed between a seat face and the outside, 30° or more off it, takes that face out of the contour.

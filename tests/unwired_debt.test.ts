@@ -126,6 +126,7 @@ const PENDING: Record<string, string> = {
   readPartSolids: "S5 (`ORBIT_SURFACE_PART_CHECKS.md` §4, D1) — B1's reader of a scene's .glb, with `checkSolids`; at load owed (RND7)",
   landingPerStage: "S7 (`ORBIT_SURFACE_PART_CHECKS.md` §14 – §16) — B3 + B5, the landing per stage and the faces no place (it calls B2's `exposedPerStage`): its vectors and its check at the export gate (`check_where_each_part_lands.ts`), information; never the game's",
   inGameFaceMap: "S7 (`ORBIT_SURFACE_PART_CHECKS.md` §15 item 7) — B5's share read with the game's own face map, offline: its vectors and the landing check; never the game's",
+  facetTowardGoal: "S8 (`ORBIT_SURFACE_PART_CHECKS.md` §17) — B4's second half, the facet toward a goal along its way in, offline: its vectors and the landing check; never the game's",
   // ⭐ (2026-11-23, S6 — `30_OBJECTS_3D/spec/PROXY_AND_COLLISION_RULES.md`, DECIDED) the proxy rules' checks run as vectors and by the check script; two of
   // their scales wait for packet 2 (ρ: the closing, the caps) and packet 3 (τc: the collision pieces against the real shape)
   checkProxyFaces: "S6 packet 1 (`PROXY_AND_COLLISION_RULES.md` §9) — R7, R3, R4, R2 on each proxy face: vectors and `check_part_solids.ts`, at the export gate",

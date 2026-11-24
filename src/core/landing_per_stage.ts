@@ -51,9 +51,9 @@ export interface B3Stage {
 export interface LandingStageOpts {
   /**
    * ⭐ is each face in a facet of the game's face map? (the game's `buildFaceMap`, `src/input` — passed in: `src/core` imports none). Absent: the share
-   * not read.
+   * not read. Called at EVERY stage with exposed faces (`placed`: its placed parts), a held piece with no orientation included (S8 reads its map).
    */
-  readonly inFaceMap?: (faces: readonly StageFace[]) => readonly boolean[];
+  readonly inFaceMap?: (faces: readonly StageFace[], placed: readonly string[]) => readonly boolean[];
   /** the samples' spacing on a face (mm) */
   readonly stepMm?: number;
 }
@@ -175,13 +175,13 @@ export function landingPerStage(parts: readonly PartSolids[], goals: ReadonlyMap
     const held = byId.get(order[s]!)!;
     const rest = restingFaceOf(held);
     const faces = stageFaces(v);
+    const kept = faces.length > 0 ? opts.inFaceMap?.(faces, v.placed) : undefined;
     if (rest === null || faces.length === 0) {
       out.push({ placed: v.placed, held: held.id, resting: rest?.node ?? null, faces: [], ms: performance.now() - t0 });
       continue;
     }
     const pp = preparePlaced(v.placed.flatMap((id) => placedPieces.get(id)!));
     const caps = v.placed.flatMap(capsOf);
-    const kept = opts.inFaceMap?.(faces);
     // the held piece turned onto each face direction, both turns, prepared once per (normal, turn)
     const prepared = new Map<string, { at: (p: Vec3) => { kind: string; contact: number; part: string } }>();
     const preparedFor = (n: Vec3, turn: 0 | 90) => {

@@ -7,7 +7,8 @@ import { describe, expect, it } from "vitest";
 import { landingPerStage, type B3Face } from "../src/core/landing_per_stage";
 import { B1_FIT_MM, type PartMesh, type PartSolids } from "../src/core/part_checks";
 import type { Vec3 } from "../src/core/vec";
-import { inGameFaceMap } from "../src/input/face_map_membership";
+import { facetTowardGoal, gameFaceMap, inGameFaceMap } from "../src/input/face_map_membership";
+import type { StageFace } from "../src/core/landing_per_stage";
 import { boxPiece, face } from "./helpers/proxy_shapes";
 
 const at = (ids: string[]) => new Map(ids.map((id) => [id, { position: [0, 0, 0] as Vec3, rotation: [1, 0, 0, 0] as const }]));
@@ -112,6 +113,20 @@ describe("⭐⭐⭐ S7 — B3 (where the held piece lands) and B5 (the faces tha
     const D = solids("D", [boxPiece("UCX_D", [-10, 0, -10], [10, 10, 10])], [face("UFM_D_cap", [[-10, 10, -10], [10, 10, -10], [10, 10, 10], [-10, 10, 10]], [0, 1, 0])]);
     const st = landingPerStage([boxPart("A", [0, 0, 0], [100, 20, 100]), D], at(["A", "D"]), new Set());
     expect(st).toEqual([{ placed: ["A"], held: "D", resting: null, faces: [], ms: st[0]!.ms }]);
+  });
+  it("V10 — B4's reading (S8): the facet toward a goal along its way in — over the box's top a facet (0 mm out), past its edge 50 mm out, 15° off still it, 30° off none, a virtual facet never, a frozen part's map none", () => {
+    let faces: readonly StageFace[] = [];
+    landingPerStage([boxPart("A", [0, 0, 0], [100, 20, 100]), heldBox("B", 20, 10, 20)], at(["A", "B"]), new Set(), { inFaceMap: (fs) => ((faces = fs), fs.map(() => true)) });
+    const map = gameFaceMap(faces, new Set());
+    const r = (w: Vec3, p: Vec3) => facetTowardGoal(map, w, p);
+    expect(r([0, 1, 0], [50, 20, 50])).toMatchObject({ n: [0, 1, 0], deg: 0, outMm: 0 });
+    expect(r([0, 1, 0], [150, 20, 50])!.outMm).toBeCloseTo(50, 6);
+    const c15 = Math.cos((15 * Math.PI) / 180), s15 = Math.sin((15 * Math.PI) / 180);
+    expect(r([0, c15, s15], [50, 20, 50])).toMatchObject({ outMm: 0 });
+    expect(r([0, c15, s15], [50, 20, 50])!.deg).toBeCloseTo(15, 6);
+    expect(r([0, Math.cos(Math.PI / 6), Math.sin(Math.PI / 6)], [50, 20, 50])).toBeNull();
+    expect(r([0, -1, 0], [50, 0, 50])).toBeNull();
+    expect(facetTowardGoal(gameFaceMap(faces, new Set(["A"])), [0, 1, 0], [50, 20, 50])).toBeNull();
   });
   it("V9 — a proxy 3 mm above its solid (B1e's defect): every sample falls BELOW the face, never landable", () => {
     // (3 mm: B2's grid is the solids' box grown by two cells — a proxy far past it reads sealed, never exposed)
