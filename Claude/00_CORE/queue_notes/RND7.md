@@ -142,3 +142,6 @@
 * **2026-11-24** — his *"S11: you can proceed as you recommend"*: Q1 with `GM13`, Q2 the caps measured with every body then a build behind
   `surfaceL1` on `Scene_1`, Q3 precomputed (`ORBIT_SURFACE_L1.md` §8). And *"The landing cost: i do not accept these costs. You need to find another
   solution"* — the study first (a query-time exact cast, no sums prepared), then S11.
+* **2026-11-24** — S14 PROPOSED (`ORBIT_SURFACE_LANDING_CAST.md`): the landing map's cost rooted (every pair's obstacle built eagerly, every
+  turn frame) and an engine that builds none (the near pairs cast exactly at query time — GJK's ray cast, a broad phase, a bound); the prototype
+  (kit `fo3/surface/cast/`): 32 000 queries, 0 kinds or parts different, depths within 0.1 µm; `Scene_2`'s turn frame 698 → 0.2 ms. His word owed.

@@ -105,3 +105,10 @@ collision pieces (one measurement before the plunge is built); the frozen plinth
 * **His two questions** answered in plain words and recorded: the landing map's cost — WHEN it is paid (`ORBIT_SURFACE_PART_CHECKS.md` §19,
   the timing of 2026-11-24); S11 — what it is, the caps, why `Scene_2` and not `Scene_1`, each option's effect, when it runs
   (`ORBIT_SURFACE_L1.md` §7). S11's three questions still wait for his word.
+
+## ⭐ 2026-11-24, afternoon — his two words: S11 *"proceed as you recommend"*; the landing cost *"I do not accept these costs"*
+
+* **S11 DECIDED** (`ORBIT_SURFACE_L1.md` §8): Q1 with `GM13`; Q2 the caps measured with every body first, then behind `surfaceL1` on `Scene_1`;
+  Q3 precomputed. Not started: after the landing's engine (one heavy job at a time).
+* **S14 PROPOSED** (`ORBIT_SURFACE_LANDING_CAST.md`): the landing read at query time — prototype in the kit's `fo3/surface/cast/` (`proto_cast.ts`,
+  `cost_when.ts`; run from `../orbit_surface` with `npx vite-node <path>`; env `F=near`, `N`, `STAGES`). His word owed: build it (recommended), or audit first.

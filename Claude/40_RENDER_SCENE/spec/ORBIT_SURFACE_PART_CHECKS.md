@@ -376,3 +376,6 @@ Timed on this PC (2026-11-24, the cost check's sets; a scratch script, not a che
 **In plain words:** moving the piece about costs almost nothing, even on `Scene_2`; the cost is paid WHILE THE PIECE TURNS — each frame of the
 turn's animation would stall the game for up to 0.7 s on this PC (more on the phone) — and a little again each time the gizmo reaches a face of a
 new direction after a turn. ⚠ Nothing live pays it: P2 runs on `Scene_1` only (`READOUT_SCENE`). The ways stay §19's, for his word with `GM13`.
+
+⭐ **(2026-11-24, his *"I do not accept these costs. You need to find another solution"*)** — the root (the eager, global preparation, not the
+question) and the engine that removes it, prototyped and measured: [ORBIT_SURFACE_LANDING_CAST.md](ORBIT_SURFACE_LANDING_CAST.md) (S14, PROPOSED).
