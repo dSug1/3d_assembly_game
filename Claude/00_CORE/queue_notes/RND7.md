@@ -1,9 +1,9 @@
 # RND7 — The orbit's surface: where the gizmo travels
 
-> **STATUS** · 🔧 **S2 (the readout) BUILT AND GATED** (2026-11-22 night, the owner asleep; `ORBIT_SURFACE_READOUT.md` §13 – §14), ⭐ **DEPLOYED 2026-11-23** (LIVE main `ff41fc3` = `5d30edf5`); 🔧 **S3 (the mouth's hold restricted) BUILT AND GATED** 2026-11-23 (`d4b6c222`, `ORBIT_SURFACE_MOUTH_HOLD.md`), ⭐ **DEPLOYED 2026-11-23** (LIVE main `e80a7b0` = `1bc13f70`); 🔧 **S4 (P2 drives the gizmo) BUILT AND GATED** 2026-11-23 (`19fa42bf`, local, `ORBIT_SURFACE_DRIVE.md`) — the workfront: branch `1.0.158from1.0.157-Orbit_surface` (pushed), the
+> **STATUS** · 🔧 **S2 (the readout) BUILT AND GATED** (2026-11-22 night, the owner asleep; `ORBIT_SURFACE_READOUT.md` §13 – §14), ⭐ **DEPLOYED 2026-11-23** (LIVE main `ff41fc3` = `5d30edf5`); 🔧 **S3 (the mouth's hold restricted) BUILT AND GATED** 2026-11-23 (`d4b6c222`, `ORBIT_SURFACE_MOUTH_HOLD.md`), ⭐ **DEPLOYED 2026-11-23** (LIVE main `e80a7b0` = `1bc13f70`); 🔧 **S4 (P2 drives the gizmo) BUILT AND GATED** 2026-11-23 (`ORBIT_SURFACE_DRIVE.md`), ⭐ **DEPLOYED 2026-11-23** (LIVE main `86a0e53` = `664f9c53`) — the workfront: branch `1.0.158from1.0.157-Orbit_surface` (pushed), the
 > worktree `../orbit_surface`. Built OFFLINE before the merge (2026-11-17): S0 (the entry sets on `Scene_2`'s real collision pieces) and S1 (the landing map,
 > `src/core/landing_map.ts` — NOT wired: nothing calls it). Nothing else built.
-> **NEXT** · his look on S4 (local: his word to deploy, or USB) — the build list's item 4, P2 DRIVING the gizmo, BUILT: `ORBIT_SURFACE_DRIVE.md` (his word 2026-11-23 *"Do as per your recommendation"*: `mouthHoldDomain` stays 2,
+> **NEXT** · ✅ his look 2026-11-23: *"the overall feel is ok"*; the alignment tap: *"a small stutter on the green contour but nothing alarming"* — then the build list continues (his *"continue"*); his look on S4 (deployed) given — the build list's item 4, P2 DRIVING the gizmo, BUILT: `ORBIT_SURFACE_DRIVE.md` (his word 2026-11-23 *"Do as per your recommendation"*: `mouthHoldDomain` stays 2,
 > item 4 next — S3's finding, `ORBIT_SURFACE_MOUTH_HOLD.md` §7); his look on the readout and S3 (deployed) owed; then item 3 (the Blender checks). ✅ The side facets: AS HELD (his word). Before: the READOUT designed for his look, then
 > built. ✅ §8's end asked again 2026-11-22, all four answered (`ORBIT_SURFACE_BUILD.md` §2bis).
 > **LAST VERIFIED** · 2026-11-22, on `c0e40f85` (docs) = LIVE `3b7a479`'s code
@@ -59,3 +59,55 @@
 * **2026-11-23, later** — S4 built (`54e37d03`), audited (two defects: queries between frames read undriven and cached; `F` read on faces the piece is
   not over), fixed (`19fa42bf`); G1 identical at 0 on his four records; his front record at 2: the gizmo moved on the top round `Piece44` only
   (+73.25 mm), the camera ≤ 2.9 mm (F17); the support never active in his records (the contact-range gate: vector V3). Local, not deployed.
+* **2026-11-23, later** — his word *"Deploy"*: the branch pushed at `664f9c53`, merged into main with no working tree touched (main's tree = the
+  branch's): LIVE main `86a0e53` = `664f9c53` — S4 live (`landingDrives` 2; 0 = `e80a7b0`); his look owed (the phone's turn cost too).
+* **2026-11-23, later** — his look 2026-11-23: *"the overall feel is ok"*; the alignment tap: *"a small stutter on the green contour but nothing alarming"*; *"Commit, continue"* (`ORBIT_SURFACE_DRIVE.md` §11: the stutter is L2's).
+* **2026-11-23, later** — S4b (`9b028396`, `ORBIT_SURFACE_DRIVE.md` §12): the alignment's stutter at its root — the placed parts' hulls prepared once
+  per placed set, one preparation shared by the readout and the drive: a turn frame's sums 2.90 → 0.70 ms on this PC; G1 identical at 0, his `Scene_1`
+  records at 2 identical to the fix round's. Local. Next on the build list: item 3, the Blender checks — their scope asked of him.
+* **2026-11-23, later** — his word *"Game side first"* on item 3 (the Blender build scripts are not in this repository), then *"the plinth in scene 2 … the
+  proxy face is not complete. Make sure the same is detected"*: S5 designed (`ORBIT_SURFACE_PART_CHECKS.md`); B1 built (`part_checks.ts`, 5 s on
+  `Scene_2`): ⭐ the plinth's incomplete proxy DETECTED (B1h: its four corners cut, a hole), 20 more findings (proxies off their collision pieces up to
+  42 mm, E17's half turned inward) — the ledger's rows 14, 15, his word. B2 next.
+* **2026-11-23, later** — his *"Capture those lessons … the plinth: the proxy is not a closed mesh but a quad: check that. Then continue the build"*:
+  CHECKED — the plinth's proxy is ONE open face (its top); no `Scene_2` proxy is closed (a selection of faces by convention). Lessons → D4 – D7
+  (`PART_AUTHORING.md` §6.4, §4.2), `SCENE_WORKFLOW.md` §7.3, §9.1, the ledger 14 – 16; `check_part_solids.ts`. B2 + B1i built (5 s): the plinth's
+  sides uncovered (71.8 %) — but D7 read literally flags every part: his word on the rule (`ORBIT_SURFACE_PART_CHECKS.md` §10). Local.
+* **2026-11-23, later** — ⛔ his question *"why your previous check failed to identify this issue and I had to tell you?"*: answered and the
+  record CORRECTED (`ORBIT_SURFACE_PART_CHECKS.md` §11) — B1 tested one direction only (no rule said which faces a proxy covers), and the first
+  coverage check, flagging all parts, was narrowed until it found the plinth's corners, reported as his issue; it was not (the sides). His word:
+  no rebuild of `Scene_2` here; the lessons captured; the RULES for proxies (simplified — the gizmo's moves) and maybe the collision pieces
+  defined first, then the proper checks.
+* **2026-11-23, later** — his *"I agree with your recommendations. Capture, proceed"*: the proxy and collision rules DECIDED (w 10 mm, every
+  cylinder a hexagon face up, every cavity deeper than wide and every undercut capped, no fixed count of pieces); S6 packet 1 BUILT
+  (`checkProxyFaces`: R7, R3, R4, R2; his three shapes clean reference parts; 9 mutants red); ⛔ a second correction of S5's record — the resting
+  proxies are VIRTUAL by design (`ORBIT_SURFACE_PART_CHECKS.md` §12). Packets 2 (coverage, caps) and 3 (collision pieces) owed. Local.
+* **2026-11-23, later** — his question *how are the part checks run, and linked with the automated building?* answered (by hand at the export
+  gate and in `npm run verify`, never at play); his word *"capture what is missing for that loop … other loops to automatize the other checks as
+  well"* → `SCENE_WORKFLOW.md` §11 (OWED: one command per scene, the build script calling it and stopping on a FAIL, a generator applying the
+  rules; the construction, landing and headless loops). Then packet 2.
+* **2026-11-23, night** — his word *"Continue building the orbit's surface pipeline without stopping and without asking me questions. Commit
+  regularly, update the md files with the lessons learned"* (he went to bed). S6 packet 2 BUILT: `checkProxyCover` (`proxy_cover.ts`) — R1 the
+  outer surface at the ρ-closing covered, R1b every cavity deeper than wide / undercut capped (amber information), R2 closed, a cap's rim flush;
+  17 vectors, 15 mutants red; `Scene_2`: every proxy open (the plinth 58.6 % not covered), the pistons a resting face only, E02 / E13 / E14 cavities
+  uncapped (ledger rows 17 – 18). Seven lessons of measuring (`PROXY_AND_COLLISION_RULES.md` §9.3). D7 answered by D8. Local.
+* **2026-11-23, night (later)** — S6 packet 3 BUILT: `checkCollisionPieces` (`collision_cover.ts`) — C-R2 (a) the render inside its pieces within
+  tau_c (strict), (b) no piece sticking out past tau_c (a ring's facet: its GEOMETRIC sagitta exempt), the resting candidates (decision 5);
+  14 vectors (a tube's bore lined by six / three slabs; a slab pushed 5 mm), 10 of 11 mutants red (the 11th a pure speed shortcut); `Scene_2`:
+  render outside pieces (E04 42 mm, pistons 29 mm), pieces sticking out (crank webs, piston skirts), 12 parts without a resting candidate
+  (ledger 19 – 20). Six lessons (`PROXY_AND_COLLISION_RULES.md` §9.5). The S6 checks complete: packets 1 – 3. Local.
+* **2026-11-23, night (later)** — the pipeline's first loop piece: THE ONE COMMAND `scripts/surface/check_scene.ts` (SCENE_WORKFLOW.md
+  §9.3 – §11.2 item 1; on the proposal, his word owed — reversible): each check its own process, one verdict, exit 0 / 1 / 2; `SELF=1` its controls
+  (red on a mutant); `Scene_2`: reach PASS, parts FAIL → FAIL. Local.
+* **2026-11-23, night (later)** — R2's fidelity against the rho-closing (the audit's §7.1 row 4, owed since packet 1) BUILT: a failing face
+  re-read with its samples skipped where the render is far and the closing lies under (`insideClosing`); the primitives moved to `voxels.ts`,
+  `tri_geom.ts`. Local.
+* **2026-11-23, night (later)** — C4's check (the ledger's row 10): the format admits only convex kinds (box, frustum, prism ± tips) and
+  refuses the rest; its guard `tests/data_parts_convex.test.ts` (95 bodies in 5 scenes; a new kind fails it until proved convex). Local.
+* **2026-11-23, night (later)** — the loop's items 2 and 4 (SCENE_WORKFLOW.md §11.2): `scene_gate.py` (a build script's call to the gate;
+  not yet in `build_engine.py`) and the rules' constants as JSON for the Blender side (`rules_constants.json`, its staleness vector). Local.
+* **2026-11-23, night (later)** — `ORBIT_SURFACE.md` §5.3's missing shapes added to the landing map's vectors (a round hole through and blind,
+  a 12-sided cylinder, a dome, a thin bar, an oblique facet — against the brute force); M7 now 2 red; the brute's bound includes a corner's √2. Local.
+* **2026-11-23, night (later)** — B3 / B5 STUDIED, not built (`ORBIT_SURFACE_PART_CHECKS.md` §14): the definitions proposed (the stage's held piece
+  as held, its resting face against each exposed face, both turns; landable within the fit; B5's reasons), information until the playability
+  brief exists; three questions for his word. Local.

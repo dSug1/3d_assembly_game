@@ -6,13 +6,13 @@
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { driveLevel, heldPiece, heldReach, landingAxes, landingFor, landingSupport, prepareHeldSums, prepareLanding, type Landing } from "../src/core/landing_map";
+import { driveLevel, heldPiece, heldReach, heldSumsOn, landingAxes, landingFor, landingSupport, prepareHeldSums, prepareLanding, preparePlaced, type Landing } from "../src/core/landing_map";
 import { qFromAxisAngle, type Quat, type Vec3 } from "../src/core/vec";
 import { planeAxes } from "../src/input/contact";
 import { footprintSupport, supportTop, SUPPORT_SLACK_M } from "../src/input/footprint";
 import { DEFAULT_CONFIG, validateGestureConfig } from "../src/input/gestureConfig";
 import { driveGizmoLanding, driveKey, driveStamp, driveSupport, landingDriveFrame } from "../src/render/landing_drive";
-import type { ReadoutSource } from "../src/render/landing_readout";
+import { heldSumsFor, type ReadoutSource } from "../src/render/landing_readout";
 import type { SceneState } from "../src/render/scene_state";
 import { bx, hullPart, toConvex, type Part } from "./helpers/surface_shapes";
 
@@ -212,5 +212,35 @@ describe("⭐⭐ V5 — the switch, the drive's module, the wiring", () => {
   it("the menu: the slider under GIZMO & SECTIONS", () => {
     const m = readFileSync(new URL("../src/render/tuning_menu.ts", import.meta.url), "utf8");
     expect(m).toContain('"landingDrives", 0, 2, 1)');
+  });
+});
+
+describe("⭐⭐ V6 — S4b, THE SHARED PREPARATION (`ORBIT_SURFACE_DRIVE.md` §12; his look: a small stutter at the alignment)", () => {
+  const conv = toConvex(P44);
+  // a degenerate placed piece (no volume) — refused, by name
+  const flat = { id: "Flat", points: [[0, 0.2, 0], [0.01, 0.2, 0], [0, 0.2, 0.01], [0.01, 0.2, 0.01]] as Vec3[] };
+  it("`heldSumsOn(preparePlaced(…))` is `prepareHeldSums` bit for bit: the same landings everywhere, the same pieces refused", () => {
+    const a = prepareHeldSums([...conv, flat], HELD);
+    const b = heldSumsOn(preparePlaced([...conv, flat]), HELD);
+    expect(b.refused).toEqual(a.refused);
+    expect(b.refused).toEqual(["Flat"]);
+    for (const n of [UP, [1, 0, 0], [0.6, 0.8, 0]] as Vec3[]) {
+      const pa = landingFor(a, axesOf(n)), pb = landingFor(b, axesOf(n));
+      expect(pb.top).toBe(pa.top);
+      for (let u = -0.2; u <= 0.2; u += 0.013) for (let v = -0.2; v <= 0.2; v += 0.017) expect(pb.landingAt(u, v, 0.12)).toEqual(pa.landingAt(u, v, 0.12));
+    }
+  });
+  it("`heldSumsFor`: the same held key → the same sums (the held piece not read again); a TURN (a new key) → new sums on the SAME placed hulls", () => {
+    const parts = { parts: conv.map((p) => p.points), ids: conv.map((p) => p.id) };
+    let reads = 0;
+    const held = () => (reads++, HELD);
+    const s1 = heldSumsFor(parts, "k1", held);
+    expect(heldSumsFor(parts, "k1", held)).toBe(s1);
+    expect(reads).toBe(1);
+    const turned = [GREEN.map((p): Vec3 => [p[2], p[1], -p[0]])];
+    const s2 = heldSumsFor(parts, "k2", () => turned);
+    expect(s2).not.toBe(s1);
+    expect(s2.P).toBe(s1.P); // the placed parts' hulls reused: a turn pays the held piece's part only
+    expect(heldSumsFor({ parts: [...parts.parts], ids: parts.ids }, "k2", () => turned).P).not.toBe(s1.P); // another placed set: prepared again
   });
 });

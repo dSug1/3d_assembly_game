@@ -35,6 +35,8 @@ export const compose = (outer: Placement, inner: Placement): Placement => ({
 
 const quatOf = (r: readonly number[] | undefined): Quat => (r ? [r[3]!, r[0]!, r[1]!, r[2]!] : [1, 0, 0, 0]);
 const local = (n: Node): Placement => ({ position: (n.translation as Vec3 | undefined) ?? [0, 0, 0], rotation: quatOf(n.rotation) });
+/** ⭐ (2026-11-23, S5 — `ORBIT_SURFACE_PART_CHECKS.md`) a node's own placement (its translation and rotation; no scale below the root) — the parts' checks walk the nodes too */
+export const nodePlacement = (n: { readonly translation?: readonly number[]; readonly rotation?: readonly number[] }): Placement => local(n);
 
 /** The BIN chunk of a `.glb` (the second chunk). */
 export function glbBin(bytes: Uint8Array): Uint8Array {

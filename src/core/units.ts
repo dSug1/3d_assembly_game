@@ -39,3 +39,15 @@ export const LANDING_STEP_MM = 4;
  * enters by at least this is OPEN for it (`voidOpenFor`).
  */
 export const SURFACE_STEP_MIN_MM = 0.5;
+
+/**
+ * ⭐⭐⭐ (2026-11-23, S6 — `30_OBJECTS_3D/spec/PROXY_AND_COLLISION_RULES.md` §7.3, his decisions) THE PROXY RULES' SCALES — millimetres of the MODEL:
+ * `PROXY_PROBE_MM` ρ, the probe — an opening narrower than 2ρ is bridged (R1); `PROXY_FACE_MIN_MM` w, the narrowest face the gizmo travels (R3, his
+ * Q1: SIMPLICITY — not the retired "too narrow to stand on"); `PROXY_FLUSH_MM`, a planar real face's proxy ON it (R2 — half the face map's coplanar
+ * 0.5 mm); `PROXY_CURVE_TOL_MM` τ and `COLLISION_TOL_MM` τc (his "as proposed": 1 – 2 mm).
+ */
+export const PROXY_PROBE_MM = 3.5;
+export const PROXY_FACE_MIN_MM = 10;
+export const PROXY_FLUSH_MM = 0.25;
+export const PROXY_CURVE_TOL_MM = 1.5;
+export const COLLISION_TOL_MM = 1.5;

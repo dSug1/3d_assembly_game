@@ -292,6 +292,20 @@ export interface HeldSums {
   readonly forms: readonly SumForm[];
 }
 export function prepareHeldSums(placed: readonly ConvexPiece[], held: readonly (readonly Vec3[])[]): HeldSums {
+  return heldSumsOn(preparePlaced(placed), held);
+}
+
+/**
+ * ⭐⭐ (2026-11-23, S4b — `ORBIT_SURFACE_DRIVE.md` §12; his look: *"a small stutter"* at the alignment) THE PLACED PARTS' HULLS, held-free: three
+ * quarters of `prepareHeldSums`' cost (measured: 2.1 of 2.7 ms on `Scene_1`) — prepared ONCE per placed set, so a turn of the held piece (every frame of
+ * an alignment's slerp) pays only the held piece's part (`heldSumsOn`). Opaque outside this file.
+ */
+export interface PlacedPolys {
+  readonly ids: readonly string[];
+  readonly refused: readonly string[];
+  readonly P: readonly { readonly poly: Poly; readonly part: number }[];
+}
+export function preparePlaced(placed: readonly ConvexPiece[]): PlacedPolys {
   const refused: string[] = [];
   const ids = [...new Set(placed.map((p) => p.id))].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
   const idx = new Map(ids.map((id, k) => [id, k] as const));
@@ -301,6 +315,12 @@ export function prepareHeldSums(placed: readonly ConvexPiece[], held: readonly (
     if (poly === null) refused.push(p.id);
     else P.push({ poly, part: idx.get(p.id)! });
   }
+  return { ids, refused, P };
+}
+/** ⭐⭐ (S4b) the held piece's part of the direction-free preparation, on the placed parts' hulls (`preparePlaced`) — `prepareHeldSums` bit for bit */
+export function heldSumsOn(pp: PlacedPolys, held: readonly (readonly Vec3[])[]): HeldSums {
+  const { ids, P } = pp;
+  const refused: string[] = [...pp.refused];
   const H: Poly[] = [];
   held.forEach((pts, k) => {
     const poly = polyOf(pts);

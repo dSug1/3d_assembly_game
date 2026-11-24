@@ -23,7 +23,7 @@ still hold).
   far (above); open: the waits left, a cap at 520°/s over his own spins (his word).
 * **The workfront:** ⭐ since 2026-11-22 evening the worktree `../orbit_surface`, branch **`1.0.158from1.0.157-Orbit_surface`**, made from
   **`1.0.157-Orbit_surface`** (pushed; made from `1.0.156-Orbits_with_camera_follow_final`; the main folder `3d_assembly_game` stays on it). ⭐ 2026-11-22 night: S2, the READOUT, built, audited,
-  fixed and gated there; ⭐ 2026-11-23: S3, the mouth's hold restricted, built and gated (`d4b6c222`, [`ORBIT_SURFACE_MOUTH_HOLD.md`](../../40_RENDER_SCENE/spec/ORBIT_SURFACE_MOUTH_HOLD.md)); S2 DEPLOYED on his word (LIVE main `ff41fc3` = `5d30edf5`), then S3 (LIVE main `e80a7b0` = `1bc13f70`, the branch pushed); S4, P2 drives the gizmo, built and gated LOCAL (`19fa42bf`, [`ORBIT_SURFACE_DRIVE.md`](../../40_RENDER_SCENE/spec/ORBIT_SURFACE_DRIVE.md)) → [`ORBIT_SURFACE_READOUT.md`](../../40_RENDER_SCENE/spec/ORBIT_SURFACE_READOUT.md) §14 — his look owed.
+  fixed and gated there; ⭐ 2026-11-23: S3, the mouth's hold restricted, built and gated (`d4b6c222`, [`ORBIT_SURFACE_MOUTH_HOLD.md`](../../40_RENDER_SCENE/spec/ORBIT_SURFACE_MOUTH_HOLD.md)); S2 DEPLOYED on his word (LIVE main `ff41fc3` = `5d30edf5`), then S3 (LIVE main `e80a7b0` = `1bc13f70`, the branch pushed); S4, P2 drives the gizmo, built, gated and DEPLOYED (LIVE main `86a0e53` = `664f9c53`, [`ORBIT_SURFACE_DRIVE.md`](../../40_RENDER_SCENE/spec/ORBIT_SURFACE_DRIVE.md)) → [`ORBIT_SURFACE_READOUT.md`](../../40_RENDER_SCENE/spec/ORBIT_SURFACE_READOUT.md) §14 — his look owed.
 * **No longer owed** (closed with the orbit — future improvements only, on his word): FO3's open points ([`FAST_ORBIT.md`](../../40_RENDER_SCENE/spec/FAST_ORBIT.md)
   §12), the lean audit, D-R1's re-crossing study ([`TOP_BOTTOM_STUDY.md`](../../40_RENDER_SCENE/spec/TOP_BOTTOM_STUDY.md) §10), close in's own turns
   (`CAMERA_FOLLOWS_GIZMO.md` §19.4), R5's far strokes pinning the gizmo at a pole ([`PICTURE_REBUILD.md`](../../40_RENDER_SCENE/spec/PICTURE_REBUILD.md)).
@@ -66,3 +66,14 @@ collision pieces (one measurement before the plunge is built); the frozen plinth
   drivers and readers (`walk_c.mjs` serves the main folder; `CHECKPOINT_CAP.md`), `ARCHIVED.md` the closed folders; the runbook
   `scripts/probes/ORBIT_GATES.md`; the surface study's scripts `scripts/probes/surface_study/` (its `library.json`, `sweep.json` gitignored, present).
 * The archived lines: the pushed `archive/*` tags (`HANDOVER_2026-11-22.md` §4).
+
+## ⭐ 2026-11-23 night — the state for the morning (his overnight word: *"continue building the orbit's surface pipeline without stopping and without asking me questions. Commit regularly, update the md files with the lessons learned"*)
+
+* **Where**: worktree `../orbit_surface`, branch `1.0.158from1.0.157-Orbit_surface`, head `8be12136`+ (LOCAL — nothing pushed or deployed since `7f69e034`;
+  LIVE main `86a0e53`). `npm run verify`: 198 files / 2457 tests.
+* **Built tonight**: S6 packets 2 – 3 (`proxy_cover.ts`, `collision_cover.ts` — coverage, closure, caps; the collision pieces both ways, the resting
+  candidates); THE ONE COMMAND `scripts/surface/check_scene.ts` (the export gate: `Scene_2` FAIL), `scene_gate.py`, `rules_constants.json`; R2 against
+  the ρ-closing; C4's guard; `ORBIT_SURFACE.md` §5.3's shapes in the landing map's vectors. The lessons: `PROXY_AND_COLLISION_RULES.md` §9.3, §9.5.
+* **For his word**: B3 / B5's three questions (`ORBIT_SURFACE_PART_CHECKS.md` §14); the one command (`SCENE_WORKFLOW.md` §9.3, built on its proposal —
+  reversible); the resting share ¼ (PROPOSED); `Scene_2`'s findings (ledger rows 14 – 20: the file or the rule — not rebuilt here); a deploy of S4b
+  (the stutter fix) for his phone look.

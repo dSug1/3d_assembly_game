@@ -4,8 +4,7 @@
 > item 4 next — `ORBIT_SURFACE.md` §6 (4)). The rules are his of 2026-11-16 (P2, ⑤, Q2, Q10) and 2026-11-23 (*"Keep as held"*); the choices they leave
 > open are made in §8 and may be reversed on his look. ⭐ **BUILT AND GATED 2026-11-23** (`54e37d03` + fix round 1 `19fa42bf`, §9bis – §10): G0 green;
 > G1 his four records at 0 IDENTICAL to `3b7a479`; G2 a key change ~4 ms on this PC; G3 his front record: the gizmo moved on the top only (round
-> `Piece44`, +73.25 mm at the recess), the camera ≤ 2.9 mm, the piece ≤ 7.1 mm (F17); the audit: two defects, fixed. Local, not deployed; his look
-> OWED. Branch `1.0.158from1.0.157-Orbit_surface`, worktree `../orbit_surface`.
+> `Piece44`, +73.25 mm at the recess), the camera ≤ 2.9 mm, the piece ≤ 7.1 mm (F17); the audit: two defects, fixed. ⭐ **DEPLOYED 2026-11-23** on his word *"Deploy"* (LIVE main `86a0e53` = `664f9c53`); ✅ HIS LOOK 2026-11-23: *"the overall feel is ok"*; the alignment tap: *"a small stutter on the green contour but nothing alarming"* (L2). Branch `1.0.158from1.0.157-Orbit_surface`, worktree `../orbit_surface`.
 > **OWNS** · S4's design: where P2 drives the gizmo and the piece's support, what it reads, what stays, its switch, its vectors and gates.
 > **READ WITH** · [ORBIT_SURFACE.md](ORBIT_SURFACE.md) §2.2 P1, P2 (its ⑤), §5.2, §6; [ORBIT_SURFACE_READOUT.md](ORBIT_SURFACE_READOUT.md) §3, §14;
 > [ORBIT_SURFACE_MOUTH_HOLD.md](ORBIT_SURFACE_MOUTH_HOLD.md) §7; [ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md) §9 (the terms the closed orbit sets).
@@ -261,3 +260,23 @@ roughly halve it — not built. L3 — the readout's `band` flag reads a blend w
 support's index is its part's first body (never read). L5 — an edge band's middle is today's point cast (§3.5). L6 — the contact-range behaviour is
 proven by vectors only (V2, V3), not on a record.
 
+## 11. His look (2026-11-23, on the phone, LIVE `86a0e53`)
+
+*"I am not able to judge in details all the points but the overall feel is ok. Alignment tap: there is a small stutter on the green contour but
+nothing alarming. Commit, continue."* — the stutter is L2's (a turn's frames each prepare the sums — and the readout its facet: S2's key holds the
+orientation too): G2 put it at ~4 ms a turn frame on this PC for the drive alone.
+
+## 12. S4b — the alignment's stutter (`9b028396`, his *"continue"*)
+
+**The root, measured.** A turn of the held piece changes the held key on EVERY frame (an alignment is a slerp: the model's orientation follows the
+drawn piece), so the drive prepared its direction-free sums again on every frame of the turn — and the readout its facet's preparation, on top. Three
+quarters of those sums are the PLACED parts' hulls (2.1 of 2.7 ms on `Scene_1`, 36 boxes), which a turn never changes. **The change** (no new rule —
+the same results, the work done once): `preparePlaced` (the placed hulls, held-free) + `heldSumsOn` (the held piece's part) — `prepareHeldSums` =
+`heldSumsOn(preparePlaced(…))`, bit for bit — and ONE shared preparation, `heldSumsFor` (`landing_readout.ts`): the placed hulls once per placed set
+(its arrays' identity — `placedParts`' cache, a seat makes new ones), the held sums once per held key, read by the readout AND the drive.
+**Measured:** a turn frame's sums **2.90 → 0.70 ms** on this PC, and the readout's own preparation gone (it projects the shared sums). The phone's
+figure: his look. `prepareLanding` is now the vectors' and the offline scripts' one call (`unwired_debt.test.ts`, its reason).
+**Vectors** (V6), each RED on its mutant first: the placed refused dropped (*"expected [] to deeply equal [ 'Flat' ]"*); no placed cache (the hulls'
+identity: *"expected { … } to be { … }"*); the held key ignored (*"… not to be …"*). **G0**: 192 files / 2380 tests.
+**G1 / G3 on `9b028396`** (the kit's `run_s4b.sh`): his four records at `landingDrives` 0 IDENTICAL to `3b7a479`'s replays; his two `Scene_1`
+records at 2 IDENTICAL to the fix round's (`19fa42bf`) — the same results, the work done once. Local, not deployed: the phone's stutter is his look.

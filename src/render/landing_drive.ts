@@ -3,7 +3,7 @@
  * THE PIECE'S SUPPORT** — the landing map read FROM WHERE THE PIECE IS (⑤): far out the piece is outside every part (the reading from outside), close in
  * a part standing above it is a WALL (never a step up). The gizmo at P2's level LESS the piece's reach (it marks the contact: the piece hangs from it by
  * its lift — §2's correction); the footprint support the same reading (§3.3). The rules are `core/landing_map.ts`'s (`driveLevel`, `landingSupport`,
- * `prepareHeldSums`, `landingFor`); here the state, the frame's `F`, the cache.
+ * `heldSumsFor`'s shared preparation, `landingFor`); here the state, the frame's `F`, the cache.
  *
  * ⭐ `F` (§3.2): the anchor the solver left LAST frame (`pieceHoldPrev`), snapshotted once at the frame's start — every query of the frame reads it;
  * ⭐⭐ (fix round 1, §9bis 1) between two frames the stored snapshot (a pinch, an A + drag, the coast), and each snapshot a new STAMP (`driveStamp`): the
@@ -14,12 +14,12 @@
  * ⭐ `Scene_1` only (`READOUT_SCENE`); `landingDrives` 0 = as deployed (no query made), 1 = the support, 2 = the support and the gizmo.
  * ⭐ MODEL coordinates only: the placed parts on their model pose, the held piece by its model orientation.
  */
-import { heldPiece, heldReach, landingAxes, landingFor, landingSupport, prepareHeldSums, readoutKey, type HeldSums, type Landing, type LandingSupport, type PreparedLanding } from "../core/landing_map";
+import { heldPiece, heldReach, landingAxes, landingFor, landingSupport, readoutKey, type HeldSums, type Landing, type LandingSupport, type PreparedLanding } from "../core/landing_map";
 import { worldPlacementOf } from "../core/object_model";
 import type { Vec3 } from "../core/vec";
 import { planeAxes } from "../input/contact";
 import { SUPPORT_SLACK_M } from "../input/footprint";
-import { idOf, READOUT_SCENE, type ReadoutSource } from "./landing_readout";
+import { heldSumsFor, idOf, READOUT_SCENE, type ReadoutSource } from "./landing_readout";
 import type { SceneState } from "./scene_state";
 
 /** ⭐ One direction prepared: its landing, the held piece's reach toward it (`heldReach`). */
@@ -85,7 +85,9 @@ export function landingDriveFrame(st: SceneState, src: ReadoutSource): void {
   s.key = key;
   s.dirs.clear();
   s.held = [heldPiece(local, place.orientation, rc)];
-  s.sums = prepareHeldSums(parts.parts.map((points, k) => ({ id: parts.ids[k]!, points })), s.held);
+  // ⭐⭐ (2026-11-23, S4b — §12) the SHARED preparation (`heldSumsFor`): the placed parts' hulls once per placed set — a turn pays the held piece's part
+  const held = s.held;
+  s.sums = heldSumsFor(parts, key, () => held);
 }
 
 /** the direction prepared on demand (`null`: no sums) */

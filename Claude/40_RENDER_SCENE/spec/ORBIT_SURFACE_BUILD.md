@@ -90,6 +90,12 @@ gizmo's place every frame, exact (no grid), beside today's depth on `Scene_1` �
 **S3 — THE MOUTH'S HOLD RESTRICTED** (the build list's item 2, his Q4 (a); designed and built 2026-11-23 on his *"Continue build"*) → [ORBIT_SURFACE_MOUTH_HOLD.md](ORBIT_SURFACE_MOUTH_HOLD.md):
 never on a cap (H1), only over a void P2 leaves open for the held piece (H2); behind `mouthHoldDomain` (0 = `3b7a479`'s hold).
 
+**S5 — THE PARTS' CHECKS, THE GAME'S SIDE** (the build list's item 3; his *"Game side first"*, 2026-11-23) → [ORBIT_SURFACE_PART_CHECKS.md](ORBIT_SURFACE_PART_CHECKS.md):
+B1 the solids (convex, closed, volume, budget; the proxy on its solids, outward, ⭐ COMPLETE — the plinth, his word) and B2 exposed per stage, pure
+functions in `src/core`, vectors on `Scene_2`'s `.glb`; the Blender side waits for the build scripts. ⭐ Next, on his word (2026-11-23): the
+UNIVERSAL proxy and collision rules first — [`PROXY_AND_COLLISION_RULES.md`](../../30_OBJECTS_3D/spec/PROXY_AND_COLLISION_RULES.md) (a study) —
+then the checks built both ways; `Scene_2` not rebuilt in this worktree.
+
 **S4 — P2 DRIVES THE GIZMO** (the build list's item 4; designed 2026-11-23 on his *"Do as per your recommendation"*) → [ORBIT_SURFACE_DRIVE.md](ORBIT_SURFACE_DRIVE.md):
 the gizmo's depth P2's, read from where the piece is (⑤: far = from outside, close in a proud part a wall), at its level LESS the piece's reach (the
 gizmo marks the contact — the correction of S2's side-facet consequence); the footprint support re-expressed on the same reading; behind `landingDrives`
@@ -165,7 +171,7 @@ gizmo marks the contact — the correction of S2's side-facet consequence); the 
 * ⭐ **S2 — BUILT 2026-11-22 (P1 `dfeb7ef9`, P2 `fafbde6b`, P2b `d21a4826` — on `Scene_1` only), the gates G1 – G3 OWED** → [ORBIT_SURFACE_READOUT.md](ORBIT_SURFACE_READOUT.md) §13.
 * ⭐ **S4 — BUILT AND GATED 2026-11-23 (`54e37d03`, fix round 1 `19fa42bf`)** → [ORBIT_SURFACE_DRIVE.md](ORBIT_SURFACE_DRIVE.md) §9bis – §10: P2 drives the gizmo
   (its level less the piece's reach) and the support, read from where the piece is on the face it is over; G1 identical at 0; his front record: the
-  gizmo moved on the top round `Piece44` only (+73.25 mm), the camera ≤ 2.9 mm (F17); the support never active in his records. Local; his look owed.
+  gizmo moved on the top round `Piece44` only (+73.25 mm), the camera ≤ 2.9 mm (F17); the support never active in his records. ⭐ DEPLOYED 2026-11-23 (LIVE main `86a0e53` = `664f9c53`); his look owed.
 * ⭐ **S3 — BUILT 2026-11-23 (`d4b6c222`)** → [ORBIT_SURFACE_MOUTH_HOLD.md](ORBIT_SURFACE_MOUTH_HOLD.md) §7, §10: his four records never meet the hold (nothing he played changes); `Scene_1`'s scan: no cap
   mouth; H2 removes the hold at the 10 mm bottom slots (the piece never enters) and within half a piece of the top channel's walls — there the top's
   depth (not yet P2's) brings back the drop at the tilt: §8 row 11, his word. ⭐ DEPLOYED 2026-11-23 (LIVE main `e80a7b0` = `1bc13f70`); his look owed.
@@ -185,8 +191,8 @@ check script, run at the scene workflow's export gate, shown failing once, in th
 ⛔ **It binds every package's brief from now on**: each brief ends with *"what did this teach about how a scene must be drawn, ordered or
 marked? → its check, its control, its row in §8"*; a builder with nothing to add says so.
 ⭐⭐ **WIDENED 2026-11-22 (the owner)** — *"also, make sure that you capture in the md files that any lesson learned in this orbit's surface work is captured for the scene construction workflow or the blender drawing workflow, so that later on I can automate the construction of the scene and the drawing of the parts in blender with rules which have incorporated those lessons learned."* → every lesson first a RULE of construction or drawing
-(`SCENE_WORKFLOW.md` §10: the form a script applies; the registers §10.3 and `PART_AUTHORING.md` §6.4), then its check; the column *its rule* below. One script or several: open
-(`SCENE_WORKFLOW.md` §9.3).
+(`SCENE_WORKFLOW.md` §10: the form a script applies; the registers §10.3 and `PART_AUTHORING.md` §6.4), then its check; the column *its rule* below. One script or several: ✅ decided
+2026-11-24 — one command, each check its own file (`SCENE_WORKFLOW.md` §9.3).
 
 | # | the finding (where it was learned) | what a scene must satisfy | its rule (`SCENE_WORKFLOW.md` §10) | its check | status |
 |---|---|---|---|---|---|
@@ -199,12 +205,21 @@ marked? → its check, its control, its row in §8"*; a builder with nothing to 
 | 7 | The landing map's cost grows with the placed parts' convex pieces (S1: 36 – 270 ms a direction on `Scene_1` for a whole map) | ⏳ proposed: a budget per scene, once the wiring has chosen the map's representation | **C2** — OWED | none yet (B3 will run the game's own function on the `.glb`) | ⏳ owed — after the wiring's choice |
 | 8 | The specification's own checks, from the shapes study: solids (B1), exposed per stage (B2), where each held piece first touches (B3), coverage (B5), features at a threshold (B6) | `PART_AUTHORING.md` §6.1, each with its pass rule | `PART_AUTHORING.md` §6.3's ten lines, put into §10.2's form when a build script applies them | specified there | ⏳ not built — B1, B2 first; B3, B5 once the landing map is wired |
 | 9 | On a side facet P2 (the piece AS HELD, resting face down) stands half the piece's size out: +22.5 mm across it, +51.8 mm along it (S2's G3 on his records, `ORBIT_SURFACE_READOUT.md` §14) | — a GAME rule's (P2's orientation), not a scene's | none — golden vectors once decided (`SCENE_WORKFLOW.md` §9.2) | none (a game rule) — its golden vector: `landing_readout.test.ts` V2 *on a side facet the piece AS HELD* | ✅ his word 2026-11-23: **(a) as held** |
-| 10 | The readout and the footprint support read each placed part as ONE convex body (S2's build, `ORBIT_SURFACE_READOUT.md` §13.8) | a part authored as data is convex | **C4** (construction) | ⏳ owed: its hull's volume = its mesh's | ⏳ the check owed |
+| 10 | The readout and the footprint support read each placed part as ONE convex body (S2's build, `ORBIT_SURFACE_READOUT.md` §13.8) | a part authored as data is convex | **C4** (construction) | the format (`parseSceneDescriptor`: only convex kinds) + its guard `tests/data_parts_convex.test.ts` (shown failing on planted kinds) | ✅ built 2026-11-23 |
 | 11 | Near the top channel's walls H2 lets the gizmo go (the piece cannot pass: P2 right), and the top's TODAY depth drops it 21 mm onto the channel's floor at the tilt (S3's scan, `ORBIT_SURFACE_MOUTH_HOLD.md` §7) | — a GAME rule's (the top's depth, item 4), not a scene's | none | none (a game rule) | ✅ his word 2026-11-23: keep `mouthHoldDomain` 2, item 4 built next (it resolves the row) — ⭐ S4 built: the top reads the rims there |
 | 12 | P2 driving moves the far piece and the camera where the direction is oblique to the face (F17): on his front record the camera ≤ 2.9 mm, the piece ≤ 7.1 mm (S4's G3, `ORBIT_SURFACE_DRIVE.md` §10) | — the ORBIT's (F17, its queue), not a scene's | none | none | recorded — his look |
+| 14 | `Scene_2`'s face proxies stand OFF their collision pieces — the outer surfaces up to 42 mm (E04; E05 / E06 12.3 mm, E02 2.7 mm); E17's proxy half turned inward (S5's B1, `ORBIT_SURFACE_PART_CHECKS.md` §8; ⛔ the resting faces first listed here are VIRTUAL by design — §12) | the proxy ON its solids within the fit, facing out (B1e, B1f) | **D4**, **D5** (drawing, `PART_AUTHORING.md` §6.4) | B1e, B1f (`part_checks.ts`, `check_part_solids.ts`, a vector) | ⏳ his word: the file, or the rule |
+| 15 | ⭐ The plinth's top proxy is NOT complete: its four corners cut (a rounded rectangle on a square collision top), set in ~2 mm (his known issue; S5's B1h) | a proxy face complete on the solid face it lies on (B1h) | **D6** (drawing) | B1h (a vector) | the corners found — ⛔ NOT his issue (row 16; `ORBIT_SURFACE_PART_CHECKS.md` §11) |
+| 16 | The plinth's proxy is ONE open face (its top), its sides — which the outside reaches — without one (his reading: *"not a closed mesh but a quad"*; checked 2026-11-23: every `Scene_2` proxy is open by convention, the plinth's sides the gap) | the proxy covers every face the outside reaches (⏳ PROPOSED) | **D7** (drawing) | B1i — BUILT (the plinth's sides: 71.8 %; read literally every part 33 – 100 %); ⭐ now **R1's coverage** (S6 packet 2: the plinth 58.6 % of its outer surface) | answered by the universal rules (D8: every proxy closed — `PROXY_AND_COLLISION_RULES.md` §7.1 row 5) |
+| 17 | ⭐ EVERY `Scene_2` proxy is a selection of faces, OPEN — none covers its part's outer surface (E01 58.6 %, E02 52.1 %, E03 98.9 %, E04 43.9 %, E05 / E06 35.5 %, E13 / E14 66.8 %, E17 42.1 % not covered); the pistons E07 – E12 and E15 / E16 carry a RESTING face only (S6 packet 2, `PROXY_AND_COLLISION_RULES.md` §9.2) | every part's proxy CLOSED over its outer surface (the ρ-closing), its edges shared | **D8** (R1, R2) | R1, R2 (`proxy_cover.ts`, `check_part_solids.ts`, a vector) | ✅ the check built; `Scene_2` not rebuilt here (his word) |
+| 18 | `Scene_2`'s crank chamber (E02, ≈ 66 300 mm²) and the heads' ports and pockets (E13 / E14, 8 places each) are DEEPER than their mouth is wide, UNCAPPED (S6 packet 2) | every cavity deeper than its mouth is wide and every undercut CAPPED flush, a cap's rim on the real edges | **D8** (R1b) | R1b (the sky; a vector) | ✅ the check built; `Scene_2` not rebuilt here |
+| 19 | `Scene_2`'s collision pieces and render DISAGREE both ways: the render outside its pieces (E04 up to 42 mm, the pistons 29 mm, the heads 17 mm, E05 / E06 12 mm); pieces sticking out of the part (the crankshaft's webs 3 – 6 mm, each piston's skirt filled 9 – 15 mm, E15 / E16 4 – 9 mm) (S6 packet 3, `PROXY_AND_COLLISION_RULES.md` §9.4) | the pieces' union within τc of the render both ways — a curve by the angle rule's ring (its geometric sagitta exempt), a thin feature circumscribed | **D8** (C-R2 – C-R4) | C-R2 (`collision_cover.ts`, `check_part_solids.ts`, a vector) | ✅ the check built; `Scene_2` not rebuilt here |
+| 20 | Twelve `Scene_2` parts have NO resting candidate: E02, E04, E05, E06 (an outer node not one planar face) and every part with a resting face only (S6 packet 3) | at least one real flat proxy face on the hull, ≥ ¼ of the largest (his decision 5) | **D8** (decision 5) | REST (`restingCandidates`; a vector) | ✅ the check built; the share ¼ DECIDED 2026-11-24 |
 | 13 | `Piece44` is an inverted frustum: the support on P2 equals today's where a part's widest extent is at its top; on a slant P2 reads the contact, lower (S4's V3) | — a GAME rule's (P2 is exact), not a scene's | none | V3 (`landing_drive.test.ts`) | ✅ vector |
 
 ⭐ Rows are ADDED by each package and by each look of the owner; a row leaves only when its check is built AND has been seen failing.
+⭐ **(2026-11-24, his word: *"Scene 2 need a separate work in a separate worktree"*)** `Scene_2`'s findings — rows 14 – 20, the file's side —
+are fixed by their OWN work in its own worktree (queue row `GM13`), never here; the checks stay this work's.
 
 ## 9. THE TERMS THE CLOSED ORBIT SETS FOR THE WIRING (2026-11-22 evening — read before any wiring)
 
