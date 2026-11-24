@@ -127,3 +127,6 @@
 * **2026-11-24** — S10 BUILT: C2, the landing map's cost per stage (`sumsSize`, `check_landing_cost.ts` — the fourth check in the one
   command; budget PROPOSED: no stage larger than `Scene_1`'s); `Scene_2` up to 3 203 × `Scene_1`'s half-spaces, a turn frame 318 – 694 ms
   on this PC at stages 13 – 16: P2 cannot drive `Scene_2` as drawn (ledger row 7; D9 PROPOSED; the ways for his word). Local.
+* **2026-11-24** — S11 STUDIED, not built (`ORBIT_SURFACE_L1.md`): measured — no sealed or buried face in today's data scenes (that half of
+  L1: `Scene_2` only); the caps between parts WOULD change `Scene_1` (R1b on its boxes: 4 places deeper than wide — not trusted until every
+  body is in the set); the design (precomputed per placed set, behind `surfaceL1`); three questions for his word. Local.
