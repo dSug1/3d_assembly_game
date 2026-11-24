@@ -158,3 +158,5 @@
   open along the cube's underside and at its back; the gap under the cube and Piece45's overhang were the floor's doing; `Scene1_demo` none. The
   build designed (§10 there: a virtual filler glued to the walls, precomputed, `surfaceL1`).
 * **2026-11-24** — S11 BUILT (`1d4cee3c`, behind `surfaceL1`, 0 = LIVE; `ORBIT_SURFACE_L1.md` §10.5): `Scene_1`'s one filler (the tunnel behind Piece41's goal, x 103.5 … 116.5, y 15.5 … 73.5, z −17.5 … 432.5 mm; walls Piece19 / 20 / 39, Piece41 a goal) written offline (`scripts/surface/l1_caps.ts`, accepted glued / flush / goal), its faces in the face map at 1 — the tunnel's walls gone, the underside one group, the contour unchanged; 22 vectors red first; G1 on his records and his look owed.
+* **2026-11-24** — S11 GATED (`ORBIT_SURFACE_L1.md` §10.6): G1 bit for bit on his two `Scene_1` records at `surfaceL1` 0; at 1 identical too
+  (the filler in the live map — the key's `#L1…` read — but his records never go under the cube). His look owed (under the cube, 0 and 1).

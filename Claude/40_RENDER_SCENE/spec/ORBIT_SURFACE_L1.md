@@ -1,6 +1,6 @@
 # L1 IN THE GAME — THE ASSEMBLY'S SURFACE AS IT GROWS: sealed, buried, the caps between parts (package S11, a study, 2026-11-24)
 
-> **STATUS** · ✅ **BUILT 2026-11-24 (§10.5, `1d4cee3c`, behind `surfaceL1`, 0 = LIVE; G1 and his look owed)** · ✅ **DECIDED 2026-11-24 (§8: his *"S11: you can proceed as you recommend"*)** — was: ⏳ **A STUDY — NOTHING BUILT.** Written on his word *"Then finish the orbit's surface work"* (2026-11-24), by his rules (docs before
+> **STATUS** · ✅ **BUILT 2026-11-24 (§10.5, `1d4cee3c`, behind `surfaceL1`, 0 = LIVE), ✅ GATED (§10.6: G1 bit for bit; his records unchanged at 1); his look owed** · ✅ **DECIDED 2026-11-24 (§8: his *"S11: you can proceed as you recommend"*)** — was: ⏳ **A STUDY — NOTHING BUILT.** Written on his word *"Then finish the orbit's surface work"* (2026-11-24), by his rules (docs before
 > build; the four-part method; the closed orbit's terms — [ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md) §9). **Three questions for his word (§6).**
 > **OWNS** · what the game's face map must leave out or add at a seat (layer L1), measured on today's scenes, and the design proposed.
 > **READ WITH** · [ORBIT_SURFACE.md](ORBIT_SURFACE.md) §5.1 (L1); [PROXY_AND_COLLISION_RULES.md](../../30_OBJECTS_3D/spec/PROXY_AND_COLLISION_RULES.md) §3bis
@@ -168,3 +168,14 @@ script now leaves every frozen body out, as the face map does (`render/assembly_
      main region was ONE HALF of it at 0 — the slit cut it in two: the bottom facet's share 0.5046 → 0.8167), the back's share 0.9525 → 0.9550, a
      group more in front (the filler's front at the bottom of Piece41's slot). ⚠ The camera's path at 1 is G1's to measure, never assumed.
    * **Vectors** — `tests/l1_caps.test.ts` (22), each shown RED on a mutant first (the list: `ORBIT_SURFACE_BUILD.md` §10, S11's row).
+
+### 10.6 ✅ The gates (2026-11-24, on `2f5fa240` — the kit's `fo3/surface/l1/run_l1.sh`, `walk_l1.mjs`; one headless job at a time)
+
+* **G1 — identity: PASSED, bit for bit.** His two `Scene_1` records of 2026-11-22 (back 2 916 frames, front 6 034) replayed headless at
+  `surfaceL1` 0 against the defaults' replays of 2026-11-23 (`runs/S6_*`): the largest difference **0** on every frame (the camera's position,
+  target and up; the gizmo).
+* **At 1 against 0: identical too** — both records, every frame (the gizmo, the camera, the piece: 0 frames over 1 µm). ⭐ A positive control
+  first: at 1 the page's two face maps carry the filler (their key ends `#L1L1cap_Scene_1_1`, 6 facets) — so the filler IS in the live map, and
+  his two records never take the gizmo where it changes the stacks: under the cube (its underside one region at 1, two halves at 0) or at the
+  tunnel's end in the back. **What it changes is seen only there** — his look: the gizmo under the cube, across the slit, at 1 and at 0.
+* No probe profile left in %TEMP%; the server on 5191 stopped.
