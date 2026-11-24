@@ -103,7 +103,7 @@ measure and their empty sockets may have been counted).
 * **Q3 — PRECOMPUTED** per placed set with the scene (§4.1), read at boot, looked up at a seat, a put-down, an undo.
 * **Order**: after the landing map's cost (his *"I do not accept these costs"*, the same day) — one heavy job at a time.
 
-## 9. ⭐ Q2's measure WITH EVERY BODY (2026-11-24 — `scripts/surface/l1_data_scenes.ts`, extended by an agent; 15 min)
+## 9. ⭐ Q2's measure WITH EVERY BODY (2026-11-24 — `scripts/surface/l1_data_scenes.ts`, extended by an agent; ⛔ corrected the same day: the floor out)
 
 **How.** Every body with the game's own shape (the frusta by `taperTop`, the prisms by `prismOutline`, turned bodies, the margins — each checked
 against the game's code: corners, extents, outline 0.0000 mm off, volumes); R1b on the placed set as ONE part, each place listed (a copy of R1b's
@@ -111,20 +111,36 @@ listing in the script, equal to `checkProxyCover` on a small set — `--selfchec
 and START (the bodies whose spawn is their goal; the loose Piece1, 2, 17, 23, 41 left out — a place in a left-out piece's goal volume is its slot).
 ⚠ The first run (the loose pieces at their spawn places) crashed R1b on a stack overflow — a defect in the check, fixed `ca4eeb0a` (`minOver`, V18).
 
-**`Scene_1` — the same two caps in both states; no goal slot is a place** (the slots of Piece1, 2, 23 at the top edge open, so not deep):
+⛔⛔ **CORRECTED 2026-11-24 — THE FLOOR IS NOT A PART** (his rule, repeated: *"I already told you several times that the floor shall not count
+as a part, and viewed from below the floor is not visible. Therefore the floor has no role to play in the game, it is like a UI inside the game
+scene"*). The first reading kept the frozen `Floor` in the set: it closed the 15.5 mm gap under the cube into one ≈ 500 000 mm² "cap" and, blocking
+the lower half of every sky, made Piece45's overhang read deep — both were the floor's doing; the three questions on the gap are WITHDRAWN. The
+script now leaves every frozen body out, as the face map does (`render/assembly_wiring.ts` `placedFaces`, `obj.frozen`); rerun the same day (21 s a set).
+
+**`Scene_1` — ONE cap, the same in both states** (Piece45's overhang not deep; the slots behind Piece1, 2, 17, 23's goals not deep):
 
 | place | what | size |
 |---|---|---|
-| **1** | ⭐ **the 15.5 mm GAP UNDER THE CUBE** (x −239 … 246, z −48 … 432 mm): the bottom row stands 0.155 units above the floor (`scene_1.ts` — *"Piece19's bottom is 0.155 above the sand"*); only Piece43 reaches the floor (sunk 25.8 mm, his *"Sink into the floor"*). Its mouth: an unbroken slit round the 490 × 483 mm footprint (≈ 1 946 mm long). Two branches up to y 72: the slots behind Piece17's and Piece41's goals — their goals fill the slots' front 33 mm, 450 mm stay empty finished. | ≈ 500 000 mm², no straight way out |
-| **2** | the hollow UNDER PIECE45'S OVERHANG (x 5 … 43, y 118 … 160, z −90 … −52), between Piece45 and Piece15, 35, 10 | 1 534 mm², ≈ 6.1 × deeper than wide |
-| 3 | amber (borderline) on Piece15's front | 12 mm² |
+| **1** | ⭐ **THE TUNNEL BEHIND PIECE41'S GOAL** — the seated parts were deepened to the cube's 483 mm (`scene_1.ts` `CUBE_ROWS`), the five pieces the boot moves kept the painting's 33 mm: behind Piece41's goal a tunnel 13 mm wide (between Piece19 and Piece20), 58 mm high (the cube's underside to Piece39), 450 mm long (z −17.5 … 432.5). Its mouths: a 13 mm slit along the cube's UNDERSIDE (seen from below the floor's level) and its end in the cube's BACK; at START also its front (Piece41's goal slot — the ghost bridges it) | ≈ 42 400 mm² (FINISHED), 44 300 (START); ≈ 7.9 × deeper than wide |
 
-**`Scene1_demo`** (finished): the 15.5 × 33 mm gap under the painting (its underside ≈ 8.9 ×, the floor strip ≈ 1.4 ×). **B2**: sealed 0, buried 0 on
-every data scene, both states (Q1 with `GM13` stands).
+**`Scene1_demo`**: no place. **`Scene_0`, `Scene_0bis`**: none. **B2**: sealed 0, buried 0 on every data scene, both states (Q1 with `GM13` stands).
 
-**⏳ For his word — almost all of the caps' area is the 15.5 mm float of the authored bottom row, not a hollow anyone drew:**
-* **(a) the game caps it** behind `surfaceL1` (the slit's ring, its two slot branches, Piece45's mouth): the bottom row's undersides leave the skin —
-  the gizmo can no longer go under the cube; his look decides;
-* **(b) the scene's data puts the cube on the floor** (the bottom row down 15.5 mm — the closed orbit's reference scene changes everywhere: G1 his
-  records re-baselined), then only Piece45's hollow is a cap;
-* **(c) the slit is no hollow by rule** (a gap under a part resting on the floor's plane, as the floor is frozen and no surface): only Piece45's cap.
+## 10. ⏳ THE BUILD (S11 on `Scene_1`, for his look) — the design, written before the build
+
+1. **The cap is a FILLER** — a virtual box filling the hollow, never a solid: no collision piece (P2, the drive and the casts never read it), no
+   mesh drawn. Its six faces join the face map as a part of their own (`part` = its id): the faces pressed on the walls GLUE both ways — the
+   filler's and the walls' (the face map's own rule, `input/face_map.ts` `exposedRects`) — so the tunnel's inner walls leave the skin; its open faces
+   (the underside's slit, the back's end) stay, coplanar with the cube's underside and back, and merge into their facets: the skin passes over the
+   slit like a bridge. ⚠ The gizmo already bridges a void narrower than the held piece (`heldFoot`, `stackDepthAt`): what the filler changes is the
+   FACETS under and behind the cube (the charts, the normals, the camera) — measured at the gates, never assumed.
+2. **Computed offline** (Q3) from R1b's place: its deep box snapped outward, each side to the nearest parallel face plane of a placed body within
+   the place's mouth width (⛔ the floor never: frozen, not a part); ⛔ a piece's GOAL VOLUME never inside a filler (the ghost bridges a goal's
+   mouth): the filler stops at Piece41's goal (z −17.5). Accepted only if each of its faces is GLUED (on a wall) or FLUSH (coplanar with an exposed
+   face of a wall it borders) — else refused, loudly. Written with the scene (`src/content/scene_1_caps.json`, by a script under
+   `scripts/surface/`): the filler's box (scene units) and its WALLS (Piece19, Piece20, Piece39); in the game a filler is present when all its walls
+   are placed (a seat, a put-down, an undo — the face map's key). On `Scene_1` the same in every placed set (its walls are seated from the start).
+3. **Switch `surfaceL1`** (THE ORBIT'S SURFACE): 0 = LIVE (`19c7f88`), 1 = the fillers. G1: his records at 0 identical; at 1 the camera's path
+   measured against 0 (it can differ only under and behind the cube).
+4. **Vectors** (red first against today): the filler's box read from the scene; the tunnel's inner faces absent from the face map at 1, present at 0;
+   the underside and the back each one facet across the slit at 1; mutants — a side snapped to the floor's plane, a filler reaching into a goal
+   volume, a face neither glued nor flush — refused.

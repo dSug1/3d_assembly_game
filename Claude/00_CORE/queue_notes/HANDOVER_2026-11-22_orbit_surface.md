@@ -112,3 +112,10 @@ collision pieces (one measurement before the plunge is built); the frozen plinth
   Q3 precomputed. Not started: after the landing's engine (one heavy job at a time).
 * **S14 PROPOSED** (`ORBIT_SURFACE_LANDING_CAST.md`): the landing read at query time — prototype in the kit's `fo3/surface/cast/` (`proto_cast.ts`,
   `cost_when.ts`; run from `../orbit_surface` with `npx vite-node <path>`; env `F=near`, `N`, `STAGES`). His word owed: build it (recommended), or audit first.
+
+## ⭐ 2026-11-24, evening — the floor is not a part (his rule, repeated); S11's one cap; its build designed
+
+* ⛔ The caps' measure had kept the frozen floor — he had said several times it is no part (*"it is like a UI inside the game scene"*). Rerun
+  without it: `Scene_1` has ONE cap, the 13 mm tunnel behind Piece41's goal (`ORBIT_SURFACE_L1.md` §9). Every surface measure leaves frozen bodies out.
+* S11's build designed (§10 there): the cap a virtual FILLER glued to the tunnel's walls, precomputed with the scene, behind `surfaceL1` (0 = LIVE).
+* S14 (the landing read at query time) still waits for his word.

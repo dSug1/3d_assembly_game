@@ -1,14 +1,17 @@
 // ⭐ (2026-11-24, S11 — ORBIT_SURFACE_L1.md §3) A MEASUREMENT, not a check: do today's DATA scenes have a SEALED or BURIED face, and which hollows
 // BETWEEN PLACED parts are deeper than their mouth is wide (the caps the game would add)? Never with loose pieces at their spawn places — each scene
 // (that has a `final`) in TWO states:
-//   * FINISHED — every body at its GOAL (`final`'s positions and orientations); a body with no goal (the frozen floor) where it stands;
-//   * START — only the bodies whose spawn place IS their goal (placed from the start) and the frozen ones; the loose pieces left out, their GOAL volumes
+//   * FINISHED — every body at its GOAL (`final`'s positions and orientations); a non-frozen body with no goal where it stands;
+//   * START — only the bodies whose spawn place IS their goal (placed from the start); the loose pieces left out, their GOAL volumes
 //     kept to name a place that reaches into one: that piece's GOAL SLOT (the game bridges a goal's mouth with its ghost), not a cap.
+// ⛔⛔ (his rule, repeated 2026-11-24: *"the floor shall not count as a part, and viewed from below the floor is not visible … it is like a UI
+// inside the game scene"*) A FROZEN body — the floor — is NEVER in the set: never a wall of a hollow, never a cap's reason (the face map skips it
+// too: `render/assembly_wiring.ts`, `obj.frozen`). ⛔ The first run of 2026-11-24 kept it and reported the gap under Scene_1's cube as a cap.
 // Each body with the shape the GAME gives it (`render/scene.ts` → `render/bodies.ts` `make`, reproduced engine-free below: the box, the frustum —
 // `core/frustum.ts` `taperTop` —, the prism — `prismMesh`'s steps on `core/prism.ts` —, the margin, the orientation; each shape checked and printed).
-// Per state: B2's states at 2 mm (`exposedPerStage`); the floor's contact (what stands on it, the slit under the rest); then — Scene_1 both states,
+// Per state: B2's states at 2 mm (`exposedPerStage`); then — Scene_1 both states,
 // Scene1_demo FINISHED — packet 2's R1b on the set as ONE part, each place listed: its size, how deep for its mouth, its box, the bodies round it and
-// across it, its label (a CAP between placed parts, a goal slot, amber). ≈ 5 min a set on Scene_1's 2 m floor.
+// across it, its label (a CAP between placed parts, a goal slot, amber). Minutes a set.
 // ⚠ The place list needs R1b's regions, which `checkProxyCover` does not return: `r1bPlaces` below is a COPY of its R1b section (as at ca4eeb0a,
 // `minOver` included), kept ONLY to list the places — its two lines must equal `checkProxyCover`'s, which `--selfcheck` holds:
 //   --selfcheck        on a small set (Scene_1 FINISHED, its lower right corner, no floor; ≈ 20 s)
@@ -183,39 +186,28 @@ function samePose(b: BodySpec, f: FinalPose): boolean {
   const qa = quatOf(b.orientation), qb = quatOf(f.orientation);
   return b.position.every((x, i) => Math.abs(x - f.position[i]!) < 1e-9) && Math.abs(qa[0] * qb[0] + qa[1] * qb[1] + qa[2] * qb[2] + qa[3] * qb[3]) > 1 - 1e-12;
 }
-/** ⭐ the set: FINISHED — every body at its goal (none: where it stands); START — the bodies placed from the start (spawn = goal) and the frozen ones;
- * `left`: the loose pieces left out, AT THEIR GOALS (their goal volumes); `notes`: a non-frozen body with no goal */
+/** ⭐ the set: FINISHED — every body at its goal (none: where it stands); START — the bodies placed from the start (spawn = goal);
+ * ⛔ never a FROZEN body (the floor: not a part — his rule, the header); `left`: the loose pieces left out, AT THEIR GOALS (their goal volumes);
+ * `notes`: a body with no goal, the frozen ones left out */
 function posed(sc: SceneDescriptor, state: State): { bodies: Body[]; left: Body[]; notes: string[] } {
   const u = unitOf(sc);
   const goal = new Map((sc.final?.bodies ?? []).map((f) => [f.id, f]));
   const bodies: Body[] = [], left: Body[] = [], notes: string[] = [];
+  const frozen = sc.bodies.filter((b) => b.frozen).map((b) => b.id);
+  if (frozen.length > 0) notes.push(`frozen, never a part: ${frozen.join(" ")} (left out)`);
   for (const b of sc.bodies) {
+    if (b.frozen) continue;
     const f = goal.get(b.id);
     if (f === undefined) {
-      if (!b.frozen) notes.push(`${b.id} has no goal (${state === "FINISHED" ? "kept where it stands" : "left out"})`);
-      if (b.frozen || state === "FINISHED") bodies.push(bodyOf(b, u));
+      notes.push(`${b.id} has no goal (${state === "FINISHED" ? "kept where it stands" : "left out"})`);
+      if (state === "FINISHED") bodies.push(bodyOf(b, u));
       continue;
     }
     if (state === "FINISHED") bodies.push(bodyOf({ ...b, position: f.position, orientation: f.orientation }, u));
-    else if (b.frozen || samePose(b, f)) bodies.push(bodyOf(b, u));
+    else if (samePose(b, f)) bodies.push(bodyOf(b, u));
     else left.push(bodyOf({ ...b, position: f.position, orientation: f.orientation }, u));
   }
   return { bodies, left, notes };
-}
-
-/** ⭐ the floor's contact: the frozen body of the widest footprint; the bodies that reach its top (≤ 0.5 mm — stand on it or sink in); the lowest
- * undersides of the rest (within 0.5 mm of the lowest), their footprint: the slit between them and the floor */
-function floorReadout(bodies: readonly Body[]): string {
-  const fl = bodies.filter((b) => b.spec.frozen).sort((a, b) => (b.box.hi[0] - b.box.lo[0]) * (b.box.hi[2] - b.box.lo[2]) - (a.box.hi[0] - a.box.lo[0]) * (a.box.hi[2] - a.box.lo[2]))[0];
-  if (fl === undefined) return "no frozen floor";
-  const top = fl.box.hi[1];
-  const others = bodies.filter((b) => b !== fl);
-  const touch = others.filter((b) => b.box.lo[1] <= top + 0.5);
-  const free = others.filter((b) => b.box.lo[1] > top + 0.5);
-  const low = minOver(free, (b) => b.box.lo[1]);
-  const under = free.filter((b) => b.box.lo[1] <= low + 0.5);
-  const x0 = minOver(under, (b) => b.box.lo[0]), x1 = -minOver(under, (b) => -b.box.hi[0]), z0 = minOver(under, (b) => b.box.lo[2]), z1 = -minOver(under, (b) => -b.box.hi[2]);
-  return `the floor ${fl.spec.id}'s top at y ${top.toFixed(1)} mm; reaching it: ${touch.map((b) => `${b.spec.id} (${(top - b.box.lo[1]).toFixed(1)} mm into it)`).join(", ") || "nothing"}; the lowest undersides of the rest ${(low - top).toFixed(1)} mm above it — ${under.length} bodies (${under.map((b) => b.spec.id).join(" ")}) over x ${x0.toFixed(1)}…${x1.toFixed(1)}, z ${z0.toFixed(1)}…${z1.toFixed(1)} mm: a slit ${(low - top).toFixed(1)} mm high round a ${(x1 - x0).toFixed(1)} × ${(z1 - z0).toFixed(1)} mm footprint (perimeter ≈ ${(2 * (x1 - x0 + z1 - z0)).toFixed(0)} mm)`;
 }
 
 // ── packet 2's R1b, each PLACE kept ──────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -616,7 +608,6 @@ for (const sc of SCENES) {
       const boxes = bodies.filter((b) => b.kind === "box" && !b.turned);
       if (boxes.length > 0) console.log(`    ${boxes.length} square boxes: ${boxes.filter((b) => shapeCheck(b, u).includes("✗")).length} off their dims or volume`);
     }
-    console.log(`  floor: ${floorReadout(bodies)}`);
     if (sc.id === "Scene_1" || sc.id === "Scene1_demo") {
       // ⭐ R1b on the set as ONE part (its render = every body's faces): the hollows deeper than their mouth is wide, each listed
       const t0 = performance.now();

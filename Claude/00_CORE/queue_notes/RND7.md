@@ -153,3 +153,7 @@
 * **2026-11-24** — S11's caps MEASURED with every body, two states (`ORBIT_SURFACE_L1.md` §9): `Scene_1`'s caps = the 15.5 mm gap under the
   cube (the authored bottom row's float; ≈ 500 000 mm², its slit ≈ 1 946 mm) + the hollow under Piece45's overhang (1 534 mm²); no goal slot; sealed /
   buried 0 everywhere. His word owed on the gap: the game caps it, the data lowers the cube, or no hollow by rule.
+* **2026-11-24** — ⛔ CORRECTED on his word (*"the floor shall not count as a part … it is like a UI inside the game scene"* — repeated): the
+  measure had kept the frozen floor; rerun without it (`ORBIT_SURFACE_L1.md` §9): `Scene_1` has ONE cap — the 13 mm tunnel behind Piece41's goal,
+  open along the cube's underside and at its back; the gap under the cube and Piece45's overhang were the floor's doing; `Scene1_demo` none. The
+  build designed (§10 there: a virtual filler glued to the walls, precomputed, `surfaceL1`).
