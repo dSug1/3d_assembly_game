@@ -120,6 +120,9 @@ const PENDING: Record<string, string> = {
   // ⭐ (2026-11-23, S4b — `ORBIT_SURFACE_DRIVE.md` §12) the readout and the drive read the SHARED preparation (`heldSumsFor`: the placed parts' hulls once
   // per placed set — the alignment's stutter); `prepareLanding` stays the one call of the vectors and the offline scripts (`landingFor(prepareHeldSums(…))`)
   prepareLanding: "S4b (`ORBIT_SURFACE_DRIVE.md` §12) — the vectors' and the offline scripts' one call; the product reads the shared preparation (`heldSumsFor`) since S4b",
+  // ⭐ (2026-11-24, S14 — `ORBIT_SURFACE_LANDING_CAST.md` §6) the cast's twin of `prepareLanding`: the product reads its steps apart, cached
+  // (`render/landing_readout.ts` `heldCastFor`, `castLandingFor`); this one call serves the vectors (both engines) and the offline scripts
+  prepareLandingCast: "S14 (`ORBIT_SURFACE_LANDING_CAST.md` §6) — the vectors' and the offline scripts' one call of the cast; the product reads its steps cached (`heldCastFor`, `castLandingFor`)",
   // ⭐ (2026-11-23, S5 — `ORBIT_SURFACE_PART_CHECKS.md` §4) B1, the solids, runs as VECTORS on each scene's `.glb` (`part_checks.test.ts`: `Scene_2`'s report,
   // the plinth's incomplete proxy); at load its cheap subset is owed (D1: printed, never refused — 5 s in full on this PC, B1h the heavy part)
   checkSolids: "S5 (`ORBIT_SURFACE_PART_CHECKS.md` §4, D1) — B1 run as vectors on each scene's .glb and at the export gate; its cheap subset at load is `checkSolidsAtImport` (S13, wired)",

@@ -27,8 +27,9 @@ import { cross, dot, qRotate, type Quat, type Vec3 } from "./vec";
 /** ⭐ The grid's step, millimetres (`ORBIT_SURFACE.md` §5.1) — ⭐ (2026-11-22, S2) its one home is `src/core/units.ts` (`ORBIT_SURFACE_BUILD.md` §6), re-exported. */
 export { LANDING_STEP_MM };
 const M_PER_MM = 0.001;
-/** ⭐ Touching is not overlapping: a side must hold by more than this, a stretch be longer, to count (0.1 µm — the study's `1e-4 mm`). */
-const TOUCH_M = 1e-7;
+/** ⭐ Touching is not overlapping: a side must hold by more than this, a stretch be longer, to count (0.1 µm — the study's `1e-4 mm`).
+ *  ⭐ (2026-11-24, S14) exported for the cast (`landing_cast.ts`): its one home stays here. */
+export const TOUCH_M = 1e-7;
 /** A unit normal's direction rounded to this for the de-duplication of half-spaces (a near-duplicate kept is harmless: it is a supporting plane). */
 const KEY_DIGITS = 9;
 
@@ -155,7 +156,8 @@ function polyOf(points: readonly Vec3[]): Poly | null {
   return { pts: P, normals: [...normals.values()], edges: [...edges.values()] };
 }
 
-const support = (pts: readonly Vec3[], m: Vec3): number => {
+/** σ(m): the largest m·p over the points — ⭐ (S14) exported: the cast's `top` reads it (one code, `landing_cast.ts`) */
+export const support = (pts: readonly Vec3[], m: Vec3): number => {
   let s = -Infinity;
   for (const p of pts) {
     const x = m[0] * p[0] + m[1] * p[1] + m[2] * p[2];
@@ -231,8 +233,9 @@ function castSum(s: Sum, U: number, V: number, out: number[]): void {
   if (hi - lo > TOUCH_M) out.push(lo, hi, s.part);
 }
 
-/** ⭐ the union of the stretches (bottom, top, part) — sorted by (bottom, top, part), merged, OUTERMOST FIRST; a layer's part is its top's (ties: the smaller id) */
-function mergeLayers(raw: number[], ids: readonly string[]): Layer[] {
+/** ⭐ the union of the stretches (bottom, top, part) — sorted by (bottom, top, part), merged, OUTERMOST FIRST; a layer's part is its top's (ties: the smaller id).
+ *  ⭐ (2026-11-24, S14) SHARED with the cast (`landing_cast.ts`): one merge for both engines, never a copy. */
+export function mergeLayers(raw: number[], ids: readonly string[]): Layer[] {
   const n = raw.length / 3;
   if (n === 0) return [];
   const ord = Array.from({ length: n }, (_, k) => k);
@@ -252,8 +255,9 @@ function mergeLayers(raw: number[], ids: readonly string[]): Layer[] {
   return out;
 }
 
-/** ⭐ the landing read on a layer list: from outside, or from the depth `from` (the first top at or below it; strictly inside a stretch: `inside`) */
-function landOf(layers: readonly Layer[], from: number | undefined): Landing {
+/** ⭐ the landing read on a layer list: from outside, or from the depth `from` (the first top at or below it; strictly inside a stretch: `inside`).
+ *  ⭐ (2026-11-24, S14) SHARED with the cast (`landing_cast.ts`): one read for both engines, never a copy. */
+export function landOf(layers: readonly Layer[], from: number | undefined): Landing {
   for (const l of layers) {
     if (from === undefined || from >= l.top - TOUCH_M) return { kind: "land", depth: l.top, part: l.part };
     if (from > l.bottom + TOUCH_M) return { kind: "inside", part: l.part };
