@@ -1,6 +1,6 @@
 # RND7 — The orbit's surface: where the gizmo travels
 
-> **STATUS** · 🔧 **S2 (the readout) BUILT AND GATED** (2026-11-22 night, the owner asleep; `ORBIT_SURFACE_READOUT.md` §13 – §14), ⭐ **DEPLOYED 2026-11-23** (LIVE main `ff41fc3` = `5d30edf5`); 🔧 **S3 (the mouth's hold restricted) BUILT AND GATED** 2026-11-23 (`d4b6c222`, `ORBIT_SURFACE_MOUTH_HOLD.md`), ⭐ **DEPLOYED 2026-11-23** (LIVE main `e80a7b0` = `1bc13f70`); 🔧 **S4 (P2 drives the gizmo) BUILT AND GATED** 2026-11-23 (`ORBIT_SURFACE_DRIVE.md`), ⭐ **DEPLOYED 2026-11-23** (LIVE main `86a0e53` = `664f9c53`) — the workfront: branch `1.0.158from1.0.157-Orbit_surface` (pushed), the
+> **STATUS** · 🔧 **S2 (the readout) BUILT AND GATED** (2026-11-22 night, the owner asleep; `ORBIT_SURFACE_READOUT.md` §13 – §14), ⭐ **DEPLOYED 2026-11-23** (LIVE main `ff41fc3` = `5d30edf5`); 🔧 **S3 (the mouth's hold restricted) BUILT AND GATED** 2026-11-23 (`d4b6c222`, `ORBIT_SURFACE_MOUTH_HOLD.md`), ⭐ **DEPLOYED 2026-11-23** (LIVE main `e80a7b0` = `1bc13f70`); 🔧 **S4 (P2 drives the gizmo) BUILT AND GATED** 2026-11-23 (`ORBIT_SURFACE_DRIVE.md`), ⭐ **DEPLOYED 2026-11-23** (LIVE main `86a0e53` = `664f9c53`); S4b (the stutter) ⭐ **DEPLOYED 2026-11-24** (LIVE main `6a2da88` = `bd5e69b4`) — the workfront: branch `1.0.158from1.0.157-Orbit_surface` (pushed), the
 > worktree `../orbit_surface`. Built OFFLINE before the merge (2026-11-17): S0 (the entry sets on `Scene_2`'s real collision pieces) and S1 (the landing map,
 > `src/core/landing_map.ts` — NOT wired: nothing calls it). Nothing else built.
 > **NEXT** · ✅ his look 2026-11-23: *"the overall feel is ok"*; the alignment tap: *"a small stutter on the green contour but nothing alarming"* — then the build list continues (his *"continue"*); his look on S4 (deployed) given — the build list's item 4, P2 DRIVING the gizmo, BUILT: `ORBIT_SURFACE_DRIVE.md` (his word 2026-11-23 *"Do as per your recommendation"*: `mouthHoldDomain` stays 2,
@@ -111,3 +111,6 @@
 * **2026-11-23, night (later)** — B3 / B5 STUDIED, not built (`ORBIT_SURFACE_PART_CHECKS.md` §14): the definitions proposed (the stage's held piece
   as held, its resting face against each exposed face, both turns; landable within the fit; B5's reasons), information until the playability
   brief exists; three questions for his word. Local.
+* **2026-11-24** — his word *"do 1, 2 and 3 and 5 as you recommend. Scene 2 need a separate work in a separate worktree. Then finish the orbit's
+  surface work"*: B3 / B5's three questions, the one command and the resting share ¼ DECIDED (`bd5e69b4`); `Scene_2`'s findings → `GM13` (its own
+  worktree); S4b DEPLOYED (LIVE main `6a2da88` = `bd5e69b4`; his phone look owed: the alignment tap); the rest of the surface work planned → `ORBIT_SURFACE_BUILD.md` §10.

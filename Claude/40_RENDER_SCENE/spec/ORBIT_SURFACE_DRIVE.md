@@ -279,4 +279,5 @@ figure: his look. `prepareLanding` is now the vectors' and the offline scripts' 
 **Vectors** (V6), each RED on its mutant first: the placed refused dropped (*"expected [] to deeply equal [ 'Flat' ]"*); no placed cache (the hulls'
 identity: *"expected { … } to be { … }"*); the held key ignored (*"… not to be …"*). **G0**: 192 files / 2380 tests.
 **G1 / G3 on `9b028396`** (the kit's `run_s4b.sh`): his four records at `landingDrives` 0 IDENTICAL to `3b7a479`'s replays; his two `Scene_1`
-records at 2 IDENTICAL to the fix round's (`19fa42bf`) — the same results, the work done once. Local, not deployed: the phone's stutter is his look.
+records at 2 IDENTICAL to the fix round's (`19fa42bf`) — the same results, the work done once. ⭐ **DEPLOYED 2026-11-24** on his word (LIVE main `6a2da88` = `bd5e69b4`);
+his phone look owed: the alignment tap, the stutter gone or not.

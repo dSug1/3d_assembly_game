@@ -171,7 +171,7 @@ gizmo marks the contact — the correction of S2's side-facet consequence); the 
 * ⭐ **S2 — BUILT 2026-11-22 (P1 `dfeb7ef9`, P2 `fafbde6b`, P2b `d21a4826` — on `Scene_1` only), the gates G1 – G3 OWED** → [ORBIT_SURFACE_READOUT.md](ORBIT_SURFACE_READOUT.md) §13.
 * ⭐ **S4 — BUILT AND GATED 2026-11-23 (`54e37d03`, fix round 1 `19fa42bf`)** → [ORBIT_SURFACE_DRIVE.md](ORBIT_SURFACE_DRIVE.md) §9bis – §10: P2 drives the gizmo
   (its level less the piece's reach) and the support, read from where the piece is on the face it is over; G1 identical at 0; his front record: the
-  gizmo moved on the top round `Piece44` only (+73.25 mm), the camera ≤ 2.9 mm (F17); the support never active in his records. ⭐ DEPLOYED 2026-11-23 (LIVE main `86a0e53` = `664f9c53`); his look owed.
+  gizmo moved on the top round `Piece44` only (+73.25 mm), the camera ≤ 2.9 mm (F17); the support never active in his records. ⭐ DEPLOYED 2026-11-23 (LIVE main `86a0e53` = `664f9c53`); his look: ok, a small stutter → S4b ⭐ DEPLOYED 2026-11-24 (LIVE main `6a2da88` = `bd5e69b4`).
 * ⭐ **S3 — BUILT 2026-11-23 (`d4b6c222`)** → [ORBIT_SURFACE_MOUTH_HOLD.md](ORBIT_SURFACE_MOUTH_HOLD.md) §7, §10: his four records never meet the hold (nothing he played changes); `Scene_1`'s scan: no cap
   mouth; H2 removes the hold at the 10 mm bottom slots (the piece never enters) and within half a piece of the top channel's walls — there the top's
   depth (not yet P2's) brings back the drop at the tilt: §8 row 11, his word. ⭐ DEPLOYED 2026-11-23 (LIVE main `e80a7b0` = `1bc13f70`); his look owed.
@@ -238,3 +238,23 @@ are fixed by their OWN work in its own worktree (queue row `GM13`), never here; 
   [`CAMERA_FOLLOWS_GIZMO.md`](CAMERA_FOLLOWS_GIZMO.md) §20.1 – §20.9. Every finding about a scene becomes a check (§8).
 * **The code references** here and in [`ORBIT_SURFACE.md`](ORBIT_SURFACE.md) were read on `30f7bb3` / `1190db2`: re-read on the branch before building on
   any (step 2.5 deleted the legacy zones and `chartLayout`; R6 twelve picture switches).
+
+## 10. ⭐ THE REST OF THE SURFACE WORK — THE PACKETS (2026-11-24, his word: *"Then finish the orbit's surface work"*)
+
+What the specification still asks once S0 – S6 are built ([`ORBIT_SURFACE.md`](ORBIT_SURFACE.md) §5.1's layers L0 – L2, §5.3's vectors, §6's build
+list, §7bis.3's checks B1 – B6). One packet at a time, each committed with its vectors (each red on its mutant first), its lessons (§8's ledger,
+[`SCENE_WORKFLOW.md`](../../20_GAME_RULES/spec/SCENE_WORKFLOW.md) §10) and its record here; a game change behind its switch (0 = LIVE), gated on his records.
+
+| packet | what | where | its gate |
+|---|---|---|---|
+| **S7** | **B3 + B5** (decided 2026-11-24, [`ORBIT_SURFACE_PART_CHECKS.md`](ORBIT_SURFACE_PART_CHECKS.md) §14): at each stage, where the held piece first touches each exposed face; every exposed face that is no place, with its reason — information | `src/core/landing_per_stage.ts`; its own check in the one command | vectors per verdict; `Scene_2` read |
+| **S8** | **B4 completed**: the entry set's directions that start at a landing of B3; B4 in `npm run verify` on the scene's file | the reach check + S7 | vectors; `Scene_2` read |
+| **S9** | **B6, the margins**: a feature AT a threshold, amber (the 45° band, 30° apart, the share, a gap near the piece's size) | packet 1's checks | vectors |
+| **S10** | **C2** (§8 row 7): the landing map's cost per scene — a budget from S7's measured preparations | the one command | the budget shown failing |
+| **S11** | **L1 in the game**: a SEALED or BURIED face never present, the caps of hollows formed between parts ([`PROXY_AND_COLLISION_RULES.md`](../../30_OBJECTS_3D/spec/PROXY_AND_COLLISION_RULES.md) §3bis; glued only today) — a STUDY first (the four-part method), then built behind a switch | the face map's input | G1 on his records at 0; vectors |
+| **S12** | **§5.3's last vectors**: ties (C21), defective input (C47), the relocation at a seat (C46), every order of placing, moved and turned, tilted frames and zone switches (S19 (ii)), `void_sim`'s families | `tests/` | each red on a mutant |
+| **S13** | **L0 re-verified at import**: B1's cheap subset (convex, closed, the budget) when a `.glb` loads | the catalog's reader's caller | a planted file |
+
+**Not in this work:** `Scene_2`'s file (queue row `GM13`, its own worktree — his word 2026-11-24); the Blender build script calling the gate
+(`SCENE_WORKFLOW.md` §11.2 item 2: Blender runs there, with GM13); C3 (§8 row 6: to see in the pick-up flow — with GM13); F17 and the mouth's lip
+(`RND8`); step B and the plunge ([`ORBIT_SURFACE.md`](ORBIT_SURFACE.md) §5.4).

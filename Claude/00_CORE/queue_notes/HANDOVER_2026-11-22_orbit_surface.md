@@ -77,3 +77,10 @@ collision pieces (one measurement before the plunge is built); the frozen plinth
 * **For his word**: B3 / B5's three questions (`ORBIT_SURFACE_PART_CHECKS.md` §14); the one command (`SCENE_WORKFLOW.md` §9.3, built on its proposal —
   reversible); the resting share ¼ (PROPOSED); `Scene_2`'s findings (ledger rows 14 – 20: the file or the rule — not rebuilt here); a deploy of S4b
   (the stutter fix) for his phone look.
+
+## ⭐ 2026-11-24 — his answers, the deploy, the rest of the work
+
+* **His word**: *"do 1, 2 and 3 and 5 as you recommend. Scene 2 need a separate work in a separate worktree. Then finish the orbit's surface work."*
+  B3 / B5's questions, the one command, the share ¼ DECIDED (`bd5e69b4`); `Scene_2`'s findings → queue row `GM13` (its own worktree, not opened).
+* **Deployed**: S4b — LIVE main `6a2da88` = `bd5e69b4` (2026-11-24 02:35Z); his phone look owed (the alignment tap).
+* **The rest of the surface work**: the packets S7 – S13 → [`ORBIT_SURFACE_BUILD.md`](../../40_RENDER_SCENE/spec/ORBIT_SURFACE_BUILD.md) §10.
