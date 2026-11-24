@@ -139,3 +139,6 @@
 * **2026-11-24** — S7 – S13 DEPLOYED on his word *"Deploy"*: LIVE main `19c7f88` = `16f3c845` (2026-11-24 10:48Z); in the game only S13's import warning.
   His questions answered: the landing map's cost is paid at every frame of a TURN and once per new direction, a plain frame ≈ 0.1 ms
   (`ORBIT_SURFACE_PART_CHECKS.md` §19); S11 in plain words (`ORBIT_SURFACE_L1.md` §7).
+* **2026-11-24** — his *"S11: you can proceed as you recommend"*: Q1 with `GM13`, Q2 the caps measured with every body then a build behind
+  `surfaceL1` on `Scene_1`, Q3 precomputed (`ORBIT_SURFACE_L1.md` §8). And *"The landing cost: i do not accept these costs. You need to find another
+  solution"* — the study first (a query-time exact cast, no sums prepared), then S11.
