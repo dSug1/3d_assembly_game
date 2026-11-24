@@ -106,5 +106,17 @@
     "unit": "share",
     "rule": "decision 5: a resting candidate ≥ this of the largest (decided 2026-11-24)",
     "home": "src/core/collision_cover.ts"
+  },
+  "B6_SIZE_MARGIN_MM": {
+    "value": 2,
+    "unit": "mm",
+    "rule": "B6: a face at a threshold — the piece fits or is held out by less than this (⏳ PROPOSED)",
+    "home": "src/core/landing_per_stage.ts"
+  },
+  "B6_SHARE_MARGIN": {
+    "value": 0.05,
+    "unit": "share",
+    "rule": "B6: a facet near the face map's share, within this of it (⏳ PROPOSED)",
+    "home": "src/core/landing_per_stage.ts"
   }
 }

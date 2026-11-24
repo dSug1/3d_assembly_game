@@ -331,6 +331,15 @@ export function heldSumsOn(pp: PlacedPolys, held: readonly (readonly Vec3[])[]):
   const forms = P.flatMap((p) => H.map((h) => formOf(p.poly, h, p.part)));
   return { ids, refused, P, forms };
 }
+/**
+ * ⭐ (2026-11-24, S10 — C2, the ledger's row 7: the landing map's cost per scene) THE SIZE OF A PREPARATION, machine-free: its sums (one per placed piece
+ * × held piece) and their half-spaces — a query (`landingAt`) runs through every half-space once, a turn frame (`heldSumsOn`) builds them all.
+ */
+export function sumsSize(h: HeldSums): { readonly sums: number; readonly halfSpaces: number } {
+  let halfSpaces = 0;
+  for (const f of h.forms) halfSpaces += f.ms.length;
+  return { sums: h.forms.length, halfSpaces };
+}
 /** ⭐ THE PREPARATION — the direction-free part, every pair's sum put on the facet direction (`buildLandingMap`'s and `prepareLanding`'s, one code) */
 function sumsOn(h: HeldSums, frame: LandingAxes): Sums {
   return { ids: h.ids, refused: h.refused, P: h.P, pieceSums: h.forms.map((s) => project(s, frame)) };

@@ -60,9 +60,11 @@ describe("⭐⭐⭐ the charts' layout (step 2.2) — the switches deleted (step
     expect(r.config).toEqual({ ...DEFAULT_CONFIG, sceneIndex: 1 });
   });
 
-  it("the options: the chart's layout and the normals' scale, one constant", () => {
+  it("the options: the chart's layout and the normals' scale, one constant (⭐ 2026-11-24, S7: its home `input/face_map.ts`, imported by the wiring)", () => {
+    expect(code("input/face_map.ts")).toContain('export const CHART_MAP_OPTS: Pick<FacetOpts, "layout" | "scale"> = { layout: "chart", scale: "normals" };');
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain('const CHART_MAP_OPTS: Pick<FacetOpts, "layout" | "scale"> = { layout: "chart", scale: "normals" };');
+    expect(a).toContain('import { CHART_MAP_OPTS, facetFrame } from "../input/face_map";');
+    expect(a).not.toMatch(/const CHART_MAP_OPTS/);
   });
 
   it("both `buildFaceMap` calls carry the options (the frame's, the world's — one path each); the frame's map in the parts' own box read in F", () => {

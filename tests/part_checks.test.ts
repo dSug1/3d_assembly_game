@@ -8,7 +8,7 @@ import { readFileSync } from "node:fs";
 import { glbBin, partGeometry } from "../src/core/glb_geometry";
 import { convexHull3 } from "../src/core/hull3";
 import { glbJson, readModelCatalog } from "../src/core/model_catalog";
-import { B1_FIT_MM, checkSolids, exposedPerStage, readPartSolids, UCX_MAX_VERTICES, type PartMesh, type PartSolids } from "../src/core/part_checks";
+import { B1_FIT_MM, checkSolids, checkSolidsAtImport, exposedPerStage, readPartSolids, UCX_MAX_VERTICES, type PartMesh, type PartSolids } from "../src/core/part_checks";
 import type { Vec3 } from "../src/core/vec";
 
 const GLB = new URL("../Assets/Blender/World0_Scene2_engine/world0_scene_2_engine.glb", import.meta.url);
@@ -112,6 +112,32 @@ const solidBox = (name: string, x0: number, x1: number, y0: number, y1: number, 
 };
 const at0 = (ids: string[]) => new Map(ids.map((id) => [id, { position: [0, 0, 0] as Vec3, rotation: [1, 0, 0, 0] as const }]));
 const solids = (id: string, pieces: PartMesh[], proxy: PartMesh[], frozen = false): PartSolids => ({ id, frozen, fitMm: B1_FIT_MM, pieces, proxy, renders: [] });
+
+describe("⭐⭐ V2b — S13: B1's CHEAP SUBSET re-verified at import (`checkSolidsAtImport`, the game's `model_import.ts`)", () => {
+  it("`Scene_2`'s file: none (as B1a – B1d of the export gate)", () => {
+    const bytes = new Uint8Array(readFileSync(GLB));
+    const j = glbJson(bytes);
+    if (!("json" in j)) throw new Error(j.refusal);
+    const { catalog } = readModelCatalog(j.json);
+    expect(checkSolidsAtImport(readPartSolids(j.json, glbBin(bytes), catalog!))).toEqual([]);
+  });
+  it("on planted defects it reads exactly the full check's B1a – B1d findings, and none of its sampled checks (a lifted proxy: B1e, B1h)", () => {
+    const flat: PartMesh = { name: "UCX_P_flat", points: [[-50, -50, 0], [50, -50, 0], [50, 50, 0], [-50, 50, 0]], triangles: [[0, 1, 2], [0, 2, 3]] };
+    const pts: Vec3[] = [];
+    for (let k = 0; k < 15; k++) for (const z of [0, 40]) pts.push([50 * Math.cos((2 * Math.PI * k) / 15), 50 * Math.sin((2 * Math.PI * k) / 15), z]);
+    const h = convexHull3(pts)!;
+    const planted = [
+      { ...part([{ ...BOX, points: [...BOX.points, [0, 0, 20]] }], [TOP]), id: "A" },
+      { ...part([{ ...BOX, triangles: BOX.triangles.slice(1) }], [TOP]), id: "B" },
+      { ...part([flat], [TOP]), id: "C" },
+      { ...part([{ name: "UCX_P", points: h.points, triangles: h.triangles }], []), id: "D" },
+      { ...part([BOX], [quad("UFM_P_top", -50, -50, 50, 50, 40 + 2 * B1_FIT_MM)]), id: "E" },
+    ];
+    const cheap = checkSolidsAtImport(planted);
+    expect(cheap.map((f) => `${f.part} ${f.check}`)).toEqual(["A B1a", "B B1b", "C B1c", "D B1d"]);
+    expect(cheap).toEqual(checkSolids(planted).filter((f) => ["B1a", "B1b", "B1c", "B1d"].includes(f.check)));
+  });
+});
 
 describe("⭐⭐⭐ V3 — B2 on `Scene_2`: the map per stage, and B1i (D7) on the plinth", () => {
   const bytes = new Uint8Array(readFileSync(GLB));

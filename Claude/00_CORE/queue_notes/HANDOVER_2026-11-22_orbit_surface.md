@@ -77,3 +77,23 @@ collision pieces (one measurement before the plunge is built); the frozen plinth
 * **For his word**: B3 / B5's three questions (`ORBIT_SURFACE_PART_CHECKS.md` §14); the one command (`SCENE_WORKFLOW.md` §9.3, built on its proposal —
   reversible); the resting share ¼ (PROPOSED); `Scene_2`'s findings (ledger rows 14 – 20: the file or the rule — not rebuilt here); a deploy of S4b
   (the stutter fix) for his phone look.
+
+## ⭐ 2026-11-24 — his answers, the deploy, the rest of the work
+
+* **His word**: *"do 1, 2 and 3 and 5 as you recommend. Scene 2 need a separate work in a separate worktree. Then finish the orbit's surface work."*
+  B3 / B5's questions, the one command, the share ¼ DECIDED (`bd5e69b4`); `Scene_2`'s findings → queue row `GM13` (its own worktree, not opened).
+* **Deployed**: S4b — LIVE main `6a2da88` = `bd5e69b4` (2026-11-24 02:35Z); his phone look owed (the alignment tap).
+* **The rest of the surface work**: the packets S7 – S13 → [`ORBIT_SURFACE_BUILD.md`](../../40_RENDER_SCENE/spec/ORBIT_SURFACE_BUILD.md) §10.
+
+## ⭐ 2026-11-24, later — the rest of the surface work built (S7 – S13, `ORBIT_SURFACE_BUILD.md` §10)
+
+* **Where**: `../orbit_surface`, `1.0.158from1.0.157-Orbit_surface`, head `99b74304`+ (LOCAL past `bd5e69b4` = LIVE main `6a2da88`). `npm run
+  verify`: 199 files / 2483 tests.
+* **Built** (each with its vectors, its mutants red, its record — `ORBIT_SURFACE_PART_CHECKS.md` §15 – §20): S7 B3 + B5 (where each part lands at
+  each stage, the faces no place and why); S8 B4's second half (does a way in start at a place — the reading PROPOSED); S9 B6's margins (2 mm,
+  0.05 — PROPOSED); S10 C2, the landing map's cost per stage (the budget PROPOSED); S12 `void_sim`'s families; S13 B1's cheap subset at import (the
+  game's `model_import.ts`, a HUD warning). THE ONE COMMAND now runs four checks (`check_scene.ts`). S11 (L1 in the game) STUDIED only.
+* **For his word**: S11's three questions (`ORBIT_SURFACE_L1.md` §6); the PROPOSED readings and margins (B4's start at a place and its rule C5,
+  B6's two margins, C2's budget and the drawing rule D9); `Scene_2`'s new findings for `GM13` — the frozen plinth NO PLACE in the face map (ledger
+  row 21), TEN ways in starting at no place (row 22), the TOP facet just above the share (row 23), P2's cost 3 203 × `Scene_1`'s (row 7: P2 cannot
+  drive `Scene_2` as drawn); his phone look on S4b; a deploy of S13 (a HUD warning at load — nothing changes on `Scene_2`).

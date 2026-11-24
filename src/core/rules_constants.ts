@@ -6,6 +6,7 @@
  */
 import { COLLISION_SAMPLE_MM, RESTING_MIN_SHARE } from "./collision_cover";
 import { B1_FIT_MM, B6_APART_DEG, B6_ELEVATION_BAND_DEG, R4_HALF_STEP_DEG, R7_PLANAR_DEG, UCX_MAX_TRIANGLES, UCX_MAX_VERTICES } from "./part_checks";
+import { B6_SHARE_MARGIN, B6_SIZE_MARGIN_MM } from "./landing_per_stage";
 import { CLOSED_STEP_MM, R1B_AMBER_DEG, R1B_DEEP_DEG } from "./proxy_cover";
 import { COLLISION_TOL_MM, PROXY_CURVE_TOL_MM, PROXY_FACE_MIN_MM, PROXY_FLUSH_MM, PROXY_PROBE_MM } from "./units";
 import { COVER_STEP_MM } from "./voxels";
@@ -39,5 +40,7 @@ export function rulesConstants(): Readonly<Record<string, RuleConstant>> {
     CLOSED_STEP_MM: { value: CLOSED_STEP_MM, unit: "mm", rule: "R2: an edge read every this (closed)", home: "src/core/proxy_cover.ts" },
     COLLISION_SAMPLE_MM: { value: COLLISION_SAMPLE_MM, unit: "mm", rule: "C-R2: the render sampled at this spacing", home: "src/core/collision_cover.ts" },
     RESTING_MIN_SHARE: { value: RESTING_MIN_SHARE, unit: "share", rule: "decision 5: a resting candidate ≥ this of the largest (decided 2026-11-24)", home: "src/core/collision_cover.ts" },
+    B6_SIZE_MARGIN_MM: { value: B6_SIZE_MARGIN_MM, unit: "mm", rule: "B6: a face at a threshold — the piece fits or is held out by less than this (⏳ PROPOSED)", home: "src/core/landing_per_stage.ts" },
+    B6_SHARE_MARGIN: { value: B6_SHARE_MARGIN, unit: "share", rule: "B6: a facet near the face map's share, within this of it (⏳ PROPOSED)", home: "src/core/landing_per_stage.ts" },
   };
 }

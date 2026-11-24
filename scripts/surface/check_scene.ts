@@ -3,7 +3,7 @@
 // after the question it answers (his wish for the first: "so we know what the script is about when we re-use it later on"), each run as its own
 // process; a new check joins `CHECKS` when it is built — never a script run apart (§11.3).
 //
-// Usage (Scene_2: ≈ 3 min — the reach ≈ 85 s, the parts ≈ 90 s):
+// Usage (Scene_2: ≈ 6 min — the reach ≈ 50 – 85 s, the parts ≈ 90 s, the landing ≈ 135 s, its cost ≈ 15 s):
 //   npx vite-node scripts/surface/check_scene.ts -- <scene.glb> [<plan.json>]
 //   exit 0: PASS (every check passed; warnings and information allowed) · 1: FAIL (a check failed) · 2: NOT READ (a check could not read the file,
 //   or crashed) — so a build script stops on anything but 0 (§11.2 item 2: the build script calling it after its export).
@@ -15,6 +15,8 @@ import { existsSync } from "node:fs";
 const CHECKS: readonly { readonly question: string; readonly script: string; readonly args: (glb: string, plan: string) => string[] }[] = [
   { question: "can every part reach its seat? (C1, B4's game side — SCENE_WORKFLOW.md §8)", script: "scripts/surface/check_parts_reach_their_seat.ts", args: (g, p) => (p === "" ? [g] : [g, p]) },
   { question: "are the parts drawn by the rules? (B1, B2 map, S6 packets 1 – 3 — PROXY_AND_COLLISION_RULES.md §9)", script: "scripts/surface/check_part_solids.ts", args: (g) => [g] },
+  { question: "where can each part land? (B3, B5, B4's second half, B6 — ORBIT_SURFACE_PART_CHECKS.md §14 – §18; information)", script: "scripts/surface/check_where_each_part_lands.ts", args: (g) => [g] },
+  { question: "what does the landing map cost at each stage? (C2 — ORBIT_SURFACE_PART_CHECKS.md §19; information)", script: "scripts/surface/check_landing_cost.ts", args: (g) => [g] },
 ];
 
 /** ⭐ the gate's verdict: the worst of its checks' exit codes — 0 PASS, 1 FAIL, any other (2, a crash, a signal) NOT READ */

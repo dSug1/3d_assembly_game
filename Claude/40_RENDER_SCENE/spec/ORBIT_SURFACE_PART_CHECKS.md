@@ -227,3 +227,129 @@ candidate? (Q2) "landable" within the fit, 0.5 mm (recommended), or the flush, 0
 
 **✅ His answers (2026-11-24, *"do 1, 2 and 3 and 5 as you recommend"*):** Q1 the resting face against the face, both turns; Q2 landable within the fit (0.5 mm);
 Q3 information until the playability brief exists. The definitions above are DECIDED as written → the build: §15.
+
+## 15. ⭐ S7 — B3 AND B5 AS DESIGNED (2026-11-24, before the build; §14's definitions decided)
+
+The choices §14 leaves to the build, written before the code (reversible on his look):
+1. **The stage** — B2's own walk (`exposedPerStage`, its states read by a visitor — one voxel walk, never a second one): at the stage whose placed set
+   is the plan's first *s* parts, the held piece is part *s* + 1; the last stage holds none.
+2. **The faces** — each placed part's REAL proxy triangles EXPOSED at the stage (B2's state), grouped per node by plane (normals within
+   `R7_PLANAR_DEG`, levels within the flush): one face each.
+3. **The held orientation** — its resting proxy (`…_rest`, the largest) or, without one, its largest resting candidate (packet 3); none: *no
+   orientation*, reported, its stage not read. The least turn taking the resting face's normal onto −*n*, then 0° and 90° about *n*.
+4. **The reference** — the resting face's centre over each sample; the piece's CONTACT level = P2's depth less its reach along −*n* (`heldReach`), so a
+   resting proxy off its pieces (`Scene_2`'s, 16 – 37 mm, ledger row 14) cannot hide a landing: the piece's own lowest point is read.
+5. **The samples** — every `LANDING_STEP_MM` (4 mm) on the face's exposed triangles in its plane, and each triangle's centre.
+6. **Landable** — at some sample, for either turn, P2 lands and the contact lies within `B1_FIT_MM` (0.5 mm) of the face's plane. Below the plane
+   by more (nothing under the proxy — B1e's) is counted apart, as information.
+7. **B5's reasons, in this order** (the first that holds): *capped* (every sample's line along *n* meets a placed part's cap); *frozen* (⚠ the game's
+   face map skips a FROZEN part's faces today — `placedFaces`; §8 row 6, C3 — `Scene_2`'s plinth); *below the share* (no facet of the face map — the
+   game's `buildFaceMap` on the stage's exposed faces of the parts it reads, its merge and share — within the merge angle of the face's normal; the
+   face map lives in `src/input`, so the caller passes it in: `src/core` imports none); *under an overhang* (not landable, and at every sample the
+   first contact is ANOTHER part's, above the face); *closed for the piece* (not landable otherwise). A face landable and none of the first three is a
+   PLACE.
+8. **The pass rule** — information (his Q3): its own check in the one command, `scripts/surface/check_where_each_part_lands.ts` (exit 0 read, 2 not
+   read), never a failure until the playability brief exists.
+9. **The cost** — one `preparePlaced` a stage, one `heldSumsOn` per (normal, turn); measured on `Scene_2` before it joins the gate (S10's figure).
+
+## 16. ⭐ S7 — AS BUILT (2026-11-24): B3 and B5
+
+**The code.** `src/core/landing_per_stage.ts` — `landingPerStage` (the stages from B2's walk: `exposedPerStage` now takes a visitor, its counts
+unchanged — its vectors V3 / V4 pass), `stageFaces`, `faceSamples`, `restingFaceOf`; `src/input/face_map_membership.ts` — `inGameFaceMap` (B5's share
+with the game's own `buildFaceMap`, its defaults and the charts' layout: `CHART_MAP_OPTS` moved to `input/face_map.ts`, its one home — the game's two
+calls import it, the same value). The check: `scripts/surface/check_where_each_part_lands.ts`, the third in the one command (`check_scene.ts`'s
+`CHECKS`), information (exit 0 read, 2 not read).
+**The vectors** (`tests/landing_per_stage.test.ts`, 10): a box's top and sides landable, its bottom glued and never read (V1); a resting proxy 5 mm
+off its piece still lands (V1b — the reach); a slot narrower than the piece CLOSED (V2); a slot wide enough only turned 90° LANDABLE at 90° (V3); a
+slab under another part's table UNDER AN OVERHANG (V4); a pocket CAPPED (V5); a FROZEN part's faces (V6); BELOW THE SHARE from the caller's map, and the
+game's map on a box — a frozen part's faces out even beside another's facet (V7); NO ORIENTATION (V8); a proxy 3 mm over its solid, every sample BELOW
+(V9). **11 mutants, all RED** (the reach, the 90° turn, the overhang, the caps, frozen, a contact below accepted, the held piece the last placed, the
+exposure ignored, the share ignored, the face map reading frozen parts — first GREEN: the vector had no other part's facet beside the frozen one;
+added —, the below count).
+**`Scene_2` (77 s; 16 stages):** E02, E04, E05, E06 — NO ORIENTATION (no resting proxy, no candidate: the ledger's row 20); the pistons' stages 12
+places over 25 exposed faces (2093 cm²), the rest: the plinth FROZEN (2719 cm²), 7 faces BELOW THE SHARE (the crankcase's ±z sides once the banks
+stand — no facet within 20° of them), 3 – 5 UNDER AN OVERHANG (the crankcase's top under the banks), 1 – 2 CLOSED (the banks' slants); samples
+falling BELOW their face where a proxy stands off its solid (row 14). ⭐ A FINDING — the ledger's row 21: the game's face map skips a FROZEN part's
+faces (`placedFaces`), so `Scene_2`'s plinth top (2719 cm², the largest face) is NO PLACE in the game at any stage.
+**The lessons** (§8 rows 6, 8, 21; no new drawing rule — D4 holds them): (1) a reader that takes a resting PROXY as the piece's support inherits the
+proxy's error — read the piece's own pieces (its reach); (2) B2's grid is the solids' box grown by two cells: a proxy far off its solids reads
+SEALED, never exposed — B1e is what finds it; (3) a filter whose vector meets no case where it matters is a filter no vector guards (M10: the
+frozen parts' faces beside another part's facet — the same lesson as `PROXY_AND_COLLISION_RULES.md` §9.3.5).
+**The cost**: one `preparePlaced` a stage, one `heldSumsOn` per (normal, turn): 0.1 – 1.6 s a stage, 10 – 21 s where the held heads' and covers'
+pieces meet every placed part's (stages 13 – 16) — S10's figure for the budget.
+
+## 17. ⭐ S8 — B4'S SECOND HALF: DOES A PART'S WAY IN START AT A PLACE? (2026-11-24 — the reading PROPOSED, built; information)
+
+**What is asked** (`ORBIT_SURFACE.md` §7bis.3, B4): *"at least one direction starting at a landing of B3"* — the reach check (S0, `SCENE_WORKFLOW.md`
+§8) finds each goal's entry set and its way in, and said what it could not see: *"whether the GIZMO can bring the part to where its way in starts"*.
+**The reading (⏳ PROPOSED — his look):** the game moves the held piece over a FACET of the face map, along that facet's normal; so a way in starts at
+a place when, at the part's stage, a REAL facet of the game's face map (`gameFaceMap` — S7's, the same build) lies within the merge angle (20°) of
+the way in's withdrawal and its polygon holds the seat seen along its normal (`facetTowardGoal`: else how far outside, in mm). Information, as B3
+(his Q3); it would become B4's failure (*"no direction starts at a place"*) with the playability brief.
+**Built**: the way in moved to `scripts/surface/check_parts_reach_their_seat_way.ts` (the reach check reads it there — its report on `Scene_2`
+IDENTICAL, text and JSON, before and after); `facetTowardGoal` (`src/input/face_map_membership.ts`); the landing check prints B4 per part. The
+landing check's `inFaceMap` now runs at every stage with exposed faces (a held piece without orientation too). **Vector** V10 (the box's top: 0 mm
+out; past its edge 50 mm; 15° off still it; 30° off none; a virtual facet never; a frozen part's map none) — 3 mutants RED (the merge angle, the
+containment, a virtual facet read).
+**`Scene_2`:** E03, E04, E05, E15, E16, E17 start on their facet (0°, inside). ⭐ **TEN do not** — the ledger's row 22: E02 (onto the frozen plinth:
+no face map — row 21); **E06** (once E05 stands, the face map's +z bank facet shrinks to a sliver — E05's face 30° off it passes over E04's bank
+deck: the seat 55 mm outside it; E05 at its stage, before E06, starts on it — the ORDER decides); **the six pistons and the two heads** (their
+bank's facet ends 4.6 mm short of their seats: the TOP facet takes the bores' mouths — their plunge starts from a facet 30° off their axis).
+**The lesson** (construction, `SCENE_WORKFLOW.md` §10.3 **C5**, PROPOSED): at its stage a part's way in starts on a facet of the face map over its
+seat — a part placed between a seat face and the outside, 30° or more off it, takes that face out of the contour.
+
+## 18. ⭐ S9 — B6'S MARGINS: A FEATURE AT A THRESHOLD (2026-11-24 — designed before the build; information)
+
+**What is asked** (`ORBIT_SURFACE.md` §2.6, Q6 (3) *offline*; §7bis.3 B6; the checklist's line 5): paint *"at a threshold"* a feature whose closing
+radius is near the piece's size, and a facet near the share. B6's other two thresholds — a facet within 15° of 45° of elevation, two faces within
+30° — are packet 1's R4 (findings), already built.
+**The design (⏳ the margins PROPOSED — his word):**
+1. **Near the piece's size** — B3 read again with the held piece GROWN and SHRUNK by a margin δ in the face's plane (each point's two in-plane
+   components scaled about the reference by 1 ± δ / the piece's half-extent along that axis: exact for a box's footprint, an approximation for
+   other outlines — said in the output): a face whose LANDABLE verdict differs between the two is *at a threshold* — the piece fits by less than δ
+   (landable, not when grown) or is held out by less than δ (not landable, landable when shrunk). Only the one variant that can flip a face's
+   verdict is read. **δ = `B6_SIZE_MARGIN_MM` = 2 mm** (PROPOSED: above the noise family's largest, `MAP_GROW_M` 1.6 mm — a gap narrower than the
+   noise is noise, §2.6).
+2. **Near the share** — the game's face map built again at the share ± a margin (`buildFaceMap`, the game's function): a facet present at ¼ − m and
+   not at ¼ is *just below the share*, one present at ¼ and not at ¼ + m *just above it*. **m = `B6_SHARE_MARGIN` = 0.05** (PROPOSED: a fifth of
+   the share).
+3. **Where** — the landing check prints both per stage (information, as B3 — his Q3); the margins join `rules_constants.json`.
+
+**As built (2026-11-24, S9):** `landingPerStage` reads each face's `threshold` (`B6_SIZE_MARGIN_MM`; the variant that can flip it only, and only on a
+face that is a place or would be — a capped, frozen or below-the-share face is no place by design, never read: 175 → 134 s on `Scene_2`); B3's
+samples now start with the face's own area centroid (a centred slot read exactly — a fit with less clearance than the 4 mm step was missed off
+the lattice: the reason the centroid joined); `facetsNearShare` (`src/input/face_map_membership.ts`, the game's `buildFaceMap` at the share and ±
+`B6_SHARE_MARGIN`); both margins in `rules_constants.json` (PROPOSED). The landing check prints B6 per stage. **Vectors** V11 (a 22 mm slot for a
+20 mm piece fits by less than the margin, a 19 mm one held out by less; 30 mm, 15 mm and a box's top none) and V12 (two boxes' tops over a hull
+26.8 % real just above the share, 23.9 % just below, 10 % apart none); **5 mutants RED** (the margin never read, grown and shrunk swapped, no centroid
+sample, below read as above, the share's margin zero). ⚠ No vector sees a footprint grown on one side only (the vectors' pieces are centred).
+**`Scene_2`:** no face within 2 mm of a piece's size; from stage 7 on the assembly's TOP facet stands JUST ABOVE the share (0.33 at the game's ¼,
+gone at 0.30) — the ledger's row 23.
+
+## 19. ⭐ S10 — C2: WHAT DOES THE LANDING MAP COST AT EACH STAGE? (2026-11-24 — built; the budget PROPOSED, information)
+
+**What reads it.** The game prepares P2's sums once per placed set (`preparePlaced`) and AGAIN for the held piece at every frame of a turn
+(`heldSumsOn` — S4b), and a query runs through every half-space (`landingAt`): the cost grows with the placed pieces × the held piece's pieces ×
+their sums' half-spaces (a Minkowski sum's faces include its pieces' EDGE PAIRS). **Built:** `sumsSize` (`landing_map.ts`: sums and half-spaces,
+machine-free) and the check `scripts/surface/check_landing_cost.ts`, the fourth in the one command — per stage its size against `Scene_1`'s (36
+boxes × the green piece: 36 sums, 216 half-spaces, a turn frame 1.15 ms on this PC — the set played on his phone, S4 / S4b) and its time on this PC.
+**Vector** (`landing_map.test.ts`, S10): two placed boxes × a held box — aligned 2 sums of 6 half-spaces (a box), turned 45° of 10 (an octagonal
+prism); 2 mutants RED (the sums counted for their half-spaces, one sum's only).
+**The budget (⏳ PROPOSED — his word with the phone's measurement, owed since S4):** no stage larger than `Scene_1`'s; information until then.
+**`Scene_2`** (≈ 15 s): from 2.5 × (stage 2) to **3 203 ×** `Scene_1`'s (stage 16: 115 placed pieces × E16's 16 — 1 840 sums, 691 764 half-spaces);
+a turn frame **318 – 694 ms on this PC** at stages 13 – 16 (the heads and covers held, 15 – 16 pieces each), 11 – 34 ms elsewhere. ⭐ **A FINDING —
+the ledger's row 7 measured:** P2 cannot drive `Scene_2` as drawn (it runs on `Scene_1` only — `READOUT_SCENE` — nothing live is touched). The
+ways, for his word (with `GM13`): FEWER held pieces (the drawing: a part's pieces multiply every placed piece's sums — rule **D9**, PROPOSED), the
+held piece read by its HULL for P2 (a rule of the game: its concavities lost to the landing), or the sums built only near the gizmo (the game's
+code: a tile round it — S1's option).
+
+## 20. ⭐ S13 — L0 RE-VERIFIED AT IMPORT: B1'S CHEAP SUBSET WHEN A `.glb` LOADS (2026-11-24 — built, wired)
+
+**What is asked** (`ORBIT_SURFACE.md` §5.1 L0: *"the Blender checks B1 passed, re-verified at import"*; §7bis.3 B1: *"a pure `src/core` function on
+the parsed `.glb`: convex / closed / budget"*). **Built:** `checkSolidsAtImport` (`part_checks.ts`) — B1a convex, B1b closed, B1c volume, B1d the
+budget, `checkSolids`' OWN code (its piece loop moved to `pieceChecks`, shared: B1's vectors and `Scene_2`'s pinned report unchanged), none of its
+sampled checks (seconds — the gate's); called by the game's `render/model_import.ts` after the scene is placed and its contact file read (≈ 50 ms
+on this PC for `Scene_2`, read 8 – 25 ms + checks 40 – 55 ms): a finding is a WARNING on the HUD (`⚠B1 ×n`) and the console, **never a refusal**
+(W3's gate refuses). `readPartSolids` now has a production caller (the debt's line gone). **Vectors** (V2b): `Scene_2`'s file none; on planted
+defects exactly the full check's B1a – B1d and nothing sampled (a lifted proxy: B1e, B1h not read); **3 mutants RED** (it reads nothing, it runs
+the full check, B1b dropped). Not behind a switch: it changes no frame and no file's load — `Scene_2` has none of the four (its HUD line unchanged).

@@ -5,7 +5,7 @@
  * `scripts/surface/landing_compare.ts`; here a fixed, deterministic choice of places.
  */
 import { describe, expect, it } from "vitest";
-import { buildLandingMap, LANDING_STEP_MM, type Landing, type LandingMap } from "../src/core/landing_map";
+import { buildLandingMap, heldSumsOn, LANDING_STEP_MM, preparePlaced, sumsSize, type Landing, type LandingMap } from "../src/core/landing_map";
 import type { Vec3 } from "../src/core/vec";
 import {
   PIECES, PIECE_A, PIECE_B, TOP_F, base, boxHeld, bruteLanding, bx, frameOf, library, hullPart, placesOf, prismZ, toConvex, vd, withVoids, type Part,
@@ -376,5 +376,37 @@ describe("⭐⭐ §5.3 — the specification's missing shapes, each against the 
     const c = Math.cos(R6(30)), sn = Math.sin(R6(30));
     const f = { n: [0, c, sn] as [number, number, number], t: [1, 0, 0] as [number, number, number], b: [0, -sn, c] as [number, number, number] };
     expect(againstBrute([...base(), cylinder12(40, 0), bx("pin", 60, 70, 240, 280, 40, 50)], f, -160, 160, -140, 140).places).toBeGreaterThan(1000);
+  });
+});
+
+// ── ⭐ (2026-11-24, S12 — `ORBIT_SURFACE.md` §5.3: *"still to add: `void_sim`'s families"*) the void study's nine families (`scripts/probes/void_sim.ts`,
+// POLAR_ORBIT_CLEANUP.md §7: a plate's top cut by blind recesses, through holes, grooves, slots, a U-slot, notches, rebates, an L, an undercut) on the
+// study's block (its top at 240, the plate's centre at 0), each against the brute force, sample for sample, pieces A and B ──
+describe("⭐⭐ S12 — `void_sim`'s families A – I, each against the brute force", () => {
+  const fam: [string, Part[], [number, number, number, number]][] = [
+    ["A a blind recess 40 × 40, 60 deep", withVoids([vd(-20, 20, -20, 20, 60)]), [-100, 100, -100, 100]],
+    ["A a blind recess 13 × 13, 10 deep", withVoids([vd(-6.5, 6.5, -6.5, 6.5, 10)]), [-80, 80, -80, 80]],
+    ["B a through hole 40 × 40", withVoids([vd(-20, 20, -20, 20, 240)]), [-100, 100, -100, 100]],
+    ["C a groove 40 wide, 60 deep, the whole face long", withVoids([vd(-20, 20, -240, 240, 60)]), [-100, 100, -120, 120]],
+    ["D a through slot 13 wide, 200 long", withVoids([vd(-6.5, 6.5, -100, 100, 240)]), [-80, 80, -140, 140]],
+    ["E a U-slot 40 wide, 60 deep, from the edge", withVoids([vd(-20, 20, -240, 0, 60)]), [-100, 100, -280, 60]],
+    ["F a corner notch 50 × 50, 60 deep", withVoids([vd(-240, -190, -240, -190, 60)]), [-280, -120, -280, -120]],
+    ["G a rebate 50 wide, 60 deep, along a whole edge", withVoids([vd(-240, 240, -240, -190, 60)]), [-120, 120, -280, -120]],
+    ["H an L-shaped recess, arms 40 wide, 40 deep", withVoids([vd(-50, 50, -50, -10, 40), vd(-50, -10, -10, 50, 40)]), [-110, 110, -110, 110]],
+    ["I an undercut: a mouth 20 wide, a cavity 60 wide below", withVoids([vd(-10, 10, -50, 50, 20), vd(-30, 30, -50, 50, 40, 220)]), [-90, 90, -100, 100]],
+  ];
+  for (const [name, parts, [u0, u1, v0, v1]] of fam) it(name, () => expect(againstBrute(parts, TOP_F, u0, u1, v0, v1).places).toBeGreaterThan(200));
+});
+
+describe("⭐ S10 — C2: the size of a preparation, machine-free (`sumsSize`)", () => {
+  const box = (id: string, x: number): { id: string; points: Vec3[] } => ({ id, points: [0, 1, 2, 3, 4, 5, 6, 7].map((m): Vec3 => [x + (m & 1 ? 0.1 : 0), m & 2 ? 0.02 : 0, m & 4 ? 0.1 : 0]) });
+  const heldBox = (turnDeg: number): Vec3[][] => {
+    const c = Math.cos((turnDeg * Math.PI) / 180), s = Math.sin((turnDeg * Math.PI) / 180);
+    return [[0, 1, 2, 3, 4, 5, 6, 7].map((m): Vec3 => { const x = m & 1 ? 0.01 : -0.01, z = m & 4 ? 0.01 : -0.01; return [c * x + s * z, m & 2 ? 0.01 : 0, -s * x + c * z]; })];
+  };
+  it("two placed boxes × a held box: 2 sums; aligned, each a box (6 half-spaces); the held box turned 45°, each an octagonal prism (10)", () => {
+    const pp = preparePlaced([box("A", 0), box("B", 0.3)]);
+    expect(sumsSize(heldSumsOn(pp, heldBox(0)))).toEqual({ sums: 2, halfSpaces: 12 });
+    expect(sumsSize(heldSumsOn(pp, heldBox(45)))).toEqual({ sums: 2, halfSpaces: 20 });
   });
 });

@@ -157,38 +157,55 @@ export const toUnion = (p: Vec3, ks: readonly Convex[]): number => ks.reduce((m,
 
 // ── B1 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 /** ⭐⭐⭐ B1 on a scene's parts (`readPartSolids`): every finding, named; [] = the scene passes */
+/** ⭐ B1a – B1d on one part's collision pieces (its findings pushed to `out`); its convex bodies with volume (S13: shared with the check at import) */
+function pieceChecks(part: PartSolids, out: B1Finding[]): Convex[] {
+  const ks: Convex[] = [];
+  for (const pc of part.pieces) {
+    const f = (check: B1Finding["check"], detail: string) => out.push({ check, part: part.id, node: pc.name, detail });
+    const k = convexOf(pc.points);
+    // B1d — simple
+    const verts = new Set(pc.points.map((p) => `${p[0].toFixed(4)},${p[1].toFixed(4)},${p[2].toFixed(4)}`)).size;
+    if (verts > UCX_MAX_VERTICES || pc.triangles.length > UCX_MAX_TRIANGLES) f("B1d", `${verts} vertices, ${pc.triangles.length} triangles (at most ${UCX_MAX_VERTICES}, ${UCX_MAX_TRIANGLES})`);
+    // B1c — volume
+    if (k === null || k.volume <= B1_TOL_MM ** 3) {
+      f("B1c", `no volume (${k === null ? "degenerate" : `${k.volume.toExponential(2)} mm³`})`);
+      continue;
+    }
+    ks.push(k);
+    // B1a — convex: every point on its hull
+    let dent = 0;
+    for (const p of pc.points) dent = Math.max(dent, -signedTo(p, k));
+    if (dent > B1_TOL_MM) f("B1a", `a point ${dent.toFixed(3)} mm inside its hull (not convex)`);
+    // B1b — closed: every edge in exactly two triangles (welded by position)
+    const key = (i: number) => { const p = pc.points[i]!; return `${p[0].toFixed(4)},${p[1].toFixed(4)},${p[2].toFixed(4)}`; };
+    const edges = new Map<string, number>();
+    for (const [a, b, c] of pc.triangles) for (const [x, y] of [[a, b], [b, c], [c, a]] as const) {
+      const kx = key(x), ky = key(y);
+      if (kx === ky) continue;
+      const e = kx < ky ? `${kx}|${ky}` : `${ky}|${kx}`;
+      edges.set(e, (edges.get(e) ?? 0) + 1);
+    }
+    const open = [...edges.values()].filter((n) => n !== 2).length;
+    if (open > 0) f("B1b", `${open} edge(s) not shared by exactly two triangles (not closed)`);
+  }
+  return ks;
+}
+
+/**
+ * ⭐⭐ (2026-11-24, S13 — `ORBIT_SURFACE.md` §5.1 L0, §7bis.3 B1: *"re-verified cheaply at import"*) B1's CHEAP SUBSET on a scene's file as it loads:
+ * each collision piece convex (B1a), closed (B1b), with volume (B1c), within the budget (B1d) — `checkSolids`' own code (`pieceChecks`), none of its
+ * sampled checks (the proxy on its solids, outward, complete: seconds — the export gate's). The game WARNS on the HUD; it never refuses (W3 refuses).
+ */
+export function checkSolidsAtImport(parts: readonly PartSolids[]): B1Finding[] {
+  const out: B1Finding[] = [];
+  for (const part of parts) pieceChecks(part, out);
+  return out;
+}
+
 export function checkSolids(parts: readonly PartSolids[]): B1Finding[] {
   const out: B1Finding[] = [];
   for (const part of parts) {
-    const ks: Convex[] = [];
-    for (const pc of part.pieces) {
-      const f = (check: B1Finding["check"], detail: string) => out.push({ check, part: part.id, node: pc.name, detail });
-      const k = convexOf(pc.points);
-      // B1d — simple
-      const verts = new Set(pc.points.map((p) => `${p[0].toFixed(4)},${p[1].toFixed(4)},${p[2].toFixed(4)}`)).size;
-      if (verts > UCX_MAX_VERTICES || pc.triangles.length > UCX_MAX_TRIANGLES) f("B1d", `${verts} vertices, ${pc.triangles.length} triangles (at most ${UCX_MAX_VERTICES}, ${UCX_MAX_TRIANGLES})`);
-      // B1c — volume
-      if (k === null || k.volume <= B1_TOL_MM ** 3) {
-        f("B1c", `no volume (${k === null ? "degenerate" : `${k.volume.toExponential(2)} mm³`})`);
-        continue;
-      }
-      ks.push(k);
-      // B1a — convex: every point on its hull
-      let dent = 0;
-      for (const p of pc.points) dent = Math.max(dent, -signedTo(p, k));
-      if (dent > B1_TOL_MM) f("B1a", `a point ${dent.toFixed(3)} mm inside its hull (not convex)`);
-      // B1b — closed: every edge in exactly two triangles (welded by position)
-      const key = (i: number) => { const p = pc.points[i]!; return `${p[0].toFixed(4)},${p[1].toFixed(4)},${p[2].toFixed(4)}`; };
-      const edges = new Map<string, number>();
-      for (const [a, b, c] of pc.triangles) for (const [x, y] of [[a, b], [b, c], [c, a]] as const) {
-        const kx = key(x), ky = key(y);
-        if (kx === ky) continue;
-        const e = kx < ky ? `${kx}|${ky}` : `${ky}|${kx}`;
-        edges.set(e, (edges.get(e) ?? 0) + 1);
-      }
-      const open = [...edges.values()].filter((n) => n !== 2).length;
-      if (open > 0) f("B1b", `${open} edge(s) not shared by exactly two triangles (not closed)`);
-    }
+    const ks = pieceChecks(part, out);
     if (ks.length === 0) continue;
     const proxyTris: { readonly t: readonly [Vec3, Vec3, Vec3]; readonly n: Vec3; readonly lo: Vec3; readonly hi: Vec3 }[] = [];
     for (const px of part.proxy) {
@@ -292,7 +309,22 @@ interface Placed {
   readonly id: string;
   readonly index: number;
   readonly ks: readonly Convex[];
-  readonly proxy: readonly { readonly t: readonly [Vec3, Vec3, Vec3]; readonly n: Vec3; readonly real: boolean }[];
+  readonly proxy: readonly B2Tri[];
+}
+/** ⭐ (S7) one proxy triangle of a placed part at its goal (scene frame, mm): its node, its corners, its normal, real or virtual */
+export interface B2Tri {
+  readonly node: string;
+  readonly t: readonly [Vec3, Vec3, Vec3];
+  readonly n: Vec3;
+  readonly real: boolean;
+}
+/**
+ * ⭐ (S7 — `ORBIT_SURFACE_PART_CHECKS.md` §15 item 1) one stage as B2 read it, for a reader of its states (B3): the placed parts in order, and per part
+ * its proxy triangles and each one's state — 0 exposed, 1 glued, 2 buried, 3 sealed.
+ */
+export interface B2Visit {
+  readonly placed: readonly string[];
+  readonly parts: readonly { readonly id: string; readonly tris: readonly B2Tri[]; readonly state: Uint8Array }[];
 }
 /** one stage of the plan: the part placed (the frozen ones first, together), and per placed part its proxy triangles' states */
 export interface B2Stage {
@@ -313,18 +345,19 @@ export interface B2Map {
  * flooded cell), GLUED (another part's or the floor's), BURIED (its own part's), SEALED (empty, not reached). ⭐ And B1i (D7, PROPOSED): each part's
  * solids sampled at its goal; a sample the outside reaches at some stage from its placing on must be under its proxy (within the fit, its normal).
  * `parts`: `readPartSolids`; `goals`: each part's goal placement in the scene frame, its position in mm; `frozen`: the parts placed from the start.
+ * `visit` (S7): called at each stage with every triangle's state (one walk read by B3 — never a second one).
  */
-export function exposedPerStage(parts: readonly PartSolids[], goals: ReadonlyMap<string, Placement>, frozen: ReadonlySet<string>, stepMm: number = B2_STEP_MM): B2Map {
+export function exposedPerStage(parts: readonly PartSolids[], goals: ReadonlyMap<string, Placement>, frozen: ReadonlySet<string>, stepMm: number = B2_STEP_MM, visit?: (stage: B2Visit) => void): B2Map {
   const placed: Placed[] = parts.map((p, index) => {
     const g = goals.get(p.id)!;
     const at = (q: Vec3): Vec3 => apply(g, q);
     const ks = p.pieces.map((pc) => convexOf(pc.points.map(at))).filter((k): k is Convex => k !== null);
-    const proxy: { t: [Vec3, Vec3, Vec3]; n: Vec3; real: boolean }[] = [];
+    const proxy: B2Tri[] = [];
     for (const px of p.proxy)
       for (const [a, b, c] of px.triangles) {
         const t: [Vec3, Vec3, Vec3] = [at(px.points[a]!), at(px.points[b]!), at(px.points[c]!)];
         const n = triNormal(t[0], t[1], t[2]);
-        if (n !== null) proxy.push({ t, n, real: !isVirtualProxy(px.name) });
+        if (n !== null) proxy.push({ node: px.name, t, n, real: !isVirtualProxy(px.name) });
       }
     return { id: p.id, index, ks, proxy };
   });
@@ -408,16 +441,19 @@ export function exposedPerStage(parts: readonly PartSolids[], goals: ReadonlyMap
     if (s === Math.max(1, nFrozen)) now.forEach(fill);
     else fill(order[s - 1]!);
     flood();
+    const seen: { id: string; tris: readonly B2Tri[]; state: Uint8Array }[] = [];
     const rows = now.map((p) => {
       let exposed = 0, glued = 0, buried = 0, sealed = 0;
-      for (const { t, n: nn } of p.proxy) {
+      const state = new Uint8Array(p.proxy.length);
+      p.proxy.forEach(({ t, n: nn }, ti) => {
         const g: Vec3 = [(t[0][0] + t[1][0] + t[2][0]) / 3, (t[0][1] + t[1][1] + t[2][1]) / 3, (t[0][2] + t[1][2] + t[2][2]) / 3];
         const cs = [g, ...t.map((v): Vec3 => [v[0] + (g[0] - v[0]) * 0.2, v[1] + (g[1] - v[1]) * 0.2, v[2] + (g[2] - v[2]) * 0.2])].map((q) => front(q, nn)).filter((c) => c >= 0);
         if (cs.some((c) => flooded[c] === 1)) exposed++;
-        else if (cs.some((c) => (owner[c]! >= 0 && owner[c] !== p.index) || owner[c] === -2)) glued++;
-        else if (cs.some((c) => owner[c] === p.index)) buried++;
-        else sealed++;
-      }
+        else if (cs.some((c) => (owner[c]! >= 0 && owner[c] !== p.index) || owner[c] === -2)) (glued++, (state[ti] = 1));
+        else if (cs.some((c) => owner[c] === p.index)) (buried++, (state[ti] = 2));
+        else (sealed++, (state[ti] = 3));
+      });
+      seen.push({ id: p.id, tris: p.proxy, state });
       const sm = samples.get(p.id)!;
       const r = reached.get(p.id) ?? new Uint8Array(sm.length);
       sm.forEach(({ q, n: nn }, i) => {
@@ -428,6 +464,7 @@ export function exposedPerStage(parts: readonly PartSolids[], goals: ReadonlyMap
       return { id: p.id, exposed, glued, buried, sealed };
     });
     stages.push({ placed: s === Math.max(1, nFrozen) ? now.map((p) => p.id).join("+") : order[s - 1]!.id, parts: rows });
+    visit?.({ placed: now.map((p) => p.id), parts: seen });
   }
   // B1i — the reached samples not under the part's proxy
   const uncovered: B1Finding[] = [];

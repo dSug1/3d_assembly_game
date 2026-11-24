@@ -1,6 +1,6 @@
 # RND7 — The orbit's surface: where the gizmo travels
 
-> **STATUS** · 🔧 **S2 (the readout) BUILT AND GATED** (2026-11-22 night, the owner asleep; `ORBIT_SURFACE_READOUT.md` §13 – §14), ⭐ **DEPLOYED 2026-11-23** (LIVE main `ff41fc3` = `5d30edf5`); 🔧 **S3 (the mouth's hold restricted) BUILT AND GATED** 2026-11-23 (`d4b6c222`, `ORBIT_SURFACE_MOUTH_HOLD.md`), ⭐ **DEPLOYED 2026-11-23** (LIVE main `e80a7b0` = `1bc13f70`); 🔧 **S4 (P2 drives the gizmo) BUILT AND GATED** 2026-11-23 (`ORBIT_SURFACE_DRIVE.md`), ⭐ **DEPLOYED 2026-11-23** (LIVE main `86a0e53` = `664f9c53`) — the workfront: branch `1.0.158from1.0.157-Orbit_surface` (pushed), the
+> **STATUS** · 🔧 **S2 (the readout) BUILT AND GATED** (2026-11-22 night, the owner asleep; `ORBIT_SURFACE_READOUT.md` §13 – §14), ⭐ **DEPLOYED 2026-11-23** (LIVE main `ff41fc3` = `5d30edf5`); 🔧 **S3 (the mouth's hold restricted) BUILT AND GATED** 2026-11-23 (`d4b6c222`, `ORBIT_SURFACE_MOUTH_HOLD.md`), ⭐ **DEPLOYED 2026-11-23** (LIVE main `e80a7b0` = `1bc13f70`); 🔧 **S4 (P2 drives the gizmo) BUILT AND GATED** 2026-11-23 (`ORBIT_SURFACE_DRIVE.md`), ⭐ **DEPLOYED 2026-11-23** (LIVE main `86a0e53` = `664f9c53`); S4b (the stutter) ⭐ **DEPLOYED 2026-11-24** (LIVE main `6a2da88` = `bd5e69b4`) — the workfront: branch `1.0.158from1.0.157-Orbit_surface` (pushed), the
 > worktree `../orbit_surface`. Built OFFLINE before the merge (2026-11-17): S0 (the entry sets on `Scene_2`'s real collision pieces) and S1 (the landing map,
 > `src/core/landing_map.ts` — NOT wired: nothing calls it). Nothing else built.
 > **NEXT** · ✅ his look 2026-11-23: *"the overall feel is ok"*; the alignment tap: *"a small stutter on the green contour but nothing alarming"* — then the build list continues (his *"continue"*); his look on S4 (deployed) given — the build list's item 4, P2 DRIVING the gizmo, BUILT: `ORBIT_SURFACE_DRIVE.md` (his word 2026-11-23 *"Do as per your recommendation"*: `mouthHoldDomain` stays 2,
@@ -111,3 +111,28 @@
 * **2026-11-23, night (later)** — B3 / B5 STUDIED, not built (`ORBIT_SURFACE_PART_CHECKS.md` §14): the definitions proposed (the stage's held piece
   as held, its resting face against each exposed face, both turns; landable within the fit; B5's reasons), information until the playability
   brief exists; three questions for his word. Local.
+* **2026-11-24** — his word *"do 1, 2 and 3 and 5 as you recommend. Scene 2 need a separate work in a separate worktree. Then finish the orbit's
+  surface work"*: B3 / B5's three questions, the one command and the resting share ¼ DECIDED (`bd5e69b4`); `Scene_2`'s findings → `GM13` (its own
+  worktree); S4b DEPLOYED (LIVE main `6a2da88` = `bd5e69b4`; his phone look owed: the alignment tap); the rest of the surface work planned → `ORBIT_SURFACE_BUILD.md` §10.
+* **2026-11-24** — S7 BUILT: B3 + B5 (`src/core/landing_per_stage.ts`, `src/input/face_map_membership.ts`; the check
+  `check_where_each_part_lands.ts`, the third in the one command, information); 10 vectors, 11 mutants red; `Scene_2` 77 s: four parts NO
+  ORIENTATION, the plinth's top NO PLACE in the game (the face map skips a frozen part — ledger row 21, his word with GM13). Local.
+* **2026-11-24** — S8 BUILT: B4's second half — does a part's way in start at a place? (a real facet of the stage's face map within 20° of
+  its withdrawal, over its seat; PROPOSED reading, information); the way in shared with the reach check (its `Scene_2` report identical); V10,
+  3 mutants red; `Scene_2`: ten ways in start at no place (E02 the frozen plinth, E06 after E05, the pistons and heads 4.6 mm short) —
+  ledger row 22, rule C5 PROPOSED. Local.
+* **2026-11-24** — S9 BUILT: B6's margins (a face the piece fits or is held out of by less than 2 mm; a facet within 0.05 of the face
+  map's share — both PROPOSED, information); B3's samples start at each face's centroid; V11, V12, 5 mutants red; `Scene_2`: no face at the
+  size margin, the TOP facet just above the share from stage 7 (ledger row 23); the landing check 134 s. Local.
+* **2026-11-24** — S10 BUILT: C2, the landing map's cost per stage (`sumsSize`, `check_landing_cost.ts` — the fourth check in the one
+  command; budget PROPOSED: no stage larger than `Scene_1`'s); `Scene_2` up to 3 203 × `Scene_1`'s half-spaces, a turn frame 318 – 694 ms
+  on this PC at stages 13 – 16: P2 cannot drive `Scene_2` as drawn (ledger row 7; D9 PROPOSED; the ways for his word). Local.
+* **2026-11-24** — S11 STUDIED, not built (`ORBIT_SURFACE_L1.md`): measured — no sealed or buried face in today's data scenes (that half of
+  L1: `Scene_2` only); the caps between parts WOULD change `Scene_1` (R1b on its boxes: 4 places deeper than wide — not trusted until every
+  body is in the set); the design (precomputed per placed set, behind `surfaceL1`); three questions for his word. Local.
+* **2026-11-24** — S12 BUILT: `void_sim`'s nine families in the landing map's vectors (against the brute force; the map's M3, M5 turn 3
+  each red; a 1 mm touching mutant and a coarse normal key stay green — boxes test no slanted contact); ties, defective input, every order and
+  a rigid motion were S1's; the frames across a tilt or zone switch, the relocation at a seat, F17's bump handed to `RND8` (the orbit's). Local.
+* **2026-11-24** — S13 BUILT and WIRED: B1's cheap subset re-verified when a `.glb` loads (`checkSolidsAtImport`, `checkSolids`' own
+  code; `render/model_import.ts` after the boot is placed, ≈ 50 ms on the PC for `Scene_2`, a HUD warning — never a refusal); V2b, 3 mutants
+  red; `Scene_2` none (its HUD unchanged). The packets S7 – S13 done (S11 a study for his word). Local.

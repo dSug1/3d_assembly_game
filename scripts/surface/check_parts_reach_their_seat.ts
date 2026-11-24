@@ -23,7 +23,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
-import { type ModelGhost, type ModelPart, type ModelSeat, glbJson, readModelCatalog } from "../../src/core/model_catalog";
+import { glbJson, readModelCatalog } from "../../src/core/model_catalog";
 import { apply, glbBin, partGeometry } from "../../src/core/glb_geometry";
 import { gapBetween } from "../../src/core/collision_shape";
 import { DEFAULT_CONFIG } from "../../src/input/gestureConfig";
@@ -32,6 +32,7 @@ import { mmToPx } from "../../src/core/units";
 import { ENTRY_SPHERE_N } from "../probes/surface_study/checks";
 import { type Pair, type Piece, type V, angleBetween, blocked, deg, depthAt, entrySet, makePair, makePairSat, makePiece, mouthAlong, normalDirs, sphere, unit } from "./check_parts_reach_their_seat_geom";
 import { selfChecks } from "./check_parts_reach_their_seat_selfcheck";
+import { wayIn, type WayIn } from "./check_parts_reach_their_seat_way";
 
 const t0 = Date.now();
 const argv = process.argv.slice(2);
@@ -68,8 +69,7 @@ const NARROW_DEG = 10;
 const BESIDE_MM = 10;
 // ─── a ghost's authored plunge against the computed one: a difference over this is a warning
 const GHOST_MM = 1;
-// ─── a SEAT PAIR: a marker of the part and a marker of a placed part, coincident and anti-parallel within these (PART_AUTHORING.md §3 item 4)
-const PAIR_MM = 0.1, PAIR_DEG = 0.1;
+// ─── a SEAT PAIR: PAIR_MM, PAIR_DEG — `check_parts_reach_their_seat_way.ts`
 const mouth = (part: Piece[], placed: Piece[], d: V) => mouthAlong(part, placed, d, BESIDE_MM, gapBetween);
 
 // ─── the plan file (optional)
@@ -121,37 +121,7 @@ const pairOf = (a: Piece, b: Piece): Pair => {
   return P;
 };
 
-// ─── ⭐ THE WAY IN A SCENE NAMES FOR A PART — the direction INTO its seat is its own seat marker's normal; the withdrawal is minus it. Which marker:
-//   1. the plan file's, when it names one;
-//   2. else the marker a PLUNGE GHOST authored for this part lands on (the ghost's `to` marker, on a placed part, meets it) — "ghost";
-//   3. else the part's markers that MEET a placed part's marker (coincident, anti-parallel: a seat pair): one direction — "seat"; several — "seats"
-//      (each is checked; the scene should name one);
-//   4. else none — the entry set is still computed, the way in is reported as not named.
-// (A marker of the part that meets only a LATER part's marker is where that later part seats ON it: not its own way in.)
-interface WayIn { how: "plan file" | "ghost" | "seat" | "seats" | "none"; says: string; markers: ModelSeat[] }
-const meets = (s: ModelSeat, hosts: readonly ModelPart[]): string[] =>
-  hosts.flatMap((h) => h.seats.filter((t) => Math.hypot(s.position[0] - t.position[0], s.position[1] - t.position[1], s.position[2] - t.position[2]) * MM <= PAIR_MM
-    && deg(angleBetween(unit(s.normal), unit(minus(t.normal)))) <= PAIR_DEG).map((t) => t.node));
-function wayIn(part: ModelPart, placedParts: readonly ModelPart[], ghosts: { g: ModelGhost; host: string }[]): WayIn {
-  const line = PLAN.parts?.[part.id];
-  if (line?.marker) {
-    const m = part.seats.find((s) => s.node === line.marker);
-    if (!m) throw new Error(`${part.id}: the plan file names the marker ${line.marker}; the part's seat markers are ${part.seats.map((s) => s.node).join(" ") || "none"}`);
-    return { how: "plan file", says: line.says ?? `the plan file: ${m.node}`, markers: [m] };
-  }
-  const own = part.seats.filter((s) => meets(s, placedParts).length > 0);
-  for (const { g } of ghosts) {
-    if (!g.plunge) continue;
-    const m = own.find((s) => meets(s, placedParts).includes(g.plunge!.to));
-    if (m) return { how: "ghost", says: line?.says ?? `the plunge of the ghost ${g.node} onto ${g.plunge.to} (the part's ${m.node})`, markers: [m] };
-  }
-  const dirs: ModelSeat[] = [];
-  for (const s of own) if (!dirs.some((t) => angleBetween(unit(s.normal), unit(t.normal)) < 1e-4)) dirs.push(s);
-  const list = own.map((s) => `${s.node} on ${meets(s, placedParts).join(" + ")}`).join("; ");
-  if (dirs.length === 1) return { how: "seat", says: line?.says ?? `onto its seat: ${list}`, markers: dirs };
-  if (dirs.length > 1) return { how: "seats", says: line?.says ?? `${dirs.length} seats on placed parts, none named as the way in: ${list}`, markers: dirs };
-  return { how: "none", says: line?.says ?? "no seat marker of this part meets a placed part's marker: its way in is not named", markers: [] };
-}
+// ─── ⭐ THE WAY IN A SCENE NAMES FOR A PART — `check_parts_reach_their_seat_way.ts` (moved 2026-11-24, S8: the landing check reads the same)
 
 // ─── the second implementation of the pair obstacle, and the game's GJK at the seat, on this file's real pieces
 function crossChecks() {
@@ -212,7 +182,7 @@ function runAll(skin: number): Row[] {
     const mine = piecesOf.get(part.id)!;
     const placed = placedIds.flatMap((id) => piecesOf.get(id)!);
     const ghosts = catalog.parts.flatMap((host) => host.ghosts.filter((g) => g.forPart === part.id).map((g) => ({ g, host: host.id })));
-    const way = wayIn(part, placedParts, ghosts);
+    const way = wayIn(part, placedParts, ghosts, PLAN.parts?.[part.id], MM);
     const planDirs = way.markers.map((m) => ({ label: "plan", d: unit(minus(m.normal)) }));
     const plunges = ghosts.filter((x) => x.g.plunge);
     const exactDirs = [
@@ -334,7 +304,7 @@ const findings = judge(rows, cross);
 const fails = findings.filter((x) => x.level === "FAIL"), warns = findings.filter((x) => x.level === "WARN");
 const controls = rows.filter((r) => r.control !== null);
 const NOT_CHECKED = [
-  "whether the GIZMO can bring the part to where its way in starts (it needs the landing map wired: B3, B5)",
+  "whether the GIZMO can bring the part to where its way in starts — read by check_where_each_part_lands.ts (B4's second half, S8)",
   "the DRAWN meshes: only the UCX_ collision pieces are read (whether they follow the drawn part is B1)",
   "ways in that need a TURN: straight withdrawals only, the part at its goal's orientation",
   "other ORDERS than the one run (a plan file's `order` runs another)",
