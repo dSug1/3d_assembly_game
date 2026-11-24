@@ -325,3 +325,20 @@ the lattice: the reason the centroid joined); `facetsNearShare` (`src/input/face
 sample, below read as above, the share's margin zero). ⚠ No vector sees a footprint grown on one side only (the vectors' pieces are centred).
 **`Scene_2`:** no face within 2 mm of a piece's size; from stage 7 on the assembly's TOP facet stands JUST ABOVE the share (0.33 at the game's ¼,
 gone at 0.30) — the ledger's row 23.
+
+## 19. ⭐ S10 — C2: WHAT DOES THE LANDING MAP COST AT EACH STAGE? (2026-11-24 — built; the budget PROPOSED, information)
+
+**What reads it.** The game prepares P2's sums once per placed set (`preparePlaced`) and AGAIN for the held piece at every frame of a turn
+(`heldSumsOn` — S4b), and a query runs through every half-space (`landingAt`): the cost grows with the placed pieces × the held piece's pieces ×
+their sums' half-spaces (a Minkowski sum's faces include its pieces' EDGE PAIRS). **Built:** `sumsSize` (`landing_map.ts`: sums and half-spaces,
+machine-free) and the check `scripts/surface/check_landing_cost.ts`, the fourth in the one command — per stage its size against `Scene_1`'s (36
+boxes × the green piece: 36 sums, 216 half-spaces, a turn frame 1.15 ms on this PC — the set played on his phone, S4 / S4b) and its time on this PC.
+**Vector** (`landing_map.test.ts`, S10): two placed boxes × a held box — aligned 2 sums of 6 half-spaces (a box), turned 45° of 10 (an octagonal
+prism); 2 mutants RED (the sums counted for their half-spaces, one sum's only).
+**The budget (⏳ PROPOSED — his word with the phone's measurement, owed since S4):** no stage larger than `Scene_1`'s; information until then.
+**`Scene_2`** (≈ 15 s): from 2.5 × (stage 2) to **3 203 ×** `Scene_1`'s (stage 16: 115 placed pieces × E16's 16 — 1 840 sums, 691 764 half-spaces);
+a turn frame **318 – 694 ms on this PC** at stages 13 – 16 (the heads and covers held, 15 – 16 pieces each), 11 – 34 ms elsewhere. ⭐ **A FINDING —
+the ledger's row 7 measured:** P2 cannot drive `Scene_2` as drawn (it runs on `Scene_1` only — `READOUT_SCENE` — nothing live is touched). The
+ways, for his word (with `GM13`): FEWER held pieces (the drawing: a part's pieces multiply every placed piece's sums — rule **D9**, PROPOSED), the
+held piece read by its HULL for P2 (a rule of the game: its concavities lost to the landing), or the sums built only near the gizmo (the game's
+code: a tile round it — S1's option).

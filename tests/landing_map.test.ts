@@ -5,7 +5,7 @@
  * `scripts/surface/landing_compare.ts`; here a fixed, deterministic choice of places.
  */
 import { describe, expect, it } from "vitest";
-import { buildLandingMap, LANDING_STEP_MM, type Landing, type LandingMap } from "../src/core/landing_map";
+import { buildLandingMap, heldSumsOn, LANDING_STEP_MM, preparePlaced, sumsSize, type Landing, type LandingMap } from "../src/core/landing_map";
 import type { Vec3 } from "../src/core/vec";
 import {
   PIECES, PIECE_A, PIECE_B, TOP_F, base, boxHeld, bruteLanding, bx, frameOf, library, hullPart, placesOf, prismZ, toConvex, vd, withVoids, type Part,
@@ -376,5 +376,18 @@ describe("⭐⭐ §5.3 — the specification's missing shapes, each against the 
     const c = Math.cos(R6(30)), sn = Math.sin(R6(30));
     const f = { n: [0, c, sn] as [number, number, number], t: [1, 0, 0] as [number, number, number], b: [0, -sn, c] as [number, number, number] };
     expect(againstBrute([...base(), cylinder12(40, 0), bx("pin", 60, 70, 240, 280, 40, 50)], f, -160, 160, -140, 140).places).toBeGreaterThan(1000);
+  });
+});
+
+describe("⭐ S10 — C2: the size of a preparation, machine-free (`sumsSize`)", () => {
+  const box = (id: string, x: number): { id: string; points: Vec3[] } => ({ id, points: [0, 1, 2, 3, 4, 5, 6, 7].map((m): Vec3 => [x + (m & 1 ? 0.1 : 0), m & 2 ? 0.02 : 0, m & 4 ? 0.1 : 0]) });
+  const heldBox = (turnDeg: number): Vec3[][] => {
+    const c = Math.cos((turnDeg * Math.PI) / 180), s = Math.sin((turnDeg * Math.PI) / 180);
+    return [[0, 1, 2, 3, 4, 5, 6, 7].map((m): Vec3 => { const x = m & 1 ? 0.01 : -0.01, z = m & 4 ? 0.01 : -0.01; return [c * x + s * z, m & 2 ? 0.01 : 0, -s * x + c * z]; })];
+  };
+  it("two placed boxes × a held box: 2 sums; aligned, each a box (6 half-spaces); the held box turned 45°, each an octagonal prism (10)", () => {
+    const pp = preparePlaced([box("A", 0), box("B", 0.3)]);
+    expect(sumsSize(heldSumsOn(pp, heldBox(0)))).toEqual({ sums: 2, halfSpaces: 12 });
+    expect(sumsSize(heldSumsOn(pp, heldBox(45)))).toEqual({ sums: 2, halfSpaces: 20 });
   });
 });

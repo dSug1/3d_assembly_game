@@ -124,3 +124,6 @@
 * **2026-11-24** — S9 BUILT: B6's margins (a face the piece fits or is held out of by less than 2 mm; a facet within 0.05 of the face
   map's share — both PROPOSED, information); B3's samples start at each face's centroid; V11, V12, 5 mutants red; `Scene_2`: no face at the
   size margin, the TOP facet just above the share from stage 7 (ledger row 23); the landing check 134 s. Local.
+* **2026-11-24** — S10 BUILT: C2, the landing map's cost per stage (`sumsSize`, `check_landing_cost.ts` — the fourth check in the one
+  command; budget PROPOSED: no stage larger than `Scene_1`'s); `Scene_2` up to 3 203 × `Scene_1`'s half-spaces, a turn frame 318 – 694 ms
+  on this PC at stages 13 – 16: P2 cannot drive `Scene_2` as drawn (ledger row 7; D9 PROPOSED; the ways for his word). Local.
