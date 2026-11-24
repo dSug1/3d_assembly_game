@@ -67,6 +67,20 @@ let SKY: ReturnType<typeof sky> | null = null;
 const at = (p: Vec3) => `(${p.map((x) => x.toFixed(0)).join(", ")})`;
 
 /**
+ * ⭐ (2026-11-24, S11's measurement with every body — a DEFECT found: `Math.min(...values)` passes every value as an argument, and a place of ~1.6e5
+ * voxels (`Scene_1`'s gap under the cube) overflowed the call stack — `RangeError`, the whole check lost) the smallest `f(x)` over `xs` by a loop;
+ * `Infinity` for none (as `Math.min()`).
+ */
+export function minOver<T>(xs: readonly T[], f: (x: T) => number): number {
+  let m = Infinity;
+  for (const x of xs) {
+    const v = f(x);
+    if (v < m) m = v;
+  }
+  return m;
+}
+
+/**
  * ⭐⭐⭐ (S6, packet 2) COVERAGE, CLOSURE AND CAPS on each part (`readPartSolids`: its proxy nodes, its render meshes) — `stepMm` the voxel step
  * (`COVER_STEP_MM`); a part with no render or no proxy read not. `info` findings: the amber borderline (R1b).
  */
@@ -308,7 +322,7 @@ export function checkProxyCover(parts: readonly PartSolids[], stepMm: number = C
     const deepFlag = comps.map((c) => c.some((x) => cls[x]! >= 2));
     const deepC = comps.filter((_, i) => deepFlag[i]), amberC = comps.filter((_, i) => !deepFlag[i]);
     const sum = (cs: number[][]) => cs.reduce((t, c) => t + c.length, 0) * h * h;
-    const minSky = (c: number[]) => Math.min(...c.map((x) => skyOf[x]!));
+    const minSky = (c: number[]) => minOver(c, (x) => skyOf[x]!);
     if (deepC.length > 0) {
       const under = deepC.reduce((t, c) => t + c.filter((x) => cls[x] === 3).length, 0);
       const big = deepC[0]!;
@@ -337,7 +351,7 @@ export function checkProxyCover(parts: readonly PartSolids[], stepMm: number = C
       for (const t of f.tris) (ptris.push(t), allow.push(a));
     }
     const pgrid = triGrid(ptris, 8);
-    const aMax = Math.max(...allow);
+    const aMax = -minOver(allow, (a) => -a);
     const loose = 1.87 * h;
     const uncovered = new Uint8Array(n);
     let reachedShell = 0;
