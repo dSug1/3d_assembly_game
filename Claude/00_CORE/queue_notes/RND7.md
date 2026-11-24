@@ -130,3 +130,6 @@
 * **2026-11-24** — S11 STUDIED, not built (`ORBIT_SURFACE_L1.md`): measured — no sealed or buried face in today's data scenes (that half of
   L1: `Scene_2` only); the caps between parts WOULD change `Scene_1` (R1b on its boxes: 4 places deeper than wide — not trusted until every
   body is in the set); the design (precomputed per placed set, behind `surfaceL1`); three questions for his word. Local.
+* **2026-11-24** — S12 BUILT: `void_sim`'s nine families in the landing map's vectors (against the brute force; the map's M3, M5 turn 3
+  each red; a 1 mm touching mutant and a coarse normal key stay green — boxes test no slanted contact); ties, defective input, every order and
+  a rigid motion were S1's; the frames across a tilt or zone switch, the relocation at a seat, F17's bump handed to `RND8` (the orbit's). Local.

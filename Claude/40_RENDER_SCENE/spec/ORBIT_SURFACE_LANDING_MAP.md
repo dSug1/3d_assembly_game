@@ -194,9 +194,9 @@ the full sort key of §5 gives by construction).
 |---|---|
 | M1 the held piece not mirrored | 13 |
 | M2 the first contact taken as the last | 2 (from a depth; the library) |
-| M3 one pair skipped (the last placed piece) | 14 |
+| M3 one pair skipped (the last placed piece) | 14; ⭐ +3 since 2026-11-24 (`void_sim`'s groove, notch, rebate — S12) |
 | M4 the layers out of order (innermost first) | 3 |
-| M5 "nothing" returned as the plane's depth | 2 (the hole; the library) |
+| M5 "nothing" returned as the plane's depth | 2 (the hole; the library); ⭐ +3 since 2026-11-24 (`void_sim`'s U-slot, notch, rebate — S12) |
 | M6 a tie broken by array order (the ids not sorted) | 3 (ties; two order vectors) |
 | M7 the edge-against-edge facets left out | 1 (the slanted ridge); ⭐ 2 since 2026-11-23 (+ the DOME of `ORBIT_SURFACE.md` §5.3's shapes) |
 | M8 the lookup takes the lower corner | 1 |
