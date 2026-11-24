@@ -128,6 +128,8 @@ const PENDING: Record<string, string> = {
   sumsSize: "S10 (`ORBIT_SURFACE_PART_CHECKS.md` §19) — C2, a preparation's size machine-free: its vector and `check_landing_cost.ts` at the export gate; never the game's",
   facetsNearShare: "S9 (`ORBIT_SURFACE_PART_CHECKS.md` §18) — B6, the facets near the face map's share, offline: its vectors and the landing check; never the game's",
   facetTowardGoal: "S8 (`ORBIT_SURFACE_PART_CHECKS.md` §17) — B4's second half, the facet toward a goal along its way in, offline: its vectors and the landing check; never the game's",
+  // ⭐ (2026-11-24, S11 — `ORBIT_SURFACE_L1.md` §10) L1's acceptance runs OFFLINE, when the caps are written (`scripts/surface/l1_caps.ts`) and in its vectors
+  fillerVerdict: "S11 (`ORBIT_SURFACE_L1.md` §10.2) — a filler accepted only if each face is glued, flush or on a goal volume and nothing reaches in: the caps script and its vectors; the game reads the accepted file",
   // ⭐ (2026-11-23, S6 — `30_OBJECTS_3D/spec/PROXY_AND_COLLISION_RULES.md`, DECIDED) the proxy rules' checks run as vectors and by the check script; two of
   // their scales wait for packet 2 (ρ: the closing, the caps) and packet 3 (τc: the collision pieces against the real shape)
   checkProxyFaces: "S6 packet 1 (`PROXY_AND_COLLISION_RULES.md` §9) — R7, R3, R4, R2 on each proxy face: vectors and `check_part_solids.ts`, at the export gate",
