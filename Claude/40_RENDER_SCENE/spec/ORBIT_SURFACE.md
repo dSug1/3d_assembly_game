@@ -765,7 +765,8 @@ fails, with a planted **control** in `CHECK_CONTROLS` (*"a check never seen fail
 * [`PART_AUTHORING.md`](../../30_OBJECTS_3D/spec/PART_AUTHORING.md) §6 (new): the checks' table, the entry set and the ghost, the checklist; pointers at
   §1 (exposed = reachable from outside, S22), §3 item 3 (the ghost at the depth already superseded; the ghost computed where the entry set is
   narrow), §4.2 (B1 under "not yet in the report"), §4.3 item 3 (the review gets B3 – B6's colours and pass rules).
-* The game: a `src/core` checker beside `readModelCatalog` (B1's subset at load; the rest in vectors on each scene's `.glb`) — not built. What it
+* The game: a `src/core` checker beside `readModelCatalog` (B1's subset at load; the rest in vectors on each scene's `.glb`) — ⭐ BUILT 2026-11-24
+  (S13: `checkSolidsAtImport`, called by `render/model_import.ts`, a HUD warning — `ORBIT_SURFACE_PART_CHECKS.md` §20). What it
   costs per scene (estimates): [ORBIT_SURFACE_AUDIT.md](ORBIT_SURFACE_AUDIT.md) §8.2.
 
 ---

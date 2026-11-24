@@ -342,3 +342,14 @@ the ledger's row 7 measured:** P2 cannot drive `Scene_2` as drawn (it runs on `S
 ways, for his word (with `GM13`): FEWER held pieces (the drawing: a part's pieces multiply every placed piece's sums — rule **D9**, PROPOSED), the
 held piece read by its HULL for P2 (a rule of the game: its concavities lost to the landing), or the sums built only near the gizmo (the game's
 code: a tile round it — S1's option).
+
+## 20. ⭐ S13 — L0 RE-VERIFIED AT IMPORT: B1'S CHEAP SUBSET WHEN A `.glb` LOADS (2026-11-24 — built, wired)
+
+**What is asked** (`ORBIT_SURFACE.md` §5.1 L0: *"the Blender checks B1 passed, re-verified at import"*; §7bis.3 B1: *"a pure `src/core` function on
+the parsed `.glb`: convex / closed / budget"*). **Built:** `checkSolidsAtImport` (`part_checks.ts`) — B1a convex, B1b closed, B1c volume, B1d the
+budget, `checkSolids`' OWN code (its piece loop moved to `pieceChecks`, shared: B1's vectors and `Scene_2`'s pinned report unchanged), none of its
+sampled checks (seconds — the gate's); called by the game's `render/model_import.ts` after the scene is placed and its contact file read (≈ 50 ms
+on this PC for `Scene_2`, read 8 – 25 ms + checks 40 – 55 ms): a finding is a WARNING on the HUD (`⚠B1 ×n`) and the console, **never a refusal**
+(W3's gate refuses). `readPartSolids` now has a production caller (the debt's line gone). **Vectors** (V2b): `Scene_2`'s file none; on planted
+defects exactly the full check's B1a – B1d and nothing sampled (a lifted proxy: B1e, B1h not read); **3 mutants RED** (it reads nothing, it runs
+the full check, B1b dropped). Not behind a switch: it changes no frame and no file's load — `Scene_2` has none of the four (its HUD line unchanged).

@@ -122,8 +122,7 @@ const PENDING: Record<string, string> = {
   prepareLanding: "S4b (`ORBIT_SURFACE_DRIVE.md` §12) — the vectors' and the offline scripts' one call; the product reads the shared preparation (`heldSumsFor`) since S4b",
   // ⭐ (2026-11-23, S5 — `ORBIT_SURFACE_PART_CHECKS.md` §4) B1, the solids, runs as VECTORS on each scene's `.glb` (`part_checks.test.ts`: `Scene_2`'s report,
   // the plinth's incomplete proxy); at load its cheap subset is owed (D1: printed, never refused — 5 s in full on this PC, B1h the heavy part)
-  checkSolids: "S5 (`ORBIT_SURFACE_PART_CHECKS.md` §4, D1) — B1 run as vectors on each scene's .glb; its cheap subset at load owed (RND7)",
-  readPartSolids: "S5 (`ORBIT_SURFACE_PART_CHECKS.md` §4, D1) — B1's reader of a scene's .glb, with `checkSolids`; at load owed (RND7)",
+  checkSolids: "S5 (`ORBIT_SURFACE_PART_CHECKS.md` §4, D1) — B1 run as vectors on each scene's .glb and at the export gate; its cheap subset at load is `checkSolidsAtImport` (S13, wired)",
   landingPerStage: "S7 (`ORBIT_SURFACE_PART_CHECKS.md` §14 – §16) — B3 + B5, the landing per stage and the faces no place (it calls B2's `exposedPerStage`): its vectors and its check at the export gate (`check_where_each_part_lands.ts`), information; never the game's",
   inGameFaceMap: "S7 (`ORBIT_SURFACE_PART_CHECKS.md` §15 item 7) — B5's share read with the game's own face map, offline: its vectors and the landing check; never the game's",
   sumsSize: "S10 (`ORBIT_SURFACE_PART_CHECKS.md` §19) — C2, a preparation's size machine-free: its vector and `check_landing_cost.ts` at the export gate; never the game's",

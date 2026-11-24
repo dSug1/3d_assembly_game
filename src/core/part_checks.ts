@@ -157,38 +157,55 @@ export const toUnion = (p: Vec3, ks: readonly Convex[]): number => ks.reduce((m,
 
 // ── B1 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 /** ⭐⭐⭐ B1 on a scene's parts (`readPartSolids`): every finding, named; [] = the scene passes */
+/** ⭐ B1a – B1d on one part's collision pieces (its findings pushed to `out`); its convex bodies with volume (S13: shared with the check at import) */
+function pieceChecks(part: PartSolids, out: B1Finding[]): Convex[] {
+  const ks: Convex[] = [];
+  for (const pc of part.pieces) {
+    const f = (check: B1Finding["check"], detail: string) => out.push({ check, part: part.id, node: pc.name, detail });
+    const k = convexOf(pc.points);
+    // B1d — simple
+    const verts = new Set(pc.points.map((p) => `${p[0].toFixed(4)},${p[1].toFixed(4)},${p[2].toFixed(4)}`)).size;
+    if (verts > UCX_MAX_VERTICES || pc.triangles.length > UCX_MAX_TRIANGLES) f("B1d", `${verts} vertices, ${pc.triangles.length} triangles (at most ${UCX_MAX_VERTICES}, ${UCX_MAX_TRIANGLES})`);
+    // B1c — volume
+    if (k === null || k.volume <= B1_TOL_MM ** 3) {
+      f("B1c", `no volume (${k === null ? "degenerate" : `${k.volume.toExponential(2)} mm³`})`);
+      continue;
+    }
+    ks.push(k);
+    // B1a — convex: every point on its hull
+    let dent = 0;
+    for (const p of pc.points) dent = Math.max(dent, -signedTo(p, k));
+    if (dent > B1_TOL_MM) f("B1a", `a point ${dent.toFixed(3)} mm inside its hull (not convex)`);
+    // B1b — closed: every edge in exactly two triangles (welded by position)
+    const key = (i: number) => { const p = pc.points[i]!; return `${p[0].toFixed(4)},${p[1].toFixed(4)},${p[2].toFixed(4)}`; };
+    const edges = new Map<string, number>();
+    for (const [a, b, c] of pc.triangles) for (const [x, y] of [[a, b], [b, c], [c, a]] as const) {
+      const kx = key(x), ky = key(y);
+      if (kx === ky) continue;
+      const e = kx < ky ? `${kx}|${ky}` : `${ky}|${kx}`;
+      edges.set(e, (edges.get(e) ?? 0) + 1);
+    }
+    const open = [...edges.values()].filter((n) => n !== 2).length;
+    if (open > 0) f("B1b", `${open} edge(s) not shared by exactly two triangles (not closed)`);
+  }
+  return ks;
+}
+
+/**
+ * ⭐⭐ (2026-11-24, S13 — `ORBIT_SURFACE.md` §5.1 L0, §7bis.3 B1: *"re-verified cheaply at import"*) B1's CHEAP SUBSET on a scene's file as it loads:
+ * each collision piece convex (B1a), closed (B1b), with volume (B1c), within the budget (B1d) — `checkSolids`' own code (`pieceChecks`), none of its
+ * sampled checks (the proxy on its solids, outward, complete: seconds — the export gate's). The game WARNS on the HUD; it never refuses (W3 refuses).
+ */
+export function checkSolidsAtImport(parts: readonly PartSolids[]): B1Finding[] {
+  const out: B1Finding[] = [];
+  for (const part of parts) pieceChecks(part, out);
+  return out;
+}
+
 export function checkSolids(parts: readonly PartSolids[]): B1Finding[] {
   const out: B1Finding[] = [];
   for (const part of parts) {
-    const ks: Convex[] = [];
-    for (const pc of part.pieces) {
-      const f = (check: B1Finding["check"], detail: string) => out.push({ check, part: part.id, node: pc.name, detail });
-      const k = convexOf(pc.points);
-      // B1d — simple
-      const verts = new Set(pc.points.map((p) => `${p[0].toFixed(4)},${p[1].toFixed(4)},${p[2].toFixed(4)}`)).size;
-      if (verts > UCX_MAX_VERTICES || pc.triangles.length > UCX_MAX_TRIANGLES) f("B1d", `${verts} vertices, ${pc.triangles.length} triangles (at most ${UCX_MAX_VERTICES}, ${UCX_MAX_TRIANGLES})`);
-      // B1c — volume
-      if (k === null || k.volume <= B1_TOL_MM ** 3) {
-        f("B1c", `no volume (${k === null ? "degenerate" : `${k.volume.toExponential(2)} mm³`})`);
-        continue;
-      }
-      ks.push(k);
-      // B1a — convex: every point on its hull
-      let dent = 0;
-      for (const p of pc.points) dent = Math.max(dent, -signedTo(p, k));
-      if (dent > B1_TOL_MM) f("B1a", `a point ${dent.toFixed(3)} mm inside its hull (not convex)`);
-      // B1b — closed: every edge in exactly two triangles (welded by position)
-      const key = (i: number) => { const p = pc.points[i]!; return `${p[0].toFixed(4)},${p[1].toFixed(4)},${p[2].toFixed(4)}`; };
-      const edges = new Map<string, number>();
-      for (const [a, b, c] of pc.triangles) for (const [x, y] of [[a, b], [b, c], [c, a]] as const) {
-        const kx = key(x), ky = key(y);
-        if (kx === ky) continue;
-        const e = kx < ky ? `${kx}|${ky}` : `${ky}|${kx}`;
-        edges.set(e, (edges.get(e) ?? 0) + 1);
-      }
-      const open = [...edges.values()].filter((n) => n !== 2).length;
-      if (open > 0) f("B1b", `${open} edge(s) not shared by exactly two triangles (not closed)`);
-    }
+    const ks = pieceChecks(part, out);
     if (ks.length === 0) continue;
     const proxyTris: { readonly t: readonly [Vec3, Vec3, Vec3]; readonly n: Vec3; readonly lo: Vec3; readonly hi: Vec3 }[] = [];
     for (const px of part.proxy) {

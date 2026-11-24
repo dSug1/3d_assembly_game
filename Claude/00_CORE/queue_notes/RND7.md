@@ -133,3 +133,6 @@
 * **2026-11-24** — S12 BUILT: `void_sim`'s nine families in the landing map's vectors (against the brute force; the map's M3, M5 turn 3
   each red; a 1 mm touching mutant and a coarse normal key stay green — boxes test no slanted contact); ties, defective input, every order and
   a rigid motion were S1's; the frames across a tilt or zone switch, the relocation at a seat, F17's bump handed to `RND8` (the orbit's). Local.
+* **2026-11-24** — S13 BUILT and WIRED: B1's cheap subset re-verified when a `.glb` loads (`checkSolidsAtImport`, `checkSolids`' own
+  code; `render/model_import.ts` after the boot is placed, ≈ 50 ms on the PC for `Scene_2`, a HUD warning — never a refusal); V2b, 3 mutants
+  red; `Scene_2` none (its HUD unchanged). The packets S7 – S13 done (S11 a study for his word). Local.

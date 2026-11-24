@@ -29,6 +29,7 @@ import { bootAnimator, type BootAnimator } from "./boot_anim_wiring"; // ANIMATI
 import { makeModelBodies } from "./model_bodies_wiring";
 import { bodyFrame, type BodyFrame } from "../core/model_bodies";
 import { glbBin, partFaces, partGeometry, type Placement } from "../core/glb_geometry";
+import { checkSolidsAtImport, readPartSolids } from "../core/part_checks";
 import { ImageProcessingConfiguration } from "@babylonjs/core/Materials/imageProcessingConfiguration";
 import { SSAO2RenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/ssao2RenderingPipeline";
 import "@babylonjs/core/Rendering/geometryBufferRendererSceneComponent";
@@ -90,6 +91,14 @@ export async function importSceneModel(st: SceneState): Promise<void> {
       }
     } finally {
       markReady();
+    }
+    // ⭐⭐ (2026-11-24, S13 — `ORBIT_SURFACE.md` §5.1 L0: *"the Blender checks B1 passed, re-verified at import"*) B1's CHEAP SUBSET on the file —
+    // each collision piece convex, closed, with volume, within the budget (`checkSolidsAtImport`: ~50 ms on the PC for `Scene_2`, after the boot is
+    // placed): a WARNING on the HUD and the console, never a refusal (the export gate refuses — `SCENE_WORKFLOW.md` §9.3)
+    const b1 = checkSolidsAtImport(readPartSolids(parsed.json, glbBin(bytes), read.catalog));
+    if (b1.length > 0) {
+      console.warn("⚠ the scene's collision pieces (B1a – B1d, re-verified at import):\n" + b1.map((f) => `${f.check} ${f.part} ${f.node}: ${f.detail}`).join("\n"));
+      st.modelStatus += `  ⚠B1 ×${b1.length}: ${b1[0]!.check} ${b1[0]!.part}`;
     }
   } catch (e) {
     console.error("⛔ the scene's model did not load:", e);
