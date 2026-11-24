@@ -181,3 +181,14 @@ byte):
 
 **Not done here (the gates, his):** G1 at 0 bit for bit and at 1 within 1e-9 m on his `Scene_1` records; k (the queries a frame) counted; the phone's
 figure on his look (`ORBIT_SURFACE_DRIVE.md` §11); D9 ([PART_AUTHORING.md](../../30_OBJECTS_3D/spec/PART_AUTHORING.md)) stays until his look.
+
+## 10. ✅ The gates (2026-11-24, on `ab17666d` — the kit's `fo3/surface/s14/run_s14.sh`; one headless job at a time)
+
+* **G1 — at 0 (the defaults, with the ring of `ORBIT_SURFACE_READOUT.md` §15): PASSED, bit for bit.** His two `Scene_1` records of 2026-11-22
+  (back 2 916 frames, front 6 034) against the defaults' replays of 2026-11-23 (`runs/S6_*`): the largest difference **0** on every frame — the gizmo,
+  the camera's position and target, the piece; the support the same.
+* **At 1 (the cast) against 0: within 3.6e-15 m** (back; front 8.9e-16 m) on every frame — 0 frames over 1 µm for the gizmo, the camera, the piece.
+* **The queries a frame (k)**: not counted in the page (no counter there); the jitter's replays read the solver at 2 queries a frame on an approach
+  and 13 on a contact frame (`APPROACH_CAMERA_JITTER.md`) — each one landing query at most: ≈ 13 × 5 µs more on such a frame at 1 on `Scene_1`.
+* `npm run verify` on a quiet PC: 202 files, 2 557 tests, all green. No probe profile left; 5191 stopped.
+* ⏳ His look at 1 (the slider "P2 engine"); then its default; then D9 withdrawn (§6 step 5).

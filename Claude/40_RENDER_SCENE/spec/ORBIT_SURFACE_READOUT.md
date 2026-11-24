@@ -332,5 +332,5 @@ the rings apart wherever the piece is already below a rim or does not rest on it
 driven gizmo `mr0` handed in as the readout's last argument — its point taken, never recomputed), `ringOf` (the ring's place and colour); the HUD line
 from `drive` where P2 drives, as built elsewhere (its text unchanged). `tests/landing_ring_drive.test.ts` (6), each RED first on a mutant: the ring on
 the readout always (4 red), the line ignoring the drive (4), the drive's point taken as today's (1). `npm run verify`: 2556 of 2557 — the one red
-`boot_heaps`' 3 s wall-clock cap under load (a headless replay ran beside it), 9 / 9 alone. ⏳ G1 (his records: `g`, `c`, `t`, `p` bit for bit) and
-his look owed.
+`boot_heaps`' 3 s wall-clock cap under load (a headless replay ran beside it), 9 / 9 alone; on a quiet PC 2557 / 2557. ✅ G1 (2026-11-24, with S14's — `ORBIT_SURFACE_LANDING_CAST.md` §10): his two `Scene_1` records,
+`g`, `c`, `t`, `p` identical to the defaults' replays of 2026-11-23 on every frame. His look owed.
