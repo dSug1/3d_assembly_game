@@ -1,6 +1,6 @@
 # L1 IN THE GAME — THE ASSEMBLY'S SURFACE AS IT GROWS: sealed, buried, the caps between parts (package S11, a study, 2026-11-24)
 
-> **STATUS** · ✅ **DECIDED 2026-11-24 (§8: his *"S11: you can proceed as you recommend"*)** — was: ⏳ **A STUDY — NOTHING BUILT.** Written on his word *"Then finish the orbit's surface work"* (2026-11-24), by his rules (docs before
+> **STATUS** · ✅ **BUILT 2026-11-24 (§10.5, `1d4cee3c`, behind `surfaceL1`, 0 = LIVE; G1 and his look owed)** · ✅ **DECIDED 2026-11-24 (§8: his *"S11: you can proceed as you recommend"*)** — was: ⏳ **A STUDY — NOTHING BUILT.** Written on his word *"Then finish the orbit's surface work"* (2026-11-24), by his rules (docs before
 > build; the four-part method; the closed orbit's terms — [ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md) §9). **Three questions for his word (§6).**
 > **OWNS** · what the game's face map must leave out or add at a seat (layer L1), measured on today's scenes, and the design proposed.
 > **READ WITH** · [ORBIT_SURFACE.md](ORBIT_SURFACE.md) §5.1 (L1); [PROXY_AND_COLLISION_RULES.md](../../30_OBJECTS_3D/spec/PROXY_AND_COLLISION_RULES.md) §3bis
@@ -125,7 +125,7 @@ script now leaves every frozen body out, as the face map does (`render/assembly_
 
 **`Scene1_demo`**: no place. **`Scene_0`, `Scene_0bis`**: none. **B2**: sealed 0, buried 0 on every data scene, both states (Q1 with `GM13` stands).
 
-## 10. ⏳ THE BUILD (S11 on `Scene_1`, for his look) — the design, written before the build
+## 10. ✅ BUILT 2026-11-24 (`1d4cee3c`, behind `surfaceL1`, 0 = LIVE — §10.5) — THE BUILD (S11 on `Scene_1`, for his look) — the design, written before the build
 
 1. **The cap is a FILLER** — a virtual box filling the hollow, never a solid: no collision piece (P2, the drive and the casts never read it), no
    mesh drawn. Its six faces join the face map as a part of their own (`part` = its id): the faces pressed on the walls GLUE both ways — the
@@ -144,3 +144,27 @@ script now leaves every frozen body out, as the face map does (`render/assembly_
 4. **Vectors** (red first against today): the filler's box read from the scene; the tunnel's inner faces absent from the face map at 1, present at 0;
    the underside and the back each one facet across the slit at 1; mutants — a side snapped to the floor's plane, a filler reaching into a goal
    volume, a face neither glued nor flush — refused.
+
+5. ⭐ **AS BUILT** (2026-11-24, `1d4cee3c`; G1 on his records and his look owed — nothing pushed, nothing deployed):
+   * **Offline** — `scripts/surface/l1_caps.ts` (≈ 80 s; the bodies and R1b's places moved, unchanged, from `l1_data_scenes.ts` to `l1_places.ts`)
+     writes `src/content/scene_1_caps.json`; `Scene_0`, `Scene_0bis`, `Scene1_demo`: no deep place, no file (a stale file is refused). Rerun: the same
+     content. The filler, both states: **x 103.5 … 116.5, y 15.5 … 73.5, z −17.5 … 432.5 mm** (units 1.035 … 1.165, 0.155 … 0.735, −0.175 … 4.325);
+     R1b's place (voxel centres) 104.0 … 116.25, 19.75 … 72.25, −16.5 (START −37.5, cut out of Piece41's goal volume at −17.5) … 422.75, each side
+     snapped outward ≤ 9.75 mm. **Walls Piece19, Piece20, Piece39; Piece41 a GOAL, never a wall** (a loose piece: the filler is there before it).
+   * **The acceptance** (`src/input/l1_caps.ts` `fillerVerdict`, the face map's own `exposedRects`, coplanar and bordering within `PROXY_FLUSH_MM`):
+     at FINISHED −x GLUED Piece19, +x GLUED Piece20, +y GLUED Piece39, −z GLUED Piece41, −y FLUSH (Piece19, Piece20, Piece41), +z FLUSH (Piece19,
+     Piece20, Piece39); at START the front on Piece41's goal volume — ⚠ a THIRD verdict, **GOAL** (the ghost bridges the slot; glued once it seats).
+     FLUSH as built: each OPEN piece of the face borders an EXPOSED coplanar face of a placed part, the same way out. Nothing inside (a separating-axis
+     test, each part one convex body — C4). The script also requires the SAME filler from both states' places (else §4.1's per-set precompute is owed).
+   * ⚠ **Piece43 under the slit**: the frustum under Piece19 reaches 3.75 mm under the tunnel (x 103.5 … 107.25, z 168.5 … 213.5) — that bit of the
+     filler's underside is glued to Piece43's top, and leaves the top's stack too.
+   * **In the game** — `render/assembly_wiring.ts` `placedFaces`: at `surfaceL1` 1, each filler whose walls are all placed (`placedForMap`, the parts'
+     own test: goal-locked, not orbited, not frozen, mesh shown) adds its six faces, part = its id, carried by its ANCHOR's model placement (Piece19's
+     `worldPlacementOf` in `st.world` against its goal pose in the file — at boot exactly `units × unitM`, checked against the page's faces); both
+     face maps' keys + `#L1<ids>` at 1 only (at 0 the key byte for byte). Read by `content/scene_caps.ts` (checked at import). Slider in THE ORBIT'S
+     SURFACE: *"L1 caps (0 = LIVE 19c7f88; 1 = the fillers)"*.
+   * **Measured on the page's faces** (`tests/fixtures/scene_1_cube_faces.json`, START): at 1 the six facets' planes and polygons, the columns, the
+     levels — UNCHANGED; the stacks change: the tunnel's walls and ceiling gone (26 100, 26 100, 5 850 mm² at 0 → 0), the underside ONE group (its
+     main region was ONE HALF of it at 0 — the slit cut it in two: the bottom facet's share 0.5046 → 0.8167), the back's share 0.9525 → 0.9550, a
+     group more in front (the filler's front at the bottom of Piece41's slot). ⚠ The camera's path at 1 is G1's to measure, never assumed.
+   * **Vectors** — `tests/l1_caps.test.ts` (22), each shown RED on a mutant first (the list: `ORBIT_SURFACE_BUILD.md` §10, S11's row).
