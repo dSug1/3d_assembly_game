@@ -102,3 +102,29 @@ measure and their empty sockets may have been counted).
   BEHIND A SWITCH (`surfaceL1`, 0 = LIVE) on `Scene_1` for his look; the camera's path at 1 measured against 0 on his records.
 * **Q3 — PRECOMPUTED** per placed set with the scene (§4.1), read at boot, looked up at a seat, a put-down, an undo.
 * **Order**: after the landing map's cost (his *"I do not accept these costs"*, the same day) — one heavy job at a time.
+
+## 9. ⭐ Q2's measure WITH EVERY BODY (2026-11-24 — `scripts/surface/l1_data_scenes.ts`, extended by an agent; 15 min)
+
+**How.** Every body with the game's own shape (the frusta by `taperTop`, the prisms by `prismOutline`, turned bodies, the margins — each checked
+against the game's code: corners, extents, outline 0.0000 mm off, volumes); R1b on the placed set as ONE part, each place listed (a copy of R1b's
+listing in the script, equal to `checkProxyCover` on a small set — `--selfcheck`); two states: FINISHED (every body at its goal, `SCENE_1_FINAL`)
+and START (the bodies whose spawn is their goal; the loose Piece1, 2, 17, 23, 41 left out — a place in a left-out piece's goal volume is its slot).
+⚠ The first run (the loose pieces at their spawn places) crashed R1b on a stack overflow — a defect in the check, fixed `ca4eeb0a` (`minOver`, V18).
+
+**`Scene_1` — the same two caps in both states; no goal slot is a place** (the slots of Piece1, 2, 23 at the top edge open, so not deep):
+
+| place | what | size |
+|---|---|---|
+| **1** | ⭐ **the 15.5 mm GAP UNDER THE CUBE** (x −239 … 246, z −48 … 432 mm): the bottom row stands 0.155 units above the floor (`scene_1.ts` — *"Piece19's bottom is 0.155 above the sand"*); only Piece43 reaches the floor (sunk 25.8 mm, his *"Sink into the floor"*). Its mouth: an unbroken slit round the 490 × 483 mm footprint (≈ 1 946 mm long). Two branches up to y 72: the slots behind Piece17's and Piece41's goals — their goals fill the slots' front 33 mm, 450 mm stay empty finished. | ≈ 500 000 mm², no straight way out |
+| **2** | the hollow UNDER PIECE45'S OVERHANG (x 5 … 43, y 118 … 160, z −90 … −52), between Piece45 and Piece15, 35, 10 | 1 534 mm², ≈ 6.1 × deeper than wide |
+| 3 | amber (borderline) on Piece15's front | 12 mm² |
+
+**`Scene1_demo`** (finished): the 15.5 × 33 mm gap under the painting (its underside ≈ 8.9 ×, the floor strip ≈ 1.4 ×). **B2**: sealed 0, buried 0 on
+every data scene, both states (Q1 with `GM13` stands).
+
+**⏳ For his word — almost all of the caps' area is the 15.5 mm float of the authored bottom row, not a hollow anyone drew:**
+* **(a) the game caps it** behind `surfaceL1` (the slit's ring, its two slot branches, Piece45's mouth): the bottom row's undersides leave the skin —
+  the gizmo can no longer go under the cube; his look decides;
+* **(b) the scene's data puts the cube on the floor** (the bottom row down 15.5 mm — the closed orbit's reference scene changes everywhere: G1 his
+  records re-baselined), then only Piece45's hollow is a cap;
+* **(c) the slit is no hollow by rule** (a gap under a part resting on the floor's plane, as the floor is frozen and no surface): only Piece45's cap.

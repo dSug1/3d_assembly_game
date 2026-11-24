@@ -150,3 +150,6 @@
   `Scene_1`'s gap under the cube (~1.6e5 voxels) — fixed `ca4eeb0a` (`minOver`, V18 red first; verify 199 / 2484). Lesson: a check meant for a
   whole assembly never spreads an array into arguments. First reading (loose pieces wrongly in the set): the largest place is the 15.5 mm gap
   under the cube, a real hollow under Piece45's overhang; the measure rerun on the placed set only (FINISHED and START states).
+* **2026-11-24** — S11's caps MEASURED with every body, two states (`ORBIT_SURFACE_L1.md` §9): `Scene_1`'s caps = the 15.5 mm gap under the
+  cube (the authored bottom row's float; ≈ 500 000 mm², its slit ≈ 1 946 mm) + the hollow under Piece45's overhang (1 534 mm²); no goal slot; sealed /
+  buried 0 everywhere. His word owed on the gap: the game caps it, the data lowers the cube, or no hollow by rule.
