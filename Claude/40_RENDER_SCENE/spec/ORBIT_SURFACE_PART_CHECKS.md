@@ -353,3 +353,26 @@ on this PC for `Scene_2`, read 8 – 25 ms + checks 40 – 55 ms): a finding is 
 (W3's gate refuses). `readPartSolids` now has a production caller (the debt's line gone). **Vectors** (V2b): `Scene_2`'s file none; on planted
 defects exactly the full check's B1a – B1d and nothing sampled (a lifted proxy: B1e, B1h not read); **3 mutants RED** (it reads nothing, it runs
 the full check, B1b dropped). Not behind a switch: it changes no frame and no file's load — `Scene_2` has none of the four (its HUD line unchanged).
+
+## 21. ⭐ WHEN IS THE LANDING MAP'S COST PAID? (his question 2026-11-24 — *"they are paid at each turn?"*; S13 deployed: LIVE `19c7f88`)
+
+The game keeps three things and remakes each only when what it is made of changes (`render/landing_readout.ts` `heldSumsFor`, `landing_drive.ts`):
+1. **the placed parts' hulls** — once per placed set (a SEAT);
+2. **the held piece's sums** — once per HELD KEY: the piece, its orientation, its resting face, the placed set. ⭐ **A TURN changes the orientation at
+   every frame of its animation (the 8-snap turn, the alignment tap's slerp): every one of those frames rebuilds them** — §19's *"turn frame"*;
+3. **one direction's preparation** (`landingFor`) — once per facet normal the gizmo meets, per held key: after a turn, at each new face direction;
+4. **a query** (`landingAt`) — a few every frame the gizmo moves.
+
+Timed on this PC (2026-11-24, the cost check's sets; a scratch script, not a check):
+
+| set | placed × held pieces | a turn frame | a new direction | a query |
+|---|---|---|---|---|
+| `Scene_1` (36 boxes × the green piece) | 36 × 1 | 1.2 ms | 0.3 ms | 0.02 ms |
+| `Scene_2` stage 3 (E03 held) | 16 × 14 | 17 ms | 1.7 ms | 0.03 ms |
+| `Scene_2` stage 9 (E09) | 61 × 2 | 28 ms | 1.8 ms | 0.01 ms |
+| `Scene_2` stage 13 (E13) | 69 × 15 | 326 ms | 26 ms | 0.10 ms |
+| `Scene_2` stage 16 (E16) | 115 × 16 | 698 ms | 56 ms | 0.12 ms |
+
+**In plain words:** moving the piece about costs almost nothing, even on `Scene_2`; the cost is paid WHILE THE PIECE TURNS — each frame of the
+turn's animation would stall the game for up to 0.7 s on this PC (more on the phone) — and a little again each time the gizmo reaches a face of a
+new direction after a turn. ⚠ Nothing live pays it: P2 runs on `Scene_1` only (`READOUT_SCENE`). The ways stay §19's, for his word with `GM13`.

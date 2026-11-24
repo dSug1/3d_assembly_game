@@ -97,3 +97,11 @@ collision pieces (one measurement before the plunge is built); the frozen plinth
   B6's two margins, C2's budget and the drawing rule D9); `Scene_2`'s new findings for `GM13` — the frozen plinth NO PLACE in the face map (ledger
   row 21), TEN ways in starting at no place (row 22), the TOP facet just above the share (row 23), P2's cost 3 203 × `Scene_1`'s (row 7: P2 cannot
   drive `Scene_2` as drawn); his phone look on S4b; a deploy of S13 (a HUD warning at load — nothing changes on `Scene_2`).
+
+## ⭐ 2026-11-24, later still — S7 – S13 DEPLOYED (his word *"Deploy"*)
+
+* **LIVE main `19c7f88`** = `16f3c845` (2026-11-24 10:48Z; the branch pushed). In the game only S13 (the scene's collision pieces re-checked when a `.glb`
+  loads: a HUD warning, never a refusal; `Scene_2` has none — its HUD unchanged); the rest rides offline. His phone look owed (S4b's alignment tap).
+* **His two questions** answered in plain words and recorded: the landing map's cost — WHEN it is paid (`ORBIT_SURFACE_PART_CHECKS.md` §19,
+  the timing of 2026-11-24); S11 — what it is, the caps, why `Scene_2` and not `Scene_1`, each option's effect, when it runs
+  (`ORBIT_SURFACE_L1.md` §7). S11's three questions still wait for his word.

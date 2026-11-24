@@ -136,3 +136,6 @@
 * **2026-11-24** — S13 BUILT and WIRED: B1's cheap subset re-verified when a `.glb` loads (`checkSolidsAtImport`, `checkSolids`' own
   code; `render/model_import.ts` after the boot is placed, ≈ 50 ms on the PC for `Scene_2`, a HUD warning — never a refusal); V2b, 3 mutants
   red; `Scene_2` none (its HUD unchanged). The packets S7 – S13 done (S11 a study for his word). Local.
+* **2026-11-24** — S7 – S13 DEPLOYED on his word *"Deploy"*: LIVE main `19c7f88` = `16f3c845` (2026-11-24 10:48Z); in the game only S13's import warning.
+  His questions answered: the landing map's cost is paid at every frame of a TURN and once per new direction, a plain frame ≈ 0.1 ms
+  (`ORBIT_SURFACE_PART_CHECKS.md` §19); S11 in plain words (`ORBIT_SURFACE_L1.md` §7).
