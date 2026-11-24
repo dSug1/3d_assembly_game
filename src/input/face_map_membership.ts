@@ -5,7 +5,7 @@
  * out (`placedFaces` skips them today — the surface ledger's row 6) — and a face IN it when a facet's normal lies within the merge angle of its own.
  * ⚠ The box: the faces' own extent (the game's is every placed part's vertices — a frozen part's included; the caps' levels may differ by that).
  */
-import type { StageFace } from "../core/landing_per_stage";
+import { B6_SHARE_MARGIN, type StageFace } from "../core/landing_per_stage";
 import { dot, type Vec3 } from "../core/vec";
 import { buildFaceMap, CHART_MAP_OPTS, type FaceMap, type MapFace } from "./face_map";
 import { DEFAULT_CONFIG } from "./gestureConfig";
@@ -13,8 +13,8 @@ import { shellBox } from "./orbit_shell";
 
 const M = 0.001;
 
-/** ⭐ the game's face map built on the stage's faces (a frozen part's left out); `null` when no face is left */
-export function gameFaceMap(faces: readonly StageFace[], frozen: ReadonlySet<string>): FaceMap | null {
+/** ⭐ the game's face map built on the stage's faces (a frozen part's left out); `null` when no face is left. `minShare`: the game's (S9 reads it ± a margin) */
+export function gameFaceMap(faces: readonly StageFace[], frozen: ReadonlySet<string>, minShare: number = DEFAULT_CONFIG.facetMinShare): FaceMap | null {
   const mf: MapFace[] = [];
   for (const f of faces) {
     if (frozen.has(f.part)) continue;
@@ -28,7 +28,23 @@ export function gameFaceMap(faces: readonly StageFace[], frozen: ReadonlySet<str
     if (A > 0) mf.push({ normal: f.n, centre: [cx / A, cy / A, cz / A], tris, part: f.part });
   }
   const box = shellBox(mf.map((f) => f.tris.flatMap((t) => [t[0], t[1], t[2]])));
-  return box === null ? null : buildFaceMap(mf, box, { mergeDeg: DEFAULT_CONFIG.facetMergeDeg, minShare: DEFAULT_CONFIG.facetMinShare, ...CHART_MAP_OPTS });
+  return box === null ? null : buildFaceMap(mf, box, { mergeDeg: DEFAULT_CONFIG.facetMergeDeg, minShare, ...CHART_MAP_OPTS });
+}
+
+/**
+ * ⭐⭐ (2026-11-24, S9 — `ORBIT_SURFACE_PART_CHECKS.md` §18 item 2, B6, the margin ⏳ PROPOSED) THE FACETS NEAR THE SHARE: the game's face map built at its
+ * share and at the share ∓ `margin` — a REAL facet present at the share less the margin and not at the share is JUST BELOW it (`below`), one present at
+ * the share and not at the share plus the margin JUST ABOVE it (`above`); each with its share at the lower build. Facets matched by their normal.
+ */
+export function facetsNearShare(faces: readonly StageFace[], frozen: ReadonlySet<string>, margin: number = B6_SHARE_MARGIN): { readonly below: readonly { readonly n: Vec3; readonly share: number }[]; readonly above: readonly { readonly n: Vec3; readonly share: number }[] } {
+  const share = DEFAULT_CONFIG.facetMinShare;
+  const real = (m: FaceMap | null) => (m === null ? [] : m.facets.filter((k) => k.real));
+  const lo = real(gameFaceMap(faces, frozen, Math.max(0, share - margin))), mid = real(gameFaceMap(faces, frozen, share)), hi = real(gameFaceMap(faces, frozen, Math.min(1, share + margin)));
+  const has = (ks: readonly { n: Vec3 }[], n: Vec3) => ks.some((k) => dot(k.n, n) > 1 - 1e-9);
+  return {
+    below: lo.filter((k) => !has(mid, k.n)).map((k) => ({ n: k.n, share: k.share })),
+    above: mid.filter((k) => !has(hi, k.n)).map((k) => ({ n: k.n, share: k.share })),
+  };
 }
 
 /** ⭐ is each face in a facet of `map`? (a REAL facet's normal within the merge angle of its own; a frozen part's face: false) */

@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import { landingPerStage, type B3Face } from "../src/core/landing_per_stage";
 import { B1_FIT_MM, type PartMesh, type PartSolids } from "../src/core/part_checks";
 import type { Vec3 } from "../src/core/vec";
-import { facetTowardGoal, gameFaceMap, inGameFaceMap } from "../src/input/face_map_membership";
+import { facetsNearShare, facetTowardGoal, gameFaceMap, inGameFaceMap } from "../src/input/face_map_membership";
 import type { StageFace } from "../src/core/landing_per_stage";
 import { boxPiece, face } from "./helpers/proxy_shapes";
 
@@ -127,6 +127,29 @@ describe("⭐⭐⭐ S7 — B3 (where the held piece lands) and B5 (the faces tha
     expect(r([0, Math.cos(Math.PI / 6), Math.sin(Math.PI / 6)], [50, 20, 50])).toBeNull();
     expect(r([0, -1, 0], [50, 0, 50])).toBeNull();
     expect(facetTowardGoal(gameFaceMap(faces, new Set(["A"])), [0, 1, 0], [50, 20, 50])).toBeNull();
+  });
+  it("V11 — B6 (S9) near the piece's size: a 22 mm slot for a 20 mm piece FITS BY LESS THAN THE MARGIN (2 mm), a 19 mm one HELD OUT BY LESS; 30 mm and 15 mm slots, a box's top: no threshold", () => {
+    const slot = (w: number) => faceOf(landingPerStage([uPart("A", w), heldBox("B", 20, 10, 40)], at(["A", "B"]), new Set())[0]!.faces, "UFM_A_slot");
+    expect(slot(22)).toMatchObject({ landable: true, turn: 90, threshold: "fits by less than the margin" });
+    expect(slot(19)).toMatchObject({ landable: false, threshold: "held out by less than the margin" });
+    expect(slot(30)).toMatchObject({ landable: true, threshold: null });
+    expect(slot(15)).toMatchObject({ landable: false, threshold: null });
+    const top = faceOf(landingPerStage([boxPart("A", [0, 0, 0], [100, 20, 100]), heldBox("B", 20, 10, 20)], at(["A", "B"]), new Set())[0]!.faces, "UFM_A_top");
+    expect(top.threshold).toBeNull();
+  });
+  it("V12 — B6 (S9) near the share: two boxes' tops over a hull 26.8 % real JUST ABOVE the share (gone at 0.30), 23.9 % JUST BELOW it (there at 0.20)", () => {
+    const near = (x: number) => {
+      let faces: readonly StageFace[] = [];
+      landingPerStage([boxPart("A", [0, 0, 0], [100, 20, 100]), boxPart("E", [x, 0, 0], [x + 10, 20, 100]), heldBox("B", 20, 10, 20)], at(["A", "E", "B"]), new Set(), { inFaceMap: (fs, placed) => (placed.length === 2 && (faces = fs), fs.map(() => true)), marginMm: 0 });
+      return facetsNearShare(faces, new Set());
+    };
+    const up = (l: readonly { n: Vec3 }[]) => l.some((k) => k.n[1] > 1 - 1e-9);
+    const a = near(400);
+    expect([up(a.above), up(a.below)]).toEqual([true, false]);
+    const b = near(450);
+    expect([up(b.above), up(b.below)]).toEqual([false, true]);
+    const c = near(100);
+    expect([up(c.above), up(c.below)]).toEqual([false, false]);
   });
   it("V9 — a proxy 3 mm above its solid (B1e's defect): every sample falls BELOW the face, never landable", () => {
     // (3 mm: B2's grid is the solids' box grown by two cells — a proxy far past it reads sealed, never exposed)

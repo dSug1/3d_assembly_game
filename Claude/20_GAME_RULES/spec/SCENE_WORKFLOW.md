@@ -575,7 +575,7 @@ the generator's test: it proves that what was generated obeys the rules (§10), 
 | S6 packet 2 — R1 coverage, R1b caps, R2 closed (`src/core/proxy_cover.ts`) | the same | the same (`Scene_2`'s quick parts in the vector; ≈ 58 s in all) | in the same verdict | — |
 | S6 packet 3 — C-R2 the collision pieces both ways, the resting candidates (`src/core/collision_cover.ts`) | the same | the same (`Scene_2`'s E01, E03, E07, E17 in the vector; ≈ 26 s in all) | in the same verdict | — |
 | B3 the landing per stage (the game's L2 on the `.glb`); B5 the coverage list | `scripts/surface/check_where_each_part_lands.ts` (S7, 2026-11-24) | the one command | information (exit 0 read; his Q3) | — (a failure once the playability brief names the faces a later part needs) |
-| B6 the thresholds | R4's angles built; the closing radius and the share not | — | — | — |
+| B6 the thresholds | R4's angles (packet 1); the piece's size and the share's margins — `check_where_each_part_lands.ts` (S9, 2026-11-24) | the one command | information (margins PROPOSED) | — |
 | the Blender build's own checks (`../../30_OBJECTS_3D/spec/PART_AUTHORING.md` §4.2: the seats, the way in, collision simplicity, the proxy sanity …) | `Assets/Blender/scripts/build_<scene>.py` | every build run, inside Blender | PRINTED — a failure does not stop the run | an exit code ≠ 0 on a FAIL |
 | ⭐ THE ONE COMMAND — the export gate (§11.2 item 1) | `scripts/surface/check_scene.ts` | by hand (the build script does not call it yet: §11.2 item 2) | exit 0 / 1 / 2, the worst of its checks | the build script calling it |
 | the plan's rules on the level data (W5); the headless proof (W6) | vectors; the probes | `npm run verify`; the probes by hand | vectors red / green | the probes run by the loop |

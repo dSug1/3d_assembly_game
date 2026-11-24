@@ -121,3 +121,6 @@
   its withdrawal, over its seat; PROPOSED reading, information); the way in shared with the reach check (its `Scene_2` report identical); V10,
   3 mutants red; `Scene_2`: ten ways in start at no place (E02 the frozen plinth, E06 after E05, the pistons and heads 4.6 mm short) —
   ledger row 22, rule C5 PROPOSED. Local.
+* **2026-11-24** — S9 BUILT: B6's margins (a face the piece fits or is held out of by less than 2 mm; a facet within 0.05 of the face
+  map's share — both PROPOSED, information); B3's samples start at each face's centroid; V11, V12, 5 mutants red; `Scene_2`: no face at the
+  size margin, the TOP facet just above the share from stage 7 (ledger row 23); the landing check 134 s. Local.

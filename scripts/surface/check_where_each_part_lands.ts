@@ -11,7 +11,8 @@ import { landingPerStage } from "../../src/core/landing_per_stage";
 import { glbJson, readModelCatalog } from "../../src/core/model_catalog";
 import { readPartSolids } from "../../src/core/part_checks";
 import type { FaceMap } from "../../src/input/face_map";
-import { facetTowardGoal, gameFaceMap, inFaceMapOf } from "../../src/input/face_map_membership";
+import { facetsNearShare, facetTowardGoal, gameFaceMap, inFaceMapOf } from "../../src/input/face_map_membership";
+import { B6_SHARE_MARGIN, B6_SIZE_MARGIN_MM, type StageFace } from "../../src/core/landing_per_stage";
 import { wayIn } from "./check_parts_reach_their_seat_way";
 
 const file = process.argv.slice(2).find((a) => a.endsWith(".glb")) ?? process.env["GLB"];
@@ -42,10 +43,12 @@ const mm = catalog.unitM * 1000;
 const goals = new Map<string, Placement>(partGeometry(j.json, glbBin(bytes), catalog).map((g) => [g.id, { position: [g.goal.position[0] * mm, g.goal.position[1] * mm, g.goal.position[2] * mm], rotation: g.goal.rotation }]));
 const frozen = new Set(catalog.parts.filter((p) => p.frozen).map((p) => p.id));
 const maps = new Map<string, FaceMap | null>();
+const facesAt = new Map<string, readonly StageFace[]>();
 const stages = landingPerStage(parts, goals, frozen, {
   inFaceMap: (faces, placed) => {
     const m = gameFaceMap(faces, frozen);
     maps.set(placed.join("+"), m);
+    facesAt.set(placed.join("+"), faces);
     return inFaceMapOf(m, faces, frozen);
   },
 });
@@ -87,5 +90,18 @@ for (const s of stages) {
   const fmt = (v: readonly number[]) => `(${v.map((x) => (Math.abs(x) < 5e-4 ? 0 : x).toFixed(2)).join(", ")})`;
   console.log(`  ${s.held} (way in: ${way.how}): ${reads.length === 0 ? "no way in named — not read" : reads.map((r) => `${r.m} withdrawal ${fmt(r.w)} ${r.f === null ? "starts at NO place (no real facet within 20° of it)" : r.f.outMm === 0 ? `starts on the facet ${fmt(r.f.n)} (${r.f.deg.toFixed(1)}°)` : `starts at NO place (the nearest facet within 20°, ${fmt(r.f.n)}, misses its seat by ${r.f.outMm.toFixed(1)} mm)`}`).join("; ")}`);
 }
-console.log(`VERDICT: READ (information) — no place by reason over the stages: ${[...counts.entries()].map(([r, n]) => `${r} ${n}`).join(", ") || "none"}; a way in starting at no place: ${noStart.join(" ") || "none"}`);
+// ⭐⭐ (S9 — ORBIT_SURFACE_PART_CHECKS.md §18, B6's margins, PROPOSED) a FEATURE AT A THRESHOLD: a face the piece fits by less than the margin, or is
+// held out of by less (B3 read with the piece grown / shrunk in the face's plane — exact for a box's footprint); a facet near the face map's share
+console.log(`B6 — at a threshold (the size margin ${B6_SIZE_MARGIN_MM} mm, the share's ±${B6_SHARE_MARGIN} — PROPOSED; information):`);
+let atSize = 0, atShare = 0;
+for (const s of stages) {
+  const th = s.faces.filter((f) => f.threshold !== null);
+  const near = facesAt.has(s.placed.join("+")) ? facetsNearShare(facesAt.get(s.placed.join("+"))!, frozen) : { below: [], above: [] };
+  atSize += th.length;
+  atShare += near.below.length + near.above.length;
+  if (th.length === 0 && near.below.length === 0 && near.above.length === 0) continue;
+  const fmtN = (v: readonly number[]) => `(${v.map((x) => (Math.abs(x) < 5e-4 ? 0 : x).toFixed(2)).join(", ")})`;
+  console.log(`  stage ${s.placed.length + 1} (${s.held}): ${[...th.map((f) => `${f.part} ${f.node} ${fmtN(f.n)} — ${f.threshold}`), ...near.below.map((k) => `the facet ${fmtN(k.n)} JUST BELOW the share (${k.share.toFixed(2)})`), ...near.above.map((k) => `the facet ${fmtN(k.n)} JUST ABOVE the share (${k.share.toFixed(2)})`)].join("; ")}`);
+}
+console.log(`VERDICT: READ (information) — B6 at a threshold: ${atSize} face(s) by the size, ${atShare} facet(s) by the share; no place by reason over the stages: ${[...counts.entries()].map(([r, n]) => `${r} ${n}`).join(", ") || "none"}; a way in starting at no place: ${noStart.join(" ") || "none"}`);
 process.exit(0);

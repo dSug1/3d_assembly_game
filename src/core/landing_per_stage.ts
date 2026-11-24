@@ -13,6 +13,11 @@ import { cross, dot, normalize, qFromAxisAngle, qmul, qRotate, shortestArc, sub,
 
 const M = 0.001;
 const RAD = Math.PI / 180;
+/** ⭐ (S9, B6 — `ORBIT_SURFACE_PART_CHECKS.md` §18 item 1, ⏳ PROPOSED) a face is AT A THRESHOLD when the held piece grown or shrunk by this (mm) in the
+ * face's plane changes its landable verdict — above the noise family's largest (`MAP_GROW_M`, 1.6 mm): a gap narrower than the noise is noise */
+export const B6_SIZE_MARGIN_MM = 2;
+/** ⭐ (S9, B6 — §18 item 2, ⏳ PROPOSED) a facet NEAR THE SHARE: present at the face map's share less this and not at it, or at it and not at it plus this */
+export const B6_SHARE_MARGIN = 0.05;
 type Tri = readonly [Vec3, Vec3, Vec3];
 
 /** ⭐ B5's reasons, in the order they are read (§15 item 7): the first that holds names the face */
@@ -38,6 +43,8 @@ export interface B3Face {
   readonly turn: 0 | 90 | null;
   /** samples where the piece's contact lies BELOW the face by more than the fit (nothing under the proxy — B1e's) */
   readonly below: number;
+  /** ⭐ (S9, B6) AT A THRESHOLD: the piece fits by less than the margin (landable, not when grown) or is held out by less (not, landable when shrunk) */
+  readonly threshold: "fits by less than the margin" | "held out by less than the margin" | null;
   readonly reason: FaceReason | null;
 }
 export interface B3Stage {
@@ -56,6 +63,8 @@ export interface LandingStageOpts {
   readonly inFaceMap?: (faces: readonly StageFace[], placed: readonly string[]) => readonly boolean[];
   /** the samples' spacing on a face (mm) */
   readonly stepMm?: number;
+  /** (S9, B6) the size margin (mm; 0: not read) — `B6_SIZE_MARGIN_MM` */
+  readonly marginMm?: number;
 }
 
 const area = (t: Tri): number => {
@@ -101,10 +110,30 @@ export function stageFaces(v: B2Visit): StageFace[] {
   return out.sort((a, b) => (a.part < b.part ? -1 : a.part > b.part ? 1 : a.node < b.node ? -1 : a.node > b.node ? 1 : a.levelMm - b.levelMm));
 }
 
-/** ⭐ (§15 item 5) the face's samples: a lattice every `step` mm in its plane (anchored at the origin) inside each triangle, and each triangle's centre */
+/**
+ * ⭐ (§15 item 5) the face's samples: its own area centroid when inside it (S9: a centred slot read exactly), each triangle's centre, and a lattice
+ * every `step` mm in its plane (anchored at the origin) inside each triangle. ⚠ A fit with less clearance than the step may be missed off those points.
+ */
 export function faceSamples(f: StageFace, step: number): Vec3[] {
   const [t, b] = axesOf(f.n);
   const out: Vec3[] = [];
+  {
+    let A = 0, cx = 0, cy = 0, cz = 0;
+    for (const tr of f.tris) {
+      const a = area(tr);
+      (A += a), (cx += (a * (tr[0][0] + tr[1][0] + tr[2][0])) / 3), (cy += (a * (tr[0][1] + tr[1][1] + tr[2][1])) / 3), (cz += (a * (tr[0][2] + tr[1][2] + tr[2][2])) / 3);
+    }
+    const c: Vec3 = A > 0 ? [cx / A, cy / A, cz / A] : [NaN, NaN, NaN];
+    const inside = (tr: Tri) => {
+      const [p0, p1, p2] = tr.map((q) => [dot(q, t), dot(q, b)] as const) as unknown as [readonly [number, number], readonly [number, number], readonly [number, number]];
+      const x = dot(c, t), y = dot(c, b);
+      const d = (p1[0] - p0[0]) * (p2[1] - p0[1]) - (p2[0] - p0[0]) * (p1[1] - p0[1]);
+      if (Math.abs(d) < 1e-9) return false;
+      const l1 = ((x - p0[0]) * (p2[1] - p0[1]) - (p2[0] - p0[0]) * (y - p0[1])) / d, l2 = ((p1[0] - p0[0]) * (y - p0[1]) - (x - p0[0]) * (p1[1] - p0[1])) / d;
+      return l1 >= -1e-9 && l2 >= -1e-9 && l1 + l2 <= 1 + 1e-9;
+    };
+    if (A > 0 && f.tris.some(inside)) out.push(c);
+  }
   for (const tr of f.tris) {
     out.push([(tr[0][0] + tr[1][0] + tr[2][0]) / 3, (tr[0][1] + tr[1][1] + tr[2][1]) / 3, (tr[0][2] + tr[1][2] + tr[2][2]) / 3]);
     const uv = tr.map((q) => [dot(q, t), dot(q, b)] as const);
@@ -184,13 +213,25 @@ export function landingPerStage(parts: readonly PartSolids[], goals: ReadonlyMap
     const caps = v.placed.flatMap(capsOf);
     // the held piece turned onto each face direction, both turns, prepared once per (normal, turn)
     const prepared = new Map<string, { at: (p: Vec3) => { kind: string; contact: number; part: string } }>();
-    const preparedFor = (n: Vec3, turn: 0 | 90) => {
-      const key = `${n.map((x) => x.toFixed(6)).join(",")}#${turn}`;
+    const delta = (opts.marginMm ?? B6_SIZE_MARGIN_MM) * M;
+    // `grow`: 0 as held; +1 / −1 the piece grown / shrunk by the margin in the face's plane (S9 — each side of its footprint moved by δ along u, v)
+    const preparedFor = (n: Vec3, turn: 0 | 90, grow: 0 | 1 | -1 = 0) => {
+      const key = `${n.map((x) => x.toFixed(6)).join(",")}#${turn}#${grow}`;
       let got = prepared.get(key);
       if (got === undefined) {
         const q = qmul(qFromAxisAngle(n, turn * RAD), shortestArc(rest.n, [-n[0], -n[1], -n[2]]));
-        const pts = held.pieces.map((pc) => pc.points.map((p) => { const w = qRotate(q, sub(p, rest.centre)); return [w[0] * M, w[1] * M, w[2] * M] as Vec3; }));
         const [tu, tb] = axesOf(n);
+        let pts = held.pieces.map((pc) => pc.points.map((p) => { const w = qRotate(q, sub(p, rest.centre)); return [w[0] * M, w[1] * M, w[2] * M] as Vec3; }));
+        if (grow !== 0) {
+          const ext = (ax: Vec3, sgn: 1 | -1) => Math.max(1e-9, ...pts.flatMap((pc) => pc.map((p) => sgn * dot(p, ax))));
+          const hu = [ext(tu, 1), ext(tu, -1)] as const, hv = [ext(tb, 1), ext(tb, -1)] as const;
+          const k = (h: number) => Math.max(0.05, 1 + (grow * delta) / h);
+          pts = pts.map((pc) => pc.map((p) => {
+            const a = dot(p, tu), c = dot(p, tb);
+            const da = a * (k(a >= 0 ? hu[0] : hu[1]) - 1), dc = c * (k(c >= 0 ? hv[0] : hv[1]) - 1);
+            return [p[0] + tu[0] * da + tb[0] * dc, p[1] + tu[1] * da + tb[1] * dc, p[2] + tu[2] * da + tb[2] * dc] as Vec3;
+          }));
+        }
         const prep = landingFor(heldSumsOn(pp, pts), { origin: [0, 0, 0], u: tu, v: tb, n });
         const reach = heldReach(pts, n);
         got = {
@@ -202,6 +243,17 @@ export function landingPerStage(parts: readonly PartSolids[], goals: ReadonlyMap
         prepared.set(key, got);
       }
       return got;
+    };
+    /** does the piece (grown / shrunk) land ON the face at some sample, for either turn? */
+    const landsOn = (f: StageFace, samples: readonly Vec3[], grow: 1 | -1): boolean => {
+      for (const tn of [0, 90] as const) {
+        const pr = preparedFor(f.n, tn, grow);
+        for (const p of samples) {
+          const r = pr.at(p);
+          if (r.kind === "land" && Math.abs(r.contact - f.levelMm * M) <= fit) return true;
+        }
+      }
+      return false;
     };
     const read: B3Face[] = faces.map((f, fi) => {
       const samples = faceSamples(f, step);
@@ -228,7 +280,10 @@ export function landingPerStage(parts: readonly PartSolids[], goals: ReadonlyMap
       }
       const capped = caps.length > 0 && samples.length > 0 && samples.every((p) => caps.some((t) => hitsAhead(p, f.n, t)));
       const reason: FaceReason | null = capped ? "capped" : frozen.has(f.part) ? "frozen" : kept !== undefined && kept[fi] !== true ? "below the share" : landable ? null : allOther ? "under an overhang" : "closed for the piece";
-      return { part: f.part, node: f.node, n: f.n, levelMm: f.levelMm, areaMm2: f.areaMm2, samples: samples.length, landable, turn, below, reason };
+      // ⭐ B6 reads the faces that are places or would be (a capped, frozen or below-the-share face is no place by design — never read: S9's cost)
+      const read6 = delta > 0 && (reason === null || reason === "under an overhang" || reason === "closed for the piece");
+      const threshold = !read6 ? null : landable ? (landsOn(f, samples, 1) ? null : "fits by less than the margin") : landsOn(f, samples, -1) ? "held out by less than the margin" : null;
+      return { part: f.part, node: f.node, n: f.n, levelMm: f.levelMm, areaMm2: f.areaMm2, samples: samples.length, landable, turn, below, threshold, reason };
     });
     out.push({ placed: v.placed, held: held.id, resting: rest.node, faces: read, ms: performance.now() - t0 });
   }

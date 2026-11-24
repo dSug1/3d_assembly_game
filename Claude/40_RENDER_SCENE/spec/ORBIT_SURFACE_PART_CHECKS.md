@@ -297,3 +297,31 @@ deck: the seat 55 mm outside it; E05 at its stage, before E06, starts on it — 
 bank's facet ends 4.6 mm short of their seats: the TOP facet takes the bores' mouths — their plunge starts from a facet 30° off their axis).
 **The lesson** (construction, `SCENE_WORKFLOW.md` §10.3 **C5**, PROPOSED): at its stage a part's way in starts on a facet of the face map over its
 seat — a part placed between a seat face and the outside, 30° or more off it, takes that face out of the contour.
+
+## 18. ⭐ S9 — B6'S MARGINS: A FEATURE AT A THRESHOLD (2026-11-24 — designed before the build; information)
+
+**What is asked** (`ORBIT_SURFACE.md` §2.6, Q6 (3) *offline*; §7bis.3 B6; the checklist's line 5): paint *"at a threshold"* a feature whose closing
+radius is near the piece's size, and a facet near the share. B6's other two thresholds — a facet within 15° of 45° of elevation, two faces within
+30° — are packet 1's R4 (findings), already built.
+**The design (⏳ the margins PROPOSED — his word):**
+1. **Near the piece's size** — B3 read again with the held piece GROWN and SHRUNK by a margin δ in the face's plane (each point's two in-plane
+   components scaled about the reference by 1 ± δ / the piece's half-extent along that axis: exact for a box's footprint, an approximation for
+   other outlines — said in the output): a face whose LANDABLE verdict differs between the two is *at a threshold* — the piece fits by less than δ
+   (landable, not when grown) or is held out by less than δ (not landable, landable when shrunk). Only the one variant that can flip a face's
+   verdict is read. **δ = `B6_SIZE_MARGIN_MM` = 2 mm** (PROPOSED: above the noise family's largest, `MAP_GROW_M` 1.6 mm — a gap narrower than the
+   noise is noise, §2.6).
+2. **Near the share** — the game's face map built again at the share ± a margin (`buildFaceMap`, the game's function): a facet present at ¼ − m and
+   not at ¼ is *just below the share*, one present at ¼ and not at ¼ + m *just above it*. **m = `B6_SHARE_MARGIN` = 0.05** (PROPOSED: a fifth of
+   the share).
+3. **Where** — the landing check prints both per stage (information, as B3 — his Q3); the margins join `rules_constants.json`.
+
+**As built (2026-11-24, S9):** `landingPerStage` reads each face's `threshold` (`B6_SIZE_MARGIN_MM`; the variant that can flip it only, and only on a
+face that is a place or would be — a capped, frozen or below-the-share face is no place by design, never read: 175 → 134 s on `Scene_2`); B3's
+samples now start with the face's own area centroid (a centred slot read exactly — a fit with less clearance than the 4 mm step was missed off
+the lattice: the reason the centroid joined); `facetsNearShare` (`src/input/face_map_membership.ts`, the game's `buildFaceMap` at the share and ±
+`B6_SHARE_MARGIN`); both margins in `rules_constants.json` (PROPOSED). The landing check prints B6 per stage. **Vectors** V11 (a 22 mm slot for a
+20 mm piece fits by less than the margin, a 19 mm one held out by less; 30 mm, 15 mm and a box's top none) and V12 (two boxes' tops over a hull
+26.8 % real just above the share, 23.9 % just below, 10 % apart none); **5 mutants RED** (the margin never read, grown and shrunk swapped, no centroid
+sample, below read as above, the share's margin zero). ⚠ No vector sees a footprint grown on one side only (the vectors' pieces are centred).
+**`Scene_2`:** no face within 2 mm of a piece's size; from stage 7 on the assembly's TOP facet stands JUST ABOVE the share (0.33 at the game's ¼,
+gone at 0.30) — the ledger's row 23.
