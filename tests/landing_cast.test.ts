@@ -252,7 +252,7 @@ describe("⭐⭐⭐ V6 — the switch `landingEngine`, the wiring: at 1 the cast
   };
   const MAP = { facets: [{ n: [0, 1, 0], t: [1, 0, 0], b: [0, 0, 1] }, { n: [1, 0, 0], t: [0, 0, -1], b: [0, 1, 0] }] } as unknown as FaceMap;
   const parts = { key: "H|P", parts: PROUD.map((p) => p.points), ids: PROUD.map((p) => p.id) };
-  const src: ReadoutSource = { map: () => MAP, frame: () => null, placed: () => parts };
+  const src: ReadoutSource = { map: () => MAP, frame: () => null, placed: () => parts, drive: () => null };
   const at = (x: number, stack = 0, n: Vec3 = UP): GizmoRead => ({ hit: { point: [x * M, 100 * M, 0] }, t: { stack, normal: n, surface: [x * M, 100 * M, 0] } });
   /** a frame of the game at `engine`: the drive (the gizmo on two faces, the support, the lines' key) and the readout (two facets) */
   const play = (engine: number, q: Quat) => {

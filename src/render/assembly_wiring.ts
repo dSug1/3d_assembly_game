@@ -1043,6 +1043,9 @@ const READOUT_SOURCE: ReadoutSource = {
   map: (st) => faceMapOf(st),
   frame: (st) => mapFrame(st),
   placed: (st) => placedParts(st),
+  // ⭐ (2026-11-24, `ORBIT_SURFACE_READOUT.md` §15) the drive's own landing — with the DRIVEN gizmo (`mr0`, the readout's last argument) the ring and
+  // the HUD line show what the gizmo uses
+  drive: (st, n, p) => driveGizmoLanding(st, n, p),
 };
 
 /** ⭐ (2026-11-10) the face map's knobs: no slow stretch through an edge (the owner: *"remove it"*). */
@@ -1476,7 +1479,7 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     // ⭐ (S4) fed today's point, and — where P2 moved it and the readout runs (§9bis 6) — today's blend (its `band` flag: the blend's far end is the next
     // face's driven point, the flag only)
     const askHold = st.cfg.mouthHoldDomain === 2 && m0g !== null && m0g.mouth !== undefined;
-    landingReadoutFrame(st, mrT, mr0 === mrT || (st.cfg.landingReadout !== 1 && !askHold) ? m0g : gizmoOf(st, mq.yaw, mq.pitch, mrT), READOUT_SOURCE, askHold);
+    landingReadoutFrame(st, mrT, mr0 === mrT || (st.cfg.landingReadout !== 1 && !askHold) ? m0g : gizmoOf(st, mq.yaw, mq.pitch, mrT), READOUT_SOURCE, askHold, mr0);
     if (m0g !== null) {
       // ⭐⭐⭐ (2026-11-10, the owner: *"the tilt shall happen when the red section reaches the edge at the bottom of the mouth"* → *"build b"*) A VOID'S MOUTH:
       // a dy toward its open end HOLDS the gizmo where it last was — the void's floor edge, the red's end there (`mouthHold`) — and hands over: the automatic

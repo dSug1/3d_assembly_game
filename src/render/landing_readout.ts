@@ -18,7 +18,7 @@ import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import type { LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
 import { castHeldHulls, castHeldOn, castPlacedOn, landingCast, type HeldHulls, type HeldOnFrame, type PlacedOnFrame } from "../core/landing_cast";
-import { heldPiece, heldReach, heldSumsOn, landingAxes, landingFor, preparePlaced, readoutAt, readoutKey, voidOpenFor, type HeldSums, type LandingAxes, type PlacedPolys, type PreparedLanding, type Readout, type Turn } from "../core/landing_map";
+import { heldPiece, heldReach, heldSumsOn, landingAxes, landingFor, preparePlaced, readoutAt, readoutKey, voidOpenFor, type HeldSums, type Landing, type LandingAxes, type PlacedPolys, type PreparedLanding, type Readout, type Turn } from "../core/landing_map";
 import { worldPlacementOf } from "../core/object_model";
 import type { Vec3 } from "../core/vec";
 import { trackingMetresPerPx } from "../input";
@@ -47,6 +47,19 @@ export interface ReadoutSource {
   frame(st: SceneState): Turn | null;
   /** the placed parts on their model pose: the set's key, each body's points and its part id (parallel) */
   placed(st: SceneState): { readonly key: string; readonly parts: readonly (readonly Vec3[])[]; readonly ids: readonly string[] };
+  /** ⭐ (2026-11-24, §15) the DRIVE's landing at the world place `p` along the world normal `n` (`driveGizmoLanding`); `null` where P2 does not drive */
+  drive(st: SceneState, n: Vec3, p: Vec3): { readonly landing: Landing; readonly reach: number } | null;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-24, `ORBIT_SURFACE_READOUT.md` §15 — his word *"make the white ring show what the gizmo uses"*) WHAT THE GIZMO USES, where P2 drives
+ * it: the driven gizmo's own point (`driveGizmo`'s, before the edge blend — in the world), the drive's landing's kind and part, Δ = its level − today's.
+ */
+export interface DriveShown {
+  readonly kind: Landing["kind"];
+  readonly part: string | null;
+  readonly delta: number;
+  readonly point: Vec3;
 }
 
 /** ⭐ The frame's gizmo as the readout reads it: `rawGizmo`'s (today's point, the facet, the place) or `mapGizmo`'s (the point drawn: the blend in a band). */
@@ -62,7 +75,8 @@ export interface LandingReadoutState {
   readonly prepared: Map<string, PreparedLanding>;
   /** the frame's readout (in the world): the frame it was read in, P2's answer, whether the drawn gizmo is the edge blend, the pieces refused; ⭐ (S3) the
    *  held piece's reach toward the facet (`heldReach`: Δ when it rests on the facet's plane) */
-  shown: { readonly frame: number; readonly readout: Readout; readonly band: boolean; readonly refused: readonly string[]; readonly reach: number } | null;
+  /** ⭐ (§15) `drive`: what the gizmo uses where P2 drives it — the ring and the HUD line read it; ⛔ `readout` (from outside) stays `mouthP2`'s */
+  shown: { readonly frame: number; readonly readout: Readout; readonly band: boolean; readonly refused: readonly string[]; readonly reach: number; readonly drive: DriveShown | null } | null;
   /** the last preparation (ms), the worst over 2 s and when it was set, the query (µs, a mean over ~30 frames) */
   prepLastMs: number;
   prepWorstMs: number;
@@ -167,11 +181,11 @@ const facetEntry = (stack: number, n: Vec3): string => `${stack}:${n[0]},${n[1]}
  * (nothing read, prepared or allocated). Else: the cache's key, the frame's facet prepared if it is not yet (at most one preparation a frame, timed), the
  * readout at the facet's place (timed) — into `st.landing`, read by nothing but its ring, the HUD and the hold's domain (`mouthP2`).
  */
-export function landingReadoutFrame(st: SceneState, raw: GizmoRead | null, drawn: GizmoRead | null, src: ReadoutSource, forHold = false): void {
+export function landingReadoutFrame(st: SceneState, raw: GizmoRead | null, drawn: GizmoRead | null, src: ReadoutSource, forHold = false, driven: GizmoRead | null = null): void {
   if (st.cfg.landingReadout !== 1 && !forHold) return;
   const s = st.landing ?? (st.landing = { key: "", prepared: new Map(), shown: null, prepLastMs: 0, prepWorstMs: 0, prepWorstAt: 0, queryUs: 0 });
   s.shown = null;
-  const prepMs = readFrame(st, s, raw, drawn, src);
+  const prepMs = readFrame(st, s, raw, drawn, src, driven);
   // ⭐ the worst over 2 s as the `solver` field's peak: every frame at 1, so it falls back once the preparations stop
   const now = performance.now();
   if (now - s.prepWorstAt > PREP_WORST_HOLD_MS || prepMs >= s.prepWorstMs) {
@@ -181,7 +195,7 @@ export function landingReadoutFrame(st: SceneState, raw: GizmoRead | null, drawn
 }
 
 /** the frame's readout into `s.shown` (none: no piece held, no map); the preparation's time this frame (ms; 0: none) */
-function readFrame(st: SceneState, s: LandingReadoutState, raw: GizmoRead | null, drawn: GizmoRead | null, src: ReadoutSource): number {
+function readFrame(st: SceneState, s: LandingReadoutState, raw: GizmoRead | null, drawn: GizmoRead | null, src: ReadoutSource, driven: GizmoRead | null): number {
   if (st.sceneSpec.id !== READOUT_SCENE || raw === null || drawn === null || st.orbitPiecePlaced) return 0;
   // ⭐ the held piece as `supportFrame` poses it: its local points, its MODEL orientation, its resting face's centre
   const id = st.greenBox?.name;
@@ -225,8 +239,29 @@ function readFrame(st: SceneState, s: LandingReadoutState, raw: GizmoRead | null
   s.queryUs += ((performance.now() - t1) * 1000 - s.queryUs) / QUERY_MEAN_FRAMES;
   // ⭐ (§10 choice 3) in an edge band the drawn gizmo is the blend (`gizmoOf`): not today's point — the readout keeps the facet's place and says `band`
   const d = drawn.hit.point;
-  s.shown = { frame: st.frames, readout, band: d[0] !== today[0] || d[1] !== today[1] || d[2] !== today[2], refused: prep.refused, reach: heldReach(held, prep.frame.n) };
+  s.shown = { frame: st.frames, readout, band: d[0] !== today[0] || d[1] !== today[1] || d[2] !== today[2], refused: prep.refused, reach: heldReach(held, prep.frame.n), drive: driveShown(st, raw, driven, src, R, at, today) };
   return prepMs;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-24, `ORBIT_SURFACE_READOUT.md` §15) WHAT THE GIZMO USES: where P2 drives the frame's gizmo (`src.drive` not null — the drive's own call,
+ * at the same place and normal `driveGizmo` gives it), the DRIVEN gizmo's own point (`driven`: `driveGizmo`'s result, in the map's frame) — never a
+ * second computation of it, so the ring sits on the gizmo by construction. `null` where P2 does not drive (the readout as built, from outside).
+ */
+function driveShown(st: SceneState, raw: GizmoRead, driven: GizmoRead | null, src: ReadoutSource, R: Turn | null, at: Vec3, today: Vec3): DriveShown | null {
+  if (driven === null) return null;
+  const n = R === null ? raw.t.normal : mulM(R, raw.t.normal);
+  const dl = src.drive(st, n, at);
+  if (dl === null) return null;
+  const point = R === null ? driven.hit.point : mulM(R, driven.hit.point);
+  const lv = (q: Vec3): number => q[0] * n[0] + q[1] * n[1] + q[2] * n[2];
+  return { kind: dl.landing.kind, part: dl.landing.kind === "land" || dl.landing.kind === "inside" ? dl.landing.part : null, delta: lv(point) - lv(today), point };
+}
+
+/** ⭐ (§15) the ring's place and colour: what the gizmo uses where P2 drives it, else the readout's (from outside) */
+export function ringOf(sh: { readonly readout: Readout; readonly drive: DriveShown | null }): { readonly point: Vec3; readonly nothing: boolean } {
+  if (sh.drive !== null) return { point: sh.drive.point, nothing: sh.drive.kind === "nothing" };
+  return { point: sh.readout.point, nothing: sh.readout.kind !== "land" };
 }
 
 /**
@@ -256,7 +291,9 @@ export function landingMarkerFrame(st: SceneState): void {
     return;
   }
   const ring = st.landingMarker ?? (st.landingMarker = makeRing(st));
-  const t = gizmoShownAt(sh.readout.point, st.centreBlend.targetM, st.asmGizmoLag);
+  // ⭐⭐⭐ (2026-11-24, §15) what the gizmo uses where P2 drives it (`ringOf`), else the readout (from outside)
+  const rg = ringOf(sh);
+  const t = gizmoShownAt(rg.point, st.centreBlend.targetM, st.asmGizmoLag);
   const cam = st.camera.position;
   const dist = Math.hypot(t[0] - cam.x, t[1] - cam.y, t[2] - cam.z);
   if (!(dist > 1e-6)) {
@@ -264,7 +301,7 @@ export function landingMarkerFrame(st: SceneState): void {
     return;
   }
   ring.isVisible = true;
-  ring.color.copyFrom(sh.readout.kind === "land" ? LAND_COLOUR : NOTHING_COLOUR);
+  ring.color.copyFrom(rg.nothing ? NOTHING_COLOUR : LAND_COLOUR);
   const m = trackingMetresPerPx(dist, st.camera.fov, st.canvas.clientHeight) * GIZMO_RING_PX * LANDING_RING_SHARE;
   ring.scaling.set(m, m, m);
   ring.position.set(t[0], t[1], t[2]);
@@ -295,7 +332,20 @@ export function landingLine(st: SceneState): string {
   // ⭐ the HUD paints before the frame's readout: the last one is the frame before's
   const sh = s.shown !== null && s.shown.frame >= st.frames - 1 ? s.shown : null;
   const r = sh?.readout ?? null;
-  const head = r === null ? "—" : r.kind === "land" ? `P2 Δ${signedMm(r.delta)} mm  land ${r.part}` : "P2 nothing";
+  // ⭐⭐⭐ (2026-11-24, §15) where P2 drives the gizmo: what the gizmo uses (Δ = the driven level − today's); else the readout from outside (S2)
+  const dv = sh?.drive ?? null;
+  const head =
+    dv !== null
+      ? dv.kind === "land"
+        ? `P2 Δ${signedMm(dv.delta)} mm  land ${dv.part}`
+        : dv.kind === "nothing"
+          ? "P2 nothing"
+          : `P2 ${dv.kind}${dv.part !== null ? ` ${dv.part}` : ""} (the gizmo as built)`
+      : r === null
+        ? "—"
+        : r.kind === "land"
+          ? `P2 Δ${signedMm(r.delta)} mm  land ${r.part}`
+          : "P2 nothing";
   const band = sh !== null && sh.band ? "  band" : "";
   const refused = sh !== null && sh.refused.length > 0 ? ` · ⛔refused ${sh.refused.join(",")}` : "";
   return `${head}${band} · prep ${s.prepLastMs.toFixed(1)} ms (worst ${s.prepWorstMs.toFixed(1)}) · query ${s.queryUs.toFixed(1)} µs · facets ${s.prepared.size}${refused}`;

@@ -95,7 +95,7 @@ describe("⭐⭐ V2 — the readout's evaluation ASKED BY THE HOLD (`forHold`) a
   const map = { facets: [{ n: N, t: [0, 0, -1], b: [0, 1, 0] }] } as unknown as FaceMap;
   const srcOf = (parts: Part[]): ReadoutSource => {
     const c = toConvex(parts);
-    return { map: () => map, frame: () => null, placed: () => ({ key: "k", parts: c.map((p) => p.points), ids: c.map((p) => p.id) }) };
+    return { map: () => map, frame: () => null, placed: () => ({ key: "k", parts: c.map((p) => p.points), ids: c.map((p) => p.id) }), drive: () => null };
   };
   const at: GizmoRead = { hit: { point: [0, 350 * M, 0] }, t: { stack: 0, normal: N, surface: [0, 350 * M, 0] } };
 
@@ -140,7 +140,7 @@ describe("⭐⭐ V3 — the switch `mouthHoldDomain` and the wiring", () => {
   });
   it("the frame's readout asked at a mouth only at 2; the domain read right before the hold; at 0 the mouth passed as built", () => {
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("const askHold = st.cfg.mouthHoldDomain === 2 && m0g !== null && m0g.mouth !== undefined; landingReadoutFrame(st, mrT, mr0 === mrT || (st.cfg.landingReadout !== 1 && !askHold) ? m0g : gizmoOf(st, mq.yaw, mq.pitch, mrT), READOUT_SOURCE, askHold);"); // ⭐ (2026-11-23, S4) fed today's point; (§9bis 6) today's blend only when the readout runs
+    expect(a).toContain("const askHold = st.cfg.mouthHoldDomain === 2 && m0g !== null && m0g.mouth !== undefined; landingReadoutFrame(st, mrT, mr0 === mrT || (st.cfg.landingReadout !== 1 && !askHold) ? m0g : gizmoOf(st, mq.yaw, mq.pitch, mrT), READOUT_SOURCE, askHold, mr0);"); // ⭐ (2026-11-23, S4) fed today's point; (§9bis 6) today's blend only when the readout runs
     expect(a).toContain("const mouthIn = m0g.mouth !== undefined && mouthHoldDomain(st.cfg.mouthHoldDomain, m0g.t.band, mouthP2(st)) ? m0g.mouth : null; const holdNow = mouthHold(wasHeld, mouthIn, dP, dY);");
   });
   it("⛔ (the audit, nit 5) P2 READ BACK BY ONE READER ONLY: `mouthP2` defined once and called once in the product — the hold's domain", () => {
