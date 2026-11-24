@@ -145,3 +145,8 @@
 * **2026-11-24** — S14 PROPOSED (`ORBIT_SURFACE_LANDING_CAST.md`): the landing map's cost rooted (every pair's obstacle built eagerly, every
   turn frame) and an engine that builds none (the near pairs cast exactly at query time — GJK's ray cast, a broad phase, a bound); the prototype
   (kit `fo3/surface/cast/`): 32 000 queries, 0 kinds or parts different, depths within 0.1 µm; `Scene_2`'s turn frame 698 → 0.2 ms. His word owed.
+* **2026-11-24** — S11's measurement (the caps with every body; by an agent, `l1_data_scenes.ts` extended — frusta, prisms, turned bodies
+  checked against the game's shapes) found a DEFECT in the R1b check: `Math.min(...values)` over a place's voxels overflowed the stack on
+  `Scene_1`'s gap under the cube (~1.6e5 voxels) — fixed `ca4eeb0a` (`minOver`, V18 red first; verify 199 / 2484). Lesson: a check meant for a
+  whole assembly never spreads an array into arguments. First reading (loose pieces wrongly in the set): the largest place is the 15.5 mm gap
+  under the cube, a real hollow under Piece45's overhang; the measure rerun on the placed set only (FINISHED and START states).
