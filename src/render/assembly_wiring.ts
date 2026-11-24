@@ -29,6 +29,8 @@ import { faceTrianglesWorld } from "./contact_wiring";
 import { calmHeading, calmLevelHeading, calmShown, calmStep as calmStepEase, calmTarget, cameraHeading, capEdgePitch, heldOffsetStep, poleWeight, type CalmKnobs, type CalmState } from "../input/orbit_calm";
 import { askedCalm, calmInFrame, calmWorld, farReading, followTurnHoldsGizmo, levelledHeading, placeCrossings, type CalmAskTarget } from "../input/camera_follow";
 import { CHART_MAP_OPTS, facetFrame } from "../input/face_map";
+import { fillerFaces } from "../input/l1_caps";
+import { SCENE_CAPS } from "../content/scene_caps";
 import { qRotate, type Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
@@ -1065,7 +1067,8 @@ function faceMapOf(st: SceneState): FaceMap | null {
   if (box === null) return null;
   // ⭐⭐⭐ (2026-11-10, §9.4) under the tilted pole the map is BUILT IN F (`tiltFaces`, `tiltBox`): the pressed cap a side — cached per tilt
   // ⭐⭐⭐ (2026-11-13, POLAR_ZONES.md) …or in the polar zone's frame (`baseFrame`) — cached per zone switch
-  const key = `${parts.key}#${st.cfg.facetMergeDeg}#${st.cfg.facetMinShare}${st.asmTilt !== null ? `#T${st.asmTilt.id}` : `#Z${st.asmZone?.id ?? 0}`}`;
+  // ⭐⭐⭐ (2026-11-24, S11 — `ORBIT_SURFACE_L1.md` §10) L1's fillers in the key at 1 (`l1Key`; at 0 the key as LIVE, byte for byte)
+  const key = `${parts.key}#${st.cfg.facetMergeDeg}#${st.cfg.facetMinShare}${st.asmTilt !== null ? `#T${st.asmTilt.id}` : `#Z${st.asmZone?.id ?? 0}`}${l1Key(st)}`;
   if (st.asmFaceMap !== null && st.asmFaceMap.key === key) return st.asmFaceMap.map;
   // ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §16 — C2W, W7) in the parts' own box READ IN F (`frameBox`) — ⛔ the world box's corners turned (`tiltBox`,
   // the box of the game before the charts, deleted here at step 2.5): loose for a frame off the world's axes (a cap turned 30°)
@@ -1080,7 +1083,7 @@ function worldFaceMap(st: SceneState): FaceMap | null {
   const box = shellOf(st);
   if (box === null) return null;
   // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §2.2 / §5.2, step 2.2) the charts' layout in the call (`CHART_MAP_OPTS`)
-  const key = `${parts.key}#${st.cfg.facetMergeDeg}#${st.cfg.facetMinShare}`;
+  const key = `${parts.key}#${st.cfg.facetMergeDeg}#${st.cfg.facetMinShare}${l1Key(st)}`;
   if (st.asmWorldMap !== null && st.asmWorldMap.key === key) return st.asmWorldMap.map;
   const map = buildFaceMap(placedFaces(st), box, { mergeDeg: st.cfg.facetMergeDeg, minShare: st.cfg.facetMinShare, ...CHART_MAP_OPTS });
   st.asmWorldMap = { key, map };
@@ -1094,13 +1097,19 @@ function worldFaceMap(st: SceneState): FaceMap | null {
  */
 // (2026-11-24, S7) its one home is now `input/face_map.ts` (`CHART_MAP_OPTS`): B5's reading of the face map offline builds it the same way
 
+/** ⭐ A part placed for the face map: in the model, not orbited, not FROZEN (the floor is not a part), locked in its goal, its mesh shown. */
+function placedForMap(st: SceneState, id: string): boolean {
+  const obj = st.world.objects.get(id);
+  if (obj === undefined || obj.orbited === true || obj.frozen === true || !goalLocked(id, st.goalCommit, st.cfg.lockPlacedPieces === 1)) return false;
+  const mesh = st.meshOf.get(id);
+  return mesh !== undefined && mesh.isEnabled();
+}
+
 /** ⭐ The placed parts' faces on their model pose (the slide's own: `faceWorld`, `faceTrianglesWorld`), in the world. */
 function placedFaces(st: SceneState): MapFace[] {
   const faces: MapFace[] = [];
   for (const [id, obj] of st.world.objects) {
-    if (obj.orbited === true || obj.frozen === true || !goalLocked(id, st.goalCommit, st.cfg.lockPlacedPieces === 1)) continue;
-    const mesh = st.meshOf.get(id);
-    if (mesh === undefined || !mesh.isEnabled()) continue;
+    if (!placedForMap(st, id)) continue;
     for (const f of obj.faces) {
       const w = faceWorld(st.world, id, f.id);
       const tris = faceTrianglesWorld(st, id, f.id);
@@ -1108,7 +1117,23 @@ function placedFaces(st: SceneState): MapFace[] {
       faces.push({ normal: w.normal, centre: w.centre, tris, part: id }); // ⭐⭐⭐ (2026-11-09, R1) the part: a glued face is not a surface
     }
   }
+  // ⭐⭐⭐ (2026-11-24, S11 — `ORBIT_SURFACE_L1.md` §10, `surfaceL1` 1) L1's FILLERS: each of the scene's (`content/scene_caps.ts`) whose walls are all
+  // placed, its six faces a part of their own, carried by its anchor's MODEL placement (`st.world` — never the swaying meshes) — the face map's glue
+  // rule takes the hollow's inner walls away, its open faces bridge the mouth. ⛔ Never a solid: no mesh, no collision piece, P2 never reads it.
+  if (st.cfg.surfaceL1 === 1)
+    for (const f of SCENE_CAPS.get(st.sceneSpec.id)?.fillers ?? []) {
+      if (!f.walls.every((id) => placedForMap(st, id))) continue;
+      const a = worldPlacementOf(st.world, f.anchor.id);
+      if (a !== null) faces.push(...fillerFaces(f, st.sceneSpec.unitM ?? 1, a));
+    }
   return faces;
+}
+
+/** ⭐ (S11) the face maps' key for L1's fillers: "" at 0 (the key as LIVE), else the fillers present (their walls placed). */
+function l1Key(st: SceneState): string {
+  if (st.cfg.surfaceL1 !== 1) return "";
+  const ids = (SCENE_CAPS.get(st.sceneSpec.id)?.fillers ?? []).filter((f) => f.walls.every((id) => placedForMap(st, id))).map((f) => f.id);
+  return `#L1${ids.join(",")}`;
 }
 
 /**

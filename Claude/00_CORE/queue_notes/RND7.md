@@ -136,3 +136,27 @@
 * **2026-11-24** — S13 BUILT and WIRED: B1's cheap subset re-verified when a `.glb` loads (`checkSolidsAtImport`, `checkSolids`' own
   code; `render/model_import.ts` after the boot is placed, ≈ 50 ms on the PC for `Scene_2`, a HUD warning — never a refusal); V2b, 3 mutants
   red; `Scene_2` none (its HUD unchanged). The packets S7 – S13 done (S11 a study for his word). Local.
+* **2026-11-24** — S7 – S13 DEPLOYED on his word *"Deploy"*: LIVE main `19c7f88` = `16f3c845` (2026-11-24 10:48Z); in the game only S13's import warning.
+  His questions answered: the landing map's cost is paid at every frame of a TURN and once per new direction, a plain frame ≈ 0.1 ms
+  (`ORBIT_SURFACE_PART_CHECKS.md` §19); S11 in plain words (`ORBIT_SURFACE_L1.md` §7).
+* **2026-11-24** — his *"S11: you can proceed as you recommend"*: Q1 with `GM13`, Q2 the caps measured with every body then a build behind
+  `surfaceL1` on `Scene_1`, Q3 precomputed (`ORBIT_SURFACE_L1.md` §8). And *"The landing cost: i do not accept these costs. You need to find another
+  solution"* — the study first (a query-time exact cast, no sums prepared), then S11.
+* **2026-11-24** — S14 PROPOSED (`ORBIT_SURFACE_LANDING_CAST.md`): the landing map's cost rooted (every pair's obstacle built eagerly, every
+  turn frame) and an engine that builds none (the near pairs cast exactly at query time — GJK's ray cast, a broad phase, a bound); the prototype
+  (kit `fo3/surface/cast/`): 32 000 queries, 0 kinds or parts different, depths within 0.1 µm; `Scene_2`'s turn frame 698 → 0.2 ms. His word owed.
+* **2026-11-24** — S11's measurement (the caps with every body; by an agent, `l1_data_scenes.ts` extended — frusta, prisms, turned bodies
+  checked against the game's shapes) found a DEFECT in the R1b check: `Math.min(...values)` over a place's voxels overflowed the stack on
+  `Scene_1`'s gap under the cube (~1.6e5 voxels) — fixed `ca4eeb0a` (`minOver`, V18 red first; verify 199 / 2484). Lesson: a check meant for a
+  whole assembly never spreads an array into arguments. First reading (loose pieces wrongly in the set): the largest place is the 15.5 mm gap
+  under the cube, a real hollow under Piece45's overhang; the measure rerun on the placed set only (FINISHED and START states).
+* **2026-11-24** — S11's caps MEASURED with every body, two states (`ORBIT_SURFACE_L1.md` §9): `Scene_1`'s caps = the 15.5 mm gap under the
+  cube (the authored bottom row's float; ≈ 500 000 mm², its slit ≈ 1 946 mm) + the hollow under Piece45's overhang (1 534 mm²); no goal slot; sealed /
+  buried 0 everywhere. His word owed on the gap: the game caps it, the data lowers the cube, or no hollow by rule.
+* **2026-11-24** — ⛔ CORRECTED on his word (*"the floor shall not count as a part … it is like a UI inside the game scene"* — repeated): the
+  measure had kept the frozen floor; rerun without it (`ORBIT_SURFACE_L1.md` §9): `Scene_1` has ONE cap — the 13 mm tunnel behind Piece41's goal,
+  open along the cube's underside and at its back; the gap under the cube and Piece45's overhang were the floor's doing; `Scene1_demo` none. The
+  build designed (§10 there: a virtual filler glued to the walls, precomputed, `surfaceL1`).
+* **2026-11-24** — S11 BUILT (`1d4cee3c`, behind `surfaceL1`, 0 = LIVE; `ORBIT_SURFACE_L1.md` §10.5): `Scene_1`'s one filler (the tunnel behind Piece41's goal, x 103.5 … 116.5, y 15.5 … 73.5, z −17.5 … 432.5 mm; walls Piece19 / 20 / 39, Piece41 a goal) written offline (`scripts/surface/l1_caps.ts`, accepted glued / flush / goal), its faces in the face map at 1 — the tunnel's walls gone, the underside one group, the contour unchanged; 22 vectors red first; G1 on his records and his look owed.
+* **2026-11-24** — S11 GATED (`ORBIT_SURFACE_L1.md` §10.6): G1 bit for bit on his two `Scene_1` records at `surfaceL1` 0; at 1 identical too
+  (the filler in the live map — the key's `#L1…` read — but his records never go under the cube). His look owed (under the cube, 0 and 1).

@@ -97,3 +97,25 @@ collision pieces (one measurement before the plunge is built); the frozen plinth
   B6's two margins, C2's budget and the drawing rule D9); `Scene_2`'s new findings for `GM13` — the frozen plinth NO PLACE in the face map (ledger
   row 21), TEN ways in starting at no place (row 22), the TOP facet just above the share (row 23), P2's cost 3 203 × `Scene_1`'s (row 7: P2 cannot
   drive `Scene_2` as drawn); his phone look on S4b; a deploy of S13 (a HUD warning at load — nothing changes on `Scene_2`).
+
+## ⭐ 2026-11-24, later still — S7 – S13 DEPLOYED (his word *"Deploy"*)
+
+* **LIVE main `19c7f88`** = `16f3c845` (2026-11-24 10:48Z; the branch pushed). In the game only S13 (the scene's collision pieces re-checked when a `.glb`
+  loads: a HUD warning, never a refusal; `Scene_2` has none — its HUD unchanged); the rest rides offline. His phone look owed (S4b's alignment tap).
+* **His two questions** answered in plain words and recorded: the landing map's cost — WHEN it is paid (`ORBIT_SURFACE_PART_CHECKS.md` §19,
+  the timing of 2026-11-24); S11 — what it is, the caps, why `Scene_2` and not `Scene_1`, each option's effect, when it runs
+  (`ORBIT_SURFACE_L1.md` §7). S11's three questions still wait for his word.
+
+## ⭐ 2026-11-24, afternoon — his two words: S11 *"proceed as you recommend"*; the landing cost *"I do not accept these costs"*
+
+* **S11 DECIDED** (`ORBIT_SURFACE_L1.md` §8): Q1 with `GM13`; Q2 the caps measured with every body first, then behind `surfaceL1` on `Scene_1`;
+  Q3 precomputed. Not started: after the landing's engine (one heavy job at a time).
+* **S14 PROPOSED** (`ORBIT_SURFACE_LANDING_CAST.md`): the landing read at query time — prototype in the kit's `fo3/surface/cast/` (`proto_cast.ts`,
+  `cost_when.ts`; run from `../orbit_surface` with `npx vite-node <path>`; env `F=near`, `N`, `STAGES`). His word owed: build it (recommended), or audit first.
+
+## ⭐ 2026-11-24, evening — the floor is not a part (his rule, repeated); S11's one cap; its build designed
+
+* ⛔ The caps' measure had kept the frozen floor — he had said several times it is no part (*"it is like a UI inside the game scene"*). Rerun
+  without it: `Scene_1` has ONE cap, the 13 mm tunnel behind Piece41's goal (`ORBIT_SURFACE_L1.md` §9). Every surface measure leaves frozen bodies out.
+* S11's build designed (§10 there): the cap a virtual FILLER glued to the tunnel's walls, precomputed with the scene, behind `surfaceL1` (0 = LIVE).
+* S14 (the landing read at query time) still waits for his word.

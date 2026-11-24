@@ -1,6 +1,6 @@
 # L1 IN THE GAME — THE ASSEMBLY'S SURFACE AS IT GROWS: sealed, buried, the caps between parts (package S11, a study, 2026-11-24)
 
-> **STATUS** · ⏳ **A STUDY — NOTHING BUILT.** Written on his word *"Then finish the orbit's surface work"* (2026-11-24), by his rules (docs before
+> **STATUS** · ✅ **BUILT 2026-11-24 (§10.5, `1d4cee3c`, behind `surfaceL1`, 0 = LIVE), ✅ GATED (§10.6: G1 bit for bit; his records unchanged at 1); his look owed** · ✅ **DECIDED 2026-11-24 (§8: his *"S11: you can proceed as you recommend"*)** — was: ⏳ **A STUDY — NOTHING BUILT.** Written on his word *"Then finish the orbit's surface work"* (2026-11-24), by his rules (docs before
 > build; the four-part method; the closed orbit's terms — [ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md) §9). **Three questions for his word (§6).**
 > **OWNS** · what the game's face map must leave out or add at a seat (layer L1), measured on today's scenes, and the design proposed.
 > **READ WITH** · [ORBIT_SURFACE.md](ORBIT_SURFACE.md) §5.1 (L1); [PROXY_AND_COLLISION_RULES.md](../../30_OBJECTS_3D/spec/PROXY_AND_COLLISION_RULES.md) §3bis
@@ -26,8 +26,8 @@ part (a GLUED face is no surface: R1, 2026-11-09). No face is ever left out for 
 * **Sealed, buried — NONE in today's data scenes**: each scene's plain boxes at their places as one set (B2's states at 2 mm): `Scene_1` 39 boxes
   (241 triangles exposed, 227 glued), `Scene1_demo` 42 (238, 266), `Scene_0` / `Scene_0bis` / `Scene_2`'s data part one each — 0 sealed, 0 buried
   (a data part is ONE convex body, C4: it cannot bury its own face). ⚠ The 7 frusta and prisms of `Scene_1` (2 of `Scene_0`, `Scene_0bis`) left out.
-  → **That half of L1 changes nothing on today's data scenes**; on `Scene_2` (a `.glb`) B2 found E03's nose SEALED once E17 seats, E17's proxy half
-  BURIED (`ORBIT_SURFACE_PART_CHECKS.md` §9).
+  → **That half of L1 changes nothing on today's data scenes**; on `Scene_2` (a `.glb`) ⚠ (corrected 2026-11-24, §7) B2 reads E03's nose GLUED once E17 seats —
+  nothing sealed — and E17's proxy half BURIED because it faces inward, a drawing defect (`ORBIT_SURFACE_PART_CHECKS.md` §9).
 * **Caps between parts — they WOULD change `Scene_1`**: packet 2's R1b on the set as ONE part reads 4 places deeper than their mouth is wide on
   `Scene_1`'s boxes (≈ 501 680 mm², 279 s), 2 on `Scene1_demo`'s (≈ 21 912 mm²). ⚠ Not yet trusted: the frusta's and prisms' sockets are empty in
   that set (the largest place, ≈ 304 725 mm² with no straight way out, may be one) — the measure needs every body first.
@@ -56,3 +56,126 @@ part (a GLUED face is no surface: R1, 2026-11-09). No face is ever left out for 
   on scenes authored in Blender (their `_cap` faces), or not (P2 and S3's mouth hold read the voids already)? (⏳ recommended: first measure with
   every body, then his look on a build behind the switch on `Scene_1`.)
 * **Q3** — the precompute (`<scene>_stages.json` with the scene, §4.1) or a fast L1 in the game.
+
+## 7. In plain words (his question 2026-11-24: *"explain in layman's terms … when that S11 will run"*)
+
+**What it is about.** The gizmo — and the camera that follows it — travels over the assembly's SKIN: the face map, made from the faces of the
+parts already placed. When a part is seated, the skin must change. Today one change is made: two faces pressed together (GLUED) leave the skin.
+S11 adds the other two the rules ask for: a face SEALED in a closed pocket, or BURIED inside another part, leaves it too; and a narrow hollow formed
+BETWEEN parts gets a CAP.
+
+**The caps.** A cap is an invisible lid over the mouth of a hollow that is deeper than its mouth is wide (his rule of 2026-11-23). The skin passes
+over the lid like a bridge instead of following every wall down and up; the piece can still go INTO the hollow where it fits — P2 reads the depth
+under the lid (S4). A hollow inside ONE part is capped by that part's own drawing (`_cap`, rule R1b); S11 is about the hollows that only exist once two or
+more parts are side by side — a gap between two boxes, a slot between three.
+
+**Why `Scene_2` and not `Scene_1` — and a correction.** ⚠ §3 first said B2 found E03's nose SEALED once E17 seats: wrong — B2's pinned
+result (`ORBIT_SURFACE_PART_CHECKS.md` §9, V3) reads it GLUED (pressed by E17, 14 of 16 triangles) and NOTHING SEALED in any scene. The only
+BURIED faces are half of E17's own proxy, because that half faces INWARD — a drawing defect (B1f, the ledger's rows 14 – 15) that `Scene_2`'s
+redraw (`GM13`) fixes. `Scene_1`'s parts are simple solids set side by side, each ONE convex body (boxes, a few frusta and prisms): one can press on
+another (glued) but its boxes close no pocket round another's face nor sink into it (measured on the boxes, §3). **So the sealed / buried half has no real case today, on either scene**; built now, it would only hide E17's
+inward faces — a defect the drawing must fix. The caps are the other way round: they DO concern `Scene_1` — its gaps between boxes (the 10 mm
+slots near the bottom, maybe the top channel; 4 hollows deeper than wide were found, not yet trusted: the frusta and prisms were left out of that
+measure and their empty sockets may have been counted).
+
+**Each option's effect.**
+
+| | `Scene_1` | `Scene_2` |
+|---|---|---|
+| Q1 sealed / buried — now | no change (it has none) | no real case; it would hide E17's inward proxy half (a drawing defect) — and `Scene_2` does not run with the charts yet |
+| Q1 — with `GM13` (recommended) | no change | built with the redrawn parts, when `Scene_2` runs with the charts and a real case can be seen |
+| Q2 caps — every scene | ⚠ changes: the gizmo and the camera bridge its gaps (the closed orbit's path — measured first) | lids over its between-parts hollows (not measured yet) |
+| Q2 — only scenes made in Blender | no change (described in the game's code, not in Blender) | lids written by the scene's build |
+| Q2 — not at all | no change | no lids: the hollows stay open in the skin, as today (P2 and the mouth's hold already read them) |
+
+**When it runs.** Never during the orbit's frames: the skin changes only when the set of placed parts changes — a seat, a put-down, an undo.
+* **Q3 precomputed** (recommended in §4): the work is done ONCE on the PC when the scene is exported (seconds to minutes), saved in a file beside
+  the scene; the game reads the file at BOOT with the scene, and at each seat it LOOKS UP the line for the new placed set — instant.
+* **Q3 in the game**: the work is done AT EACH SEAT on the phone — today's methods on this PC: the hidden faces ≈ 0.3 s a seat (B2: 5 s for
+  `Scene_2`'s 17 stages), the caps MINUTES (R1b: 279 s on `Scene_1`'s boxes); the phone slower — a freeze at every seat until a far faster method
+  is found.
+
+## 8. ✅ HIS DECISION (2026-11-24: *"S11: you can proceed as you recommend"*)
+
+* **Q1 — sealed / buried: WITH `GM13`** (no real case today on any scene; built with `Scene_2`'s redrawn parts, when it runs with the charts).
+* **Q2 — the caps between parts: MEASURED FIRST WITH EVERY BODY** (`Scene_1`'s frusta and prisms in the set — their sockets filled), then a build
+  BEHIND A SWITCH (`surfaceL1`, 0 = LIVE) on `Scene_1` for his look; the camera's path at 1 measured against 0 on his records.
+* **Q3 — PRECOMPUTED** per placed set with the scene (§4.1), read at boot, looked up at a seat, a put-down, an undo.
+* **Order**: after the landing map's cost (his *"I do not accept these costs"*, the same day) — one heavy job at a time.
+
+## 9. ⭐ Q2's measure WITH EVERY BODY (2026-11-24 — `scripts/surface/l1_data_scenes.ts`, extended by an agent; ⛔ corrected the same day: the floor out)
+
+**How.** Every body with the game's own shape (the frusta by `taperTop`, the prisms by `prismOutline`, turned bodies, the margins — each checked
+against the game's code: corners, extents, outline 0.0000 mm off, volumes); R1b on the placed set as ONE part, each place listed (a copy of R1b's
+listing in the script, equal to `checkProxyCover` on a small set — `--selfcheck`); two states: FINISHED (every body at its goal, `SCENE_1_FINAL`)
+and START (the bodies whose spawn is their goal; the loose Piece1, 2, 17, 23, 41 left out — a place in a left-out piece's goal volume is its slot).
+⚠ The first run (the loose pieces at their spawn places) crashed R1b on a stack overflow — a defect in the check, fixed `ca4eeb0a` (`minOver`, V18).
+
+⛔⛔ **CORRECTED 2026-11-24 — THE FLOOR IS NOT A PART** (his rule, repeated: *"I already told you several times that the floor shall not count
+as a part, and viewed from below the floor is not visible. Therefore the floor has no role to play in the game, it is like a UI inside the game
+scene"*). The first reading kept the frozen `Floor` in the set: it closed the 15.5 mm gap under the cube into one ≈ 500 000 mm² "cap" and, blocking
+the lower half of every sky, made Piece45's overhang read deep — both were the floor's doing; the three questions on the gap are WITHDRAWN. The
+script now leaves every frozen body out, as the face map does (`render/assembly_wiring.ts` `placedFaces`, `obj.frozen`); rerun the same day (21 s a set).
+
+**`Scene_1` — ONE cap, the same in both states** (Piece45's overhang not deep; the slots behind Piece1, 2, 17, 23's goals not deep):
+
+| place | what | size |
+|---|---|---|
+| **1** | ⭐ **THE TUNNEL BEHIND PIECE41'S GOAL** — the seated parts were deepened to the cube's 483 mm (`scene_1.ts` `CUBE_ROWS`), the five pieces the boot moves kept the painting's 33 mm: behind Piece41's goal a tunnel 13 mm wide (between Piece19 and Piece20), 58 mm high (the cube's underside to Piece39), 450 mm long (z −17.5 … 432.5). Its mouths: a 13 mm slit along the cube's UNDERSIDE (seen from below the floor's level) and its end in the cube's BACK; at START also its front (Piece41's goal slot — the ghost bridges it) | ≈ 42 400 mm² (FINISHED), 44 300 (START); ≈ 7.9 × deeper than wide |
+
+**`Scene1_demo`**: no place. **`Scene_0`, `Scene_0bis`**: none. **B2**: sealed 0, buried 0 on every data scene, both states (Q1 with `GM13` stands).
+
+## 10. ✅ BUILT 2026-11-24 (`1d4cee3c`, behind `surfaceL1`, 0 = LIVE — §10.5) — THE BUILD (S11 on `Scene_1`, for his look) — the design, written before the build
+
+1. **The cap is a FILLER** — a virtual box filling the hollow, never a solid: no collision piece (P2, the drive and the casts never read it), no
+   mesh drawn. Its six faces join the face map as a part of their own (`part` = its id): the faces pressed on the walls GLUE both ways — the
+   filler's and the walls' (the face map's own rule, `input/face_map.ts` `exposedRects`) — so the tunnel's inner walls leave the skin; its open faces
+   (the underside's slit, the back's end) stay, coplanar with the cube's underside and back, and merge into their facets: the skin passes over the
+   slit like a bridge. ⚠ The gizmo already bridges a void narrower than the held piece (`heldFoot`, `stackDepthAt`): what the filler changes is the
+   FACETS under and behind the cube (the charts, the normals, the camera) — measured at the gates, never assumed.
+2. **Computed offline** (Q3) from R1b's place: its deep box snapped outward, each side to the nearest parallel face plane of a placed body within
+   the place's mouth width (⛔ the floor never: frozen, not a part); ⛔ a piece's GOAL VOLUME never inside a filler (the ghost bridges a goal's
+   mouth): the filler stops at Piece41's goal (z −17.5). Accepted only if each of its faces is GLUED (on a wall) or FLUSH (coplanar with an exposed
+   face of a wall it borders) — else refused, loudly. Written with the scene (`src/content/scene_1_caps.json`, by a script under
+   `scripts/surface/`): the filler's box (scene units) and its WALLS (Piece19, Piece20, Piece39); in the game a filler is present when all its walls
+   are placed (a seat, a put-down, an undo — the face map's key). On `Scene_1` the same in every placed set (its walls are seated from the start).
+3. **Switch `surfaceL1`** (THE ORBIT'S SURFACE): 0 = LIVE (`19c7f88`), 1 = the fillers. G1: his records at 0 identical; at 1 the camera's path
+   measured against 0 (it can differ only under and behind the cube).
+4. **Vectors** (red first against today): the filler's box read from the scene; the tunnel's inner faces absent from the face map at 1, present at 0;
+   the underside and the back each one facet across the slit at 1; mutants — a side snapped to the floor's plane, a filler reaching into a goal
+   volume, a face neither glued nor flush — refused.
+
+5. ⭐ **AS BUILT** (2026-11-24, `1d4cee3c`; G1 on his records and his look owed — nothing pushed, nothing deployed):
+   * **Offline** — `scripts/surface/l1_caps.ts` (≈ 80 s; the bodies and R1b's places moved, unchanged, from `l1_data_scenes.ts` to `l1_places.ts`)
+     writes `src/content/scene_1_caps.json`; `Scene_0`, `Scene_0bis`, `Scene1_demo`: no deep place, no file (a stale file is refused). Rerun: the same
+     content. The filler, both states: **x 103.5 … 116.5, y 15.5 … 73.5, z −17.5 … 432.5 mm** (units 1.035 … 1.165, 0.155 … 0.735, −0.175 … 4.325);
+     R1b's place (voxel centres) 104.0 … 116.25, 19.75 … 72.25, −16.5 (START −37.5, cut out of Piece41's goal volume at −17.5) … 422.75, each side
+     snapped outward ≤ 9.75 mm. **Walls Piece19, Piece20, Piece39; Piece41 a GOAL, never a wall** (a loose piece: the filler is there before it).
+   * **The acceptance** (`src/input/l1_caps.ts` `fillerVerdict`, the face map's own `exposedRects`, coplanar and bordering within `PROXY_FLUSH_MM`):
+     at FINISHED −x GLUED Piece19, +x GLUED Piece20, +y GLUED Piece39, −z GLUED Piece41, −y FLUSH (Piece19, Piece20, Piece41), +z FLUSH (Piece19,
+     Piece20, Piece39); at START the front on Piece41's goal volume — ⚠ a THIRD verdict, **GOAL** (the ghost bridges the slot; glued once it seats).
+     FLUSH as built: each OPEN piece of the face borders an EXPOSED coplanar face of a placed part, the same way out. Nothing inside (a separating-axis
+     test, each part one convex body — C4). The script also requires the SAME filler from both states' places (else §4.1's per-set precompute is owed).
+   * ⚠ **Piece43 under the slit**: the frustum under Piece19 reaches 3.75 mm under the tunnel (x 103.5 … 107.25, z 168.5 … 213.5) — that bit of the
+     filler's underside is glued to Piece43's top, and leaves the top's stack too.
+   * **In the game** — `render/assembly_wiring.ts` `placedFaces`: at `surfaceL1` 1, each filler whose walls are all placed (`placedForMap`, the parts'
+     own test: goal-locked, not orbited, not frozen, mesh shown) adds its six faces, part = its id, carried by its ANCHOR's model placement (Piece19's
+     `worldPlacementOf` in `st.world` against its goal pose in the file — at boot exactly `units × unitM`, checked against the page's faces); both
+     face maps' keys + `#L1<ids>` at 1 only (at 0 the key byte for byte). Read by `content/scene_caps.ts` (checked at import). Slider in THE ORBIT'S
+     SURFACE: *"L1 caps (0 = LIVE 19c7f88; 1 = the fillers)"*.
+   * **Measured on the page's faces** (`tests/fixtures/scene_1_cube_faces.json`, START): at 1 the six facets' planes and polygons, the columns, the
+     levels — UNCHANGED; the stacks change: the tunnel's walls and ceiling gone (26 100, 26 100, 5 850 mm² at 0 → 0), the underside ONE group (its
+     main region was ONE HALF of it at 0 — the slit cut it in two: the bottom facet's share 0.5046 → 0.8167), the back's share 0.9525 → 0.9550, a
+     group more in front (the filler's front at the bottom of Piece41's slot). ⚠ The camera's path at 1 is G1's to measure, never assumed.
+   * **Vectors** — `tests/l1_caps.test.ts` (22), each shown RED on a mutant first (the list: `ORBIT_SURFACE_BUILD.md` §10, S11's row).
+
+### 10.6 ✅ The gates (2026-11-24, on `2f5fa240` — the kit's `fo3/surface/l1/run_l1.sh`, `walk_l1.mjs`; one headless job at a time)
+
+* **G1 — identity: PASSED, bit for bit.** His two `Scene_1` records of 2026-11-22 (back 2 916 frames, front 6 034) replayed headless at
+  `surfaceL1` 0 against the defaults' replays of 2026-11-23 (`runs/S6_*`): the largest difference **0** on every frame (the camera's position,
+  target and up; the gizmo).
+* **At 1 against 0: identical too** — both records, every frame (the gizmo, the camera, the piece: 0 frames over 1 µm). ⭐ A positive control
+  first: at 1 the page's two face maps carry the filler (their key ends `#L1L1cap_Scene_1_1`, 6 facets) — so the filler IS in the live map, and
+  his two records never take the gizmo where it changes the stacks: under the cube (its underside one region at 1, two halves at 0) or at the
+  tunnel's end in the back. **What it changes is seen only there** — his look: the gizmo under the cube, across the slit, at 1 and at 0.
+* No probe profile left in %TEMP%; the server on 5191 stopped.

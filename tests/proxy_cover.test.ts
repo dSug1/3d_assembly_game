@@ -11,7 +11,7 @@ import { readFileSync } from "node:fs";
 import { glbBin } from "../src/core/glb_geometry";
 import { glbJson, readModelCatalog } from "../src/core/model_catalog";
 import { readPartSolids, type PartSolids } from "../src/core/part_checks";
-import { checkProxyCover } from "../src/core/proxy_cover";
+import { checkProxyCover, minOver } from "../src/core/proxy_cover";
 import { cellPart, face, hollowCase, hull, mesh, part, pocketBox, prismPart, shaft } from "./helpers/proxy_shapes";
 
 const rules = (p: PartSolids) => checkProxyCover([p]).map((f) => f.rule + (f.info ? "(info)" : ""));
@@ -108,3 +108,12 @@ describe("⭐⭐ V3 — `Scene_2`'s report on its quick parts (not rebuilt here 
  * E14 the heads (their ports and pockets deeper than wide); E17 (its proxy half inward) */
 const PINNED = ["R1 E01", "R2 E01", "R1 E03", "R2 E03", "R1 E04", "R2 E04", "R1 E07", "R1 E08", "R1 E09", "R1 E10", "R1 E11", "R1 E12", "R1b E13", "R1b(info) E13", "R1 E13", "R2 E13",
   "R1b E14", "R1b(info) E14", "R1 E14", "R2 E14", "R1 E15", "R1 E16", "R1 E17", "R2 E17"];
+
+describe("⭐ V18 (2026-11-24) — a large place never overflows the stack (S11's measurement: Scene_1's gap under the cube, ~1.6e5 voxels)", () => {
+  it("the smallest over a million values, by a loop — Math.min(...values) threw RangeError there", () => {
+    const xs = Array.from({ length: 1_000_000 }, (_, k) => k);
+    expect(minOver(xs, (k) => 7 + ((k * 7919) % 1_000_003) / 1000)).toBe(7);
+    expect(-minOver(xs, (k) => -k)).toBe(999_999);
+    expect(minOver([] as number[], (k) => k)).toBe(Infinity);
+  });
+});

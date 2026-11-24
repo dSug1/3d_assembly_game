@@ -344,7 +344,7 @@ export function installTuningMenu(st: SceneState): void {
       ],
       subsections: [
         {
-          // ⭐⭐⭐ (2026-11-23, S4 — `ORBIT_SURFACE_DRIVE.md` §3.7) THE ORBIT'S SURFACE: its three switches together (a folder holds 9 at most)
+          // ⭐⭐⭐ (2026-11-23, S4 — `ORBIT_SURFACE_DRIVE.md` §3.7) THE ORBIT'S SURFACE: its four switches together (a folder holds 9 at most; S11's `surfaceL1` the fourth)
           title: "THE ORBIT'S SURFACE",
           sliders: [
             // ⭐⭐⭐ (2026-11-22, `ORBIT_SURFACE_READOUT.md` §5 — S2) the landing map's P2 beside today's depth: the second ring and the HUD's `landing` line
@@ -353,6 +353,8 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "mouth's hold: where (0 = as built, 3b7a479; 1 = never on a cap; 2 = + only over a void the piece enters)", "mouthHoldDomain", 0, 2, 1),
             // ⭐⭐⭐ (2026-11-23, `ORBIT_SURFACE_DRIVE.md` §3.7 — S4) P2 drives the piece's support (1) and the gizmo's depth (2)
             tunable(st, "P2 drives (0 = as deployed, e80a7b0; 1 = the piece's support; 2 = + the gizmo's depth)", "landingDrives", 0, 2, 1),
+            // ⭐⭐⭐ (2026-11-24, `ORBIT_SURFACE_L1.md` §10 — S11) L1's caps: the fillers between placed parts in the face map
+            tunable(st, "L1 caps (0 = LIVE 19c7f88; 1 = the fillers)", "surfaceL1", 0, 1, 1),
           ],
         },
       ],
