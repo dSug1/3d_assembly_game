@@ -99,5 +99,5 @@ answers are the same — measured on 32 000 questions — and a turn on `Scene_2
 
 ## 8. For his word
 
-* **Build S14** (the cast behind `landingEngine`, his look on `Scene_1` at 1, then its default) — ⏳ recommended before S11's build, which reads
-  the same engine. Or an independent audit of this study first.
+* **Build S14** (the cast behind `landingEngine`, his look on `Scene_1` at 1, then its default) — ⏳ recommended; independent of S11 (the caps
+  are faces of the face map, never P2's collision pieces). Or an independent audit of this study first.
