@@ -224,8 +224,8 @@ step 60° and B6's 30° apart, read where they live.
 3. **A wide hollow that is no goal — BRIDGED**, *"if this is in line with rules we have set for hollows already"*: it is (R1b).
 4. **No face count — a MINIMUM SIZE per face and facet** (*"large parts may require more than 16 faces … the hull of a car"*), and *"clarify what
    happens as the assembly gets assembled: how the proxy surface of the assembly evolves and how to append the faces"* → §3bis.
-5. **The resting-face candidates — the LARGEST faces**: the proxy's faces of at least a quarter of its largest face's area (⏳ the share, proposed
-   ¼ as the face map's, a constant of its own — for the audit).
+5. **The resting-face candidates — the LARGEST faces**: the proxy's faces of at least a quarter of its largest face's area (the share ¼ as the face map's, a constant
+   of its own — ✅ DECIDED 2026-11-24, his *"do 1, 2 and 3 and 5 as you recommend"*).
 
 ## 9. The checks — as built
 
@@ -332,7 +332,7 @@ FAIL, 47.
   within ±30° (the angle rule, §7.3 Q4: a bore's wall six slabs, as its hexagon), its sagitta GEOMETRIC — (w / 2)·tan(span / 2), w its narrowest
   width — plus τc; the band reaches the facet's lens at the piece's ends. Faces between pieces, inside the part, are never read.
 * **The resting candidates** (`restingCandidates`, decision 5 + §7.1 row 10): the real planar proxy faces on a supporting plane of the proxy's hull
-  (within the flush), each ≥ `RESTING_MIN_SHARE` (¼ — ⏳ PROPOSED, a constant of its own) of the largest, the largest first. None: a finding (REST);
+  (within the flush), each ≥ `RESTING_MIN_SHARE` (¼ — ✅ DECIDED 2026-11-24, his word; a constant of its own) of the largest, the largest first. None: a finding (REST);
   the list: information.
 
 **The vectors** (`tests/collision_cover.test.ts`, 14; the shapes in `tests/helpers/proxy_shapes.ts` — `boxPiece`, `ngonPiece`, `tube`): PASSING — his

@@ -191,7 +191,7 @@ outer surface (§7.1 row 5 there) — so §10's question is answered by them, an
 (R1 at the ρ-closing, R2 closed, R1b caps; §9.2 there). The plinth: **58.6 % of its outer surface not covered, its proxy open** (1432 mm of edges).
 B1i stays, printed as information, until the next scene is built by the rules.
 
-## 14. ⏳ B3 AND B5 — THE LANDING PER STAGE, THE COVERAGE LIST: A STUDY (2026-11-23 night — PROPOSED; his word before the build)
+## 14. ✅ B3 AND B5 — THE LANDING PER STAGE, THE COVERAGE LIST: A STUDY (2026-11-23 night) — DECIDED 2026-11-24 (his word: as recommended)
 
 > Written during his overnight word (*"continue building … without asking me questions"*); by his rules (docs before build; the four-part method) a
 > check with open definitions is studied first, its questions kept for his morning. **Nothing of it is built.**
@@ -224,3 +224,6 @@ proxy nor a candidate: no orientation — reported, never guessed; a face smalle
 **For his word (three questions):** (Q1) the held orientation — the resting face against the face, both turns (recommended), or every resting
 candidate? (Q2) "landable" within the fit, 0.5 mm (recommended), or the flush, 0.25 mm? (Q3) B3 / B5 information until the playability brief exists
 (recommended), or a pass rule now from the seats (each part's goal host face landable for it)?
+
+**✅ His answers (2026-11-24, *"do 1, 2 and 3 and 5 as you recommend"*):** Q1 the resting face against the face, both turns; Q2 landable within the fit (0.5 mm);
+Q3 information until the playability brief exists. The definitions above are DECIDED as written → the build: §15.

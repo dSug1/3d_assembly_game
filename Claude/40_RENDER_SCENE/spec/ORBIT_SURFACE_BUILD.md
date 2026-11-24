@@ -191,8 +191,8 @@ check script, run at the scene workflow's export gate, shown failing once, in th
 ⛔ **It binds every package's brief from now on**: each brief ends with *"what did this teach about how a scene must be drawn, ordered or
 marked? → its check, its control, its row in §8"*; a builder with nothing to add says so.
 ⭐⭐ **WIDENED 2026-11-22 (the owner)** — *"also, make sure that you capture in the md files that any lesson learned in this orbit's surface work is captured for the scene construction workflow or the blender drawing workflow, so that later on I can automate the construction of the scene and the drawing of the parts in blender with rules which have incorporated those lessons learned."* → every lesson first a RULE of construction or drawing
-(`SCENE_WORKFLOW.md` §10: the form a script applies; the registers §10.3 and `PART_AUTHORING.md` §6.4), then its check; the column *its rule* below. One script or several: open
-(`SCENE_WORKFLOW.md` §9.3).
+(`SCENE_WORKFLOW.md` §10: the form a script applies; the registers §10.3 and `PART_AUTHORING.md` §6.4), then its check; the column *its rule* below. One script or several: ✅ decided
+2026-11-24 — one command, each check its own file (`SCENE_WORKFLOW.md` §9.3).
 
 | # | the finding (where it was learned) | what a scene must satisfy | its rule (`SCENE_WORKFLOW.md` §10) | its check | status |
 |---|---|---|---|---|---|
@@ -214,10 +214,12 @@ marked? → its check, its control, its row in §8"*; a builder with nothing to 
 | 17 | ⭐ EVERY `Scene_2` proxy is a selection of faces, OPEN — none covers its part's outer surface (E01 58.6 %, E02 52.1 %, E03 98.9 %, E04 43.9 %, E05 / E06 35.5 %, E13 / E14 66.8 %, E17 42.1 % not covered); the pistons E07 – E12 and E15 / E16 carry a RESTING face only (S6 packet 2, `PROXY_AND_COLLISION_RULES.md` §9.2) | every part's proxy CLOSED over its outer surface (the ρ-closing), its edges shared | **D8** (R1, R2) | R1, R2 (`proxy_cover.ts`, `check_part_solids.ts`, a vector) | ✅ the check built; `Scene_2` not rebuilt here (his word) |
 | 18 | `Scene_2`'s crank chamber (E02, ≈ 66 300 mm²) and the heads' ports and pockets (E13 / E14, 8 places each) are DEEPER than their mouth is wide, UNCAPPED (S6 packet 2) | every cavity deeper than its mouth is wide and every undercut CAPPED flush, a cap's rim on the real edges | **D8** (R1b) | R1b (the sky; a vector) | ✅ the check built; `Scene_2` not rebuilt here |
 | 19 | `Scene_2`'s collision pieces and render DISAGREE both ways: the render outside its pieces (E04 up to 42 mm, the pistons 29 mm, the heads 17 mm, E05 / E06 12 mm); pieces sticking out of the part (the crankshaft's webs 3 – 6 mm, each piston's skirt filled 9 – 15 mm, E15 / E16 4 – 9 mm) (S6 packet 3, `PROXY_AND_COLLISION_RULES.md` §9.4) | the pieces' union within τc of the render both ways — a curve by the angle rule's ring (its geometric sagitta exempt), a thin feature circumscribed | **D8** (C-R2 – C-R4) | C-R2 (`collision_cover.ts`, `check_part_solids.ts`, a vector) | ✅ the check built; `Scene_2` not rebuilt here |
-| 20 | Twelve `Scene_2` parts have NO resting candidate: E02, E04, E05, E06 (an outer node not one planar face) and every part with a resting face only (S6 packet 3) | at least one real flat proxy face on the hull, ≥ ¼ of the largest (his decision 5) | **D8** (decision 5) | REST (`restingCandidates`; a vector) | ✅ the check built; the share ¼ PROPOSED |
+| 20 | Twelve `Scene_2` parts have NO resting candidate: E02, E04, E05, E06 (an outer node not one planar face) and every part with a resting face only (S6 packet 3) | at least one real flat proxy face on the hull, ≥ ¼ of the largest (his decision 5) | **D8** (decision 5) | REST (`restingCandidates`; a vector) | ✅ the check built; the share ¼ DECIDED 2026-11-24 |
 | 13 | `Piece44` is an inverted frustum: the support on P2 equals today's where a part's widest extent is at its top; on a slant P2 reads the contact, lower (S4's V3) | — a GAME rule's (P2 is exact), not a scene's | none | V3 (`landing_drive.test.ts`) | ✅ vector |
 
 ⭐ Rows are ADDED by each package and by each look of the owner; a row leaves only when its check is built AND has been seen failing.
+⭐ **(2026-11-24, his word: *"Scene 2 need a separate work in a separate worktree"*)** `Scene_2`'s findings — rows 14 – 20, the file's side —
+are fixed by their OWN work in its own worktree (queue row `GM13`), never here; the checks stay this work's.
 
 ## 9. THE TERMS THE CLOSED ORBIT SETS FOR THE WIRING (2026-11-22 evening — read before any wiring)
 

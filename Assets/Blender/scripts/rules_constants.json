@@ -104,7 +104,7 @@
   "RESTING_MIN_SHARE": {
     "value": 0.25,
     "unit": "share",
-    "rule": "decision 5: a resting candidate ≥ this of the largest (⏳ PROPOSED)",
+    "rule": "decision 5: a resting candidate ≥ this of the largest (decided 2026-11-24)",
     "home": "src/core/collision_cover.ts"
   }
 }

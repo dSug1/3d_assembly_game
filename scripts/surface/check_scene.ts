@@ -1,5 +1,5 @@
 // ⭐⭐⭐ THE SCENE'S EXPORT GATE — ONE command, ONE verdict, ONE exit code (SCENE_WORKFLOW.md §11.2 item 1; §9.3's proposal, built 2026-11-23 on his
-// word "continue building the orbit's surface pipeline" — ⏳ his word on §9.3 still owed: reversible). Behind it EACH CHECK STAYS ITS OWN FILE, named
+// word "continue building the orbit's surface pipeline" — ✅ his word on §9.3, 2026-11-24: kept as built). Behind it EACH CHECK STAYS ITS OWN FILE, named
 // after the question it answers (his wish for the first: "so we know what the script is about when we re-use it later on"), each run as its own
 // process; a new check joins `CHECKS` when it is built — never a script run apart (§11.3).
 //

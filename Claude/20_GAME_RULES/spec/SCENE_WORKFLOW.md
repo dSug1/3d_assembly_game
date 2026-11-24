@@ -487,15 +487,15 @@ the FILES break it: ask which. And a check meant to catch the owner's known defe
   face too small to land on): BOTH — the vector for the rule, and a scene check that reports WHERE a scene has that shape, so that it is seen
   at the export gate and not first on the device.
 
-### 9.3 One script or several — ⛔ OPEN, nothing built
+### 9.3 One script or several — ✅ DECIDED 2026-11-24: ONE command, each check its own file (built)
 
 The owner left both ways open (above): a script for all the surface's findings, or `check_parts_reach_their_seat.ts` with a wider scope.
 **Proposed (Claude), his word owed when the second check is built:** ONE command to run at the gate, giving one verdict for the scene; behind it
 each check stays its own file, named after the question it answers — as he asked for the first (*"so we know what the script is about when we
 re-use it later on"*) — so widening the scope does not make that name untrue. Until then the gate runs §8's command.
 ⭐ (2026-11-23) The loops that will run them with no hand step — and what each lacks: §11.
-⭐ **(2026-11-23 night) THE ONE COMMAND BUILT on this proposal** (his *"continue building the orbit's surface pipeline"*; ⏳ his word on §9.3 still
-owed — reversible): `npx vite-node scripts/surface/check_scene.ts -- <scene.glb> [<plan.json>]` runs each check as its own file and process, prints
+⭐ **(2026-11-23 night) THE ONE COMMAND BUILT on this proposal** (his *"continue building the orbit's surface pipeline"*; ✅ his word on §9.3
+2026-11-24, *"do 1, 2 and 3 and 5 as you recommend"*: kept as built): `npx vite-node scripts/surface/check_scene.ts -- <scene.glb> [<plan.json>]` runs each check as its own file and process, prints
 one table and one VERDICT, exits 0 PASS · 1 FAIL · 2 NOT READ (`SELF=1`: its own controls). `Scene_2`: the reach PASS (48 s), the parts FAIL
 (100 s) → FAIL, exit 1.
 
@@ -581,7 +581,7 @@ the generator's test: it proves that what was generated obeys the rules (§10), 
 
 ### 11.2 The part-drawing loop — what it lacks (the first to build)
 
-1. ✅ **ONE command per scene** running every check of the export gate: one verdict, one exit code — §9.3's proposal (each check its own file behind
+1. ✅ **ONE command per scene** running every check of the export gate: one verdict, one exit code — §9.3 (✅ decided 2026-11-24; each check its own file behind
    it, named after its question). **BUILT 2026-11-23 night**: `scripts/surface/check_scene.ts` (its `CHECKS` list: the reach, the parts; a new check
    joins it).
 2. **The build script calls it after its export, and stops on a FAIL** — today `build_engine.py` calls no game-side check and stops on none of its

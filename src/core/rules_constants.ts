@@ -38,6 +38,6 @@ export function rulesConstants(): Readonly<Record<string, RuleConstant>> {
     R1B_AMBER_DEG: { value: R1B_AMBER_DEG, unit: "deg", rule: "R1b: the amber band's top (atan ½)", home: "src/core/proxy_cover.ts" },
     CLOSED_STEP_MM: { value: CLOSED_STEP_MM, unit: "mm", rule: "R2: an edge read every this (closed)", home: "src/core/proxy_cover.ts" },
     COLLISION_SAMPLE_MM: { value: COLLISION_SAMPLE_MM, unit: "mm", rule: "C-R2: the render sampled at this spacing", home: "src/core/collision_cover.ts" },
-    RESTING_MIN_SHARE: { value: RESTING_MIN_SHARE, unit: "share", rule: "decision 5: a resting candidate ≥ this of the largest (⏳ PROPOSED)", home: "src/core/collision_cover.ts" },
+    RESTING_MIN_SHARE: { value: RESTING_MIN_SHARE, unit: "share", rule: "decision 5: a resting candidate ≥ this of the largest (decided 2026-11-24)", home: "src/core/collision_cover.ts" },
   };
 }

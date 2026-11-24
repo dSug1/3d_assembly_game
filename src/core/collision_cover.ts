@@ -20,7 +20,7 @@ import { cross, dot, sub, type Vec3 } from "./vec";
 
 /** ⭐ (C-R2 (a)) the render read every this (mm) */
 export const COLLISION_SAMPLE_MM = 2;
-/** ⭐ (decision 5) a resting candidate at least this share of the largest one's area — ⏳ PROPOSED, ¼ as the face map's share (`facetMinShare`), a constant of its own for the audit */
+/** ⭐ (decision 5) a resting candidate at least this share of the largest one's area — ✅ DECIDED 2026-11-24 (his word), ¼ as the face map's share (`facetMinShare`), a constant of its own for the audit */
 export const RESTING_MIN_SHARE = 0.25;
 
 /** one finding of packet 3; `info`: reported, not a failure */
