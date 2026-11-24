@@ -301,7 +301,7 @@ placed body the orbit reads is convex (its hull's volume = its mesh's)"* would m
   word to deploy (⭐ done 2026-11-23: LIVE main `ff41fc3` = `5d30edf5`). The ring and the HUD's `landing` line; the slider `landingReadout` (GIZMO & SECTIONS): 0 =
   `3b7a479`.
 
-## 15. ⏳ THE RING SHOWS WHAT THE GIZMO USES (his word 2026-11-24: *"make the white ring show what the gizmo uses"*) — the design, before the build
+## 15. ✅ BUILT (`cfc5e325`) — THE RING SHOWS WHAT THE GIZMO USES (his word 2026-11-24: *"make the white ring show what the gizmo uses"*) — the design, before the build
 
 **Why.** His question (2026-11-24, a screenshot: `P2 Δ+51.8 mm land Piece21`, the white ring above the yellow): *"why the white gizmo and the yellow
 gizmo do not coincide?"* Since S4 (`landingDrives` 2, `ORBIT_SURFACE_DRIVE.md` §3) P2 places the gizmo — read FROM WHERE THE PIECE IS (`F`, the face
@@ -327,3 +327,10 @@ the rings apart wherever the piece is already below a rim or does not rest on it
 `nothing`, `inside` and `uncovered`; read from `F` below a rim (his case: the from-outside point on the rim, the driven one below it).
 
 **When.** After S14 lands (`ORBIT_SURFACE_LANDING_CAST.md` — it edits `landing_readout.ts` now). Then the gates (G1) and his look.
+
+**As built (2026-11-24, `cfc5e325`).** `landing_readout.ts`: the source's `drive` (= `driveGizmoLanding`), `DriveShown`, `shown.drive` (the
+driven gizmo `mr0` handed in as the readout's last argument — its point taken, never recomputed), `ringOf` (the ring's place and colour); the HUD line
+from `drive` where P2 drives, as built elsewhere (its text unchanged). `tests/landing_ring_drive.test.ts` (6), each RED first on a mutant: the ring on
+the readout always (4 red), the line ignoring the drive (4), the drive's point taken as today's (1). `npm run verify`: 2556 of 2557 — the one red
+`boot_heaps`' 3 s wall-clock cap under load (a headless replay ran beside it), 9 / 9 alone. ⏳ G1 (his records: `g`, `c`, `t`, `p` bit for bit) and
+his look owed.
