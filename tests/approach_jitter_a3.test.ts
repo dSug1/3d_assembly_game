@@ -198,7 +198,7 @@ describe("⭐⭐⭐ A3-p (D-J4) — the latch and the unlatch (`09fv_r01` f1906 
 });
 
 describe("⭐⭐⭐ A3-p (D-J4) — the switch", () => {
-  it("`followParkOwn`, 1 by default (his word 2026-11-25: default at 1 also in the two other branches, as LIVE `870078b`; 0 = `3b7a479`), 0 or 1 only; the wiring parks through `parkOwn` at the read and the record, the turntable's ψ as is at 0", () => {
+  it("`followParkOwn`, 1 by default (his word 2026-11-25: deploy with all sliders at 1; 0 = `3b7a479`), 0 or 1 only; the wiring parks through `parkOwn` at the read and the record, the turntable's ψ as is at 0", () => {
     expect(DEFAULT_CONFIG.followParkOwn).toBe(1);
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, followParkOwn: 1 })).not.toThrow();
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, followParkOwn: 2 })).toThrow(/followParkOwn/);

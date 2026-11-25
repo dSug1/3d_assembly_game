@@ -1,8 +1,9 @@
 # THE ORBIT'S SURFACE — what it aims at, its rules and principles, its singularities, its obstacles, what the rebuild must specify (2026-11-16)
 
+> ✅✅ **2026-11-25 — THE `Scene_1` PHASE CLOSED (his word)**: built and LIVE (`8204f25`) → [ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md) §10; the rest with `GM13`; step B parked (`RND8`: reopened only if a scene shows an issue, otherwise nothing built (the orbit is satisfactory)).
 > ⭐⭐⭐ **2026-11-22 — THE SURFACE WORK STARTS (his word: *"We will then move to the orbit surface work"*).** The condition below is MET: the orbit
 > charts are CLOSED (LIVE `3b7a479`, `1.0.156-Orbits_with_camera_follow_final`, the best so far) and this branch is merged (`1.0.154-`, 2026-11-22). The workfront: `1.0.157-Orbit_surface`.
-> First: ask him again what §8 (its end) keeps for this moment → [`HANDOVER_2026-11-22_orbit_surface.md`](../../00_CORE/queue_notes/HANDOVER_2026-11-22_orbit_surface.md).
+> First: ask him again what §8 (its end) keeps for this moment → [`HANDOVER_2026-11-22_orbit_surface.md`](../../00_CORE/queue_notes/HANDOVER_2026-11-22_orbit_surface.md). ✅ **Asked 2026-11-22 evening, all four answered** → [ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md) §2bis.
 > ⭐⭐ **2026-11-22 evening — WHAT CHANGED SINCE THIS SPECIFICATION WAS WRITTEN (11-16 / 17) — read before building** ([ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md) §9).
 > (1) Its code references were read on `30f7bb3` / `1190db2`; since then step 2.5 deleted the old detectors, `chartLayout` / `chartCalm` and the legacy
 > zones (§3.3's T3 row, the audit's WS17); the camera became a FOLLOWER far out and ONE PICTURE at every distance (11-20 – 11-22; R6 deleted twelve
@@ -67,8 +68,8 @@ gizmo's void test and the piece's footprint support answer nearly the same quest
   S26 / S27 (Q6); the Blender checks and the playability brief, now written into the workflow (Q7, §7bis); S25 / S22 (Q8); the first round's open
   points (Q9). **P3, P6** withdrawn (the orbit's matters: audit §5).
 
-**What stays open.** The classes with no rule (⏳ in §5.2: C22 long flat shapes, a piece wider than its facet, C38 free-form, the layout's events
-at a pole); the classes the study has no shape for (§5.3); the findings handed over — to the ORBIT's queue (F17, the mouth's lip, F7 an event at a
+**What stays open.** The classes with no rule (⏳ in §5.2: C38 free-form; ⭐ 2026-11-25 a piece wider than its facet RULED — R-W,
+[ORBIT_SURFACE_WIDE_PIECE.md](ORBIT_SURFACE_WIDE_PIECE.md); C22 long flat shapes and the layout's events at a pole handed to the orbit — `RND8`, reopened only if a scene shows an issue, his word); the classes the study has no shape for (§5.3); the findings handed over — to the ORBIT's queue (F17, the mouth's lip, F7 an event at a
 seat, D5 after a closing WS21, the camera's frame far out), to the CONTACT's queue (the drop, §2.2 P5). Nothing is built.
 
 **What cannot be avoided (§4).** A direction field round a closed shape has singular points (the poles; a hole through adds saddles); a depth
@@ -490,7 +491,7 @@ Sizes (from `scene_*.ts`, `SCENE_2_ASSEMBLY.md`): every scene is held near the c
 
 ### 3.0 How the catalogue is derived — so that it does not rest on the shapes met so far *(review)*
 
-[PROPOSED] The classes C1 – C24 of §3.1 are the ones the scenes and the probes have met. To cover what they have not, every feature of a
+[ACCEPTED by the owner 2026-11-22 — to be tested] The classes C1 – C24 of §3.1 are the ones the scenes and the probes have met. To cover what they have not, every feature of a
 surface is read on the grid below; a class is one cell of it, and a shape nobody has drawn yet falls in a cell too. §3.1b lists the cells
 the pipeline has not met.
 
@@ -536,7 +537,7 @@ names the principle that answers each class (§5.2 in full); ⏳ = still open. "
 | **C21** | **no level face; tied pole candidates; symmetry** | a ridge, a vertex up, equal faces | T for ties; G for the tie tolerance | `Scene_0`'s zenith ridge; test shapes | charts' top set within 1° (`CHART_CAP_DEG`, `face_map.ts:810`) | 1° → **a stated key** |
 | **C22** | **very long, very flat shapes** | aspect ratio far from 1 | G | `Scene_0bis` (730 × 483 mm), `Scene_2`'s plinth | spit zones | — → **⏳ open** |
 | **C23** | **the surface changing in play** | a seat adds a protrusion, fills a slot; `Scene_2` grows from a slab | T (the surface's identity changes) | every scene at each seat | face map rebuilt per placed set (`placedKey`, `assembly_wiring.ts:840`); never measured across a seat | — → **S19** |
-| **C24** | **the held piece's own size** | a piece as big as the assembly, or bigger than the voids | G | `Scene_2`'s cases and banks | `heldFoot` = the two smallest sizes of the drawn mesh's own box (`assembly_wiring.ts:926`) | — → **P2 (⏳ wider than its facet)** |
+| **C24** | **the held piece's own size** | a piece as big as the assembly, or bigger than the voids | G | `Scene_2`'s cases and banks | `heldFoot` = the two smallest sizes of the drawn mesh's own box (`assembly_wiring.ts:926`) | — → **P2; wider than its facet: R-W** ([ORBIT_SURFACE_WIDE_PIECE.md](ORBIT_SURFACE_WIDE_PIECE.md)) |
 
 ### 3.1b The classes the pipeline has not met *(review)*, and the two the study added — moved
 
@@ -618,7 +619,7 @@ still reaches only the first). Where a scene's parts are boxes, frusta and prism
 
 ### 5.2 The table SINGULARITY → PRINCIPLE → EVENT
 
-[PROPOSED] "Nothing to land on" = no contact along the facet's direction: the gizmo on the facet's plane, marked. "Approached" = reached by
+[ACCEPTED by the owner 2026-11-22 — to be tested] "Nothing to land on" = no contact along the facet's direction: the gizmo on the facet's plane, marked. "Approached" = reached by
 A + dy or a plunge. "⏳ open" = no principle answers it yet.
 
 | class | answered by | what it gives | event at its border |
@@ -641,15 +642,15 @@ A + dy or a plunge. "⏳ open" = no principle answers it yet.
 | C19 a hole in one face | L1 from triangles, then P2 | as C4 / C6 | as C4 / C6 |
 | C20 face on the floor | as built | not a place | — |
 | C21 ties, symmetry | a stated key | — | — |
-| C22 very long, flat shapes | ⏳ open — the spits handle the layout | — | the spit's entry |
+| C22 very long, flat shapes | the landing: P2 (S1's thin bar); the layout: the spits — the orbit's (L3 / L4), handed to it — `RND8`, reopened only if a scene shows an issue (his word 2026-11-25, [ORBIT_SURFACE_WIDE_PIECE.md](ORBIT_SURFACE_WIDE_PIECE.md) §5) | — | the spit's entry |
 | C23 a seat; C46 topology changing | S19 | L1 – L4 rebuilt; the gizmo relocated once | a relocation |
-| C24 a piece as big as the assembly; C43 the body against the point | P2 (the body is the ruler) + P5; P2 ③ past an edge *(study, F9)* | ⏳ a piece wider than its facet: open | — |
+| C24 a piece as big as the assembly; C43 the body against the point | P2 (the body is the ruler) + P5; P2 ③ past an edge *(study, F9)*; ⭐ a piece wider than its facet: **R-W** (2026-11-25, [ORBIT_SURFACE_WIDE_PIECE.md](ORBIT_SURFACE_WIDE_PIECE.md)) | it lands wherever the gizmo can stand on the facet, never widened by the piece; a seat past the facet: B4 / C5 | — |
 | C25 open cavity | P2 (its floor); inner walls approached (S13), B4 says which goals need it | — | as C3 |
 | C31 void with a profile; C32 ring-shaped; C34 array; C28 touching *(study: as C11)* | P2 on the layered depth, level by level | exact for the piece *(study: L26 – L39)* | as C3 |
 | C35 void or face? | P2 + D5 by layers: L3 the facet, L2 the use *(study: L15, L16, L40, L41)* | no order of tests needed | a crossing if a face |
 | C39 face at a threshold | B6 — refused or flagged at authoring, by its margin (§2.6 (3)) | — | — |
 | C40 strongly non-convex | measured by B5's coverage, warned *(study: L48 43 %, L50 32 %)*; lobes not designed | — | the far path moves with the contour, at a seat (F7, P1) |
-| C41 a singularity on a singularity | its parts, for the landing *(study: Q01, Q05, Q08)*; a mouth at a pole: Q4 (Q02); ⏳ the layout's events at a pole, not studied | — | one event, never two |
+| C41 a singularity on a singularity | its parts, for the landing *(study: Q01, Q05, Q08)*; a mouth at a pole: Q4 (Q02); the layout's events at a pole: L4's — the orbit's, handed to it — `RND8`, reopened only if a scene shows an issue (his word 2026-11-25, [ORBIT_SURFACE_WIDE_PIECE.md](ORBIT_SURFACE_WIDE_PIECE.md) §5) | — | one event, never two |
 | C42 empty or nearly empty | S29 *(study: L51, L52)* | out of reach: a placed part at boot; round one small part P2 ① | — |
 | C44 the piece turned | P2 ② (§8 Q2) *(study: L53)* | the map of the piece as held | a depth change at the turn |
 | C45 goal entries | S13 + B4 + S28 *(study: L05, Q07)* | each goal's entry SET computed (B4), narrowed by the author where wanted; a direction whose first contact is the seat a landing, any other a guarded move | the entry, an event |
@@ -665,6 +666,15 @@ A + dy or a plunge. "⏳ open" = no principle answers it yet.
   (C21), long flat shapes (C22), defective input (C47), a narrowing profile in the sweep, facets other than the top and the front, tilted frames and
   zone switches (the surface's classes across them, S19 (ii)), the relocation at a seat (C46); for the orbit's queue, the far bump through
   `mapTarget`'s angles with the calm (F17: the study tilts `u` by a fixed 20° / 45°).
+  ⭐ **(2026-11-23 night) ADDED** (`tests/landing_map.test.ts`, §5.3's block — each against the brute force, sample for sample, pieces A and B): a
+  ROUND HOLE through the top and a round BLIND hole (C19: 24 convex wedges), a 12-sided CYLINDER lying (C15; from the top and the front), a DOME (C38),
+  a long THIN BAR (C22), an OBLIQUE facet (30° off the vertical). The mutant M7 (the edge-against-edge facets left out) now turns 2 red (the dome
+  with the slanted ridge). ⚠ The brute force's convention bound (its footprint shrunk 1e-4 mm) is now derived per shape and includes a CORNER's
+  diagonal (√2): the dome's band (slope 5.03) read 7.1e-4 mm — exactly 5.03 × √2 × 1e-4. ⭐ Then a FAN at an apex (C16: a pyramid), the FLOOR
+  past the block's edge (C20) and a NARROWING profile (a V trench of two wedges). ⭐ (2026-11-24, S12) `void_sim`'s nine families ADDED (A – I: blind
+  recesses, a through hole, a groove, a through slot, a U-slot, a corner notch, a rebate, an L, an undercut — on the study's block, against the brute
+  force; the map's M3 and M5 turn 3 each red). The rest — the frames across a tilt or a zone switch (S19 (ii)), the relocation at a seat (C46), F17's
+  bump — are the orbit's and the game's, not the map's: handed to `RND8` (the orbit is closed — his word).
 * **Per shape, for two pieces** (41 × 45 and 80 × 80 mm): L2's landing depth against a brute-force drop of the piece's `UCX_` (the second
   implementation that falsifies the first); the L5 gizmo on a 1 mm sweep — no jump outside a named event; the same after the shape is moved
   and turned; the same for every order of placing its parts; the same classes in every frame (S19 (ii)).
@@ -689,7 +699,7 @@ mapping: only the depth rule changes) → [ORBIT_SURFACE_AUDIT.md](ORBIT_SURFACE
 
 **Build first [DECIDED 2026-11-16 with Q2, Q4, Q7 — to be tested]:** (1) L2, the landing map (P2), as one pure function, its vectors against a brute-force drop, wired
 first as a READOUT beside today's depth on `Scene_1` (so the owner sees the difference before it drives anything) — the study's P reading is
-its second implementation; (2) the mouth's hold restricted (Q4); (3) the Blender checks B1, B2, B4 (§7bis); then (4) L2 driving the gizmo, the footprint support re-expressed on it with its wall kept
+its second implementation (✅ built 2026-11-22, S2); (2) the mouth's hold restricted (Q4) (✅ built 2026-11-23, S3 — [ORBIT_SURFACE_MOUTH_HOLD.md](ORBIT_SURFACE_MOUTH_HOLD.md)); (3) the Blender checks B1, B2, B4 (§7bis); then (4) L2 driving the gizmo, the footprint support re-expressed on it with its wall kept (✅ built 2026-11-23, S4 — [ORBIT_SURFACE_DRIVE.md](ORBIT_SURFACE_DRIVE.md))
 (a replay of `Scene_1` in contact range against `Piece44`: unchanged). The drop removed (Q10) is the contact's queue's, not this list's. *(alignment)* The far-foot step first listed here (the shell fed the contour point)
 is withdrawn: F17 and the mouth are defects recorded for the orbit's queue, F7 an event at a seat (§2.2 P1, Q1).
 
@@ -756,7 +766,8 @@ fails, with a planted **control** in `CHECK_CONTROLS` (*"a check never seen fail
 * [`PART_AUTHORING.md`](../../30_OBJECTS_3D/spec/PART_AUTHORING.md) §6 (new): the checks' table, the entry set and the ghost, the checklist; pointers at
   §1 (exposed = reachable from outside, S22), §3 item 3 (the ghost at the depth already superseded; the ghost computed where the entry set is
   narrow), §4.2 (B1 under "not yet in the report"), §4.3 item 3 (the review gets B3 – B6's colours and pass rules).
-* The game: a `src/core` checker beside `readModelCatalog` (B1's subset at load; the rest in vectors on each scene's `.glb`) — not built. What it
+* The game: a `src/core` checker beside `readModelCatalog` (B1's subset at load; the rest in vectors on each scene's `.glb`) — ⭐ BUILT 2026-11-24
+  (S13: `checkSolidsAtImport`, called by `render/model_import.ts`, a HUD warning — `ORBIT_SURFACE_PART_CHECKS.md` §20). What it
   costs per scene (estimates): [ORBIT_SURFACE_AUDIT.md](ORBIT_SURFACE_AUDIT.md) §8.2.
 
 ---
@@ -785,8 +796,8 @@ round's decisions each answered: [ORBIT_SURFACE_AUDIT.md](ORBIT_SURFACE_AUDIT.md
 question in the md file and ask again when we work on the orbit surface later on."*
 1. **A goal's way in: is "a free direction exists" enough, or must the player be able to get there?** Check B4 answers *"can this part slide into its seat along at least one direction without touching a placed part?"* Not yet *"can the player bring the piece to where that slide starts?"* Example: a seat open only from under an overhang — the slide upward is free, but the gizmo may never reach a place under the overhang (no face there is a place of the orbit). Accept a level only when, for every goal, a free direction starts at a place the gizmo reaches (needs the landing map B3 and the coverage B5 first; §2.5 already writes it so) — or is the first test enough for now? ✅ **2026-11-17: the first test is enough for now; the second once the landing map exists.**
 2. **The entry-set check was run on boxes only** (the study's shapes): run it on the real parts' collision pieces (`UCX_`, `Scene_2`) before the first surface build? ✅ **2026-11-17: yes — package S0.**
-3. Still [PROPOSED], his word owed: §3.0 the catalogue derived from a grid of questions; §5.1 the six layers L0 – L5; §5.2 "nothing to land on" (the gizmo on the facet's plane, marked) and "approached". ✅ **2026-11-17: the six layers ACCEPTED, to be tested; the catalogue's grid and §5.2's two words still owed.**
-4. Still ⏳ open (§5.2): C22 very long flat shapes; a piece wider than its facet (C24); C38 free-form; the layout's events at a pole (C41).
+3. Still [PROPOSED], his word owed: §3.0 the catalogue derived from a grid of questions; §5.1 the six layers L0 – L5; §5.2 "nothing to land on" (the gizmo on the facet's plane, marked) and "approached". ✅ **2026-11-17: the six layers ACCEPTED, to be tested; the catalogue's grid and §5.2's two words still owed.** ✅ **2026-11-22: the catalogue's grid and §5.2's two words ACCEPTED, to be tested** ([ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md) §2bis).
+4. Still ⏳ open (§5.2): C22 very long flat shapes; a piece wider than its facet (C24); C38 free-form; the layout's events at a pole (C41). ✅ **2026-11-25** (*"propose the rule for B. and implement"*): C24 ruled — R-W, vectors, no game code; C22, C41 their layout the orbit's — ✅ handed to it (`RND8`), his word: *"Agree with 1 but mention this has to be reopened only if a scene shows an issue, otherwise nothing to be built as the orbit is currently satisfactory"* ([ORBIT_SURFACE_WIDE_PIECE.md](ORBIT_SURFACE_WIDE_PIECE.md)).
 
 ---
 

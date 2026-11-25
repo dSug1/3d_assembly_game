@@ -1,0 +1,37 @@
+{
+  "note": "L1's fillers (ORBIT_SURFACE_L1.md §10), written by scripts/surface/l1_caps.ts — never edited by hand. lo / hi in the scene's authored units, in its frame with every body at its goal; walls: the placed parts it needs; goals: loose pieces whose goal volume it borders (not walls); anchor: the wall that carries it (its goal pose); mm, faces, place: for the reader.",
+  "scene": "Scene_1",
+  "unitM": 0.1,
+  "fillers": [
+    {
+      "id": "L1cap_Scene_1_1",
+      "lo": [1.035, 0.155, -0.175],
+      "hi": [1.165, 0.735, 4.325],
+      "walls": ["Piece19", "Piece20", "Piece39"],
+      "goals": ["Piece41"],
+      "anchor": {
+        "id": "Piece19",
+        "position": [0.555, 0.445, 1.91],
+        "quat": [1, 0, 0, 0]
+      },
+      "mm": {
+        "lo": [103.5, 15.5, -17.5],
+        "hi": [116.5, 73.5, 432.5]
+      },
+      "faces": {
+        "-x": "GLUED Piece19",
+        "+x": "GLUED Piece20",
+        "-y": "FLUSH Piece19 Piece20 (in part Piece43)",
+        "+y": "GLUED Piece39",
+        "-z": "GOAL Piece41",
+        "+z": "FLUSH Piece19 Piece20 Piece39"
+      },
+      "place": {
+        "areaMm2": 42367,
+        "minSkyDeg": 3.6,
+        "rawLoMm": [104, 19.75, -16.5],
+        "rawHiMm": [116.25, 72.25, 422.75]
+      }
+    }
+  ]
+}

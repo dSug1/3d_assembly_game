@@ -194,11 +194,11 @@ the full sort key of §5 gives by construction).
 |---|---|
 | M1 the held piece not mirrored | 13 |
 | M2 the first contact taken as the last | 2 (from a depth; the library) |
-| M3 one pair skipped (the last placed piece) | 14 |
+| M3 one pair skipped (the last placed piece) | 14; ⭐ +3 since 2026-11-24 (`void_sim`'s groove, notch, rebate — S12) |
 | M4 the layers out of order (innermost first) | 3 |
-| M5 "nothing" returned as the plane's depth | 2 (the hole; the library) |
+| M5 "nothing" returned as the plane's depth | 2 (the hole; the library); ⭐ +3 since 2026-11-24 (`void_sim`'s U-slot, notch, rebate — S12) |
 | M6 a tie broken by array order (the ids not sorted) | 3 (ties; two order vectors) |
-| M7 the edge-against-edge facets left out | 1 (the slanted ridge) |
+| M7 the edge-against-edge facets left out | 1 (the slanted ridge); ⭐ 2 since 2026-11-23 (+ the DOME of `ORBIT_SURFACE.md` §5.3's shapes) |
 | M8 the lookup takes the lower corner | 1 |
 | M9 touching counted as overlap | 1 (the turned flush slot) |
 | M10 a tie on exactly equal floats only (the first build's rule) | 1 (the rigid motion on L26) |
@@ -269,7 +269,8 @@ and not measured.
   coordinates, metres (never the swaying meshes). A piece with no volume is named in `refused`: look at it.
 * "Nothing to land on" is a kind: the wiring puts the gizmo on the facet's plane and marks it (§5.2 of the specification).
 * In contact range, read FROM the piece's depth (P2 ⑤): `inside` there means the piece already overlaps — the collision's matter (P5), not a landing.
-* Rebuild at a pick-up, a turn of the piece, a seat, a frame change: the function keeps no state.
+* Rebuild at a pick-up, a turn of the piece, a change of resting face (⭐ 2026-11-22, the S2 audit: a tapped face moves the reference point with no
+  turn — [ORBIT_SURFACE_READOUT.md](ORBIT_SURFACE_READOUT.md) §13.7), a seat, a frame change: the function keeps no state.
 * The cost (§10.4) decides the representation before anything drives the gizmo; the readout beside today's depth on `Scene_1` comes first
   (the specification §6).
 * `LANDING_STEP_MM` moves to `src/core/units.ts`, and the `PENDING` line leaves `tests/unwired_debt.test.ts` once something calls the map
@@ -303,3 +304,5 @@ lookup's error (§6 (a) – (c) fall away). A tile round the gizmo (the third op
 ⚠ To settle at the wiring step, after ONE measurement on a phone (none exists). The specification's sentence "one height map per facet
 direction … each frame a lookup" (§2.2 P2, its cost) is rewritten then; the rule P2 does not change. The grid and `landing` (the lookup) would
 then serve the vectors and the offline comparison only.
+✅ **2026-11-22, the owner: no grid for the readout, its cost timed on the HUD** — the phone measurement is taken by the readout itself
+([ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md) §2bis).

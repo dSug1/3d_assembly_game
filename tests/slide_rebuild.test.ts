@@ -140,7 +140,8 @@ describe("⭐⭐ the wiring", () => {
   it("⭐⭐ a support's drop waits for the DRAWN piece too (it never raises by it) and eases on at most 33 ms a frame", () => {
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("if (target !== null && lv !== null && same && target < lv.h) {");
-    expect(a).toContain("if (j !== null) target = Math.min(lv.h, Math.max(target, supportTop(parts.parts[j]!, u)));");
+    // ⭐ (2026-11-23, S4 — `ORBIT_SURFACE_DRIVE.md` §3.3) the drawn piece's support through `supportOf` (P2 from its reference, or the rule as built)
+    expect(a).toContain("if (js !== null) target = Math.min(lv.h, Math.max(target, js.top));");
     expect(a).toContain("supportLevelStep(lv!.h, target, Math.min(dtMs, SUPPORT_EASE_DT_MAX_MS))");
     expect(a).toContain("const SUPPORT_EASE_DT_MAX_MS = 33;");
   });

@@ -15,6 +15,7 @@ import { formatDrawState, formatFrameStats, type DrawState } from "../core/frame
 import { type SceneState } from "./scene_state";
 import { orbitDegPerMm } from "../input/follow_camera";
 import type { RestingCandidate, RestingResult } from "../core/resting_face";
+import { landingLine } from "./landing_readout";
 
 // ⛔⛔ (2026-11-02) the release verdict and the pinched part's depth readout are deleted with the parts' translation (commit `d8134eb`).
 
@@ -161,6 +162,7 @@ DRAWFAULT x${st.drawFaultCount} ${st.drawFault}`),
     noise: noiseLine(st),
     frame: `${formatFrameStats(st.frameMeter.stats())}  shadows=${shadowsLabel(st)}`,
     draw: formatDrawState(drawState(st)),
+    landing: landingLine(st), // ⭐⭐⭐ (2026-11-22, S2) the readout: P2 beside today's depth, its cost
   });
 }
 

@@ -1,10 +1,9 @@
 # THE CAMERA'S JUMPS ON THE APPROACH — his records of 2026-11-24, replayed (a STUDY — nothing built)
 
-> **STATUS** · ⏳ **A STUDY, 2026-11-24 — ⭐ HIS WORD 2026-11-25 (§7): A1-a and A2-a, then *"proceed as you recommend"* (D-J4, D-J5); ALL FIVE FIXES BUILT and GATED, each behind its own switch, every switch 0 = LIVE frame for frame: packet 1 (`a3d7446d` `pictureHandWhole`, `e591a9d2` `pictureBandWayIn`), packet 2a (`caac1b3b` `followParkOwn` — A3-p; `b6cf50c1` D-J5 under `pictureHandWhole`), ⭐ packet 2b (`307338dd` `framedLineGlass` — B-a, the framed line read on the glass; `020b139b` `gizmoLagTravel` — C-a, the ring shows the gizmo's travel's lag) (§7.1 – §7.7). All five at 1: family A's 10 unlatches PASS (the jump 0 mm / 0.00°, the swing 0.00°, the lift ≤ 0.57°); family B at the floor 0 frames over 1° / 30 mm on `09fv_r02`, `r04`, `n2b8_r03` (today up to 5.2°, 8.0°, 11.1°); the ring still on `n2b8_r04` (0 frames over 1 mm; today 39.7 mm); the way in and his far hand bit for bit. A3-a refuted as stated; residuals measured (0.86° of elevation, §7.4; the ring on a cap ≤ 3.7 mm, §7.7). His look owed; not deployed; the port to `1.0.157` / `1.0.156` next (D-J3).** The owner's four-part method: the rules (§2), the obstacle measured
+> **STATUS** · ✅ **CLOSED — HIS LOOK ON THE PHONE 2026-11-25: *"five camera-jitter: fixed"*** (LIVE `870078b`, then `8204f25`) · ⏳ **A STUDY, 2026-11-24 — ⭐ HIS WORD 2026-11-25 (§7): A1-a and A2-a, then *"proceed as you recommend"* (D-J4, D-J5); ALL FIVE FIXES BUILT and GATED, each behind its own switch, every switch 0 = LIVE frame for frame: packet 1 (`a3d7446d` `pictureHandWhole`, `e591a9d2` `pictureBandWayIn`), packet 2a (`caac1b3b` `followParkOwn` — A3-p; `b6cf50c1` D-J5 under `pictureHandWhole`), ⭐ packet 2b (`307338dd` `framedLineGlass` — B-a, the framed line read on the glass; `020b139b` `gizmoLagTravel` — C-a, the ring shows the gizmo's travel's lag) (§7.1 – §7.7). All five at 1: family A's 10 unlatches PASS (the jump 0 mm / 0.00°, the swing 0.00°, the lift ≤ 0.57°); family B at the floor 0 frames over 1° / 30 mm on `09fv_r02`, `r04`, `n2b8_r03` (today up to 5.2°, 8.0°, 11.1°); the ring still on `n2b8_r04` (0 frames over 1 mm; today 39.7 mm); the way in and his far hand bit for bit. A3-a refuted as stated; residuals measured (0.86° of elevation, §7.4; the ring on a cap ≤ 3.7 mm, §7.7). His look owed; not deployed; the port to `1.0.157` / `1.0.156` next (D-J3).** The owner's four-part method: the rules (§2), the obstacle measured
 > (§3), the fix options from the root (§4), the risks and the audit (§5); in plain words (§6). Code read on `00e59251` (branch
 > `1.0.158from1.0.157-Orbit_surface`, LIVE main `df5426a`); the picture's chain (`picture_wiring.ts`, `picture.ts`, `camera_follow*.ts`, `roll_shadow.ts`,
 > `seam_turn.ts`, `orbit_calm.ts`) is byte for byte the reference's (`2cd1be34` = LIVE `3b7a479`, `git diff` empty).
-> **ON THIS BRANCH** · ⭐ (2026-11-25, his word D-J3, §7) the five fixes PORTED from `1.0.158from1.0.157-Orbit_surface` as their own commits (each behind its switch, 0 = this branch's game frame for frame); ⭐ (2026-11-25, his word *"Default at 1 also in the two other branches"*) the five at **1** by default here too, as LIVE `870078b` (0 = this branch's game before). The study and its gates were made on `1.0.158from1.0.157-Orbit_surface`, where the surface work (S2 – S14: the readout, P2's drive `landingDrives`, the white ring) also lives — those names belong to that branch, not to this one's game; the jumps measured are the closed orbit's (§3.6: identical with the surface's drive off). Links to the surface's documents absent here are kept as names.
 > **OWNS** · why the camera jumps when he takes the piece out of close in, and when he approaches a side face to its floor; what moves the gizmo's
 > ring and its sections there.
 > **READ WITH** · [PICTURE_REBUILD.md](PICTURE_REBUILD.md) §2 (P1 – P18), §4.3a (the hand-over); [TILTED_POLE_CLOSE_IN.md](TILTED_POLE_CLOSE_IN.md) §1
@@ -652,3 +651,27 @@ none built, each behind its own switch.
   as defined); B-a's band on a smaller glass (§7.6: mid distances inside it on a phone — his device look); the elevation's two payers of 2a (§7.4).
   Then the port (D-J3: every file applies on `1.0.157-Orbit_surface` after packets 1 and 2a, except `tests/menu_layout.test.ts`'s two hunks a commit —
   the folder's list, clean once packets' CAMERA FOLLOWER line is hand-ported, and the count). His look on the device closes each (rule 5).
+
+### 7.8 ✅ The port (D-J3, 2026-11-25) — the five fixes on the orbit's branches, pushed
+
+Each fix its own commit (B-a with its follow-up `e4c096a6` folded in), ported by `git cherry-pick`; the one hand-resolved file
+`tests/menu_layout.test.ts` (the folder lists and the slider count: 135 there → 140). The fixes' own files (`picture.ts`, `picture_wiring.ts`,
+`camera_follow.ts`, `roll_follow.ts`, `roll_shadow.ts`, `assembly_orbit.ts`, the six `approach_jitter_*` test files, `picture.test.ts`) are byte for
+byte this branch's; `gestureConfig.ts`'s five switches the same lines.
+
+| branch (pushed) | A1-a | A2-a | A3-p | D-J5 | B-a | C-a | docs | `npm run verify` |
+|---|---|---|---|---|---|---|---|---|
+| `1.0.157-Orbit_surface` (`5eaf3eb4`) | `c51ebd02` | `3984c79f` | `927c3da5` | `7ecd0274` | `f712f1ca` | `48e58073` | `5eaf3eb4` | 194 files, 2365 tests, all pass |
+| `1.0.156-Orbits_with_camera_follow_final` (`4a6a95a1`) | `387d620e` | `e3c4df66` | `d7388a68` | `9146ce1c` | `9b1542e8` | `24c97403` | `4a6a95a1` | the same (its code = `1.0.157`'s, `git diff` empty) |
+
+The docs there: this study (with a note on what is this branch's — the surface work), `TUNING_MENU.md` (the five sliders), `RND5.md` (a dated
+line). ⚠ Not replayed headless on those branches: their switches at 0 are today's code by the vectors, and the per-frame gates of §7.2 – §7.7 were
+run here on the same files. Main untouched (LIVE `6f03b65`). His device look closes each fix (rule 5).
+
+### 7.9 ⭐ DEPLOYED ON (2026-11-25 07:02Z — his word *"Deploy with all sliders at 1"*)
+
+The five switches' default set to 1 (`4c6bd9a4`: `gestureConfig.ts` and the five default pins; verify 208 files, 2601 tests) and deployed:
+**LIVE main `870078b`** = `4c6bd9a4`. 0 on each gives the game before (`3b7a479`'s picture). `landingEngine` (S14) left at 0 — his look given
+2026-11-25 (59 fps at 0 and at 1 on the iPhone); its default on his word. ⭐ On `1.0.157-Orbit_surface` (`fbb01547`) and
+`1.0.156-Orbits_with_camera_follow_final` (`eb99a5f7`) the five at 1 too (his word 2026-11-25: *"Default at 1 also in the two other branches"*;
+verify 2365 / 2365; pushed). His device look owed on the five (B-a's band on the phone's smaller screen, §7.6).

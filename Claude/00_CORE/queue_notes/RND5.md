@@ -815,3 +815,4 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   ([`APPROACH_CAMERA_JITTER.md`](../../40_RENDER_SCENE/spec/APPROACH_CAMERA_JITTER.md) §7). His device look owed.
 * **2026-11-25 — the five at 1 by default here too** (his word: *"Default at 1 also in the two other branches"*), as LIVE `870078b`; 0 = this
   branch's game before. `npm run verify` 2365 / 2365.
+* **2026-11-25** — his look on the phone at the five camera-jitter fixes (LIVE `870078b` / `8204f25`): *"five camera-jitter: fixed"* — `APPROACH_CAMERA_JITTER.md` CLOSED.

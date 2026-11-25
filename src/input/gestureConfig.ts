@@ -522,6 +522,24 @@ export interface GestureConfig {
   gizmoEdgeMarginMm: number;
   /** ⭐ (2026-10-28, the optional) the sections the gizmo travels along drawn — green the horizontal one, red the yaw plane's (1 on, 0 off). */
   sectionLines: number;
+  /** ⭐⭐⭐ (2026-11-22, `ORBIT_SURFACE_READOUT.md` §5 — package S2) THE READOUT: the landing map's P2 beside today's depth at the gizmo's place — a second
+   *  ring (white: land, magenta: nothing to land on) and the HUD's `landing` line (1); 0 = nothing computed, nothing drawn, no line: `3b7a479` frame for frame */
+  landingReadout: number;
+  /** ⭐⭐⭐ (2026-11-23, `ORBIT_SURFACE_MOUTH_HOLD.md` §6 — package S3, his Q4 (a)) WHERE THE MOUTH'S HOLD ACTS: 0 the hold as built (`3b7a479` frame for frame);
+   *  1 never on a cap (H1); 2 never on a cap and only over a void the landing map's P2 leaves open for the held piece (H1 + H2) */
+  mouthHoldDomain: number;
+  /** ⭐⭐⭐ (2026-11-23, `ORBIT_SURFACE_DRIVE.md` §3.7 — package S4, the build list's item 4) P2 DRIVES: 0 as deployed (`e80a7b0` frame for frame — no
+   *  landing query made); 1 the footprint support read on P2 from where the piece is (its wall kept); 2 the support and the gizmo's depth (P2's level less
+   *  the piece's reach). `Scene_1` only */
+  landingDrives: number;
+  /** ⭐⭐⭐ (2026-11-24, `ORBIT_SURFACE_L1.md` §10 — package S11) L1's CAPS BETWEEN PARTS: 0 the face map as LIVE (`19c7f88` frame for frame); 1 the scene's
+   *  FILLERS (`content/<scene>_caps.json`, offline) join the face map as a part of their own — the hollow's inner walls glued away, its mouth bridged.
+   *  ⛔ Never a solid: P2, the landing and the casts never read them */
+  surfaceL1: number;
+  /** ⭐⭐⭐ (2026-11-24, `ORBIT_SURFACE_LANDING_CAST.md` §6 — package S14, his word *"proceed with S14"*) P2'S ENGINE: 0 the sums (every pair's Minkowski
+   *  sum built ahead, rebuilt at every frame of a turn — LIVE `19c7f88` frame for frame); 1 the cast (`core/landing_cast.ts`: nothing built per pair, the
+   *  near pairs cast by GJK at query time — the same answers, the sums NEVER built). `Scene_1` only, as P2 */
+  landingEngine: number;
   orbitTurnCapDegMm: number;
   /** ⭐⭐ (2026-10-19) …and on any other curve (a vertical face, no face): the view between rings 2 and 3 slowed to this (°/mm). */
   orbitTurnCapVerticalDegMm: number;
@@ -926,11 +944,11 @@ export const DEFAULT_CONFIG: GestureConfig = {
   uprightHalfHold: 1, // ⭐ (C7) the gizmo still for the whole half turn
   pictureFarTop: 1, // ⭐⭐⭐ (2026-11-22, the owner: *"set the slider default to 1"*) R5 ON by default; 0 = the far top rule of `98ac680` (H2 / H3). ⚠ Its far strokes on `Scene_0bis` pin the gizmo at a pole (`runs_str5/r5_farmix`), not studied. (2026-11-21 night, R3-FIX — the lead: 0, its gates unfinished)
   pictureBandMm: 10, // ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §4.2 — R3a) the band: his `tiltBlendMm` figure, 10 mm of approach finger before 0.65 m; ⛔ 40 (the lead, reverted the same day): Scene_1's whole far approach is ≈ 30 mm, the far rest was blended
-  pictureBandWayIn: 1, // ⭐⭐⭐⭐ (2026-11-25, his word *"Default at 1 also in the two other branches"*: the default 1, as LIVE `870078b`) ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J2 — A2-a, his answer: the band the way IN's rule only) 0 = `3b7a479`: the band by place on the way out too (two payers of its gap: ≈ 14° off and back)
-  pictureHandWhole: 1, // ⭐⭐⭐⭐ (2026-11-25, his word *"Default at 1 also in the two other branches"*: the default 1, as LIVE `870078b`) ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J1 — A1-a, his *"A1-a and A2-a as you recommend"*) 0 = `3b7a479`: the unlatch's hand-over holds the angles only (the look point 35 – 366 mm in one frame)
-  followParkOwn: 1, // ⭐⭐⭐⭐ (2026-11-25, his word *"Default at 1 also in the two other branches"*: the default 1, as LIVE `870078b`) ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J4 — A3-p, the lead under his *"proceed as you recommend"*) 0 = `3b7a479`: the follower parked on the camera's heading as its direction's (1.65 – 6.44° off at his latches, paid twice at the unlatch)
-  framedLineGlass: 1, // ⭐⭐⭐⭐ (2026-11-25, his word *"Default at 1 also in the two other branches"*: the default 1, as LIVE `870078b`) ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §4.4 B-a, the lead under his *"proceed as you recommend"*) 0 = `3b7a479`: the framed line the view's under 3 world mm only (at contact the line through residues 50 – 85° off the view: the eye swung 4 – 11° a frame)
-  gizmoLagTravel: 1, // ⭐⭐⭐⭐ (2026-11-25, his word *"Default at 1 also in the two other branches"*: the default 1, as LIVE `870078b`) ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §4.5 C-a, the lead under his *"proceed as you recommend"*) 0 = `3b7a479`: the ring drawn at the base's whole lag (the approach's slide along the oblique ray drawn as the gizmo's: up to 39.7 mm a frame, the gizmo still)
+  pictureBandWayIn: 1, // ⭐⭐⭐⭐ (2026-11-25, his word *"Deploy with all sliders at 1"*: the default 1) ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J2 — A2-a, his answer: the band the way IN's rule only) 0 = `3b7a479`: the band by place on the way out too (two payers of its gap: ≈ 14° off and back)
+  pictureHandWhole: 1, // ⭐⭐⭐⭐ (2026-11-25, his word *"Deploy with all sliders at 1"*: the default 1) ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J1 — A1-a, his *"A1-a and A2-a as you recommend"*) 0 = `3b7a479`: the unlatch's hand-over holds the angles only (the look point 35 – 366 mm in one frame)
+  followParkOwn: 1, // ⭐⭐⭐⭐ (2026-11-25, his word *"Deploy with all sliders at 1"*: the default 1) ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J4 — A3-p, the lead under his *"proceed as you recommend"*) 0 = `3b7a479`: the follower parked on the camera's heading as its direction's (1.65 – 6.44° off at his latches, paid twice at the unlatch)
+  framedLineGlass: 1, // ⭐⭐⭐⭐ (2026-11-25, his word *"Deploy with all sliders at 1"*: the default 1) ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §4.4 B-a, the lead under his *"proceed as you recommend"*) 0 = `3b7a479`: the framed line the view's under 3 world mm only (at contact the line through residues 50 – 85° off the view: the eye swung 4 – 11° a frame)
+  gizmoLagTravel: 1, // ⭐⭐⭐⭐ (2026-11-25, his word *"Deploy with all sliders at 1"*: the default 1) ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §4.5 C-a, the lead under his *"proceed as you recommend"*) 0 = `3b7a479`: the ring drawn at the base's whole lag (the approach's slide along the oblique ray drawn as the gizmo's: up to 39.7 mm a frame, the gizmo still)
   followMs: 200, // ⭐ (2026-11-21, the owner tried the slider: *"at 200 ms is better at far out distance … set default to 200ms"*; 120 before) (F2, D-F6) the calm's own 120 ms it replaces — on the RAW target 50 ms (the prototype's D, tuned on the eased one) left 56 frames over 45° offline (`CAMERA_FOLLOWS_GIZMO.md` §13)
   followPoleDeg: 30, // ⭐ (F2) his D-F1: no nearer than 30° to straight above far out
   followTurnMinDeg: 10, // ⭐ (H2) T11's band: under it the spring pays
@@ -968,6 +986,11 @@ export const DEFAULT_CONFIG: GestureConfig = {
   faceSpanZoneMinVCm: 3,
   gizmoEdgeMarginMm: 5, // ⭐ (2026-10-28) the face's switch 5 mm past an edge
   sectionLines: 1, // ⭐ (2026-10-28) the sections drawn
+  mouthHoldDomain: 2, // ⭐⭐⭐ (2026-11-23, S3 — `ORBIT_SURFACE_MOUTH_HOLD.md` §6, D3) H1 + H2 by default; 0 = `3b7a479`'s hold
+  landingDrives: 2, // ⭐⭐⭐ (2026-11-23, S4 — `ORBIT_SURFACE_DRIVE.md` §3.7, D6) the support and the gizmo on P2 by default; 0 = as deployed (`e80a7b0`)
+  surfaceL1: 1, // ⭐⭐⭐⭐ (2026-11-25, his look under the cube: no difference at 0 and 1 — *"do what's best for game playability"*: the default 1, the lids, as the rule asks) ⭐⭐⭐ (2026-11-24, S11 — `ORBIT_SURFACE_L1.md` §10) 0 = no fillers (LIVE `19c7f88` – `870078b`); 1 = the fillers in the face map
+  landingEngine: 1, // ⭐⭐⭐⭐ (2026-11-25, his look: no difference on the iPhone, 59 fps at 0 and 1 — *"do what is best for game playability"*: the default 1, the cast) ⭐⭐⭐ (2026-11-24, S14 — `ORBIT_SURFACE_LANDING_CAST.md` §6) 0 = the sums (LIVE `19c7f88` – `870078b`); 1 = the cast
+  landingReadout: 1, // ⭐⭐⭐ (2026-11-22, S2 — his word *"proceed"* on `ORBIT_SURFACE_READOUT.md` §10: default 1 on this branch, his look needs it) 0 = `3b7a479`: no readout
   orbitTurnCapDegMm: 12.5, // ⭐ (2026-10-19, the owner: *"set the turn governor horizontal face to 12.5"*; first 40) the horizontal face's turn over the top (96°/mm at the shipped gains, view and roll) capped
   orbitTurnCapVerticalDegMm: 12.5, // ⭐ (2026-10-19, the owner: *"same for vertical faces"* — 12.5; first 10) the vertical face's view between rings 2 and 3 (20°/mm at the shipped gains) slowed
   // ⛔ (2026-10-12) the pink highlights' hold / fade (`highlightHoldMs`, `highlightFadeMs`) deleted with the pink face from a part
@@ -1150,6 +1173,11 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   for (const k of ["faceSpanZoneMinHCm", "faceSpanZoneMinVCm"] as const) if (!(cfg[k] >= 0 && cfg[k] <= 30)) throw new Error(`${k} (${cfg[k]}) must be in [0, 30] cm.`);
   if (cfg.faceSpanShareVOn !== 0 && cfg.faceSpanShareVOn !== 1) throw new Error(`faceSpanShareVOn (${cfg.faceSpanShareVOn}) must be 0 or 1.`);
   if (cfg.sectionLines !== 0 && cfg.sectionLines !== 1) throw new Error(`sectionLines (${cfg.sectionLines}) must be 0 or 1.`);
+  if (cfg.landingReadout !== 0 && cfg.landingReadout !== 1) throw new Error(`landingReadout (${cfg.landingReadout}) must be 0 or 1.`);
+  if (cfg.mouthHoldDomain !== 0 && cfg.mouthHoldDomain !== 1 && cfg.mouthHoldDomain !== 2) throw new Error(`mouthHoldDomain (${cfg.mouthHoldDomain}) must be 0, 1 or 2.`);
+  if (cfg.landingDrives !== 0 && cfg.landingDrives !== 1 && cfg.landingDrives !== 2) throw new Error(`landingDrives (${cfg.landingDrives}) must be 0, 1 or 2.`);
+  if (cfg.surfaceL1 !== 0 && cfg.surfaceL1 !== 1) throw new Error(`surfaceL1 (${cfg.surfaceL1}) must be 0 or 1.`);
+  if (cfg.landingEngine !== 0 && cfg.landingEngine !== 1) throw new Error(`landingEngine (${cfg.landingEngine}) must be 0 or 1.`);
   if (!(cfg.gizmoEdgeMarginMm >= 0 && cfg.gizmoEdgeMarginMm <= 20)) throw new Error(`gizmoEdgeMarginMm (${cfg.gizmoEdgeMarginMm}) must be in [0, 20] mm.`);
   if (!(cfg.orbitTurnCapDegMm >= 5 && cfg.orbitTurnCapDegMm <= 300)) throw new Error(`orbitTurnCapDegMm (${cfg.orbitTurnCapDegMm}) must be in [5, 300]°/mm.`);
   if (!(cfg.orbitTurnCapVerticalDegMm >= 5 && cfg.orbitTurnCapVerticalDegMm <= 300)) throw new Error(`orbitTurnCapVerticalDegMm (${cfg.orbitTurnCapVerticalDegMm}) must be in [5, 300]°/mm.`);

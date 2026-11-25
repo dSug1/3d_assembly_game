@@ -102,7 +102,7 @@ describe("⭐⭐⭐ C-a — the ring shows the gizmo's travel's lag, not the app
     expect(gizmoLag([1, 2, 3], [0, 0, 0], null, null)).toEqual([1, 2, 3]);
   });
 
-  it("`gizmoLagTravel`, 1 by default (his word 2026-11-25: default at 1 also in the two other branches, as LIVE `870078b`; 0 = `3b7a479`), 0 or 1 only; the wiring: none at 0, the move read at THIS frame's gizmo and direction, the base at rest none, the state reset", () => {
+  it("`gizmoLagTravel`, 1 by default (his word 2026-11-25: deploy with all sliders at 1; 0 = `3b7a479`), 0 or 1 only; the wiring: none at 0, the move read at THIS frame's gizmo and direction, the base at rest none, the state reset", () => {
     expect(DEFAULT_CONFIG.gizmoLagTravel).toBe(1);
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, gizmoLagTravel: 1 })).not.toThrow();
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, gizmoLagTravel: 2 })).toThrow();

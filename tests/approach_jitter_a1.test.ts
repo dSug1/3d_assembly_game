@@ -191,7 +191,7 @@ describe("⭐⭐⭐ A1-a (D-J1) — the latch unchanged; the switch at 0 = today
     expect(run(true)).toEqual(run(false));
   });
 
-  it("the switch: `pictureHandWhole`, 1 by default (his word 2026-11-25: default at 1 also in the two other branches, as LIVE `870078b`; 0 = `3b7a479`), 0 or 1 only; the wiring passes `whole` only at 1", () => {
+  it("the switch: `pictureHandWhole`, 1 by default (his word 2026-11-25: deploy with all sliders at 1; 0 = `3b7a479`), 0 or 1 only; the wiring passes `whole` only at 1", () => {
     expect(DEFAULT_CONFIG.pictureHandWhole).toBe(1);
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, pictureHandWhole: 1 })).not.toThrow();
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, pictureHandWhole: 2 })).toThrow(/pictureHandWhole/);

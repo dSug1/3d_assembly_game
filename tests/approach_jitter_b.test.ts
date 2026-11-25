@@ -139,7 +139,7 @@ describe("⭐⭐⭐ B-a — the framed line's degenerate case read on the glass 
     expect(framedLine(mid, p, HIS)).toEqual(framedLine(mid, p));
   });
 
-  it("`framedLineGlass`, 1 by default (his word 2026-11-25: default at 1 also in the two other branches, as LIVE `870078b`; 0 = `3b7a479`), 0 or 1 only; the wiring hands the glass (the camera's field, the canvas's CSS height) at 1 only", () => {
+  it("`framedLineGlass`, 1 by default (his word 2026-11-25: deploy with all sliders at 1; 0 = `3b7a479`), 0 or 1 only; the wiring hands the glass (the camera's field, the canvas's CSS height) at 1 only", () => {
     expect(DEFAULT_CONFIG.framedLineGlass).toBe(1);
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, framedLineGlass: 1 })).not.toThrow();
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, framedLineGlass: 2 })).toThrow();

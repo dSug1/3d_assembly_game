@@ -75,6 +75,12 @@ export interface FacetOpts {
   readonly scale?: "built" | "normals";
 }
 export const DEFAULT_FACET_OPTS: FacetOpts = { mergeDeg: MAP_AXIS_DEG, minShare: 0.25 };
+/**
+ * ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §2.2 / §5.2, step 2.2) THE CHARTS' LAYOUT: both face maps built as the COLUMNS chart, the pole the shape's top /
+ * bottom set and the pitch scale read from the faces' normals (`render/assembly_wiring.ts`'s calls). ⭐ (2026-11-24, S7) moved here from there — its
+ * one home — so B5's offline reading of the face map (`face_map_membership.ts`) builds it as the game does.
+ */
+export const CHART_MAP_OPTS: Pick<FacetOpts, "layout" | "scale"> = { layout: "chart", scale: "normals" };
 
 /**
  * ⭐⭐⭐ A FACET of the faces contour: its outward normal `n`, its frame (`t` the way the yaw turns across it — horizontal —, `b` = `t × n` up its slope),

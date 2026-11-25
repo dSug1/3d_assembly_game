@@ -14,10 +14,10 @@ record. **A status changes in BOTH places or neither.**
 
 ---
 
-## ⭐⭐⭐ YOU ARE HERE (2026-11-22 evening, branch `1.0.157-Orbit_surface` in the MAIN folder, live main `3b7a479` = `2cd1be34`)
+## ⭐⭐⭐ YOU ARE HERE (2026-11-22 evening, branch `1.0.158from1.0.157-Orbit_surface` in `../orbit_surface`, live main `3b7a479` = `2cd1be34`)
 
 ⭐⭐⭐⭐ **THE BEST IMPLEMENTATION OF THE ORBIT SO FAR (2026-11-22 evening, his word)** — branch `1.0.156-Orbits_with_camera_follow_final`, LIVE main `3b7a479` = `2cd1be34`: the orbit closed this afternoon (`40b8095`, branch `1.0.155-Orbits_with_camera_follow_1`) + D-H23 + D-H24 → [`CAMERA_FOLLOWS_GIZMO.md`](../40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md) §20 — the reference never to regress; **2321 vectors**.
-⭐⭐⭐ **NEXT: THE ORBIT SURFACE WORK** on `1.0.157-Orbit_surface` (the main folder, the only worktree) → [`queue_notes/HANDOVER_2026-11-22_orbit_surface.md`](queue_notes/HANDOVER_2026-11-22_orbit_surface.md) — ask him `ORBIT_SURFACE.md` §8's questions again first; then RND6.
+⭐⭐⭐ **NOW: THE ORBIT SURFACE WORK** (`RND7`) on `1.0.158from1.0.157-Orbit_surface` in the worktree `../orbit_surface` (pushed) → [`queue_notes/HANDOVER_2026-11-22_orbit_surface.md`](queue_notes/HANDOVER_2026-11-22_orbit_surface.md); S2 – S4b, S7 – S13 DEPLOYED (LIVE `19c7f88`, 2026-11-24; his look on S4: ok); the rest: `ORBIT_SURFACE_BUILD.md` §10; then RND6.
 ⭐ The lines of 2026-11-22 (the merge, D-H20; the orbit closed; D-H23 + D-H24) moved → [`history/2026-11-22_queue_orbit_closed_moved.md`](history/2026-11-22_queue_orbit_closed_moved.md), [`history/2026-11-22_queue_evening_moved.md`](history/2026-11-22_queue_evening_moved.md).
 ⭐ The lines of 2026-11-19 (LIVE `675ec23`, the upright law U, option 3) moved → [`history/2026-11-22_queue_status_moved.md`](history/2026-11-22_queue_status_moved.md).
 ⭐ The lines of 2026-11-18 (LIVE `4eabab8`, FO3, the upright study, NEXT) moved → [`history/2026-11-18_queue_status_moved.md`](history/2026-11-18_queue_status_moved.md).
@@ -301,8 +301,8 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | RND4 | Off-screen target indication — Halo / Wedge | RND | render | queued. ⭐ Not general polish: **6ter needs BOTH objects selected**, and at close zoom the partner is routinely off-frame, so the gesture becomes unreachable with nothing to say why. Curvature (Halo) or a tapered wedge encodes direction AND distance without a camera snap. ⚠ Audience includes youth — cap the indicator count. Prior art: Baudisch & Rosenholtz CHI 2003; Gustafson et al. CHI 2008 | 3D1, IN4 |
 | RND5 | ✅ Orbit on charts | RND | feature | ✅ CLOSED 2026-11-22 (his word): the charts and the camera follower; the best so far LIVE `3b7a479` (+ D-H23, D-H24); step 3, FO3 no longer owed; step B → `RND7` → `queue_notes/RND5.md` | — |
 | RND6 | ⛔ Black canvas on iPhone: WebGL context lost, never restored; Safari dead until force-quit | RND | defect | diagnosed to `Scene_2`'s loads (≈ 4th reload); mechanism probable; ⛔ no fix built — the owner's instruction; ⏸ worked on AFTER the orbit surface work (2026-11-22) → `queue_notes/RND6.md` | — |
-| RND7 | ⭐ The orbit's surface — where the gizmo travels (the landing map, the entry sets, the reach check) | RND | feature | ⏸ NEXT (2026-11-22): S0, S1 built offline, nothing wired; ask him `ORBIT_SURFACE.md` §8's end first; branch `1.0.157-Orbit_surface` → `queue_notes/RND7.md` | RND5 |
-| RND8 | ⛔ The surface study's findings handed over: F17 and the mouth's lip (the orbit's), the drop into a slot in contact range (the contact's) | RND | defect | open since 2026-11-16 (`ORBIT_SURFACE.md` §2.2 P1, P5); none decided — the orbit is closed: his word → `queue_notes/RND8.md` | RND7 |
+| RND7 | ⭐ The orbit's surface — where the gizmo travels (the landing map, the entry sets, the reach check) | RND | feature | ✅ `Scene_1` phase CLOSED 2026-11-25 (his word): S2 – S15 LIVE; the rest with `GM13`, step B → `RND8` → `queue_notes/RND7.md` | RND5 |
+| RND8 | ⛔ The surface study's findings handed over: F17, the mouth's lip, C22, C41, step B (the orbit's; the last three only if a scene shows one), the drop into a slot in contact range (the contact's) | RND | defect | open since 2026-11-16 (`ORBIT_SURFACE.md` §2.2 P1, P5); none decided — the orbit is closed: his word → `queue_notes/RND8.md` | RND7 |
 
 ## Phase DEP — build and deployment
 
@@ -347,3 +347,4 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | GM10 | ⭐ Pick a part (a tap; its step available, outlined; cycle) and put it down (a double tap; a free spot near, the least turn) | GAME | feature | 🔧 **BUILT 2026-11-14**, headless → [`queue_notes/GM10.md`](queue_notes/GM10.md) | CL1 |
 | GM11 | ⭐ The scene orbit ↔ the piece orbit: by the clock at a pick, inputs held until ready; the idle blend while held | GAME | feature | 🔧 **BUILT 2026-11-14**, headless → [`queue_notes/GM11.md`](queue_notes/GM11.md) | GM10 |
 | GM12 | ⭐ After a snap: the face map rebuilt, the centre to the next part's support, the outlines back; the level end to the scene orbit | GAME | feature | 🔧 **BUILT 2026-11-14**, the lower case seated headless; ⛔ the crank on: the PLUNGE owed → [`queue_notes/GM12.md`](queue_notes/GM12.md) | GM11 |
+| GM13 | `Scene_2`'s parts redrawn by the proxy and collision rules (the surface ledger's rows 14 – 20) | GAME | content | ⏳ open 2026-11-24 — its own work and worktree (his word) → [`queue_notes/GM13.md`](queue_notes/GM13.md) | RND7 |

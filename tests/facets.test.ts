@@ -206,7 +206,9 @@ describe("⭐⭐⭐ (2026-11-04, Step 5) THE FACES CONTOUR — the face map on f
     expect(a).not.toContain("MAP_REFINE_M");
     // ⭐⭐⭐ (2026-11-15, ORBIT_CHARTS step 2.2) the charts' layout joined the call (`...CHART_MAP_OPTS`; ⛔ its switch and the key's `#C`: step 2.5)
     expect(a).toContain("const map = buildFaceMap(placedFaces(st), box, { mergeDeg: st.cfg.facetMergeDeg, minShare: st.cfg.facetMinShare, ...CHART_MAP_OPTS });");
-    expect(a).toContain("const key = `${parts.key}#${st.cfg.facetMergeDeg}#${st.cfg.facetMinShare}`;");
+    // ⭐ (2026-11-24, S11 — `ORBIT_SURFACE_L1.md` §10) + L1's fillers (`l1Key`: "" at `surfaceL1` 0 — the key as before, byte for byte)
+    expect(a).toContain("const key = `${parts.key}#${st.cfg.facetMergeDeg}#${st.cfg.facetMinShare}${l1Key(st)}`;");
+    expect(a).toContain('if (st.cfg.surfaceL1 !== 1) return "";');
     expect(DEFAULT_CONFIG.facetMergeDeg).toBe(20);
     expect(DEFAULT_CONFIG.facetMinShare).toBe(0.25);
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, facetMergeDeg: 50 })).toThrow();

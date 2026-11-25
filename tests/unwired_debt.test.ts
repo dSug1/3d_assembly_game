@@ -114,7 +114,32 @@ const PENDING: Record<string, string> = {
   // ⭐ `D170`: run at BUILD time, not in the product — `scripts/gen_demo_plan.ts` writes the committed plan the
   // product plays, and `d170_regenerate.test.ts` regenerates it to prove the data is still the generator's.
   generateDemoPlan: "build-time only — `scripts/gen_demo_plan.ts` writes `content/scene1_demo_plan.ts` (D170)",
-  buildLandingMap: "S1 (`ORBIT_SURFACE_BUILD.md`) — the landing map L2, pure and vectored, NOT wired until orbit_charts is merged: first a readout beside today's depth on Scene_1",
+  // ⭐ (2026-11-22, S2 — `ORBIT_SURFACE_READOUT.md` §13) the readout WIRED the map's sums and exact evaluation with NO GRID (`prepareLanding`, read by
+  // `render/landing_readout.ts`; `prepareLanding`, `readoutAt`, `readoutKey`, `landingAxes`, `heldPiece` left this list with it) — the GRID stays unwired
+  // by his answer (no grid, `ORBIT_SURFACE_BUILD.md` §2bis), so this line stays, its reason rewritten (⚠ the design expected it to leave: it cannot)
+  // ⭐ (2026-11-23, S4b — `ORBIT_SURFACE_DRIVE.md` §12) the readout and the drive read the SHARED preparation (`heldSumsFor`: the placed parts' hulls once
+  // per placed set — the alignment's stutter); `prepareLanding` stays the one call of the vectors and the offline scripts (`landingFor(prepareHeldSums(…))`)
+  prepareLanding: "S4b (`ORBIT_SURFACE_DRIVE.md` §12) — the vectors' and the offline scripts' one call; the product reads the shared preparation (`heldSumsFor`) since S4b",
+  // ⭐ (2026-11-24, S14 — `ORBIT_SURFACE_LANDING_CAST.md` §6) the cast's twin of `prepareLanding`: the product reads its steps apart, cached
+  // (`render/landing_readout.ts` `heldCastFor`, `castLandingFor`); this one call serves the vectors (both engines) and the offline scripts
+  prepareLandingCast: "S14 (`ORBIT_SURFACE_LANDING_CAST.md` §6) — the vectors' and the offline scripts' one call of the cast; the product reads its steps cached (`heldCastFor`, `castLandingFor`)",
+  // ⭐ (2026-11-23, S5 — `ORBIT_SURFACE_PART_CHECKS.md` §4) B1, the solids, runs as VECTORS on each scene's `.glb` (`part_checks.test.ts`: `Scene_2`'s report,
+  // the plinth's incomplete proxy); at load its cheap subset is owed (D1: printed, never refused — 5 s in full on this PC, B1h the heavy part)
+  checkSolids: "S5 (`ORBIT_SURFACE_PART_CHECKS.md` §4, D1) — B1 run as vectors on each scene's .glb and at the export gate; its cheap subset at load is `checkSolidsAtImport` (S13, wired)",
+  landingPerStage: "S7 (`ORBIT_SURFACE_PART_CHECKS.md` §14 – §16) — B3 + B5, the landing per stage and the faces no place (it calls B2's `exposedPerStage`): its vectors and its check at the export gate (`check_where_each_part_lands.ts`), information; never the game's",
+  inGameFaceMap: "S7 (`ORBIT_SURFACE_PART_CHECKS.md` §15 item 7) — B5's share read with the game's own face map, offline: its vectors and the landing check; never the game's",
+  sumsSize: "S10 (`ORBIT_SURFACE_PART_CHECKS.md` §19) — C2, a preparation's size machine-free: its vector and `check_landing_cost.ts` at the export gate; never the game's",
+  facetsNearShare: "S9 (`ORBIT_SURFACE_PART_CHECKS.md` §18) — B6, the facets near the face map's share, offline: its vectors and the landing check; never the game's",
+  facetTowardGoal: "S8 (`ORBIT_SURFACE_PART_CHECKS.md` §17) — B4's second half, the facet toward a goal along its way in, offline: its vectors and the landing check; never the game's",
+  // ⭐ (2026-11-24, S11 — `ORBIT_SURFACE_L1.md` §10) L1's acceptance runs OFFLINE, when the caps are written (`scripts/surface/l1_caps.ts`) and in its vectors
+  fillerVerdict: "S11 (`ORBIT_SURFACE_L1.md` §10.2) — a filler accepted only if each face is glued, flush or on a goal volume and nothing reaches in: the caps script and its vectors; the game reads the accepted file",
+  // ⭐ (2026-11-23, S6 — `30_OBJECTS_3D/spec/PROXY_AND_COLLISION_RULES.md`, DECIDED) the proxy rules' checks run as vectors and by the check script; two of
+  // their scales wait for packet 2 (ρ: the closing, the caps) and packet 3 (τc: the collision pieces against the real shape)
+  checkProxyFaces: "S6 packet 1 (`PROXY_AND_COLLISION_RULES.md` §9) — R7, R3, R4, R2 on each proxy face: vectors and `check_part_solids.ts`, at the export gate",
+  checkProxyCover: "S6 packet 2 (`PROXY_AND_COLLISION_RULES.md` §9.2) — R1 coverage, R1b caps, R2 closed: vectors and `check_part_solids.ts`, at the export gate (≈ 46 s on `Scene_2`: never at load)",
+  checkCollisionPieces: "S6 packet 3 (`PROXY_AND_COLLISION_RULES.md` §9.5) — C-R2 both ways and the resting candidates: vectors and `check_part_solids.ts`, at the export gate (≈ 29 s on `Scene_2`)",
+  rulesConstants: "SCENE_WORKFLOW.md §11.2 item 4 — the rules' constants as JSON for the Blender side (`export_rules_constants.ts`, its staleness vector); a generator's input, never the game's",
+  buildLandingMap: "S2 (`ORBIT_SURFACE_READOUT.md` §13) — the landing map's GRID: the readout reads its sums with no grid (`prepareLanding`); the grid serves the vectors and the offline comparison until the representation is chosen (`ORBIT_SURFACE_LANDING_MAP.md` §10.9)",
   // ✅ `qAngle` LEFT THIS LIST 2026-09-22 — `RotationFollower` reads it to decide a body has
   // ARRIVED at its detent, so it is wired and the guard reddened until this line was deleted.
   // ⭐ That is the second direction the list is asserted in: *a stale allowlist is the same lie

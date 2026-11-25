@@ -352,6 +352,25 @@ export function installTuningMenu(st: SceneState): void {
         // ⭐ (2026-10-12, *"instead of power 3 for the quad scale, use a logarythm curve so that the quads and resting face grow faster when they are small"*) — the log curve's steepness (0 = a straight line)
         tunable(st, "resting-face quads: growth steepness (log curve) with the gizmo's distance", "quadGrowthLogK", 0, 50, 0.5),
       ],
+      subsections: [
+        {
+          // ⭐⭐⭐ (2026-11-23, S4 — `ORBIT_SURFACE_DRIVE.md` §3.7) THE ORBIT'S SURFACE: its switches together (a folder holds 9 at most; S11's `surfaceL1` the fourth,
+          // S14's `landingEngine` the fifth)
+          title: "THE ORBIT'S SURFACE",
+          sliders: [
+            // ⭐⭐⭐ (2026-11-22, `ORBIT_SURFACE_READOUT.md` §5 — S2) the landing map's P2 beside today's depth: the second ring and the HUD's `landing` line
+            tunable(st, "landing readout: P2 beside today's depth, ring + HUD line (1; 0 = 3b7a479)", "landingReadout", 0, 1, 1),
+            // ⭐⭐⭐ (2026-11-23, `ORBIT_SURFACE_MOUTH_HOLD.md` §6 — S3, his Q4 (a)) where the mouth's hold acts
+            tunable(st, "mouth's hold: where (0 = as built, 3b7a479; 1 = never on a cap; 2 = + only over a void the piece enters)", "mouthHoldDomain", 0, 2, 1),
+            // ⭐⭐⭐ (2026-11-23, `ORBIT_SURFACE_DRIVE.md` §3.7 — S4) P2 drives the piece's support (1) and the gizmo's depth (2)
+            tunable(st, "P2 drives (0 = as deployed, e80a7b0; 1 = the piece's support; 2 = + the gizmo's depth)", "landingDrives", 0, 2, 1),
+            // ⭐⭐⭐ (2026-11-24, `ORBIT_SURFACE_LANDING_CAST.md` §6 — S14) P2's engine: the sums built ahead (LIVE) or the cast at query time
+            tunable(st, "P2 engine (0 = the sums, before; 1 = the cast)", "landingEngine", 0, 1, 1),
+            // ⭐⭐⭐ (2026-11-24, `ORBIT_SURFACE_L1.md` §10 — S11) L1's caps: the fillers between placed parts in the face map
+            tunable(st, "L1 caps (0 = none, before; 1 = the fillers)", "surfaceL1", 0, 1, 1),
+          ],
+        },
+      ],
     },
     {
       // ⭐ Where the camera sits behind the piece, and how the orbit centre moves when it changes.

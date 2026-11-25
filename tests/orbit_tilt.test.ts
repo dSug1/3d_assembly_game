@@ -433,7 +433,7 @@ describe("⭐⭐ wired", () => {
     expect(a).toContain("const atPole = mqP === null || !(Math.abs(mqP.pitch) >= ORBIT_PITCH_MAX_RAD - 1e-9) ? null : mqP.pitch > 0;");
     expect(a).toContain("if (st.asmCalm !== null && tf >= 0 && map.facets[tf] !== undefined) st.asmCalm = { n: map.facets[tf]!.n, sH: st.asmCalm.sH, sV: 1, wA: 1 };"); // ⭐ the calm carried into F
     expect(a).toContain("st.asmCalm = tl.exitAcross && nW !== null ? { n: nW, sH: st.asmCalm.sH, sV: 1, wA: 1 } : { ...st.asmCalm, sH: 1, sV: 1 };"); // ⭐ …and out of it
-    expect(a).toContain("const holdNow = mouthHold(wasHeld, m0g.mouth, dP, dY);"); // ⭐ build b
+    expect(a).toContain("const holdNow = mouthHold(wasHeld, mouthIn, dP, dY);"); // ⭐ build b — ⭐ (2026-11-23, S3) its mouth through the domain (`mouth_hold_domain.test.ts` V3)
     expect(a).toContain('tiltOn(st, st.asmMouth !== null ? st.asmMouth.hi : atPole);');
     expect(a).toContain("const kH = Math.max(0, st.asmCalmWhole);"); // ⛔ (step 2.5) the roll back's share (`tl.k`) no longer read
     // ⭐⭐⭐ (2026-11-11, the owner: *"you accumulate a position gap on screen between the gizmo and the piece"*) one base for the piece and the camera:

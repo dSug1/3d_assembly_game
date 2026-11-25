@@ -233,7 +233,7 @@ describe("⭐⭐⭐ A2-a (D-J2) — the way in unchanged; the switch at 0 = toda
     expect(a.some((r) => r.held)).toBe(false);
   });
 
-  it("the switch: `pictureBandWayIn`, 1 by default (his word 2026-11-25: default at 1 also in the two other branches, as LIVE `870078b`; 0 = `3b7a479`), 0 or 1 only; the wiring holds the band only at 1, the hold read off the hand-over's last owner", () => {
+  it("the switch: `pictureBandWayIn`, 1 by default (his word 2026-11-25: deploy with all sliders at 1; 0 = `3b7a479`), 0 or 1 only; the wiring holds the band only at 1, the hold read off the hand-over's last owner", () => {
     expect(DEFAULT_CONFIG.pictureBandWayIn).toBe(1);
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, pictureBandWayIn: 1 })).not.toThrow();
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, pictureBandWayIn: 2 })).toThrow(/pictureBandWayIn/);
