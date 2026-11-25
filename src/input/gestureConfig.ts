@@ -431,6 +431,9 @@ export interface GestureConfig {
   /** ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J2 — A2-a) 1: the band the way IN's rule only — its share held at 0 from the unlatch until the piece is
    *  beyond the band's far edge or latches again (the way out's one payer its own share); 0 = the band by place both ways (`3b7a479`) */
   pictureBandWayIn: number;
+  /** ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J4 — A3-p) 1: the follower parked close in IN ITS OWN CONVENTION — the direction whose pose drawn (the
+   *  owner's camera offsets) has the turntable's heading, so at the unlatch it starts where the picture is; 0 = the turntable's ψ fed as the direction's (`3b7a479`) */
+  followParkOwn: number;
   /** ⭐ (F2, D-F6) the follower's ONE ease: a critically damped spring on the sphere (ms) */
   followMs: number;
   /** ⭐ (F2, D-F1) the camera goes round the vertical this far from it far out (deg; 0 = no detour) */
@@ -919,6 +922,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   pictureBandMm: 10, // ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §4.2 — R3a) the band: his `tiltBlendMm` figure, 10 mm of approach finger before 0.65 m; ⛔ 40 (the lead, reverted the same day): Scene_1's whole far approach is ≈ 30 mm, the far rest was blended
   pictureBandWayIn: 0, // ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J2 — A2-a, his answer: the band the way IN's rule only) 0 = `3b7a479`: the band by place on the way out too (two payers of its gap: ≈ 14° off and back)
   pictureHandWhole: 0, // ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J1 — A1-a, his *"A1-a and A2-a as you recommend"*) 0 = `3b7a479`: the unlatch's hand-over holds the angles only (the look point 35 – 366 mm in one frame)
+  followParkOwn: 0, // ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J4 — A3-p, the lead under his *"proceed as you recommend"*) 0 = `3b7a479`: the follower parked on the camera's heading as its direction's (1.65 – 6.44° off at his latches, paid twice at the unlatch)
   followMs: 200, // ⭐ (2026-11-21, the owner tried the slider: *"at 200 ms is better at far out distance … set default to 200ms"*; 120 before) (F2, D-F6) the calm's own 120 ms it replaces — on the RAW target 50 ms (the prototype's D, tuned on the eased one) left 56 frames over 45° offline (`CAMERA_FOLLOWS_GIZMO.md` §13)
   followPoleDeg: 30, // ⭐ (F2) his D-F1: no nearer than 30° to straight above far out
   followTurnMinDeg: 10, // ⭐ (H2) T11's band: under it the spring pays
@@ -1115,6 +1119,7 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.pictureBandMm >= 0 && cfg.pictureBandMm <= 100)) throw new Error(`pictureBandMm (${cfg.pictureBandMm}) must be in [0, 100] mm.`);
   if (cfg.pictureBandWayIn !== 0 && cfg.pictureBandWayIn !== 1) throw new Error(`pictureBandWayIn (${cfg.pictureBandWayIn}) must be 0 or 1.`);
   if (cfg.pictureHandWhole !== 0 && cfg.pictureHandWhole !== 1) throw new Error(`pictureHandWhole (${cfg.pictureHandWhole}) must be 0 or 1.`);
+  if (cfg.followParkOwn !== 0 && cfg.followParkOwn !== 1) throw new Error(`followParkOwn (${cfg.followParkOwn}) must be 0 or 1.`);
   if (!(cfg.followMs >= 0 && cfg.followMs <= 500)) throw new Error(`followMs (${cfg.followMs}) must be in [0, 500] ms.`);
   if (!(cfg.followPoleDeg >= 0 && cfg.followPoleDeg <= 60)) throw new Error(`followPoleDeg (${cfg.followPoleDeg}) must be in [0, 60] deg.`);
   if (!(cfg.followTurnMinDeg >= 0 && cfg.followTurnMinDeg <= 90)) throw new Error(`followTurnMinDeg (${cfg.followTurnMinDeg}) must be in [0, 90] deg.`);
