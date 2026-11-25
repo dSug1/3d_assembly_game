@@ -264,6 +264,52 @@ try {
     check("close: back in (the step back over)", end.phase === "IDLE" && end.off === 0, `${JSON.stringify(end)}; the gap after ${((await num("window.__z.gap()")) * 1000).toFixed(2)} mm`);
   }
 
+  const sceneIndex = +(new URL(env.URL ?? "http://x/?sceneIndex=1").searchParams.get("sceneIndex") ?? 1);
+
+  // ── 7. (review finding 1) a lost release mid-drag (the window blurred): the gesture ends as a release would; the next drag outside orbits ──
+  if (run("lost") && sceneIndex !== 3) {
+    await idle();
+    const c = await centrePx();
+    await drag(c, [20, 90], 20);
+    await ev("window.dispatchEvent(new Event('blur'))");
+    const end = await idle();
+    check("lost: the gesture ended (snapped, no zone left)", end.zone === null && end.phase === "IDLE" && (await num("window.__z.alignErr()")) < 0.5, JSON.stringify(end));
+    await mouse("mouseReleased", c[0] + 20, c[1] + 90, 0);
+    const yaw0 = await num("window.__st.orbit.yaw");
+    const ox = Wd - 60, oy = Ht * 0.5;
+    await drag([ox, oy], [-80, 0], 20);
+    await mouse("mouseReleased", ox - 80, oy, 0);
+    const yaw1 = await num("window.__st.orbit.yaw");
+    check("lost: the next drag outside the zone orbits", Math.abs(yaw1 - yaw0) > 1e-3, `yaw ${yaw0.toFixed(4)} → ${yaw1.toFixed(4)}; ${JSON.stringify(await S())}`);
+  }
+
+  // ── 8. Scene_2: a part picked, then turned in the zone ──
+  if (run("s2") && sceneIndex === 3) {
+    await sleep(1000);
+    const p2 = await arr(`(() => { const st = window.__st; const ms = st.scene.meshes.filter((m) => st.modelBrowse.has(m) && m.name.startsWith("E02") && m.isEnabled()); if (!ms.length) return null;
+      let lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity]; for (const m of ms) { m.computeWorldMatrix(true); const b = m.getBoundingInfo().boundingBox; for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], b.minimumWorld.asArray()[k]); hi[k] = Math.max(hi[k], b.maximumWorld.asArray()[k]); } }
+      return window.__z.project([(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2]); })()`);
+    console.log(`s2: E02 on the glass ${JSON.stringify(p2)}`);
+    await mouse("mouseMoved", p2[0], p2[1], 0);
+    await mouse("mousePressed", p2[0], p2[1], 1);
+    await sleep(50);
+    await mouse("mouseReleased", p2[0], p2[1], 0);
+    await sleep(2500);
+    const held = await ev("window.__st.greenBox ? window.__st.greenBox.name : null");
+    check("s2: the part picked", held === "E02", `held ${held}; ${JSON.stringify(await S())}`);
+    if (held === "E02") {
+      const c = await centrePx();
+      const q0 = await arr("window.__z.q()");
+      await drag(c, [20, 120], 30);
+      const mid = await S();
+      check("s2: the drag on the held part turns it", mid.zone === "TURN+" && dot4(q0, await arr("window.__z.q()")) < 0.999, JSON.stringify(mid));
+      await mouse("mouseReleased", c[0] + 20, c[1] + 120, 0);
+      const end = await idle(3000);
+      check("s2: snapped onto a direction, still held", (await num("window.__z.alignErr()")) < 0.5 && (await ev("window.__st.greenBox ? window.__st.greenBox.name : null")) === "E02", JSON.stringify(end));
+      check("s2: never into a part", (await num("window.__z.gap()")) >= 0, `gap ${((await num("window.__z.gap()")) * 1000).toFixed(2)} mm`);
+    }
+  }
+
   const err = await ev("window.__recErr ?? null");
   check("no error in the page's ticker", err === null, String(err));
   console.log(fails === 0 ? "ZONE PROBE: ALL PASS" : `ZONE PROBE: ${fails} FAIL`);

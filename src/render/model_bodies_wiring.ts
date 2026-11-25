@@ -42,6 +42,7 @@ import { topologyOfBody } from "./bodies";
 import { orbitPieceEntry, resetPieceOrbit, restOnTappedFace } from "./green_box_wiring";
 import { ensureAssembly, resetOrbitState } from "./assembly_wiring";
 import { applyCamera, syncCentre } from "./camera_rig";
+import { pieceZoneTakesRelease } from "./piece_turn_wiring";
 import { selectRestingFace } from "./pointer_wiring";
 import type { SceneState } from "./scene_state";
 
@@ -212,9 +213,11 @@ class ModelPlay {
       return;
     }
     if (type === PointerEventTypes.POINTERDOWN || type === PointerEventTypes.POINTERMOVE) this.lastInput = now;
-    // ⭐⭐⭐ (2026-11-25, IN14 §2) a pointer the piece zone owns (a second finger rolling the piece): never a tap of this flow
-    if (type !== PointerEventTypes.POINTERDOWN && this.st.pieceTurn.owned.has(e.pointerId)) {
-      if (type === PointerEventTypes.POINTERUP) this.presses.delete(e.pointerId);
+    // ⭐⭐⭐ (2026-11-25, IN14 §2, review finding 6) a pointer the piece zone owns (a second finger rolling the piece), or a release the zone takes (its
+    // committed gesture, A + a click): never a tap of this flow
+    if (type === PointerEventTypes.POINTERMOVE && this.st.pieceTurn.owned.has(e.pointerId)) return;
+    if (type === PointerEventTypes.POINTERUP && pieceZoneTakesRelease(this.st, e.pointerId, e.clientX, e.clientY, now)) {
+      this.presses.delete(e.pointerId);
       return;
     }
     if (type === PointerEventTypes.POINTERDOWN) {

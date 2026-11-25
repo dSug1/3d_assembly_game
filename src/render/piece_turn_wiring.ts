@@ -65,6 +65,13 @@ export interface UndoSnap {
   readonly lastDir: OrientDirection | null;
 }
 
+/** ⭐ What a refused way out puts back (review finding 8: the history truncated to its size before the first action — every later push dropped). */
+export interface Restore {
+  readonly snap: UndoSnap;
+  readonly histSize: number;
+  readonly undone: UndoSnap | null;
+}
+
 /** ⭐ The zone's gesture in flight. */
 export interface ZoneGesture {
   readonly pointerId: number;
@@ -106,8 +113,8 @@ export interface PieceTurnState {
   offset: Vec3 | null;
   outStarted: number;
   lastTurnAt: number;
-  /** what a refused turn puts back */
-  pendingRestore: { readonly snap: UndoSnap; readonly pushed: boolean; readonly undone: UndoSnap | null } | null;
+  /** what a refused turn puts back: the state before the step back's first action, the history's size then, a step an undo took */
+  pendingRestore: Restore | null;
   readonly history: TurnHistory<UndoSnap>;
   emptyTaps: TapHistory | null;
   /** the piece's bounding sphere (its own frame) and the point shape that tests it */
@@ -283,7 +290,7 @@ const dot4 = (a: Quat, b: Quat): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[
  * ⭐⭐ A TURN STARTS (§4.5): the piece's centre held where it is; the way out asked (the frame decides: free at once — TURNING, else OUT). `restore`: what a
  * refused way out puts back. `false`: no piece, the switch at 0.
  */
-function beginTurn(st: SceneState, now: number, restore: { readonly snap: UndoSnap; readonly pushed: boolean; readonly undone: UndoSnap | null }): boolean {
+function beginTurn(st: SceneState, now: number, restore: Restore): boolean {
   const pt = st.pieceTurn;
   if (!pieceTurnOn(st)) return false;
   const sp = sphereOf(st);
@@ -305,14 +312,16 @@ function refuseTurn(st: SceneState): void {
   const r = pt.pendingRestore;
   if (r !== null) {
     putBack(st, r.snap, false, performance.now());
-    if (r.pushed && pt.history.peek() === r.snap) pt.history.pop();
+    while (pt.history.size > r.histSize) pt.history.pop();
     if (r.undone !== null) pt.history.push(r.undone);
   }
   pt.pendingRestore = null;
   if (pt.zone !== null) pt.zone.refused = true;
   pt.live = false;
-  pt.phase = "BACK";
+  // ⭐ (review finding 2) the offset from the pose and face PUT BACK, the centre where it is — then the way back in (⛔ read after the switch to BACK: the offset
+  // of the pose and face of the refused turn, the piece jumped by q·(r_new − r_old))
   pt.offset = currentOffset(st);
+  pt.phase = "BACK";
   st.lastVerdict = "piece zone: no room to turn here — move out";
   st.hudDirty = true;
 }
@@ -370,7 +379,7 @@ export function pieceTurnPost(st: SceneState, now: number, dtMs: number): void {
   }
   // ⭐ the lit quad: the direction the resting face is nearest to sitting on (D-P5); after a snap, the one it sits on
   if (z !== null && z.mode === "TURN" && z.committed) {
-    const n = qRotate(meshQ(st), p.restingFace.normal);
+    const n = qRotate(z.target ?? meshQ(st), p.restingFace.normal); // ⭐ the pose the finger asks (drawn once the room is made)
     pt.lit = litDirection(n, st.orientDirs.map((d) => d.normal), pt.lit, (st.cfg.pieceTurnLitHysteresisDeg * Math.PI) / 180);
   } else if (st.pinkTargetNormal !== null) {
     const tn = st.pinkTargetNormal;
@@ -398,14 +407,18 @@ export function pieceTurnPost(st: SceneState, now: number, dtMs: number): void {
         const u = pt.u;
         const held = pt.held;
         const from = pt.lift;
-        const r = advanceAlong((s) => gapAtCentre(st, sp, add(held, scale(u, from + s)), q), Math.min(want, STEP_MAX_M), gapM / 2, Math.max(1, queriesLeft(st)), 1e-5);
-        pt.lift += r.reached;
-        if (r.blocked) refuseTurn(st);
+        const rem = queriesLeft(st); // ⭐ (review finding 8) within what the frame left after the sphere's query — none left: next frame
+        if (rem >= 1) {
+          const r = advanceAlong((s) => gapAtCentre(st, sp, add(held, scale(u, from + s)), q), Math.min(want, STEP_MAX_M), gapM / 2, rem, 1e-5);
+          pt.lift += r.reached;
+          if (r.blocked) refuseTurn(st);
+        }
       }
     }
   }
-  // ⭐ TURNING → BACK: no gesture, no turn playing, 300 ms after the last turn
-  if (pt.phase === "TURNING" && pt.zone === null && st.restAlign === null && now - pt.lastTurnAt > BACK_AFTER_MS) {
+  // ⭐ TURNING → BACK: no gesture, no turn playing, 300 ms after the last turn — ⭐ (review finding 7) or at once when another finger presses (an orbit, an
+  // approach: the piece no longer held still while the orbit moves on)
+  if (pt.phase === "TURNING" && pt.zone === null && st.restAlign === null && (now - pt.lastTurnAt > BACK_AFTER_MS || st.router.size > 0)) {
     pt.offset = currentOffset(st);
     pt.phase = "BACK";
   }
@@ -420,7 +433,7 @@ export function pieceTurnPost(st: SceneState, now: number, dtMs: number): void {
       const raw = ringAnchorRaw(st, st.pieceQ);
       const q = meshQ(st);
       const cap = Math.min(d, STEP_MAX_M, Math.max(d * 0.35, 0.004));
-      const r = advanceAlong((s) => gapAtAnchor(st, add(raw, add(off, scale(dir, s))), q), cap, gapM, Math.max(1, queriesLeft(st)), 1e-5);
+      const r = advanceAlong((s) => gapAtAnchor(st, add(raw, add(off, scale(dir, s))), q), cap, gapM, queriesLeft(st), 1e-5);
       const next = add(off, scale(dir, r.reached));
       if (r.blocked || length(next) < 1e-5) {
         if (length(next) >= 1e-5) {
@@ -498,13 +511,6 @@ function travelWorld(st: SceneState, dxPx: number, dyPx: number): { readonly m: 
   return { m, f: [f.x, f.y, f.z] };
 }
 
-/** ⭐ A turn playing ended at once (the roll starts from where the snap was going). */
-function finishTurnNow(st: SceneState): void {
-  if (st.restAlign !== null && st.greenBox !== null) {
-    st.greenBox.rotationQuaternion = toB(st.restAlign.base);
-    st.restAlign = null;
-  }
-}
 
 /** ⭐ The direction a face would sit on now: the last selected quad, else the nearest (§4.6). */
 function faceTarget(st: SceneState): OrientDirection | null {
@@ -524,16 +530,18 @@ function commit(st: SceneState, z: ZoneGesture): void {
   st.approachInertia.stop();
   const now = performance.now();
   const snap = snapNow(st);
+  const histSize = st.pieceTurn.history.size;
   st.pieceTurn.history.push(snap); // ⭐ the undo's step: the pose before this gesture (a turn, a roll)
-  if (!beginTurn(st, now, { snap, pushed: true, undone: null })) {
+  if (!beginTurn(st, now, { snap, histSize, undone: null })) {
     st.pieceTurn.history.pop();
     z.refused = true;
     return;
   }
   st.pieceTurn.live = true;
   if (z.mode === "TURN") {
-    finishTurnNow(st);
-    z.target = meshQ(st);
+    // ⭐ (review finding 3) the finger takes the pose from where a turn playing was going — never drawn before the room is made: the drawn pose eases to it
+    z.target = st.restAlign?.base ?? meshQ(st);
+    st.restAlign = null;
     st.lastVerdict = "piece zone: the piece turns under the finger — release to snap onto the lit quad";
   } else if (z.mode === "ROLL") startRoll(st, z, null);
   st.hudDirty = true;
@@ -541,14 +549,28 @@ function commit(st: SceneState, z: ZoneGesture): void {
 
 /** ⭐ The turn under the finger snapped onto the lit quad (the release, a second finger, A). */
 function snapTurn(st: SceneState, z: ZoneGesture): void {
-  if (z.target !== null && st.greenBox !== null) st.greenBox.rotationQuaternion = toB(z.target);
-  z.target = null;
   const pt = st.pieceTurn;
   const now = performance.now();
+  const b = st.greenBox;
+  const target = z.target;
+  z.target = null;
+  const drawn = meshQ(st);
+  // ⭐ the alignment reads the pose the finger asked
+  if (target !== null && b !== null) b.rotationQuaternion = toB(target);
   const dir = pt.lit >= 0 ? st.orientDirs[pt.lit] : undefined;
+  let ok = false;
   if (dir !== undefined) {
     st.pinkDir = dir;
-    if (alignRestingFace(st, now)) {
+    ok = alignRestingFace(st, now);
+  }
+  // ⭐⭐ (review finding 3) STEPPING OUT: nothing drawn (nor solved) turned before the room is made — the pose put back, the turn waits from it
+  if (pt.phase === "OUT" && b !== null) {
+    b.rotationQuaternion = toB(drawn);
+    if (st.restAlign !== null) st.restAlign = { ...st.restAlign, from: drawn };
+    else if (target !== null) st.restAlign = { from: drawn, t0: now, base: target };
+  }
+  if (dir !== undefined) {
+    if (ok) {
       pt.lastDir = dir;
       pt.lastTurnAt = now;
       if (!popIfSame(st, st.restAlign?.base ?? meshQ(st))) episode(st);
@@ -569,8 +591,8 @@ function startRoll(st: SceneState, z: ZoneGesture, push: UndoSnap | null): void 
       if (alignRestingFace(st, now)) st.pieceTurn.lastDir = d;
     }
   }
-  finishTurnNow(st);
-  z.roll = { base: meshQ(st), angle: 0 };
+  // ⭐ (review finding 3) from the stop a turn playing is going to — drawn only once the room is made (`applyRoll`)
+  z.roll = { base: st.restAlign?.base ?? meshQ(st), angle: 0 };
   st.pieceTurn.lastTurnAt = now;
   st.lastVerdict = z.mouse ? "piece zone: A — dx rolls the piece (right: clockwise), release to snap" : "piece zone: two fingers — the twist rolls the piece, lift to snap";
   st.hudDirty = true;
@@ -592,6 +614,7 @@ function applyRoll(st: SceneState, z: ZoneGesture): void {
   if (r === null || st.greenBox === null || st.pieceTurn.phase !== "TURNING") return;
   const a = rollAxis(st, r.base);
   if (a === null) return;
+  st.restAlign = null; // ⭐ the roll's pose takes over from a turn playing (its stop is the roll's base)
   st.greenBox.rotationQuaternion = toB(qmul(qFromAxisAngle(a, r.angle), r.base));
   st.pieceTurn.lastTurnAt = performance.now();
 }
@@ -602,8 +625,10 @@ function snapRoll(st: SceneState, z: ZoneGesture): void {
   z.roll = null;
   const p = entry(st);
   const rr = st.restRoll;
-  if (r === null || p === undefined || p.restingFace === null || rr === null) return;
   const now = performance.now();
+  // ⭐ (review finding 8) nothing to snap to: back to its base
+  if (r !== null && (p === undefined || p.restingFace === null || rr === null)) st.restAlign = { from: meshQ(st), t0: now, base: r.base };
+  if (r === null || p === undefined || p.restingFace === null || rr === null) return;
   const f = st.camera.getDirection(new Vector3(0, 0, 1));
   const view: Vec3 = [f.x, f.y, f.z];
   let pinkAxes = rr.pinkAxes;
@@ -642,8 +667,9 @@ function snapRoll(st: SceneState, z: ZoneGesture): void {
 function rollOneStop(st: SceneState): boolean {
   const now = performance.now();
   const snap = snapNow(st);
+  const histSize = st.pieceTurn.history.size;
   st.pieceTurn.history.push(snap);
-  if (!beginTurn(st, now, { snap, pushed: true, undone: null })) {
+  if (!beginTurn(st, now, { snap, histSize, undone: null })) {
     st.pieceTurn.history.pop();
     return false;
   }
@@ -707,6 +733,13 @@ export function pieceZonePointer(st: SceneState, type: number, e: PointerEvent, 
     return false;
   }
   if (z === null || id !== z.pointerId) return false;
+  if (type === PointerEventTypes.POINTERMOVE && z.mouse && e.buttons === 0) {
+    // ⭐ (review finding 1) the mouse's button is up but its release was lost: the gesture ends as a release would (no tap read), the router let go
+    pieceZoneForget(st);
+    st.router.release(id);
+    if (st.pieceFaceTap !== null && st.pieceFaceTap.pointerId === id) st.pieceFaceTap = null;
+    return true;
+  }
   if (type === PointerEventTypes.POINTERMOVE) {
     st.router.move(id, s, null); // ⭐ the router keeps its last (the release's tap test reads its press)
     const prev = z.last;
@@ -747,6 +780,38 @@ export function pieceZonePointer(st: SceneState, type: number, e: PointerEvent, 
     return true;
   }
   return false;
+}
+
+/**
+ * ⭐⭐ (review finding 1) A LOST RELEASE (the window lost, `forgetPointers`; a mouse moving with no button): the gesture ends as its release would — the
+ * turn or the roll snapped, no tap read — and the owned pointers forgotten.
+ */
+export function pieceZoneForget(st: SceneState): void {
+  const pt = st.pieceTurn;
+  const z = pt.zone;
+  pt.zone = null;
+  pt.owned.clear();
+  if (z !== null && z.committed && !z.refused) {
+    if (z.mode === "TURN") snapTurn(st, z);
+    else if (z.roll !== null) snapRoll(st, z);
+  }
+  if (pt.live) {
+    pt.live = false;
+    pt.showUntil = performance.now() + HOLD_MS;
+  }
+}
+
+/**
+ * ⭐⭐ (review findings 5, 6) THIS RELEASE IS THE ZONE'S — a pointer it owns, its committed gesture, or A + a click in it: never a tap on a placed part (the
+ * gizmo) nor a tap of `Scene_2`'s flow. Asked BEFORE the zone's own release clears the gesture.
+ */
+export function pieceZoneTakesRelease(st: SceneState, id: number, x: number, y: number, t: number): boolean {
+  const pt = st.pieceTurn;
+  if (pt.owned.has(id)) return true;
+  const z = pt.zone;
+  if (z === null || z.pointerId !== id) return false;
+  if (z.committed) return true;
+  return z.mouse && (z.aHeld || st.orbitApproachKey) && isTapRelease(z.pressed.t, z.pressed.x, z.pressed.y, t, x, y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop));
 }
 
 /** ⭐ The zone's committed release consumed: the router's and the face tap's bookkeeping done here (the rest of the release does not run). */
@@ -797,12 +862,17 @@ function twistNow(st: SceneState, z: ZoneGesture): void {
 function secondUp(st: SceneState, z: ZoneGesture, s: Sample): void {
   const sec = z.second;
   if (sec === null) return;
+  if (z.refused) {
+    // ⭐ (review finding 4) the step back found no room: the lift does nothing (⛔ it popped an older undo step, or rolled outside the step back)
+    z.second = null;
+    return;
+  }
   const tapped = isTapRelease(sec.pressed.t, sec.pressed.x, sec.pressed.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop));
   const twist = z.roll?.angle ?? 0;
   z.second = null;
   if (twistIsTap(tapped, twist) && z.roll !== null) {
     // the small twist undone, its snapshot dropped, then one stop
-    if (st.greenBox !== null) st.greenBox.rotationQuaternion = toB(z.roll.base);
+    if (st.greenBox !== null && st.pieceTurn.phase === "TURNING") st.greenBox.rotationQuaternion = toB(z.roll.base); // ⭐ only if it was drawn
     z.roll = null;
     st.pieceTurn.history.pop();
     rollOneStop(st);
@@ -847,8 +917,9 @@ export function pieceZoneFaceTap(st: SceneState, faceId: string): boolean {
   const pt = st.pieceTurn;
   const now = performance.now();
   const snap = snapNow(st);
+  const histSize = pt.history.size;
   pt.history.push(snap);
-  if (!beginTurn(st, now, { snap, pushed: true, undone: null })) {
+  if (!beginTurn(st, now, { snap, histSize, undone: null })) {
     pt.history.pop();
     return false;
   }
@@ -889,12 +960,11 @@ export function pieceZoneUndo(st: SceneState): boolean {
     return false;
   }
   const cur = snapNow(st);
-  if (!beginTurn(st, now, { snap: cur, pushed: false, undone: u })) {
+  if (!beginTurn(st, now, { snap: cur, histSize: pt.history.size, undone: u })) {
     pt.history.push(u);
     return false;
   }
-  finishTurnNow(st);
-  putBack(st, u, true, now);
+  putBack(st, u, true, now); // ⭐ eased from the pose drawn (waits while the piece steps out)
   pt.lastTurnAt = now;
   pt.showUntil = now + HOLD_MS;
   episode(st);

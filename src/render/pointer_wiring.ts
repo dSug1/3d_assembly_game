@@ -29,7 +29,7 @@ import { mmToPx } from "../core/units";
 import { faceFromPickedNormal } from "../core/face_pick";
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { holdFirstPress, holdMove, holdRelease, holdSecondPress } from "./hold_wiring";
-import { pieceZoneEmptyTap, pieceZoneFaceTap, pieceZoneKey, pieceZonePointer } from "./piece_turn_wiring";
+import { pieceZoneEmptyTap, pieceZoneFaceTap, pieceZoneForget, pieceZoneKey, pieceZonePointer, pieceZoneTakesRelease } from "./piece_turn_wiring";
 import { episodeCounts } from "../input/episode_ledger";
 import { beginGesture, endGesture, gestureChangedSoFar } from "./gesture_wiring";
 import { type SceneState } from "./scene_state";
@@ -101,7 +101,9 @@ export function installPointerHandler(st: SceneState): void {
     if (info.type === PointerEventTypes.POINTERUP) {
       // ⭐⭐ (2026-10-13, §11nonies) the press on a placed part released: a TAP moves the gizmo there (`orbitTargetOnRelease`), a drag does not
       const pc = st.pendingPartCentre;
-      if (pc !== null && pc.pointerId === e.pointerId) {
+      // ⭐ (2026-11-25, IN14 review finding 5) a release the piece zone takes (its drag, its roll's tap, A + a click) never moves the gizmo
+      if (pc !== null && pc.pointerId === e.pointerId && pieceZoneTakesRelease(st, e.pointerId, s.x, s.y, s.t)) st.pendingPartCentre = null;
+      else if (pc !== null && pc.pointerId === e.pointerId) {
         st.pendingPartCentre = null;
         const to = orbitTargetOnRelease(pc.target, isTapRelease(pc.t, pc.x, pc.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop)));
         // ⭐⭐⭐ (2026-10-16) and the rig turned onto the face the tap hit, at the camera's yaw
@@ -294,6 +296,7 @@ function gestureOver(st: SceneState): void {
  */
 export function forgetPointers(st: SceneState): void {
   st.orbitApproachKey = false;
+  pieceZoneForget(st); // ⭐⭐ (2026-11-25, IN14 review finding 1) the piece zone's gesture ends as a release would
   for (const p of st.router.all()) {
     holdRelease(st, p.id, false);
     st.episodeKey.delete(p.id);
