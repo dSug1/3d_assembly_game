@@ -186,3 +186,5 @@
   lag, the way in and his far hand bit for bit. verify 2601. Not deployed; his look owed; the port next.
 * **2026-11-25** — S14's look given (the iPhone, `Scene_1`: no difference, 59 fps at 0 and 1); on his *"do what is best for game playability"*: `landingEngine` **1 by default**
   (`dfb158a8`, verify 2601; 0 = the sums), D9 WITHDRAWN (`PART_AUTHORING.md`). Not deployed yet.
+* **2026-11-25** — S11's look given (under the cube: no difference at 0 and 1); on his *"Do what's best for game playability"*: `surfaceL1` **1 by default** (`cd85616e`, verify 2601). Not deployed yet.
+* **2026-11-25** — S15 on his *"Then propose the rule for B. and implement"*: C24's rule **R-W** (`ORBIT_SURFACE_WIDE_PIECE.md`: the body the ruler, the facet the gizmo's domain never widened by the piece, a seat past its facet B4 / C5) — no game code; `tests/wide_piece.test.ts` (10, both engines, 8 of 8 RED with the piece as a point). C22, C41: their surface part P2's, their layout the orbit's — PROPOSED, his word owed.

@@ -1,6 +1,6 @@
 # L1 IN THE GAME — THE ASSEMBLY'S SURFACE AS IT GROWS: sealed, buried, the caps between parts (package S11, a study, 2026-11-24)
 
-> **STATUS** · ✅ **BUILT 2026-11-24 (§10.5, `1d4cee3c`, behind `surfaceL1`, 0 = LIVE), ✅ GATED (§10.6: G1 bit for bit; his records unchanged at 1); his look owed** · ✅ **DECIDED 2026-11-24 (§8: his *"S11: you can proceed as you recommend"*)** — was: ⏳ **A STUDY — NOTHING BUILT.** Written on his word *"Then finish the orbit's surface work"* (2026-11-24), by his rules (docs before
+> **STATUS** · ✅ **BUILT 2026-11-24 (§10.5, `1d4cee3c`, behind `surfaceL1`, 0 = LIVE), ✅ GATED (§10.6: G1 bit for bit; his records unchanged at 1)** · ⭐ **2026-11-25 his look under the cube: no difference — the default 1 on his *"Do what's best for game playability"* (`cd85616e`, not deployed yet)** · ✅ **DECIDED 2026-11-24 (§8: his *"S11: you can proceed as you recommend"*)** — was: ⏳ **A STUDY — NOTHING BUILT.** Written on his word *"Then finish the orbit's surface work"* (2026-11-24), by his rules (docs before
 > build; the four-part method; the closed orbit's terms — [ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md) §9). **Three questions for his word (§6).**
 > **OWNS** · what the game's face map must leave out or add at a seat (layer L1), measured on today's scenes, and the design proposed.
 > **READ WITH** · [ORBIT_SURFACE.md](ORBIT_SURFACE.md) §5.1 (L1); [PROXY_AND_COLLISION_RULES.md](../../30_OBJECTS_3D/spec/PROXY_AND_COLLISION_RULES.md) §3bis
