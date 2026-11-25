@@ -1,6 +1,6 @@
 # THE CAMERA'S JUMPS ON THE APPROACH — his records of 2026-11-24, replayed (a STUDY — nothing built)
 
-> **STATUS** · ⏳ **A STUDY, 2026-11-24 — ⭐ HIS WORD 2026-11-25 (§7): A1-a and A2-a, then *"proceed as you recommend"* (D-J4, D-J5); packet 1 (`a3d7446d` `pictureHandWhole`, `e591a9d2` `pictureBandWayIn`) and ⭐ packet 2a (`caac1b3b` `followParkOwn` — A3-p, the follower parked in its own convention; `b6cf50c1` D-J5 under `pictureHandWhole`) BUILT and GATED, every switch 0 = LIVE frame for frame (§7.1 – §7.5): all three at 1, all 10 unlatches of family A PASS — the unlatch's jump 0 mm / 0.00°, the swing 0.00°, the turn after the lift ≤ 0.57°; A3-a refuted as stated (no re-take), one residual measured (0.86° of elevation, §7.4). His look owed; not deployed.** The owner's four-part method: the rules (§2), the obstacle measured
+> **STATUS** · ⏳ **A STUDY, 2026-11-24 — ⭐ HIS WORD 2026-11-25 (§7): A1-a and A2-a, then *"proceed as you recommend"* (D-J4, D-J5); ALL FIVE FIXES BUILT and GATED, each behind its own switch, every switch 0 = LIVE frame for frame: packet 1 (`a3d7446d` `pictureHandWhole`, `e591a9d2` `pictureBandWayIn`), packet 2a (`caac1b3b` `followParkOwn` — A3-p; `b6cf50c1` D-J5 under `pictureHandWhole`), ⭐ packet 2b (`307338dd` `framedLineGlass` — B-a, the framed line read on the glass; `020b139b` `gizmoLagTravel` — C-a, the ring shows the gizmo's travel's lag) (§7.1 – §7.7). All five at 1: family A's 10 unlatches PASS (the jump 0 mm / 0.00°, the swing 0.00°, the lift ≤ 0.57°); family B at the floor 0 frames over 1° / 30 mm on `09fv_r02`, `r04`, `n2b8_r03` (today up to 5.2°, 8.0°, 11.1°); the ring still on `n2b8_r04` (0 frames over 1 mm; today 39.7 mm); the way in and his far hand bit for bit. A3-a refuted as stated; residuals measured (0.86° of elevation, §7.4; the ring on a cap ≤ 3.7 mm, §7.7). His look owed; not deployed; the port to `1.0.157` / `1.0.156` next (D-J3).** The owner's four-part method: the rules (§2), the obstacle measured
 > (§3), the fix options from the root (§4), the risks and the audit (§5); in plain words (§6). Code read on `00e59251` (branch
 > `1.0.158from1.0.157-Orbit_surface`, LIVE main `df5426a`); the picture's chain (`picture_wiring.ts`, `picture.ts`, `camera_follow*.ts`, `roll_shadow.ts`,
 > `seam_turn.ts`, `orbit_calm.ts`) is byte for byte the reference's (`2cd1be34` = LIVE `3b7a479`, `git diff` empty).
@@ -558,3 +558,96 @@ none built, each behind its own switch.
 * **What 2a leaves**: the elevation's two payers at a tilt-off whose asked step lies inside the 60° cap (`n2b8_r01` f3380: 0.86°, §7.4) — for the lead;
   packet 2b (B-a, C-a) next; then the port (D-J3: each commit applies on `1.0.157-Orbit_surface` after packet 1's, except `tests/menu_layout.test.ts`'s
   two hunks — the CAMERA FOLLOWER list and the count, as for packet 1). His look on the device closes each (rule 5).
+
+### 7.6 Packet 2b AS BUILT (2026-11-25, an Opus agent — `307338dd` B-a (+ `e4c096a6`, its comment restated with `09fv_r04`), `020b139b` C-a; each switch 0 = `3b7a479` frame for frame; not deployed)
+
+* **`framedLineGlass`** (§4.4 B-a; 0 by default; ORBIT › UPRIGHT PICTURE after `uprightHalfHold`; `gestureConfig.ts`, validated 0 / 1). Pure, in
+  `src/input/roll_follow.ts`: `framedLine(pose, piece, glass)` — the glass given (the camera's field, the canvas's CSS height; the wiring
+  `roll_shadow.ts` `carriedFrame` hands it at 1 only), the line's share `s` read by PLACE from the piece and the look point's separation ON THE GLASS
+  (`separationOnGlassMm`: |piece − look| at the pose's distance, by `trackingMetresPerPx` and `pxToMm` — screen mm, rule 3; `framedLineShare`: 0 within
+  `FRAMED_LINE_VIEW_MM` **5 mm**, 1 from `FRAMED_LINE_FULL_MM` **15 mm**, linear between — the two constants' one home, beside `ROLL_LINE_MIN_M`). At
+  s 1 today's arithmetic (O4 and its 3 mm), bit for bit; under 1 the direction (1 − s)·view + s·c·u, u the unit piece − look and c = u·view signed —
+  the view's at 0, today's oriented line at 1, and no flip possible inside the band: where u crosses square to the view c is 0 and the blend is the view.
+  Inside the band the line does not go through the look point (`throughLook` false: A2's error reads the piece alone there).
+* **The band measured BEFORE its width was chosen** (offline, the study's and packets' replays — the close drawer's frames, the shadow's `one` present;
+  his window 742 CSS px, the field 0.8 rad):
+
+  | frames | the separation on the glass |
+  |---|---|
+  | far out (ap ≥ 0.65; `JT_r02d`, `JT_n4`, `JT_r01`, `JT_P1_r03_00`, `JT_P1_n1_00`) | ≥ **77.8 mm** |
+  | close in before the approach's last 5 cm (0.5 ≤ ap < 0.65) | ≥ **19.9 mm** (`09fv_r04` f17747: 117 mm apart, the line 6.1° off the view; `09fv_r02` f7020 20.3 mm) |
+  | the approach's last 5 cm (0.45 < ap < 0.5) | 1.2 – 60 mm (e.g. `n2b8_r03` f13989 9.3 mm, `09fv_r02` f9643 11.5 mm) |
+  | family B's jumps at the floor, the logic's pose still (§5's gate, today: 7 frames on `n2b8_r03`, 12 on `09fv_r02`, 14 on `09fv_r04`) | **0.54 – 4.27 mm**, and 6.32 – 7.86 mm (`09fv_r04` f17273 – f17276) |
+  | `s1back` / `s1front` (far orbits) and FAST_ORBIT's hand runs on `1.0.151-` | no close-drawer frame / ≥ 30 mm (his stretches at `close`) |
+
+  ⇒ the view's within 5 mm (every jump frame of family B but four, with 0.7 mm of margin; `09fv_r04`'s four at 6.3 – 7.9 mm are blended — s 0.13 –
+  0.29, the line within a few degrees of the view, and they pass the gate: §7.7), the line through both from 15 mm (every far and
+  mid frame beyond it — 4.9 mm under the nearest, 19.9 mm; `09fv_r04` measured after the build, its run at 0 being the gate's baseline). ⚠ **Deviation, stated plainly — the measure.** §4.4 says *"within a few millimetres ON THE
+  GLASS"*; read as the piece's PROJECTED offset from the look point it fails its own condition: at mid distance the piece hangs in front of the look
+  point on the view (the latch's geometry) — `09fv_r03` f13389: 1.3 mm off it projected, 666 mm apart, the line 0.6° off the view, well defined — and
+  family B's jump frames at the floor are 0.5 – 3.6 mm off projected: the two overlap, no band separates them, and mid frames would not stay bit for bit. The
+  separation read at the pose's distance is §4.4's own computation (*"at 1.26 m, 22 – 31 mm apart is ≈ 1° on the glass"*) and separates them (above).
+  ⚠ **On a smaller glass** (a phone's ~390 CSS px high in landscape: every separation about half his PC's), the band reaches mid distances (`09fv_r02`
+  f7020 ≈ 10.7 mm there): the line there 2.4 – 7.5° off the view, blended toward it — not bit for bit on the phone, by rule 3 itself (the same place is
+  smaller on a smaller glass); his device look decides.
+* **`gizmoLagTravel`** (§4.5 C-a; 0 by default; ORBIT › SMOOTHING after `gizmoEaseMs`; validated 0 / 1). Pure, in `src/input/assembly_orbit.ts`:
+  `approachLag(was, move, dt, τ)` — the base eases to its target by ONE law (`easePoint` at `gizmoEaseMs`), linear in the target's moves, so its lag is
+  the sum of what each move left, each decaying by that law; `approachLag` carries the share the APPROACH's moves left (last frame's less this
+  frame's move, eased toward 0 by the base's own law, at rest under 0.1 mm as the base) and `gizmoLag(eased, target, n, own)` reads the base less it.
+  The wiring (`assembly_wiring.ts` `approachLagFrame`, after `footOf`): the approach's move = the foot at this frame's approach distance less the foot
+  at last frame's (`footOf` at THIS frame's gizmo, direction and support — the approach's part alone, read only when the distance changed); the base on
+  its target (born there or settled): none; state `asmLagApproach` (`scene_state.ts`; reset by `orbitStateStart`); at 0 `null` (the base's whole lag, as
+  today). ⛔ No second ease: the base, the piece and the camera untouched; where only `g` moves the share is 0 and the lag drawn is today's bit for bit
+  (a vector). ⚠ The surface's white ring (`landing_readout.ts`, this branch only — not on `1.0.157` / `1.0.156`) reads the same `st.asmGizmoLag`: it
+  follows the gizmo's ring at 1; its code is not changed.
+* **Vectors** (`tests/approach_jitter_b.test.ts` 8, `tests/approach_jitter_c.test.ts` 5; `menu_layout` 145 sliders; `orbit_state_reset` 76 fields),
+  each red first: B-a on today's rule (4 of 8 red), the separation read as the projected offset (4), the band in pixels (5), the oriented line blended
+  without its signed weight c (1 — the flip inside the band), the switch ignored (1); C-a on today's (the share ignored: 3 of 5), the share removed for
+  its own frame only (3), not decayed (3), at another time — a second ease, 2× (3), the switch ignored (1). **`npm run verify`: 2601.**
+* **The port** (D-J3; `git apply --check` in a temporary index on `1.0.157-Orbit_surface` with packets 1 and 2a applied first): every file of both
+  commits applies cleanly except `tests/menu_layout.test.ts` (two hunks each: the folder's list — its context the CAMERA FOLLOWER line packets 1 / 2a
+  changed, clean once those are hand-ported the same — and the count, 1.0.157's own + 1 each). `1.0.156` = `1.0.157`'s code.
+
+### 7.7 ITS GATES (2026-11-25 — the kit `fo3/surface/jitter/` on the branch at `020b139b` (`e4c096a6` changes no code); runs `fo3/surface/runs/JT_P2B_*`, `P2BW_*`, `p2b_hand/`; the queue and the readers `jitter/p2b/`: `gates_p2b.sh`, `read_p2b.sh`, `cmp_ap.cjs` (where two runs differ, by the approach and the latch), `cmp_lag.cjs` (the lag drawn where `g` moves; the ring's steps where it is still), `rd_last5.cjs` (the approach's last 5 cm while it moves), `cmp_rows.cjs`; the floor's gate `gate_b.cjs` beside them)
+
+* **G1 — every switch 0: identical.** `09fv_r02`, `n2b8_r03`, `n2b8_r04` against the study's `JT_r02d`, `JT_n3`, `JT_n4`: every shared per-frame field
+  bit for bit (3 315, 798, 1 830 frames). `09fv_r04` had no study replay: its run at 0 (`JT_P2B_r04_00`, `SETPR=1`, 1 283 frames) is the baseline.
+  Family A with packets 1 / 2a at 1 is read with all five at 1 (below): bit for bit but the ring's own lag — B-a never acts there, C-a draws only.
+* **B at 1** (`framedLineGlass` alone) — §5: at the floor (the approach not moving, ap < 0.5) no frame over 1° of view turn or 30 mm of eye while the
+  logic's pose is still (`dL` 0):
+
+  | record | at 0 (= `3b7a479`) | B-a | all five |
+  |---|---|---|---|
+  | `09fv_r02` | 12 frames over: up to **5.23°** / 114.7 mm (f8624, f9084 – f9087, f9657 – f9660) | **0**: at most 0.60° / 18.0 mm (f9644) | **0** (as B-a) |
+  | `09fv_r04` | 14 frames over: up to **7.96°** / 175.6 mm (f16790 – f16793, f17273 – f17285) | **0**: at most 0.10° / 9.9 mm | **0** (as B-a) |
+  | `n2b8_r03` | 7 frames over: up to **11.05°** / 242.0 mm (f13991 – f13994, f14421 – f14423) | **0**: 0.00° / 14.7 mm | **0** (as B-a) |
+
+  The approach's last 5 cm while it moves (not gated): the largest turn a frame 4.96° → 1.25° (`09fv_r02` f9075, the floor reached), 1.28° → 0.19°
+  (`n2b8_r03`), 6.30° → 0.94° (`09fv_r04`). **Where B-a changes the picture** (`cmp_ap.cjs`, B-a against 0): only latched with ap < 0.5 — the eye up
+  to 298 / 186 / 322 mm, the view up to 13.5° / 8.5° / 14.5° (today's swing taken away); latched with ap ≥ 0.5 and far out the camera, the gizmo and the
+  piece identical but `09fv_r02`'s up vector, 1.3e-16 on 129 far frames after a floor B-a had acted on (rounding carried, not the band).
+* **C at 1** (`gizmoLagTravel` alone, `n2b8_r04`): the gizmo still on 1 829 frames — the ring's step over 1 mm on **0** frames (largest 0.00 mm; at 0:
+  66 frames, 39.66 mm f17197); the camera, the gizmo and the piece bit for bit (only `jt.glag` differs, 340 frames). `n2b8_r04`'s gizmo never moves:
+  the orbit's lag is read on `09fv_r02` (all five): where `g` moves the lag drawn is today's on 255 of 299 frames, and differs on 44 only within 0 – 16
+  frames of an approach move (its share taken out, up to 25.1 mm); where `g` stands between his finger's events the ring catches up on the orbit's lag as
+  today (`09fv_r02` f7658 – f7661: 7.6, 8.1, 5.0 mm in both).
+* **All five at 1 — family B / C**: the floor's gate as B-a's above (0 frames over on all three); the ring still on `n2b8_r03`, `09fv_r04`, `n2b8_r04`
+  (0 frames over 1 mm; at 0: 30, 70, 66 — up to 8.4, 51.6, 39.7 mm).
+* **All five at 1 — family A** (`09fv_r01`, `r03`, `n2b8_r01`) against packet 2a's all-three runs (`JT_P2_*_111`): every per-frame field bit for bit
+  except the ring's lag (`jt.glag`: 539, 350, 667 frames) — the camera, the gizmo and the piece identical, so §7.5's gates stand as they are (all 10
+  unlatches PASS). The ring with `g` still: over 1 mm on 40 / 10 / 2 frames (at packet 2a: 49 / 43 / 94; largest 3.1 / 3.7 / 1.1 mm against 3.5 / 6.1 /
+  22.5) — what is left is not the approach's move by its definition (the foot's change at THIS frame's gizmo, direction and support): the shown
+  direction turning at a latch and a way out's end on a cap (`09fv_r01` f1565: the base 4.0 mm, the ring 2.5).
+* **The way in unchanged** — his two `Scene_1` records of the S14 gates (`s1back`, `s1front`) at all five 1 (`P2BW_*`) against their runs at 0 (`E0_*`):
+  every per-frame field bit for bit (2 916 and 6 034 frames; far orbits, no latch, no close-drawer frame).
+* **FAST_ORBIT's spit frames** — his hand stretches of `Scene_0bis` (`ilmj_23s`, `ilmj_99s` at 60 fps, far: the kit's `fo3/hand/`, `hand_batch.sh`) at
+  `framedLineGlass` 0 and 1 (`p2b_hand/hb0_*`, `hb1_*`): every per-frame field bit for bit (886 and 988 frames). ⚠ Measured with it: in today's game
+  the close drawer (`carriedFrame`, `framedLine`'s one caller) does not run on those frames at all — far out the follower draws and writes the shadow
+  (`camera_follow_wiring.ts`, no `one`): B-a cannot act there by construction, and FAST_ORBIT's O4 frames (1.0.148) no longer reach the framed line.
+  The frames that do reach it far out are the close drawer's for the logic's turns (`followActive` false): ≥ 77.8 mm on his records (§7.6) — beyond.
+* **Probe hygiene**: one job at a time (17 replays + 4 hand stretches, 08:30 – 09:32), port 5191 down after each, no `replay_probe_profile_*` left,
+  no headless Chrome; the owner's server on 5180 untouched.
+* **What 2b leaves**: the ring's residual on a cap at a latch / a way out's end (≤ 3.7 mm, the shown direction's turn — not the approach's, outside C-a
+  as defined); B-a's band on a smaller glass (§7.6: mid distances inside it on a phone — his device look); the elevation's two payers of 2a (§7.4).
+  Then the port (D-J3: every file applies on `1.0.157-Orbit_surface` after packets 1 and 2a, except `tests/menu_layout.test.ts`'s two hunks a commit —
+  the folder's list, clean once packets' CAMERA FOLLOWER line is hand-ported, and the count). His look on the device closes each (rule 5).

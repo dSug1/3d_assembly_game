@@ -178,3 +178,9 @@
   on the three records, the way in bit for bit); all three at 1: all 10 unlatches PASS (steps 0, view 0.00°, swing 0.00°, lift ≤ 0.57°). A3-a not
   built: refuted as stated (the asked step at the tilt-off never comes back); a residual of 0.86° of elevation at `n2b8_r01` f3380 recorded for the
   lead. verify 2588. Not deployed; his look owed.
+* **2026-11-25** — his camera jitters, packet 2b BUILT and GATED (`APPROACH_CAMERA_JITTER.md` §7.6 – §7.7; his *"proceed as you recommend"*, §4.4
+  B-a, §4.5 C-a): B-a `307338dd` (+ `e4c096a6`, comment) (`framedLineGlass`: the carried up's framed line decided on the glass — the view's within 5 mm,
+  the line through both from 15 mm, measured first: far ≥ 77.8 mm, mid ≥ 19.9 mm, B's floor jumps 0.5 – 7.9 mm), C-a `020b139b` (`gizmoLagTravel`:
+  the approach's share of the base's lag taken out of the ring's); each 0 = LIVE frame for frame (G1 bit for bit). At 1: family B at the floor 0
+  frames over 1° / 30 mm (today up to 11.1°), the ring still on `n2b8_r04` (today 39.7 mm); all five at 1 family A bit for bit with 2a but the ring's
+  lag, the way in and his far hand bit for bit. verify 2601. Not deployed; his look owed; the port next.
