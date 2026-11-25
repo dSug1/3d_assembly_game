@@ -244,6 +244,8 @@ where the level's pitch is the two faces' bisector. Share of the face seen more 
 
 ### 5.3 Step B — the view read from the place: a LATER milestone
 
+⛔ **PARKED 2026-11-25** (his word: *"mark the Scene_1 phase closed in the docs, with step B parked under the same rule"*): reopened only if a scene shows an issue, otherwise nothing built (the orbit is satisfactory) — [`RND8`](../../00_CORE/queue_notes/RND8.md).
+
 The view a function of the gizmo's place alone (the normal of the shape with its edges rounded): the only reading that fixes `Scene_0`'s end faces
 (0 % / 0 %), smoother (0.41°/mm against 0.96), and a change of chart then never moves the view. ⛔ Not ready: worse than today on a blade and a thin
 plate; it moves `Scene_1`'s calm by 4° on average. Its own offline round first (the owner: agreed).

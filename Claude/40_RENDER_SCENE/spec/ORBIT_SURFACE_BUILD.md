@@ -1,5 +1,6 @@
 # THE ORBIT'S SURFACE — THE BUILD, STARTED IN PARALLEL (2026-11-17)
 
+> ✅✅ **2026-11-25 — THE `Scene_1` PHASE CLOSED (his word: *"mark the Scene_1 phase closed in the docs, with step B parked under the same rule"*).** S2 – S15 built, gated, LIVE `8204f25` (§10); what needs `Scene_2` goes with `GM13` ([`GM13.md`](../../00_CORE/queue_notes/GM13.md)); step B, C22, C41, F17, the lip parked in `RND8` (reopened only if a scene shows an issue, otherwise nothing built (the orbit is satisfactory)).
 > ⭐⭐⭐ **2026-11-22:** §4's merges DONE (the charts and this branch merged into `1.0.154-`, `1.0.146b-` too); the orbit charts and the camera follower
 > CLOSED (his word; LIVE `3b7a479`, the best so far); the surface work starts on `1.0.157-Orbit_surface` — S0 and S1 built offline, the landing map NOT wired yet.
 > ⭐⭐⭐ **2026-11-22 evening — THE OWED QUESTIONS ASKED, ALL FOUR ANSWERED (§2bis).** The work moves to the worktree `../orbit_surface`, branch
@@ -262,4 +263,4 @@ list, §7bis.3's checks B1 – B6). One packet at a time, each committed with it
 
 **Not in this work:** `Scene_2`'s file (queue row `GM13`, its own worktree — his word 2026-11-24); the Blender build script calling the gate
 (`SCENE_WORKFLOW.md` §11.2 item 2: Blender runs there, with GM13); C3 (§8 row 6: to see in the pick-up flow — with GM13); F17 and the mouth's lip
-(`RND8`); step B and the plunge ([`ORBIT_SURFACE.md`](ORBIT_SURFACE.md) §5.4).
+(`RND8`); the plunge ([`ORBIT_SURFACE.md`](ORBIT_SURFACE.md) §5.4 — with `GM13`); step B (§5.4 there; ⛔ 2026-11-25 parked in `RND8`: reopened only if a scene shows an issue, otherwise nothing built (the orbit is satisfactory)).
