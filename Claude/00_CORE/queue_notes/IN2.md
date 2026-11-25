@@ -202,7 +202,7 @@ to a window `blur` or a hidden tab — Babylon turns a `pointercancel` into a re
 (`render/pointer_wiring.ts`) on `blur` and `visibilitychange → hidden`: every pointer released as its POINTERUP would (the hold, the hover, the approach's
 coast, the gesture's end), then the router cleared, the pinch ended, the orbit drag dropped. Vectored (`tests/audit_2026_11_04.test.ts`); ⛔ no device close.
 
-## ⭐ 2026-11-25 — THE STALE GRIP AGAIN, ON THE IPHONE (his report on LIVE `870078b`) — ⏳ the fix proposed, his word owed
+## ⭐ 2026-11-25 — THE STALE GRIP AGAIN, ON THE IPHONE (his report on LIVE `870078b`) — 💤 PARKED: a potential future improvement (his word)
 
 His words: *"on mobile i did the pitch approach then i continued with only one finger and the approach mode continued (instead of toggling back to
 orbit mode)"*, with a screenshot: one finger on the glass, the HUD `pointers 2`, `roles #…OUT #…OUT active=2`, `last orbit: two fingers — the approach
@@ -217,9 +217,9 @@ receives for a pressed touch is notified as a POINTERUP. Prior art: WebKit drops
 three.js's OrbitControls stick on iOS the same way (its forum, thread 42383); Babylon's forum on Safari's late pointerup. ⚠ Which layer dropped it on
 his phone is NOT proven (the browser, Babylon, or an exception thrown earlier in the same release).
 
-**Proposed (⏳ his word).** The glass as the truth: on every touch event of the canvas (`touchstart` / `touchmove` / `touchend` / `touchcancel` —
+**A potential future improvement — PARKED** (his word 2026-11-25: *"just capture in md file for potential future improvement"*; nothing built). The glass as the truth: on every touch event of the canvas (`touchstart` / `touchmove` / `touchend` / `touchcancel` —
 already listened to, `browser_guards.ts`), the game's touch pointers are compared with the touches on the glass (`TouchEvent.touches`); one the game
 holds that the glass no longer has (the farthest from every touch on the glass) is released exactly as its POINTERUP would (`forgetPointers`' path,
 for that pointer alone). The rule engine-free in `src/input`, vectors red first; a HUD readout naming each such release and whether the browser had
-sent that pointer's pointerup — the root's layer, read on his next look. Then ported to `1.0.157-` / `1.0.156-` as the jitter fixes were.
-**Until then:** leaving Safari and coming back (the page hidden) clears it (`forgetPointers`).
+sent that pointer's pointerup — the root's layer, read on a later look. If built, ported to `1.0.157-` / `1.0.156-` as the jitter fixes were.
+**Meanwhile:** leaving Safari and coming back (the page hidden) clears it (`forgetPointers`).

@@ -2,7 +2,7 @@
 
 > **STATUS** · ✅ **BUILT 2026-11-24 (`defb1195`) behind `landingEngine` (0 = the sums; 1 = the cast) — ⭐ DEPLOYED 2026-11-25 (LIVE `6f03b65`)** on his word *"proceed with S14"* —
 > **§9, as built** (the deviations, the cost per engine, the vectors and their red mutants). Owed: G1 at 0 bit for bit and at 1 within 1e-9 m on
-> `Scene_1`, the queries a frame counted, his look at 1 — ⭐ GIVEN 2026-11-25 on the iPhone (*"switch at zero or one does not change the fps on iphone (59fps)"*); then the default, then D9 withdrawn (§6 item 5) — on his word.
+> `Scene_1`, the queries a frame counted, his look at 1 — ⭐ GIVEN 2026-11-25 on the iPhone (*"switch at zero or one does not change the fps on iphone (59fps)"*); ⭐ then, his word *"do what is best for game playability"*: **the default 1** (`dfb158a8`, verify 2601) and **D9 WITHDRAWN** (§6 item 5). Not deployed yet (the next deploy carries it).
 > Written on his word *"The landing cost: i do not accept these costs. You need to find another solution"* (2026-11-24), by his rules (root cause
 > before patch; the four-part method; docs before build; the closed orbit's terms — [ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md) §9).
 > **OWNS** · how P2's landing is COMPUTED (the engine); never what it answers — that stays [ORBIT_SURFACE_LANDING_MAP.md](ORBIT_SURFACE_LANDING_MAP.md)'s.
@@ -191,4 +191,4 @@ figure on his look (`ORBIT_SURFACE_DRIVE.md` §11); D9 ([PART_AUTHORING.md](../.
 * **The queries a frame (k)**: not counted in the page (no counter there); the jitter's replays read the solver at 2 queries a frame on an approach
   and 13 on a contact frame (`APPROACH_CAMERA_JITTER.md`) — each one landing query at most: ≈ 13 × 5 µs more on such a frame at 1 on `Scene_1`.
 * `npm run verify` on a quiet PC: 202 files, 2 557 tests, all green. No probe profile left; 5191 stopped.
-* ⏳ His look at 1 (the slider "P2 engine"); then its default; then D9 withdrawn (§6 step 5).
+* ✅ His look at 1 (2026-11-25, the iPhone: no difference, 59 fps at 0 and 1); the default 1 on his *"do what is best for game playability"* (`dfb158a8`); D9 withdrawn (§6 step 5).

@@ -184,3 +184,5 @@
   the approach's share of the base's lag taken out of the ring's); each 0 = LIVE frame for frame (G1 bit for bit). At 1: family B at the floor 0
   frames over 1° / 30 mm (today up to 11.1°), the ring still on `n2b8_r04` (today 39.7 mm); all five at 1 family A bit for bit with 2a but the ring's
   lag, the way in and his far hand bit for bit. verify 2601. Not deployed; his look owed; the port next.
+* **2026-11-25** — S14's look given (the iPhone, `Scene_1`: no difference, 59 fps at 0 and 1); on his *"do what is best for game playability"*: `landingEngine` **1 by default**
+  (`dfb158a8`, verify 2601; 0 = the sums), D9 WITHDRAWN (`PART_AUTHORING.md`). Not deployed yet.
