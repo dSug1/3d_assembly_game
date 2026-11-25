@@ -83,6 +83,19 @@ export function bandShare(outMm: number, bandMm: number): number {
 }
 
 /**
+ * ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J2 — A2-a, `pictureBandWayIn` 1: `on`) THE BAND, THE WAY IN'S RULE ONLY — `true`: its share held at 0 this
+ * frame. Set at the unlatch (`unlatched`: the frame before latched, this one not), kept until (a) the piece is beyond the band's far edge (`wPlace`, the band's
+ * share by place, 0: there it is 0 anyway — re-armed continuously) or (b) it latches again (the latch's own hand-over, from the pose drawn). So while the way
+ * out's turn lives the band pays nothing (the follower's own pose the owner: the hand-over reads the TRUE gap, the way out's share its one payer); stopped
+ * inside the band after a way out nothing moves; the way in from far as before. ⛔ The band by place both ways: two payers of the way out's gap (the band by
+ * place, the hand-over by his out mm, then by time) — the view ≈ 14° away and back on `09fv_r01` (§3.2 A2).
+ */
+export function bandHeld(on: boolean, wasHeld: boolean, unlatched: boolean, latched: boolean, wPlace: number): boolean {
+  if (!on || latched || !(wPlace > 0)) return false;
+  return wasHeld || unlatched;
+}
+
+/**
  * ⛔ (R3-FIX, §4.3a) `bandDir` (the follower's direction slerped toward `us` by w) and `bandEye` (the residual toward G's eye by w) DELETED: both carried the
  * logic's heading by place — on a spit nearly opposite to the follower's, the slerp passed over the vertical. The band moves the elevation only
  * (`pictureStep`); G's eye is reached by the hand-over at the latch, or by G's own turn started from the pose drawn.

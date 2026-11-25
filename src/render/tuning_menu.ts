@@ -222,6 +222,8 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "the picture's band: far to close over the last mm of approach before 0.65 m (mm)", "pictureBandMm", 0, 100, 1),
             // ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J1 — A1-a) his jump of the camera taking the piece out of close in
             tunable(st, "the unlatch's hand-over: the whole pose, the look point and the piece too (1; 0 = 3b7a479)", "pictureHandWhole", 0, 1, 1),
+            // ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J2 — A2-a) his view swinging away and back taking the piece out
+            tunable(st, "the band on the way in only: none after a way out until past its far edge or a latch (1; 0 = 3b7a479)", "pictureBandWayIn", 0, 1, 1),
             tunable(st, "follower: its one ease on the sphere (ms)", "followMs", 0, 500, 10), // ⭐ (2026-11-21, the owner: *"up to 500 ms with 10 ms increment"*)
             tunable(st, "follower: round the vertical, never nearer than (deg; 0 = over it)", "followPoleDeg", 0, 60, 1),
           ],
