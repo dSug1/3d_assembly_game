@@ -172,3 +172,9 @@
   `n2b8_r01` (0 mm, 0°), `09fv_r01`'s swing 10 – 14° → 0.6 – 4.1°, the turn after the lift under 1°, the way in unchanged; ⚠ 4 of 10 still over the 2° swing
   — measured: the follower PARKED on the camera's heading while latched (1.7 – 6.4° off its direction's; the study's A3 attribution contradicted),
   outside the packet, for his word. verify 2574. Not deployed; his look owed.
+* **2026-11-25** — his camera jitters, packet 2a BUILT and GATED (`APPROACH_CAMERA_JITTER.md` §7.4 – §7.5; his *"proceed as you recommend"*, D-J4,
+  D-J5): A3-p `caac1b3b` (`followParkOwn`: the follower parked in its own convention — the turntable's ψ turned by the owner's offsets at the parked
+  elevation), D-J5 `b6cf50c1` (the way out's end read on the frame its turn ends, under `pictureHandWhole`); 0 = LIVE frame for frame (G1 bit for bit
+  on the three records, the way in bit for bit); all three at 1: all 10 unlatches PASS (steps 0, view 0.00°, swing 0.00°, lift ≤ 0.57°). A3-a not
+  built: refuted as stated (the asked step at the tilt-off never comes back); a residual of 0.86° of elevation at `n2b8_r01` f3380 recorded for the
+  lead. verify 2588. Not deployed; his look owed.
