@@ -2,7 +2,7 @@
 
 > **STATUS** · ✅ **BUILT 2026-11-24 (`defb1195`) behind `landingEngine` (0 = the sums; 1 = the cast) — ⭐ DEPLOYED 2026-11-25 (LIVE `6f03b65`)** on his word *"proceed with S14"* —
 > **§9, as built** (the deviations, the cost per engine, the vectors and their red mutants). Owed: G1 at 0 bit for bit and at 1 within 1e-9 m on
-> `Scene_1`, the queries a frame counted, his look at 1; then the default, then D9 withdrawn (§6 item 5 — not before his look).
+> `Scene_1`, the queries a frame counted, his look at 1 — ⭐ GIVEN 2026-11-25 on the iPhone (*"switch at zero or one does not change the fps on iphone (59fps)"*); then the default, then D9 withdrawn (§6 item 5) — on his word.
 > Written on his word *"The landing cost: i do not accept these costs. You need to find another solution"* (2026-11-24), by his rules (root cause
 > before patch; the four-part method; docs before build; the closed orbit's terms — [ORBIT_SURFACE_BUILD.md](ORBIT_SURFACE_BUILD.md) §9).
 > **OWNS** · how P2's landing is COMPUTED (the engine); never what it answers — that stays [ORBIT_SURFACE_LANDING_MAP.md](ORBIT_SURFACE_LANDING_MAP.md)'s.

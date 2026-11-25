@@ -671,6 +671,7 @@ run here on the same files. Main untouched (LIVE `6f03b65`). His device look clo
 ### 7.9 ⭐ DEPLOYED ON (2026-11-25 07:02Z — his word *"Deploy with all sliders at 1"*)
 
 The five switches' default set to 1 (`4c6bd9a4`: `gestureConfig.ts` and the five default pins; verify 208 files, 2601 tests) and deployed:
-**LIVE main `870078b`** = `4c6bd9a4`. 0 on each gives the game before (`3b7a479`'s picture). `landingEngine` (S14) left at 0 — his look owed. On
-`1.0.157-Orbit_surface` and `1.0.156-Orbits_with_camera_follow_final` the five stay at 0 (the reference kept; their defaults on his word). His device
-look owed on the five (B-a's band on the phone's smaller screen, §7.6).
+**LIVE main `870078b`** = `4c6bd9a4`. 0 on each gives the game before (`3b7a479`'s picture). `landingEngine` (S14) left at 0 — his look given
+2026-11-25 (59 fps at 0 and at 1 on the iPhone); its default on his word. ⭐ On `1.0.157-Orbit_surface` (`fbb01547`) and
+`1.0.156-Orbits_with_camera_follow_final` (`eb99a5f7`) the five at 1 too (his word 2026-11-25: *"Default at 1 also in the two other branches"*;
+verify 2365 / 2365; pushed). His device look owed on the five (B-a's band on the phone's smaller screen, §7.6).
