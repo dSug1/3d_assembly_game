@@ -93,7 +93,8 @@ export function pictureFrame(
   const mm = Math.max(0, st.asmFrameMm) + (da > 0 && dvPerMm > 0 ? da / dvPerMm : 0);
   const hang = Math.hypot(pp[0] - foot[0], pp[1] - foot[1], pp[2] - foot[2]);
   const us: Vec3 = hang > 1e-9 ? [(pp[0] - foot[0]) / hang, (pp[1] - foot[1]) / hang, (pp[2] - foot[2]) / hang] : (st.asmAsk ?? [0, 0, 1]);
-  const base = { us, look, foot, hang, gapM, offYawRad: off.yawRad, offPitchRad: off.pitchRad, mm, spanMm: st.cfg.pictureBandMm, coneDeg: PICTURE_CONE_DEG, polar: st.asmZone !== null };
+  // ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J1 — A1-a) `whole`: the unlatch's hand-over holds the whole pose (`pictureHandWhole` 1; 0 = `3b7a479`)
+  const base = { us, look, foot, hang, gapM, offYawRad: off.yawRad, offPitchRad: off.pitchRad, mm, spanMm: st.cfg.pictureBandMm, coneDeg: PICTURE_CONE_DEG, polar: st.asmZone !== null, ...(st.cfg.pictureHandWhole === 1 ? { whole: true } : {}) };
   let s1 = s0;
   // ⭐⭐⭐ (2026-11-21 night, `PICTURE_REBUILD.md` §4.3a rule 4 — R3-FIX, the lead's amendment) NOT LATCHED THE FOLLOWER DRAWS — far, the band, between it and
   // the latch, through EVERY logic turn (`asmZoneMix`, the way out's included), the square camera's share, a tilt turning off: `followActive` is no reason to

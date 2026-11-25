@@ -425,6 +425,9 @@ export interface GestureConfig {
   pictureFarTop: number;
   /** ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §4.2 — R3a, D-P3 (a)) THE BAND: far ↔ close a change of target over his last this-many mm of approach finger before the unlatch (0.65 m) — the follower's pose to the logic's by place (mm; 0: none) */
   pictureBandMm: number;
+  /** ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J1 — A1-a) 1: at the unlatch the picture's hand-over holds the WHOLE pose — the view's angles, the look
+   *  point, the piece drawn and the eye's distance (the pose drawn the frame before), closed by the one share (the way out's); 0 = the angles only (`3b7a479`) */
+  pictureHandWhole: number;
   /** ⭐ (F2, D-F6) the follower's ONE ease: a critically damped spring on the sphere (ms) */
   followMs: number;
   /** ⭐ (F2, D-F1) the camera goes round the vertical this far from it far out (deg; 0 = no detour) */
@@ -911,6 +914,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   uprightHalfHold: 1, // ⭐ (C7) the gizmo still for the whole half turn
   pictureFarTop: 1, // ⭐⭐⭐ (2026-11-22, the owner: *"set the slider default to 1"*) R5 ON by default; 0 = the far top rule of `98ac680` (H2 / H3). ⚠ Its far strokes on `Scene_0bis` pin the gizmo at a pole (`runs_str5/r5_farmix`), not studied. (2026-11-21 night, R3-FIX — the lead: 0, its gates unfinished)
   pictureBandMm: 10, // ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §4.2 — R3a) the band: his `tiltBlendMm` figure, 10 mm of approach finger before 0.65 m; ⛔ 40 (the lead, reverted the same day): Scene_1's whole far approach is ≈ 30 mm, the far rest was blended
+  pictureHandWhole: 0, // ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J1 — A1-a, his *"A1-a and A2-a as you recommend"*) 0 = `3b7a479`: the unlatch's hand-over holds the angles only (the look point 35 – 366 mm in one frame)
   followMs: 200, // ⭐ (2026-11-21, the owner tried the slider: *"at 200 ms is better at far out distance … set default to 200ms"*; 120 before) (F2, D-F6) the calm's own 120 ms it replaces — on the RAW target 50 ms (the prototype's D, tuned on the eased one) left 56 frames over 45° offline (`CAMERA_FOLLOWS_GIZMO.md` §13)
   followPoleDeg: 30, // ⭐ (F2) his D-F1: no nearer than 30° to straight above far out
   followTurnMinDeg: 10, // ⭐ (H2) T11's band: under it the spring pays
@@ -1105,6 +1109,7 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (cfg.uprightHalfHold !== 0 && cfg.uprightHalfHold !== 1) throw new Error(`uprightHalfHold (${cfg.uprightHalfHold}) must be 0 or 1.`);
   if (cfg.pictureFarTop !== 0 && cfg.pictureFarTop !== 1) throw new Error(`pictureFarTop (${cfg.pictureFarTop}) must be 0 or 1.`);
   if (!(cfg.pictureBandMm >= 0 && cfg.pictureBandMm <= 100)) throw new Error(`pictureBandMm (${cfg.pictureBandMm}) must be in [0, 100] mm.`);
+  if (cfg.pictureHandWhole !== 0 && cfg.pictureHandWhole !== 1) throw new Error(`pictureHandWhole (${cfg.pictureHandWhole}) must be 0 or 1.`);
   if (!(cfg.followMs >= 0 && cfg.followMs <= 500)) throw new Error(`followMs (${cfg.followMs}) must be in [0, 500] ms.`);
   if (!(cfg.followPoleDeg >= 0 && cfg.followPoleDeg <= 60)) throw new Error(`followPoleDeg (${cfg.followPoleDeg}) must be in [0, 60] deg.`);
   if (!(cfg.followTurnMinDeg >= 0 && cfg.followTurnMinDeg <= 90)) throw new Error(`followTurnMinDeg (${cfg.followTurnMinDeg}) must be in [0, 90] deg.`);

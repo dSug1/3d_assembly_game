@@ -220,6 +220,8 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "the far top rule as decided, R5 (1; 0 = H2 / H3)", "pictureFarTop", 0, 1, 1),
             // ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §4.2 — R3a) the band: the follower's picture to the logic's over his last mm of approach before 0.65 m
             tunable(st, "the picture's band: far to close over the last mm of approach before 0.65 m (mm)", "pictureBandMm", 0, 100, 1),
+            // ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J1 — A1-a) his jump of the camera taking the piece out of close in
+            tunable(st, "the unlatch's hand-over: the whole pose, the look point and the piece too (1; 0 = 3b7a479)", "pictureHandWhole", 0, 1, 1),
             tunable(st, "follower: its one ease on the sphere (ms)", "followMs", 0, 500, 10), // ⭐ (2026-11-21, the owner: *"up to 500 ms with 10 ms increment"*)
             tunable(st, "follower: round the vertical, never nearer than (deg; 0 = over it)", "followPoleDeg", 0, 60, 1),
           ],
