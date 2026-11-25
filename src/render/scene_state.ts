@@ -551,6 +551,9 @@ export interface SceneState {
   /** ⭐⭐⭐ (2026-11-02; Step 4c-bis: from the face map) each line's samples, once per line — their points and their places on the box (`surf`) */
   asmRedCache: { readonly key: string; params: readonly number[]; pts: readonly (import("@babylonjs/core/Maths/math.vector").Vector3 | null)[]; vals: readonly (LineSample | null)[]; /** ⭐ (§8.7) each sample's join to the next (`null`: not yet verified — drawn broken) */ joins: readonly (boolean | null)[]; /** ⭐ (2026-11-09, I17) the line's adaptive refinement and its joins, a slice a frame (`refineStep`, `joinStep`) */ readonly ref: import("../input/section_hull").RefineState<LineSample> } | null;
   asmGreenCache: { readonly key: string; params: readonly number[]; pts: readonly (import("@babylonjs/core/Maths/math.vector").Vector3 | null)[]; vals: readonly (LineSample | null)[]; /** ⭐ (§8.7) each sample's join to the next (`null`: not yet verified — drawn broken) */ joins: readonly (boolean | null)[]; /** ⭐ (2026-11-09, I17) the line's adaptive refinement and its joins, a slice a frame (`refineStep`, `joinStep`) */ readonly ref: import("../input/section_hull").RefineState<LineSample> } | null;
+  /** ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §4.5 C-a — `gizmoLagTravel` 1) the approach's own share of the base's lag (`approachLag`: taken out of
+   *  the lag drawn) and the approach distance it was read at; null: none (`gizmoLagTravel` 0) */
+  asmLagApproach: { readonly lag: Vec3; readonly d: number } | null;
   /** ⭐⭐⭐ (2026-11-02) the gizmo's EXACT point this frame — where the ring is drawn (`gizmoShownAt`) */
   asmGizmoAt: Vec3 | null;
   /** ⭐⭐⭐ (2026-11-11) the rig's base behind its target along the gizmo's face — the ring and its sections drawn by it (`gizmoLag`); none: at the exact point */

@@ -191,6 +191,8 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "green box smoothing (ms, 0 = steps with the input)", "boxSmoothMs", 0, 300, 5),
             // ⭐⭐ (2026-11-04, the owner: *"add a slider for gizmo position and one for orbit angles"*) the piece's lag behind the ring, its two parts
             tunable(st, "lag: the gizmo's position the piece follows (ease, ms; 0 at once)", "gizmoEaseMs", 0, 500, 5),
+            // ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §4.5 C-a) the ring and its sections sliding as he approaches, the gizmo still
+            tunable(st, "lag: the ring shows the gizmo's travel only, not the approach's (1; 0 = 3b7a479)", "gizmoLagTravel", 0, 1, 1),
             tunable(st, "lag: the orbit's angles (spring, ms; 0 at once)", "orbitSpringMs", 0, 500, 5),
             // ⭐⭐⭐ (2026-11-18, `FAST_ORBIT.md` §14 — FO3 S1) the picture a follower of the logic: its roll's time; the changes of frame it frees
             tunable(st, "lag: the camera's roll behind the orbit's (ms)", "rollFollowMs", 60, 600, 10),

@@ -70,12 +70,30 @@ export function gizmoShownAt(exact: Vec3 | null, eased: Vec3, lag: Vec3 | null =
  * sections are DRAWN by it (`gizmoShownAt`): one time law for the piece, the camera and the gizmo — the rig's own, no second ease. ⛔ The gizmo drawn at its
  * exact place stepped on each finger event (22 mm, then nothing) against a piece now still on the screen: the jitter. Its part along the normal dropped:
  * the drawn gizmo never leaves its surface (the base also moves along the normal when the shown direction turns — a turn of the camera, not the gizmo).
+ * ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §4.5 C-a — `own` given: `gizmoLagTravel` 1) the approach's own share of the lag (`approachLag`) taken out
+ * first: the lag drawn is the gizmo's travel's only. `own` null: today's.
  */
-export function gizmoLag(eased: Vec3, target: Vec3, n: Vec3 | null): Vec3 {
-  const l: Vec3 = [eased[0] - target[0], eased[1] - target[1], eased[2] - target[2]];
+export function gizmoLag(eased: Vec3, target: Vec3, n: Vec3 | null, own: Vec3 | null = null): Vec3 {
+  const l: Vec3 =
+    own === null
+      ? [eased[0] - target[0], eased[1] - target[1], eased[2] - target[2]]
+      : [eased[0] - own[0] - target[0], eased[1] - own[1] - target[1], eased[2] - own[2] - target[2]];
   if (n === null) return l;
   const k = l[0] * n[0] + l[1] * n[1] + l[2] * n[2];
   return [l[0] - n[0] * k, l[1] - n[1] * k, l[2] - n[2] * k];
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §4.5 C-a — `gizmoLagTravel` 1) THE APPROACH'S OWN SHARE OF THE BASE'S LAG — what the ring must not show.
+ * The base eases to its target by ONE law (`easePoint` at `gizmoEaseMs`), linear in the target's moves: its lag (base − target) is the sum of what each
+ * move of the target left behind, each decaying by that law. This is the share the APPROACH's moves left: last frame's (`was`; none: 0) less the
+ * approach's move of the target this frame (`move`: the foot at this frame's approach distance less the foot at last frame's, all else this frame's),
+ * stepped by the base's own law (`easePoint` toward 0 — at rest under 0.1 mm, as the base). ⛔ No second ease: the base, the piece and the camera are
+ * untouched — the same ease, its shares read apart (*"avoid adding another lerp or spring"*, 2026-11-11).
+ */
+export function approachLag(was: Vec3 | null, move: Vec3, dtMs: number, tauMs: number): Vec3 {
+  const p: Vec3 = was === null ? [-move[0], -move[1], -move[2]] : [was[0] - move[0], was[1] - move[1], was[2] - move[2]];
+  return easePoint(p, [0, 0, 0], dtMs, tauMs);
 }
 
 /**

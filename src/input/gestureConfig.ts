@@ -437,6 +437,9 @@ export interface GestureConfig {
   /** ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §4.4 B-a) 1: the carried up's framed line decided ON THE GLASS — the view's direction where the piece and
    *  the look point are one place there (their separation within 5 mm on the glass), the line through both from 15 mm, blended between; 0 = 3 world mm (`3b7a479`) */
   framedLineGlass: number;
+  /** ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §4.5 C-a) 1: the gizmo's ring and its sections drawn at the base's lag for the gizmo's TRAVEL only — the
+   *  approach's own share of that lag (its moves of the base along the piece's oblique ray) taken out; 0 = the base's whole lag (`3b7a479`) */
+  gizmoLagTravel: number;
   /** ⭐ (F2, D-F6) the follower's ONE ease: a critically damped spring on the sphere (ms) */
   followMs: number;
   /** ⭐ (F2, D-F1) the camera goes round the vertical this far from it far out (deg; 0 = no detour) */
@@ -927,6 +930,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   pictureHandWhole: 0, // ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J1 — A1-a, his *"A1-a and A2-a as you recommend"*) 0 = `3b7a479`: the unlatch's hand-over holds the angles only (the look point 35 – 366 mm in one frame)
   followParkOwn: 0, // ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J4 — A3-p, the lead under his *"proceed as you recommend"*) 0 = `3b7a479`: the follower parked on the camera's heading as its direction's (1.65 – 6.44° off at his latches, paid twice at the unlatch)
   framedLineGlass: 0, // ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §4.4 B-a, the lead under his *"proceed as you recommend"*) 0 = `3b7a479`: the framed line the view's under 3 world mm only (at contact the line through residues 50 – 85° off the view: the eye swung 4 – 11° a frame)
+  gizmoLagTravel: 0, // ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §4.5 C-a, the lead under his *"proceed as you recommend"*) 0 = `3b7a479`: the ring drawn at the base's whole lag (the approach's slide along the oblique ray drawn as the gizmo's: up to 39.7 mm a frame, the gizmo still)
   followMs: 200, // ⭐ (2026-11-21, the owner tried the slider: *"at 200 ms is better at far out distance … set default to 200ms"*; 120 before) (F2, D-F6) the calm's own 120 ms it replaces — on the RAW target 50 ms (the prototype's D, tuned on the eased one) left 56 frames over 45° offline (`CAMERA_FOLLOWS_GIZMO.md` §13)
   followPoleDeg: 30, // ⭐ (F2) his D-F1: no nearer than 30° to straight above far out
   followTurnMinDeg: 10, // ⭐ (H2) T11's band: under it the spring pays
@@ -1125,6 +1129,7 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (cfg.pictureHandWhole !== 0 && cfg.pictureHandWhole !== 1) throw new Error(`pictureHandWhole (${cfg.pictureHandWhole}) must be 0 or 1.`);
   if (cfg.followParkOwn !== 0 && cfg.followParkOwn !== 1) throw new Error(`followParkOwn (${cfg.followParkOwn}) must be 0 or 1.`);
   if (cfg.framedLineGlass !== 0 && cfg.framedLineGlass !== 1) throw new Error(`framedLineGlass (${cfg.framedLineGlass}) must be 0 or 1.`);
+  if (cfg.gizmoLagTravel !== 0 && cfg.gizmoLagTravel !== 1) throw new Error(`gizmoLagTravel (${cfg.gizmoLagTravel}) must be 0 or 1.`);
   if (!(cfg.followMs >= 0 && cfg.followMs <= 500)) throw new Error(`followMs (${cfg.followMs}) must be in [0, 500] ms.`);
   if (!(cfg.followPoleDeg >= 0 && cfg.followPoleDeg <= 60)) throw new Error(`followPoleDeg (${cfg.followPoleDeg}) must be in [0, 60] deg.`);
   if (!(cfg.followTurnMinDeg >= 0 && cfg.followTurnMinDeg <= 90)) throw new Error(`followTurnMinDeg (${cfg.followTurnMinDeg}) must be in [0, 90] deg.`);
