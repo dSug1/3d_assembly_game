@@ -603,3 +603,11 @@ node scripts/probes/gravity_read.mjs <rec.json> ...          # JSON=1: one objec
   code twice gives the same pattern; judge it against a repeat of the same code, not against zero.
   ⭐ (2026-11-22, the clean-up) `../picture_repro` and `../camera_follow` are removed: for an identity run re-create a checkout
   (`git worktree add --detach ../picture_repro <commit>`, its own `npm ci`) and pass `REPO=`; the kit's closed folders keep no recordings (`fo3/ARCHIVED.md`).
+
+## ⭐ (2026-11-25, `IN14`) The piece zone's smoke probe
+
+`bash scripts/probes/zone_batch.sh [scene index, default 1]` (`ONLY=far|roll|face|twist|close`, `EXTRA="&<tunable>=<value>"`) — its own server on
+5191, about 2 minutes on `Scene_1`. Real time (not the virtual clock): a smoke test of the zone's gestures — the drag's turn and snap, the camera still,
+the undo, the A roll and click, the face tap, the touch twist, the close-in step back (the least gap while turning, never below 0) and the solver's
+anchor against the drawn one (`drift`, 0.00 mm at rest). Good: `ZONE PROBE: ALL PASS`. ⚠ Never set `st.approach` by hand before a zone gesture: the
+solver does not follow a hand-set approach (a 6 m drift, the step back then refused) — move it with `approachMove`, or reload.

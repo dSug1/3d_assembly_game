@@ -22,7 +22,7 @@ pinch, the wheel, the boot zoom); around the assembly **the PINCH is the APPROAC
 
 ## 0. ⭐⭐⭐ 2026-11-25 (`IN14`, `1.0.159-Orbit_of_piece`): THE PIECE ZONE — under `pieceTurnZone` 1 (0 = the rows below as they were)
 
-→ [`PIECE_TURN.md`](PIECE_TURN.md) §4.8 (the map), §4 (each input). ⛔ No device look yet.
+→ [`PIECE_TURN.md`](PIECE_TURN.md) §4.8 (the map), §4 (each input), §8 (as built: gated headless 2026-11-25 night). ⛔ No device look yet.
 
 | device | input | does |
 |---|---|---|

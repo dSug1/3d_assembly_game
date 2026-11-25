@@ -1,8 +1,8 @@
 # PIECE_TURN — the piece zone: the piece turned by a drag on it, the step back to turn, the roll, the face tap, the undo (`IN14`)
 
-> **STATUS** · 🔧 **BEING BUILT 2026-11-25 night** (his word: *"proceed as you recommended (md files, packets) … Do not stop until you finish all the
-> packets … Deploy at the end so I can test"*) on `1.0.159-Orbit_of_piece`, under the switch **`pieceTurnZone`** (1 = this page; 0 = the inputs as on
-> LIVE `fe917b8`). ⛔ No device look yet (rule 5) — **his look closes it**. The packets and their state: §7; as built: §8.
+> **STATUS** · 🔧 **BUILT 2026-11-25 night** (his word: *"proceed as you recommended (md files, packets) … Do not stop until you finish all the
+> packets … Deploy at the end so I can test"*) on `1.0.159-Orbit_of_piece`, under the switch **`pieceTurnZone`** (1 = this page, the default; 0 = the
+> inputs as on LIVE `fe917b8`). Gated headless (§8.2). ⛔ No device look yet (rule 5) — **his look closes it**. The packets: §7; as built: §8.
 > **OWNS** · what a press near the held piece does, the piece's own turn, the step back, the roll, the face tap, the undo
 > **READ IF** · you touch a gesture on the held piece, the resting-face quads, or Scene_2's taps
 > **LAST VERIFIED** · 2026-11-25 (written from the code of `9dacca36`)
@@ -204,15 +204,49 @@ and on a placed part (the gizmo); ALT / CTRL as the held second touch; Scene_2's
 
 | packet | what | gate | state |
 |---|---|---|---|
-| P0 | this page, the dossier [`IN14.md`](../../00_CORE/queue_notes/IN14.md), the queue's row | doc_links + doc_budget | ✅ |
-| P1 | `src/input/piece_turn.ts` (engine-free: the zone, the commit, the turn, the lit quad, the twist, the roll's stop, the step back's searches, the history) + vectors red first + the sliders | verify | ⏳ |
-| P2 | the zone's drag, the snap, the quads at any distance (`render/piece_turn_wiring.ts`, hooks in `pointer_wiring.ts`, `orient_cube.ts`) | verify + a headless probe | ⏳ |
-| P3 | the step back (`turnOffset` in `ringAnchorAt` and the anchor) | verify + probe close in | ⏳ |
-| P4 | the roll: the twist, the second finger's tap, A + dx, A + click | verify + probe | ⏳ |
-| P5 | the face tap onto the last selected quad; the double tap undo; the empty tap inert | verify + probe | ⏳ |
-| P6 | Scene_2 (the pick at any distance, the flow ignoring the zone's pointers, no zone in the idle blend); the obsolete inputs gated; `INPUTS_TABLE.md`, `TUNING_MENU.md`, `PROVENANCE.md` | verify + probe Scene_2 | ⏳ |
-| P7 | the gates: G-A verify; G-B the switch at 0 bit for bit against `9dacca36`; G-C the probes; then DEPLOY; the docs as built | all green | ⏳ |
+| P0 | this page, the dossier [`IN14.md`](../../00_CORE/queue_notes/IN14.md), the queue's row | doc_links + doc_budget | ✅ `56e79e09` |
+| P1 | `src/input/piece_turn.ts` (engine-free: the zone, the commit, the turn, the lit quad, the twist, the roll's stop, the step back's searches, the history) + vectors red first + the sliders | verify | ✅ `42e6c6c6` |
+| P2 | the zone's drag, the snap, the quads at any distance (`render/piece_turn_wiring.ts`, hooks in `pointer_wiring.ts`, `orient_cube.ts`) | verify + a headless probe | ✅ `42e6c6c6`, probe `f9051b9e` |
+| P3 | the step back (the offset in `ringAnchorAt` and the anchor) | verify + probe close in | ✅ same |
+| P4 | the roll: the twist, the second finger's tap, A + dx, A + click | verify + probe | ✅ same |
+| P5 | the face tap onto the last selected quad; the double tap undo; the empty tap inert | verify + probe | ✅ same |
+| P6 | Scene_2 (the pick at any distance, the flow ignoring the zone's pointers, no zone in the idle blend); the obsolete inputs gated; `INPUTS_TABLE.md`, `TUNING_MENU.md`, `PROVENANCE.md` | verify + probe Scene_2 | ✅ same + docs |
+| P7 | the gates: G-A verify; G-B the switch at 0 bit for bit against `9dacca36`; G-C the probes; an independent review; then DEPLOY; the docs as built | all green | ✅ §8.2 |
 | P8 | ⏳ after his look: the obsolete code deleted (the switch removed) | his look | owed |
 
-## 8. As built
-*(filled as the packets land)*
+## 8. As built (2026-11-25 night)
+
+### 8.1 Where each rule lives
+* **`src/input/piece_turn.ts`** — engine-free: `zoneRadiusPx`, `inZone`, `sphereRadiusOnGlassPx` (§4.1); `zoneCommitted` (§4.2); `trackballTurn`,
+  `litDirection` (§4.3); `twistAngle`, `twistIsTap`, `nearestAngle` (§4.4); `traceStep` (one step of sphere tracing a frame), `advanceAlong`
+  (conservative advancement), `pivotOffset`, `boundingSphereOf` (§4.5); `TurnHistory` (§4.7). Vectors: `tests/piece_turn.test.ts` (27, red before
+  the module existed).
+* **`src/render/piece_turn_wiring.ts`** — the gesture in flight (`st.pieceTurn`): `pieceZonePointer` (called before the router in `pointer_wiring.ts`:
+  a first press in the zone noted, not consumed; its moves and committed release the zone's; a second finger owned), `pieceZoneKey` (A),
+  `pieceZoneFaceTap`, `pieceZoneUndo`, `pieceZoneEmptyTap`; the frame's `pieceTurnPre` (the offset the solve reads), `pieceTurnPost` (the drawn
+  turn's 40 ms ease, the lit quad, the way out's step, TURNING → BACK, the way back's checked steps), `pieceTurnPlace` (the mesh about its centre).
+* **The phases**: IDLE → (a turn asked) OUT → (the sphere free) TURNING → (no gesture, no turn playing, 300 ms) BACK → IDLE. A turn asked during
+  OUT waits (`restAlignFrame`); a refusal (no room on the line, or 1.5 s) puts back what changed and the undo's history, and goes BACK.
+* **Hooks** (each behind the switch): `ringAnchorAt` = `ringAnchorRaw` + the offset; the drawn anchor + the offset (the picture's `pp` without it);
+  the blocker checks of `alignRestingFace` / `rollRestingFace` off at 1; `orient_cube.ts` (the quads by the gesture, full size, faded; no quad tap,
+  no red-quad check); `hold_wiring.ts` (the second finger's taps off); `scene.ts` (ALT / CTRL off); `model_bodies_wiring.ts` (the zone's second
+  finger never a tap of the flow; `st.modelIdle`; the pick at the part's own distance). Seven sliders: INPUT › PIECE ZONE.
+
+### 8.2 The gates
+* **G-A** `npm run verify`: 210 files pass (the new 27 vectors; 10 source pins moved to the new text, each dated).
+* **G-B** the switch at 0 against `9dacca36`, `replay_batch.sh` (2 794 frames a scene): `Scene_1`, `Scene_0bis` identical in every frame; `Scene_0`
+  under 1e-9 from frame 3 (its known run-to-run noise; 1e-6 never). At 1 the replays run without error and leave the base where the seeded script
+  first presses on the piece (`Scene_1`, `Scene_0`: frame 59, its first drag) or taps empty space (`Scene_0bis`: frame 144) — as designed; the steps a
+  frame as the base's.
+* **G-C** `scripts/probes/zone_batch.sh` (`zone_probe.mjs`, `Scene_1`): the zone's drag turns the piece, the quads up, **the camera still (4e-7 m)**,
+  the release snaps onto a direction (0.000°), one undo step, the quads faded; a single tap on empty space nothing, the double click undoes; A + drag
+  rolls about the resting normal to one stop, A + click one stop; the face tap rests the tapped face on a direction; the touch twist after a zone start
+  rolls one stop; close in the piece steps out as far as its sphere needs (2 – 36 mm in the runs), turns, comes back, **never closer to a part than
+  it started**; the solver's anchor equals the drawn one at rest (0.00 mm). `Scene_2`: `pick_probe.mjs` all pass; `seat_probe.mjs` as at 0.
+* **G-D** his look on the device — owed.
+
+### 8.3 Known limits (for his look)
+* The zone is a circle (the piece's bounding sphere on the glass, capped at a third of the short side): close in the piece fills more than that;
+  outside the circle a drag orbits.
+* The step back moves the piece toward the camera (the camera stays): a long step makes it look bigger for the turn.
+* The stuck check and the red pop-up are unchanged (D-P14).
