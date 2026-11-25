@@ -808,3 +808,4 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
 * **2026-11-22 evening — HIS VERDICT: THE BEST IMPLEMENTATION OF THE ORBIT SO FAR** — branch `1.0.156-Orbits_with_camera_follow_final` (renamed from `1.0.156-Orbit-surface`),
   LIVE main `3b7a479` = `2cd1be34`; `40b8095`'s branch renamed `1.0.155-Orbits_with_camera_follow_1`; the workfront `1.0.157-Orbit_surface`
   ([`CAMERA_FOLLOWS_GIZMO.md`](../../40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md) §20.11).
+* **2026-11-25** — his look on the phone at the five camera-jitter fixes (LIVE `870078b` / `8204f25`): *"five camera-jitter: fixed"* — `APPROACH_CAMERA_JITTER.md` CLOSED.
