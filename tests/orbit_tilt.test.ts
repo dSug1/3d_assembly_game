@@ -516,7 +516,7 @@ describe("⭐⭐⭐ (2026-11-11) the roll at an exit elsewhere on the edge, and 
   });
   it("⭐⭐ wired: the ring and the sections drawn on the lag", () => {
     const aw = code("render/assembly_wiring.ts");
-    expect(aw).toContain("st.asmGizmoLag = gizmoLag(st.asmGizmo, foot, st.gizmoNormal ?? null);");
+    expect(aw).toContain("st.asmGizmoLag = gizmoLag(st.asmGizmo, foot, st.gizmoNormal ?? null, approachLagFrame(st, target, us, d, foot, dtMs));"); // ⭐ (2026-11-25, APPROACH_CAMERA_JITTER.md §4.5 C-a) the approach's share taken out (`gizmoLagTravel` 1; null at 0)
     expect(aw).toContain("if (sl !== null) sl.position.set(lg?.[0] ?? 0, lg?.[1] ?? 0, lg?.[2] ?? 0);");
     expect(code("render/green_box_wiring.ts")).toContain("gizmoShownAt(st.asmGizmoAt, st.centreBlend.targetM, st.asmGizmoLag)");
   });

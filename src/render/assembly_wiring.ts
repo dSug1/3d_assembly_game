@@ -45,6 +45,7 @@ import { holdAtCrossing, turnPose, type CamFrame, type CamPose, type EdgeHold } 
 import { approachOutMm, bandShare } from "../input/picture";
 import { poleCrossingDue, poleSeam } from "../input/pole_crossing";
 import { gapStep, restShare } from "../input/roll_follow";
+import { approachLag } from "../input/assembly_orbit"; // ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §4.5 C-a)
 import { carriedHold, lawHalfTurn } from "../input/upright";
 import { dirGap, easedDir, easeRest, poleYawKept, seamOutPaced, seamOutShare, seamOutStep, seamOutTarget, seamTurnPace, seamTurnStep, seamWholeRad, tiltLeavesNow, turnHoldsGizmo } from "../input/seam_turn";
 import { bandedFacet } from "../input/face_band";
@@ -120,6 +121,7 @@ type OrbitStateStart = Pick<
   | "asmEdgeHold" | "asmZone" | "asmZoneMix" | "asmChange" | "asmPieceDrawn" | "asmDirEase" | "asmCamLogic" | "asmCamDrawn" | "asmRollShadow" | "asmSpitSide" | "asmSpitU" | "asmSpitPic" | "asmSpitPicWas" | "asmZoneAlpha" | "asmDySign" | "asmFingerDxMm" | "asmDxSign" | "asmCarriedYaw" | "asmHeadO"
   | "asmHeadW" | "asmHeadYaw" | "asmTilt" | "asmGOff" | "asmTiltAuto" | "asmTiltPending" | "asmOrbitMm" | "asmFrameMm" | "asmBlend" | "asmCalmWhole" | "asmCalmWholeV"
   | "asmSquare" | "asmCalm" | "asmMouth" | "asmRawPrev" | "asmGizmoAt" | "asmGizmoLag" | "asmAskCalm" | "asmAsk" | "asmAskLevel" | "asmAskCalmWas" | "asmAskLevelWas" | "asmJumpAt" | "asmJumpWas" | "asmFollow" | "asmPicture"
+  | "asmLagApproach"
 >;
 
 /**
@@ -181,6 +183,7 @@ export function orbitStateStart(): OrbitStateStart {
     asmRawPrev: null,
     asmGizmoAt: null,
     asmGizmoLag: null,
+    asmLagApproach: null,
     asmAskCalm: null,
     asmAsk: null,
     asmAskLevel: null,
@@ -856,6 +859,29 @@ function footOf(st: SceneState, g: Vec3, u: Vec3, d: number): Vec3 {
   if (lv === null || st.asmRestOff) return f;
   const k = restRaise(lv, f, u, d, liftOf(st, lv.n), pieceSolveOptions(st).gapM + REST_SPARE_M);
   return k > 0 ? [f[0] + lv.n[0] * k, f[1] + lv.n[1] * k, f[2] + lv.n[2] * k] : f;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §4.5 C-a — `gizmoLagTravel` 1) THE APPROACH'S OWN SHARE OF THE BASE'S LAG this frame (`approachLag`), taken
+ * out of the lag the ring and its sections are drawn by (`gizmoLag`); null at 0 (`3b7a479`: the base's whole lag drawn). The approach's move of the
+ * target: the foot at this frame's distance less the foot at last frame's (`footOf` at THIS frame's gizmo, direction and support — the approach's part
+ * alone). ⛔ The base's slide along the piece's oblique ray (the calm's direction, ≈ 52° off the face) was drawn as the ring's: 39.7 mm a frame with the
+ * gizmo still (`n2b8_r04`). The base on its target (born there, or settled by its ease): none.
+ */
+function approachLagFrame(st: SceneState, g: Vec3, u: Vec3, d: number, foot: Vec3, dtMs: number): Vec3 | null {
+  if (st.cfg.gizmoLagTravel !== 1) {
+    st.asmLagApproach = null;
+    return null;
+  }
+  const was = st.asmLagApproach;
+  const b = st.asmGizmo;
+  let lag: Vec3 | null = null;
+  if (b !== null && !(b[0] === foot[0] && b[1] === foot[1] && b[2] === foot[2])) {
+    const fWas = was === null || was.d === d ? null : footOf(st, g, u, was.d + liftOf(st, u));
+    lag = approachLag(was?.lag ?? null, fWas === null ? [0, 0, 0] : [foot[0] - fWas[0], foot[1] - fWas[1], foot[2] - fWas[2]], dtMs, st.cfg.gizmoEaseMs);
+  }
+  st.asmLagApproach = { lag: lag ?? [0, 0, 0], d };
+  return lag;
 }
 
 
@@ -1550,7 +1576,9 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   st.asmGizmo = st.asmGizmo === null ? [foot[0], foot[1], foot[2]] : easePoint(st.asmGizmo, foot, dtMs, st.cfg.gizmoEaseMs); // ⭐⭐ (2026-11-04) a slider (the former GIZMO_TAU_MS, 90 ms)
   st.asmGizmoAt = [target[0], target[1], target[2]]; // ⭐⭐⭐ (2026-11-02) where the ring is drawn: the vertex both lines go through (`gizmoShownAt`)
   // ⭐⭐⭐ (2026-11-11, the owner's jitter of the gizmo) the ring and its sections drawn at the base's lag along the face (`gizmoLag`) — the rig's one ease
-  st.asmGizmoLag = gizmoLag(st.asmGizmo, foot, st.gizmoNormal ?? null);
+  // ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §4.5 C-a — `gizmoLagTravel` 1; 0 = `3b7a479`) the gizmo's TRAVEL's lag only: the approach's own share
+  // taken out (`approachLagFrame`) — ⛔ the base's slide along the oblique ray as he approached was drawn as the ring's (up to 39.7 mm a frame, `g` still)
+  st.asmGizmoLag = gizmoLag(st.asmGizmo, foot, st.gizmoNormal ?? null, approachLagFrame(st, target, us, d, foot, dtMs));
   st.centreBlend.snapTo(st.asmGizmo);
   syncCentre(st);
   // ⭐ the look point: the centre far out, the gizmo close in (a share of the distance — it frames the view, it switches nothing)
