@@ -365,7 +365,7 @@ export function installTuningMenu(st: SceneState): void {
             // ⭐⭐⭐ (2026-11-23, `ORBIT_SURFACE_DRIVE.md` §3.7 — S4) P2 drives the piece's support (1) and the gizmo's depth (2)
             tunable(st, "P2 drives (0 = as deployed, e80a7b0; 1 = the piece's support; 2 = + the gizmo's depth)", "landingDrives", 0, 2, 1),
             // ⭐⭐⭐ (2026-11-24, `ORBIT_SURFACE_LANDING_CAST.md` §6 — S14) P2's engine: the sums built ahead (LIVE) or the cast at query time
-            tunable(st, "P2 engine (0 = the sums, LIVE; 1 = the cast)", "landingEngine", 0, 1, 1),
+            tunable(st, "P2 engine (0 = the sums, before; 1 = the cast)", "landingEngine", 0, 1, 1),
             // ⭐⭐⭐ (2026-11-24, `ORBIT_SURFACE_L1.md` §10 — S11) L1's caps: the fillers between placed parts in the face map
             tunable(st, "L1 caps (0 = LIVE 19c7f88; 1 = the fillers)", "surfaceL1", 0, 1, 1),
           ],
