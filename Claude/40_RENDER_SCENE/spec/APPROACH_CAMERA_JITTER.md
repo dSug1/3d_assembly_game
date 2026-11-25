@@ -667,3 +667,10 @@ byte this branch's; `gestureConfig.ts`'s five switches the same lines.
 The docs there: this study (with a note on what is this branch's — the surface work), `TUNING_MENU.md` (the five sliders), `RND5.md` (a dated
 line). ⚠ Not replayed headless on those branches: their switches at 0 are today's code by the vectors, and the per-frame gates of §7.2 – §7.7 were
 run here on the same files. Main untouched (LIVE `6f03b65`). His device look closes each fix (rule 5).
+
+### 7.9 ⭐ DEPLOYED ON (2026-11-25 07:02Z — his word *"Deploy with all sliders at 1"*)
+
+The five switches' default set to 1 (`4c6bd9a4`: `gestureConfig.ts` and the five default pins; verify 208 files, 2601 tests) and deployed:
+**LIVE main `870078b`** = `4c6bd9a4`. 0 on each gives the game before (`3b7a479`'s picture). `landingEngine` (S14) left at 0 — his look owed. On
+`1.0.157-Orbit_surface` and `1.0.156-Orbits_with_camera_follow_final` the five stay at 0 (the reference kept; their defaults on his word). His device
+look owed on the five (B-a's band on the phone's smaller screen, §7.6).

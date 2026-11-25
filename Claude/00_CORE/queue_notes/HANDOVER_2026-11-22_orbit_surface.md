@@ -142,3 +142,4 @@ collision pieces (one measurement before the plunge is built); the frozen plinth
   gone (0 frames over 1°), the ring still while the gizmo is. Ported and pushed: `1.0.157-Orbit_surface` `5eaf3eb4`, `1.0.156-` `4a6a95a1` (§7.8).
 * Not deployed. His look owed (all five at 1 on the phone; B-a's band is in screen mm — on the phone's smaller screen mid-distance frames may enter
   it, §7.6); then their defaults.
+* **2026-11-25 07:02Z — DEPLOYED ON:** his *"Deploy with all sliders at 1"* → the five default 1, LIVE main `870078b` = `4c6bd9a4` (`landingEngine` still 0). His look owed; he asked what S14's slider is (answered: GIZMO & SECTIONS › THE ORBIT'S SURFACE › *P2 engine*).
