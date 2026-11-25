@@ -366,3 +366,8 @@ none built, each behind its own switch.
   against), each behind its own switch, 0 = LIVE frame for frame; vectors red first; verify; the gates of §5 on his records (family A: `09fv_r01`,
   `r03`, `n2b8_r01`; the way in unchanged: `S1B` / `S1F`). **Packet 2 = A3-a, B-a, C-a** — as recommended (he raised no objection when told they
   would follow), each behind its own switch, after packet 1's gates. His look on the device closes each (rule 5).
+* **D-J3 — the branches (his word 2026-11-25: *"make sure you commit these five fixes also in branches 1.0.156 and 1.0.157 as they also belong
+  there"*).** The five fixes are the closed orbit's, not the surface work's: each lands on `1.0.158from1.0.157-Orbit_surface` (built and gated here),
+  then is ported as its own commit (code + vectors) onto `1.0.157-Orbit_surface` and `1.0.156-Orbits_with_camera_follow_final` (their code is
+  identical to each other: `1.0.157` = `1.0.156` + three docs commits), verified there, both switches at 0 = that branch's game frame for frame.
+  The fixes therefore depend on nothing of the surface work (no landing, readout, `surfaceL1`, `landingEngine`).
