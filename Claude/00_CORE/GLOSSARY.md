@@ -7,7 +7,7 @@
 
 | prefix | meaning |
 |---|---|
-| `IN0`–`IN13` | the touch **input** system |
+| `IN0`–`IN14` | the touch **input** system |
 | `3D0`–`3D9` | objects, connectors, **assembly** |
 | `RND0`–`RND4` | scene and **rendering** |
 | `DEP0`–`DEP4` | build and **deployment** |
