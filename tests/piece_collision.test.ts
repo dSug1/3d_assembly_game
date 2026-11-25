@@ -67,8 +67,9 @@ describe("⭐⭐ wired — the orbit step, the turns, the red quad", () => {
   });
   it("⭐⭐ a turn checked WHOLE before it starts — the align and the roll refused when blocked (nothing changes, no episode)", () => {
     const g = flat("render/green_box_wiring.ts");
-    expect(g).toContain("const blockedBy = pieceTurnBlocker(st, base); if (blockedBy !== null) { st.pinkTargetNormal = pinkWas;");
-    expect(g).toContain("const blockedBy = pieceTurnBlocker(st, roll.q); if (blockedBy !== null) {");
+    // ⭐ (2026-11-25, IN14 §4.5) with the piece zone the step back makes the room first: checked only at `pieceTurnZone` 0
+    expect(g).toContain("const blockedBy = st.cfg.pieceTurnZone === 1 ? null : pieceTurnBlocker(st, base); if (blockedBy !== null) { st.pinkTargetNormal = pinkWas;");
+    expect(g).toContain("const blockedBy = st.cfg.pieceTurnZone === 1 ? null : pieceTurnBlocker(st, roll.q); if (blockedBy !== null) {");
   });
   it("⭐⭐ *\"highlight the quad in red instead of yellow and back to yellow when rotation is allowed again\"* — its tap's turn checked (at most every 100 ms)", () => {
     const c = flat("render/orient_cube.ts");

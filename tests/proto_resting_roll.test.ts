@@ -143,7 +143,7 @@ describe("⭐⭐ prototype — the roll to the next couple of symmetry axes", ()
     // every spawn (boot, respawn, the switch) asks for it; the first frame, once the orbit placed the piece, does it
     const spawn = w.slice(w.indexOf("export function spawnOrbitPiece"), w.indexOf("function bootRestAlign"));
     expect(spawn).toMatch(/st\.bootRestAlign = true;\s*st\.hudDirty = true;\s*\}/);
-    expect(w).toMatch(/st\.pieceAnchor = pp;\s*if \(st\.bootRestAlign\) bootRestAlign\(st, pp\);/);
+    expect(w).toMatch(/st\.pieceAnchor = turnOff === null \? pp : \[pp\[0\] \+ turnOff\[0\], pp\[1\] \+ turnOff\[1\], pp\[2\] \+ turnOff\[2\]\];\s*if \(st\.bootRestAlign\) bootRestAlign\(st, pp\);/); // ⭐ (2026-11-25, IN14 §4.5) the step back's offset on the anchor drawn
     const fn = w.slice(w.indexOf("function bootRestAlign"), w.indexOf("export function registerOrbitPieces"));
     expect(fn).toMatch(/st\.pinkDir = BOOT_UP;\s*const target = alignFaceOf\(st, at\);/); // ⭐ (2026-10-12) the cube's +y facet — the floor's top direction
     expect(fn).toMatch(/const turned = restAlignToFace\(\[r\.w, r\.x, r\.y, r\.z\], at, p\.restingFace\.normal, p\.restingLong, target\.normal, target\.long\);/);

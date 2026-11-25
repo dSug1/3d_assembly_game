@@ -280,6 +280,10 @@ export interface SceneState {
   restAlignHeld: boolean;
   /** ⭐ (2026-10-13) the taps on the orbited piece — a DOUBLE tap while stuck respawns it. */
   pieceTaps: TapHistory;
+  /** ⭐⭐⭐ (2026-11-25, IN14, `PIECE_TURN.md`) THE PIECE ZONE's gesture in flight, its step back, the undo's history, the last selected quad. */
+  pieceTurn: import("./piece_turn_wiring").PieceTurnState;
+  /** ⭐ (2026-11-25, IN14) Scene_2's idle blend's share (0 in, 1 out at the scene orbit's distance) — no piece zone while it is out. */
+  modelIdle: number;
   /** ⭐ (2026-10-13) the orbit centre at boot — where a respawn puts it back (the piece's spawn transform is on the boot ring). */
   bootCentreM: import("../core/vec").Vec3;
   /** ⭐ (2026-10-12) THE VIRTUAL PINK FACE — a cube facet's direction the resting face sits against (`null`: the scene's pink face, `pinkFace`). */

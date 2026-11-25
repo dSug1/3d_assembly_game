@@ -20,6 +20,24 @@ pinch, the wheel, the boot zoom); around the assembly **the PINCH is the APPROAC
 ⭐⭐⭐ **2026-11-14 (`1.0.143from1.0.142-Pick-up-of-parts`) — THE PICK-UP FLOW, a scene's `.glb` parts (`Scene_2`)** →
 [`../../20_GAME_RULES/spec/PICK_AND_PLACE.md`](../../20_GAME_RULES/spec/PICK_AND_PLACE.md): the rows marked *(`.glb` parts)* below; ⛔ no device look yet.
 
+## 0. ⭐⭐⭐ 2026-11-25 (`IN14`, `1.0.159-Orbit_of_piece`): THE PIECE ZONE — under `pieceTurnZone` 1 (0 = the rows below as they were)
+
+→ [`PIECE_TURN.md`](PIECE_TURN.md) §4.8 (the map), §4 (each input), §8 (as built: gated headless 2026-11-25 night). ⛔ No device look yet.
+
+| device | input | does |
+|---|---|---|
+| both | a drag started OUTSIDE the piece zone (the piece on the glass + 5 mm, ≥ 9 mm, ≤ ⅓ of the short side) | the orbit (unchanged) |
+| tablet / desktop | the pinch, the first finger outside / A + left drag started outside | the approach (unchanged) |
+| both | a drag started IN the zone | the piece turns under the finger (2°/mm, about its centre); the quads at any distance, the nearest lit; the release snaps onto it |
+| tablet | first finger started in the zone (wherever now) + a second finger: twist / tap | the turn snaps, then the roll: continuous 1:1, snapped at the lift / one stop clockwise |
+| desktop | A at the zone press or any time during the zone drag: dx / A + a click in the zone | the turn snaps, then the roll: dx right clockwise, snapped at the release / one stop |
+| both | a tap / click on a face of the piece | its resting face, onto the last selected quad, else the nearest direction; the quads flash |
+| both | a double tap / double click on empty space (the floor, a loose part) | the undo: the last turn, face or roll (one episode) |
+| both | close in, any turn | the piece steps back along its approach line until it can turn, turns, steps back in |
+
+⛔ **Inert at 1**: rows 37 – 44 (the second touch's way in, the second finger's taps, the quads' taps, the tap on empty space), 66 – 70, 72, 75 – 76 (ALT /
+CTRL), the quads shown by the distance, Scene_2's pick kept beyond the quads' distance.
+
 ## 1. Tablet (touch)
 
 | holding | input | does |

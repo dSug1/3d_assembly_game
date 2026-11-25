@@ -14,10 +14,9 @@ record. **A status changes in BOTH places or neither.**
 
 ---
 
-## ⭐⭐⭐ YOU ARE HERE (2026-11-22 evening, branch `1.0.158from1.0.157-Orbit_surface` in `../orbit_surface`, live main `3b7a479` = `2cd1be34`)
+## ⭐⭐⭐ YOU ARE HERE (2026-11-25 night, branch `1.0.159-Orbit_of_piece`, the main folder)
 
-⭐⭐⭐⭐ **THE BEST IMPLEMENTATION OF THE ORBIT SO FAR (2026-11-22 evening, his word)** — branch `1.0.156-Orbits_with_camera_follow_final`, LIVE main `3b7a479` = `2cd1be34`: the orbit closed this afternoon (`40b8095`, branch `1.0.155-Orbits_with_camera_follow_1`) + D-H23 + D-H24 → [`CAMERA_FOLLOWS_GIZMO.md`](../40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md) §20 — the reference never to regress; **2321 vectors**.
-⭐⭐⭐ **NOW: THE ORBIT SURFACE WORK** (`RND7`) on `1.0.158from1.0.157-Orbit_surface` in the worktree `../orbit_surface` (pushed) → [`queue_notes/HANDOVER_2026-11-22_orbit_surface.md`](queue_notes/HANDOVER_2026-11-22_orbit_surface.md); S2 – S4b, S7 – S13 DEPLOYED (LIVE `19c7f88`, 2026-11-24; his look on S4: ok); the rest: `ORBIT_SURFACE_BUILD.md` §10; then RND6.
+⭐⭐⭐ **NOW: `IN14`, THE PIECE ZONE** (his word) — the held piece turned by a drag on it, the step back to turn, the roll, the face tap, the undo → [`PIECE_TURN.md`](../10_INPUT_TOUCH/spec/PIECE_TURN.md). Then `GM13`, `RND6`. The 2026-11-22 lines moved → [`history/2026-11-25_queue_status_moved.md`](history/2026-11-25_queue_status_moved.md).
 ⭐ The lines of 2026-11-22 (the merge, D-H20; the orbit closed; D-H23 + D-H24) moved → [`history/2026-11-22_queue_orbit_closed_moved.md`](history/2026-11-22_queue_orbit_closed_moved.md), [`history/2026-11-22_queue_evening_moved.md`](history/2026-11-22_queue_evening_moved.md).
 ⭐ The lines of 2026-11-19 (LIVE `675ec23`, the upright law U, option 3) moved → [`history/2026-11-22_queue_status_moved.md`](history/2026-11-22_queue_status_moved.md).
 ⭐ The lines of 2026-11-18 (LIVE `4eabab8`, FO3, the upright study, NEXT) moved → [`history/2026-11-18_queue_status_moved.md`](history/2026-11-18_queue_status_moved.md).
@@ -274,6 +273,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | IN11 | ⭐ **Is rule 2bis's free rotation PATH-DEPENDENT?** — a debugging row | IN | defect? | queued, ⭐⭐ **UNBLOCKED — it needs no object model**. 2bis is a per-frame increment about two fixed axes, which do not commute, so out-and-back by a DIFFERENT route may not return the object. ⚠ Retracing the SAME path does close, which is why a tuning session would never show it. ⭐ **Write the square-path vector FIRST and confirm it FAILS against today's code**; the answer is a curve against drag angle, not a yes/no. ⛔ Must not undo the world-frame axis composition → [`queue_notes/IN11.md`](queue_notes/IN11.md) | IN1 |
 | IN12 | ⭐ **A DEADBAND on the pointer delta** | IN | defect | ✅✅ **CLOSED 2026-09-15 BY `A11`, AND NOT THE WAY THIS ROW SPECIFIED IT** — the owner made §1.1 *itself* a position deadband. ⭐⭐ **A threshold has a SHAPE as well as a size**: the per-axis band buys **axis purity**, which no radius can give. ⛔ Still owed: a device pass — `motionDeadbandMm` is the commit threshold, the rest test and the jitter deadband at once → [`queue_notes/IN12.md`](queue_notes/IN12.md) | IN1, IN4 |
 | IN13 | ⭐⭐ **WHICH TOUCHPOINT ASSIGNMENT SHIPS** | IN | decision | ✅✅ **ANSWERED AND CLOSED 2026-09-16 (`D28`)** — the tap toggle, after a hand drove three readings from one build over three versions. ⛔ Forks A and B are **deleted**, along with the flag, its latch, the slider and 44 vectors; `A14` and `A12` are retired **by construction**. ⭐ The comparison cost one boolean instead of two branches, which is what `D26` bought → [`queue_notes/IN13.md`](queue_notes/IN13.md) | IN4, IN8 |
+| IN14 | ⭐ **The piece zone**: a drag on the held piece turns it, snapped at the release; the step back to turn; the roll (twist, A); the face tap; the double-tap undo | IN | feature | 🔧 **BUILDING 2026-11-25 night** under `pieceTurnZone` (0 = LIVE `fe917b8`'s inputs); his look owed → [`queue_notes/IN14.md`](queue_notes/IN14.md) | IN13 |
 
 ## Phase 3D — objects and assembly
 

@@ -82,7 +82,7 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
 
   it("⭐⭐ the desktop (2026-10-11, *\"build with ALT and CTRL\"*): ALT or CTRL held is the second touch whenever a piece is orbited; the LEFT click while it is held names the pink face", () => {
     const flat = (t: string) => t.replace(/\s+/g, " ");
-    expect(code("render/scene.ts")).toContain("() => st.greenBox !== null);");
+    expect(code("render/scene.ts")).toContain("() => st.greenBox !== null && st.cfg.pieceTurnZone !== 1);"); // ⭐ (2026-11-25, IN14 §4.8) not with the piece zone
     const a = flat(code("render/mouse_adapter.ts"));
     expect(a).toContain('const modKey = (k: string) => k === "Alt" || k === "Control";');
     expect(a).toContain('if (modKey(e.key) && !e.repeat && !modDown && orbitSecond !== undefined && orbitSecond()) { modDown = true; apply({ type: "MOD_DOWN"');
@@ -144,7 +144,7 @@ describe("⭐⭐ prototype — the second touch's TAP, the first held, ROLLS to 
   });
   it("⭐⭐ wired at the second touch's release (2026-10-13, *\"the second touch's tap on empty space to do exactly what the first touch's tap does: align to the yellow quad, or roll if already aligned there\"*): the YELLOW quad tapped — `orientTapShown`, as the first touch's tap on empty space", () => {
     const h = code("render/hold_wiring.ts").replace(/\s+/g, " ");
-    expect(h).toContain("if (holdTapTapsYellow(tapped, mode, h.first !== null, h.pressActed) && orientTapShown(st)) {");
+    expect(h).toContain("if (st.cfg.pieceTurnZone !== 1 && holdTapTapsYellow(tapped, mode, h.first !== null, h.pressActed) && orientTapShown(st)) {"); // ⭐ (2026-11-25, IN14 §4.8) at 0 only
     expect(h).not.toContain("holdTapRolls");
     expect(code("render/pointer_wiring.ts")).not.toContain("over the orbited piece: never the tap roll"); // ⛔ (2026-10-12) the key's raycast removed
     expect(code("render/hold_wiring.ts")).toContain("pressActed: centreAt !== null, centreAt,"); // ⭐ a tap on a placed part moves the centre, never rolls
@@ -183,6 +183,6 @@ describe("⛔⛔ a second-touch TAP that wobbled into the pinch is still a tap (
   it("⭐ wired at the second touch's release: a tapped approach undone, the tap judged in that mode (⛔ 2026-11-13 no zoom to undo)", () => {
     const h = code("render/hold_wiring.ts").replace(/\s+/g, " ");
     expect(h).toContain("const mode = holdTapMode(h.mode, tapped); // ⭐ (2026-10-28) a tapped approach undone; an approach's end starts its coast if (mode !== h.mode && h.mode === \"APPROACH\" && h.base) st.approach = h.base.approach;");
-    expect(h).toContain("if (holdTapTapsYellow(tapped, mode, h.first !== null,");
+    expect(h).toContain("holdTapTapsYellow(tapped, mode, h.first !== null,"); // ⭐ (2026-11-25, IN14 §4.8) behind `pieceTurnZone` 0
   });
 });

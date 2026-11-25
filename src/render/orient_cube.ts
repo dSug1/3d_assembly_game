@@ -35,6 +35,7 @@ import { blockedMessage, pieceRespawnArmed } from "../input/piece_orbit_solver";
 import { showBlockedPopup } from "./goal_popup";
 import { alignRestingFace, orientationFrames, pieceStuckFrame, pieceTurnVerdict, restingPreview, rollRestingFace, sceneSignature } from "./green_box_wiring";
 import { quadCheckBudget } from "../input/piece_orbit_solver";
+import { pieceTurnLit, pieceTurnQuadsShare } from "./piece_turn_wiring";
 import type { Sample } from "../input";
 import type { SceneState } from "./scene_state";
 
@@ -107,7 +108,9 @@ export function orientCubeFrame(st: SceneState): void {
   // ⭐⭐ (2026-10-12, the owner: *"if one quad is clicked, it becomes the yellow quad since the left click/first touch on empty will keep on
   // rolling the resting piece on this quad until the next delta position"*) — the direction tapped stays the pink one until the next orbit
   // drag (`orbitDragStep` drops it), whatever the candidate does
-  quadTurnFrame(st);
+  // ⭐⭐⭐ (2026-11-25, IN14 §4.8) the piece zone: no quad to tap — its turn never checked (the step back makes the room)
+  if (st.cfg.pieceTurnZone === 1) st.quadTurnCheck.blockedBy = null;
+  else quadTurnFrame(st);
   // ⭐⭐ (2026-10-13, the owner: *"In such case the piece is blocked, Add a pop up message (same kind as the pop up when a part reach its goal) in red (instead of green) with written “Part is blocked. Double-click the part to restart” in desktop or “Part is blocked. Double-tap the part to restart” in mobile."*) — the red pop-up while the piece is STUCK (its position input and its quad's turn both blocked)
   // ⭐⭐ (2026-10-13, *"the red message shall appear if all delta position and quad rotations are blocked"*) — EVERY position step and EVERY quad turn blocked (`pieceStuckFrame`), not only the last input and the yellow quad
   pieceStuckFrame(st);
@@ -118,7 +121,7 @@ export function orientCubeFrame(st: SceneState): void {
     const coarse = typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches;
     showBlockedPopup(st, stuck ? blockedMessage(coarse) : null);
   }
-  restingQuadsFrame(st, shownTag(st));
+  restingQuadsFrame(st, st.cfg.pieceTurnZone === 1 ? pieceTurnLit(st) : shownTag(st)); // ⭐⭐⭐ (IN14 §4.3) the piece zone: its lit quad
 }
 
 /**
@@ -266,7 +269,10 @@ function restingQuadsFrame(st: SceneState, shown: number): void {
   const range = pieceDistanceRange(st.cfg);
   const from = quadsShownFromM(range.maxM);
   // ⭐ (2026-11-14) a `.glb` part's proxy is never drawn (its own meshes are): it counts as shown (`model_bodies_wiring.ts`)
-  const show = st.greenBox !== null && p.mesh.isEnabled() && (p.mesh.isVisible || p.mesh.metadata?.modelBody === true) && d >= from;
+  // ⭐⭐⭐ (2026-11-25, IN14 §4.3) the piece zone: shown while its gesture lives (and held, then faded) — at ANY distance, at full size
+  const zone = st.cfg.pieceTurnZone === 1;
+  const share = zone ? pieceTurnQuadsShare(st, performance.now()) : 1;
+  const show = st.greenBox !== null && p.mesh.isEnabled() && (p.mesh.isVisible || p.mesh.metadata?.modelBody === true) && (zone ? share > 0 : d >= from);
   for (const x of q.quads) {
     x.fill.isVisible = show;
     x.edges.isVisible = show;
@@ -283,7 +289,7 @@ function restingQuadsFrame(st: SceneState, shown: number): void {
   }
   // ⭐ at the resting face's centre, as the piece stands now
   q.root.position.set(at[0], at[1], at[2]);
-  const side = quadSize(d, from, range.maxM, st.cfg.quadGrowthLogK, onePx, full);
+  const side = zone ? full : quadSize(d, from, range.maxM, st.cfg.quadGrowthLogK, onePx, full);
   q.growth = side / full;
   q.root.scaling.setAll(side);
   // ⭐⭐ (2026-10-12, *"highlight in yellow the quad which corresponds to the pink face of the cube"*) — the pink direction's plane
@@ -292,8 +298,8 @@ function restingQuadsFrame(st: SceneState, shown: number): void {
     const lit = pn !== null && Math.abs(dot(x.normal, pn)) >= SAME_DIR;
     x.edges.color = lit ? (st.quadTurnCheck.blockedBy !== null || st.restAlignHeld ? QUAD_BLOCKED : QUAD_LIT) : QUAD_EDGE; // ⭐ (2026-10-13) RED while its turn is blocked — or held (the third audit)
     // ⭐⭐ (2026-10-15, the owner: *"non-yellow quads' edges go from 0.45 to 0.2 and their fills from 0.12 to 0.05. The yellow quad is unchanged."*)
-    x.edges.alpha = quadEdgeAlpha(lit, st.cfg.quadUnlitAlpha);
-    (x.fill.material as StandardMaterial).alpha = quadFillAlpha(lit, st.cfg.quadUnlitAlpha);
+    x.edges.alpha = quadEdgeAlpha(lit, st.cfg.quadUnlitAlpha) * share;
+    (x.fill.material as StandardMaterial).alpha = quadFillAlpha(lit, st.cfg.quadUnlitAlpha) * share;
   }
 }
 
@@ -317,6 +323,7 @@ export function restingQuadPointer(
     const q = st.restingQuads;
     const piece = st.greenBox;
     if (q === null || piece === null || e.pointerId === MOUSE_SECOND_ID || st.hold !== null) return false;
+    if (st.cfg.pieceTurnZone === 1) return false; // ⭐⭐⭐ (2026-11-25, IN14 §4.8) the piece zone: no tap on a quad
     if (!q.quads.some((k) => k.fill.isVisible)) return false; // ⭐ hidden (nearer than 65 % of the farthest): nothing to press
     if (e.pointerType === "mouse" && e.button !== 0) return false;
     if (st.router.all().length > 0) return false; // ⭐ a first touch only

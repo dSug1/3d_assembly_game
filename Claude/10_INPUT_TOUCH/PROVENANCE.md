@@ -195,3 +195,16 @@ form has none.
 |---|---|---|
 | **Two fingers spreading / closing → zoom** | ✅ **PRIOR ART, and universal** | The pinch-to-zoom of every multitouch UI; already registered for the empty-space pinch (`IN9`) |
 | ⚠ **The same pinch recognised WHILE one of the two fingers holds a body, the body's translation and roll paused and the pinch latched until a lift** | ⚠ **INTERNAL COMPOSITION** | Not searched for a publication; one hand's two fingers, no novel multi-finger mapping beyond the pinch itself. ⚠ Recorded for `SEC4` |
+
+## ⭐⭐⭐ THE PIECE ZONE — registered 2026-11-25 (`IN14`, [`spec/PIECE_TURN.md`](spec/PIECE_TURN.md) §3), at the moment of adoption
+
+| the part | verdict | the citation, or the gap |
+|---|---|---|
+| **A drag on the held piece turns it under the finger** (the near point goes with the finger, about the screen's axes) | ✅ **PRIOR ART** | the virtual sphere — Chen, Mountford & Sellen, *A study in interactive 3-D rotation using 2-D control devices*, SIGGRAPH 1988; the arcball — Shoemake, Graphics Interface 1992 (rule 2bis above) |
+| **The turn lives while pressed; the release snaps** | ✅ **PRIOR ART** | the kinesthetic hold / quasimode — Sellen, Kurtenbach & Buxton, *The prevention of mode errors through sensory feedback*, HCI 1992; Raskin, *The Humane Interface*, 2000; the snap to the nearest of a set — Bier, *Snap-dragging in three dimensions*, I3D 1990 |
+| **The zone chosen at the press by where it lands** (on the piece: its turn; elsewhere: the orbit) | **INTERNAL COMPOSITION** | direct picking (Nielson & Olsen 1986, rule 2 above) choosing the manipulation; the zone's size ours |
+| **Two fingers' twist rolls the piece** | ✅ **PRIOR ART** | the two-finger rotation of every multitouch UI since the 2007 phones; Hancock, Carpendale & Cockburn, *Shallow-depth 3D interaction*, CHI 2007 |
+| ⚠ **The first finger started on the piece (wherever it is now), a second finger lands: the turn snaps, the twist rolls about the resting face's normal, a second finger's tap one stop** | ⚠ **INTERNAL COMPOSITION** | the parts above composed; not searched further — for `SEC4` |
+| **A held with a drag on the piece rolls it** (desktop) | **INTERNAL COMPOSITION** | a modifier key changing a drag's manipulation is universal DCC practice; the roll about the resting normal ours |
+| **The step back to turn** (out along the approach line until the bounding sphere is free, turned, back in by checked steps) | ✅ **PRIOR ART** | retreat / re-orient / approach: Unimation's VAL robot language (1979), `DEPART` / `APPRO`; sphere tracing — Hart, The Visual Computer 1996; conservative advancement — Mirtich 1996 (`COLLISION.md` §11octies); a bounding sphere is rotation-invariant (elementary geometry) |
+| **A double tap on empty space undoes the last turn** | **INTERNAL COMPOSITION** | the double tap is universal; its meaning here (an undo, on empty space only) ours — `D111`'s double tap undo had the same shape until 2026-11-02 |
