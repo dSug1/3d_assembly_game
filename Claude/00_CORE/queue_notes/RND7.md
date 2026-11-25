@@ -165,3 +165,4 @@
   gizmo the ring and the HUD line are the driven gizmo's own point and the drive's landing; `mouthP2` unchanged. G1 and his look owed.
 * **2026-11-24** — S14 and the ring GATED (`ORBIT_SURFACE_LANDING_CAST.md` §10): G1 bit for bit at the defaults on his two `Scene_1` records;
   `landingEngine` 1 within 3.6e-15 m; verify 2557 / 2557 on a quiet PC. The jitter's diagnosis committed (`APPROACH_CAMERA_JITTER.md`, `ab17666d`).
+* **2026-11-25** — S14 and the ring DEPLOYED on his word *"deploy"* (LIVE main `6f03b65` = `c6a4ffa5`, 2026-11-25 02:12Z). His look owed: S14 at 1, the ring.

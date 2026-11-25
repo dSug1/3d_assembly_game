@@ -126,3 +126,9 @@ collision pieces (one measurement before the plunge is built); the frozen plinth
   `ORBIT_SURFACE_LANDING_CAST.md` §9 – §10), the white ring showing what the gizmo uses (`ORBIT_SURFACE_READOUT.md` §15) — both gated on his records.
 * **His camera jitters** (nine play records, `../orbit_surface/.recordings/`): all the closed orbit's — `APPROACH_CAMERA_JITTER.md` (A1 – A3, B, C; five
   fix options, each its own switch). His word owed: A1-a or A1-b; A2-a's band after a way out.
+
+## ⭐ 2026-11-25 — S14 and the ring deployed
+
+* **LIVE main `6f03b65`** = `c6a4ffa5` (his word *"deploy"*, 2026-11-25 02:12Z): S14 behind `landingEngine` (0 = the sums, as before; 1 = the cast) and the
+  white ring on the driven gizmo where P2 drives. At the defaults the game is `df5426a`'s but for the ring (G1 bit for bit). His looks owed: S14 at 1,
+  the ring; then S14's default and D9's withdrawal. The jitters' fixes wait for his word (A1-a / A1-b, A2-a's band).

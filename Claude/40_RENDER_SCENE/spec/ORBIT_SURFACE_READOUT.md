@@ -301,7 +301,7 @@ placed body the orbit reads is convex (its hull's volume = its mesh's)"* would m
   word to deploy (⭐ done 2026-11-23: LIVE main `ff41fc3` = `5d30edf5`). The ring and the HUD's `landing` line; the slider `landingReadout` (GIZMO & SECTIONS): 0 =
   `3b7a479`.
 
-## 15. ✅ BUILT (`cfc5e325`) — THE RING SHOWS WHAT THE GIZMO USES (his word 2026-11-24: *"make the white ring show what the gizmo uses"*) — the design, before the build
+## 15. ✅ BUILT (`cfc5e325`), ⭐ DEPLOYED 2026-11-25 (LIVE `6f03b65`) — THE RING SHOWS WHAT THE GIZMO USES (his word 2026-11-24: *"make the white ring show what the gizmo uses"*) — the design, before the build
 
 **Why.** His question (2026-11-24, a screenshot: `P2 Δ+51.8 mm land Piece21`, the white ring above the yellow): *"why the white gizmo and the yellow
 gizmo do not coincide?"* Since S4 (`landingDrives` 2, `ORBIT_SURFACE_DRIVE.md` §3) P2 places the gizmo — read FROM WHERE THE PIECE IS (`F`, the face
