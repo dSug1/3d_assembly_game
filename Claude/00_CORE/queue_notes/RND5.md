@@ -808,3 +808,8 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
 * **2026-11-22 evening — HIS VERDICT: THE BEST IMPLEMENTATION OF THE ORBIT SO FAR** — branch `1.0.156-Orbits_with_camera_follow_final` (renamed from `1.0.156-Orbit-surface`),
   LIVE main `3b7a479` = `2cd1be34`; `40b8095`'s branch renamed `1.0.155-Orbits_with_camera_follow_1`; the workfront `1.0.157-Orbit_surface`
   ([`CAMERA_FOLLOWS_GIZMO.md`](../../40_RENDER_SCENE/spec/CAMERA_FOLLOWS_GIZMO.md) §20.11).
+* **2026-11-25 — the camera's jumps on the approach: five fixes PORTED here** (his word: *"make sure you commit these five fixes also in branches
+  1.0.156 and 1.0.157 as they also belong there"*) from `1.0.158from1.0.157-Orbit_surface`, each its own commit behind its own switch (0 = this
+  branch's game frame for frame): A1-a `pictureHandWhole`, A2-a `pictureBandWayIn`, A3-p `followParkOwn` (+ D-J5 under `pictureHandWhole`), B-a
+  `framedLineGlass`, C-a `gizmoLagTravel` — the study, his words and the gates on his records
+  ([`APPROACH_CAMERA_JITTER.md`](../../40_RENDER_SCENE/spec/APPROACH_CAMERA_JITTER.md) §7). His device look owed.
