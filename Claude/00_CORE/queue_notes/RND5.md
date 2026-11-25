@@ -813,3 +813,5 @@ study of its own). Then: the deploy on his word, his look, step 3 once, the merg
   branch's game frame for frame): A1-a `pictureHandWhole`, A2-a `pictureBandWayIn`, A3-p `followParkOwn` (+ D-J5 under `pictureHandWhole`), B-a
   `framedLineGlass`, C-a `gizmoLagTravel` — the study, his words and the gates on his records
   ([`APPROACH_CAMERA_JITTER.md`](../../40_RENDER_SCENE/spec/APPROACH_CAMERA_JITTER.md) §7). His device look owed.
+* **2026-11-25 — the five at 1 by default here too** (his word: *"Default at 1 also in the two other branches"*), as LIVE `870078b`; 0 = this
+  branch's game before. `npm run verify` 2365 / 2365.
