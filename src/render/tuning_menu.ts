@@ -209,6 +209,8 @@ export function installTuningMenu(st: SceneState): void {
             // ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` — packet E) the carried up
             tunable(st, "carried up: the alignment a dx pays near the vertical (deg a mm)", "uprightAlignDegPerMm", 0, 20, 0.5),
             tunable(st, "carried up: the gizmo still for the whole half turn (1; 0 = never)", "uprightHalfHold", 0, 1, 1),
+            // ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §4.4 B-a) his view swinging 4 – 11° at a side face's floor: the line rolled about, read on the glass
+            tunable(st, "carried up: its line read on the glass — the view's where the piece and the look point are one place (1; 0 = 3b7a479)", "framedLineGlass", 0, 1, 1),
           ],
         },
         // ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §13 — F2) far out the camera a simple polar orbit following the direction asked

@@ -87,7 +87,9 @@ function carriedFrame(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Ve
   const gizmoFree = zm === null && !sqTurning && !tiltHold;
   const zmOn = st.asmZoneMix !== null;
   const G = zoneMixPose(st, piece, eye, look, up);
-  const line = framedLine(G, piece);
+  // ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §4.4 B-a — `framedLineGlass` 1; 0 = `3b7a479`) the line's degenerate case read ON THE GLASS (`framedLine`'s
+  // band, screen mm): ⛔ by 3 world mm the line at contact was millimetre residues 50 – 85° off the view — the carried up swung the eye on a 1.26 m arm
+  const line = framedLine(G, piece, st.cfg.framedLineGlass === 1 ? { fovY: st.camera.fov, heightPx: st.canvas.clientHeight } : null);
   const tw = was === null ? 0 : twistAbout(was.ghost, G, line.dir);
   // C1 THE TURN ASKED: the drawn orbit's yaw step about its pole axis, the upright camera's away from the vertical — none across a change of the logic's frame
   const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
