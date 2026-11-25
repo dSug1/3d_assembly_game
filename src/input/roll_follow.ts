@@ -19,10 +19,23 @@
  * deleted with their paths: `gapStep` now steps the piece's shown direction's rest alone (`asmDirEase.own`, at `rollFollowMs`).
  */
 import { cross, dot, type Vec3 } from "../core/vec";
+import { pxToMm } from "../core/units";
 import { rotateAbout, type CamPose } from "./orbit_tilt";
+import { trackingMetresPerPx } from "./translate";
 
 /** ⭐ the piece and the look point closer than this (m): the framed line is the view's own direction through the piece (O4) */
 export const ROLL_LINE_MIN_M = 0.003;
+/**
+ * ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §4.4 B-a, §7.6 — `framedLineGlass` 1) THE FRAMED LINE'S BAND ON THE GLASS (screen mm, CLAUDE.md rule 3):
+ * the piece and the look point apart by their separation as it reads on the glass at the pose's distance (`separationOnGlassMm`). Within
+ * `FRAMED_LINE_VIEW_MM` they are one place there: the view's own direction through the piece; from `FRAMED_LINE_FULL_MM` the line through both (O4, as
+ * today); between, blended by place (`framedLineShare`). Measured on his records (§7.6): the close drawer's frames far out ≥ 77.8 mm, close in before the
+ * approach's last 5 cm (ap ≥ 0.5) ≥ 19.9 mm (`09fv_r04` f17747; `09fv_r02` f7020 20.3) — beyond the band, bit for bit; family B's jumps at the floor
+ * (the logic's pose still) at 0.5 – 4.3 mm — the view's — and 6.3 – 7.9 mm (`09fv_r04` f17273 – f17276: blended, the line near the view). ⚠ The projected
+ * offset on the glass cannot tell them apart: the piece in front of the look point at mid distance is 1.3 mm off it there (`09fv_r03` f13389, 666 mm apart).
+ */
+export const FRAMED_LINE_VIEW_MM = 5;
+export const FRAMED_LINE_FULL_MM = 15;
 /** ⭐ the follower's time (ms) — S1's slider `rollFollowMs` (§12.4: 200; ⭐ 2026-11-18 the owner: *"very good at 160 ms … set them as default"*) */
 export const ROLL_FOLLOW_MS = 160;
 /** ⭐ a change whose twist is this or more is today's timed turn (deg) — S0's default; S1's slider `freeTurnMaxDeg` (§12.4: 90) */
@@ -54,10 +67,44 @@ export interface FramedLine {
   readonly throughLook: boolean;
 }
 
-/** ⭐ The line through the piece and the pose's look point (O4: the two closer than `ROLL_LINE_MIN_M` — the view's direction through the piece). */
-export function framedLine(pose: CamPose, piece: Vec3): FramedLine {
+/** ⭐ (B-a) The glass a pose is drawn on: its vertical field (rad) and its height (CSS px — the pointer's, `trackingMetresPerPx`). */
+export interface Glass {
+  readonly fovY: number;
+  readonly heightPx: number;
+}
+
+/** ⭐⭐⭐ (B-a) The piece and the pose's look point apart, as it reads on the glass at the pose's distance (screen mm); a degenerate glass: infinite. */
+export function separationOnGlassMm(pose: CamPose, piece: Vec3, glass: Glass): number {
+  const m = trackingMetresPerPx(len(sub(pose.look, pose.eye)), glass.fovY, glass.heightPx);
+  return m > 0 ? pxToMm(len(sub(piece, pose.look)) / m) : Infinity;
+}
+
+/** ⭐⭐⭐ (B-a) The line through both's share by the separation on the glass (mm): 0 within `FRAMED_LINE_VIEW_MM`, 1 from `FRAMED_LINE_FULL_MM`, linear between. */
+export function framedLineShare(mm: number): number {
+  return Math.min(1, Math.max(0, (mm - FRAMED_LINE_VIEW_MM) / (FRAMED_LINE_FULL_MM - FRAMED_LINE_VIEW_MM)));
+}
+
+/**
+ * ⭐ The line through the piece and the pose's look point (O4: the two closer than `ROLL_LINE_MIN_M` — the view's direction through the piece).
+ * ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §4.4 B-a — `glass` given: `framedLineGlass` 1) ITS DEGENERATE CASE BY ITS REAL CONDITION, ON THE GLASS: the
+ * share `s` of the line through both by their separation on the glass (`framedLineShare`); under 1 the direction is (1 − s)·view + s·c·u (u the unit
+ * piece − look, c = u·view, signed) — the view's at 0, the line's at 1 (c·u normalised is today's u turned away from the eye) — and no flip can occur
+ * inside the band: where u crosses square to the view c is 0 and the blend is the view's. ⛔ (§3.3) Decided by 3 WORLD mm: at contact 5 – 60 mm apart
+ * at 1.26 m (≈ 1 – 11 mm on his glass) the line was millimetre residues 50 – 85° off the view, flipping as it crossed square to it — the carried up's
+ * roll about it swung the eye on a 1.26 m arm (4 – 11° a frame, his records). From 1 on: today's rule, the same arithmetic. `glass` null: today's.
+ */
+export function framedLine(pose: CamPose, piece: Vec3, glass: Glass | null = null): FramedLine {
   const view = unit(sub(pose.look, pose.eye), [0, 0, 1]);
   const d = sub(piece, pose.look);
+  if (glass !== null) {
+    const s = framedLineShare(separationOnGlassMm(pose, piece, glass));
+    if (s < 1) {
+      const l = len(d);
+      if (!(s > 0) || l < 1e-12) return { at: piece, dir: view, throughLook: false };
+      const k = (s * (dot(d, view) / l)) / l;
+      return { at: piece, dir: unit([(1 - s) * view[0] + k * d[0], (1 - s) * view[1] + k * d[1], (1 - s) * view[2] + k * d[2]], view), throughLook: false };
+    }
+  }
   if (len(d) < ROLL_LINE_MIN_M) return { at: piece, dir: view, throughLook: false };
   const u = unit(d, view);
   return { at: piece, dir: dot(u, view) < 0 ? [-u[0], -u[1], -u[2]] : u, throughLook: true };
