@@ -30,9 +30,9 @@ export const ROLL_LINE_MIN_M = 0.003;
  * the piece and the look point apart by their separation as it reads on the glass at the pose's distance (`separationOnGlassMm`). Within
  * `FRAMED_LINE_VIEW_MM` they are one place there: the view's own direction through the piece; from `FRAMED_LINE_FULL_MM` the line through both (O4, as
  * today); between, blended by place (`framedLineShare`). Measured on his records (§7.6): the close drawer's frames far out ≥ 77.8 mm, close in before the
- * approach's last 5 cm (ap ≥ 0.5) ≥ 20.3 mm (`09fv_r02` f7020) — beyond the band, bit for bit; family B's jumps at the floor (the logic's pose still)
- * at 0.7 – 4.3 mm — the view's. ⚠ The projected offset on the glass cannot tell them apart: the piece in front of the look point at mid distance is 1.3 mm
- * off it there (`09fv_r03` f13389, 666 mm apart).
+ * approach's last 5 cm (ap ≥ 0.5) ≥ 19.9 mm (`09fv_r04` f17747; `09fv_r02` f7020 20.3) — beyond the band, bit for bit; family B's jumps at the floor
+ * (the logic's pose still) at 0.5 – 4.3 mm — the view's — and 6.3 – 7.9 mm (`09fv_r04` f17273 – f17276: blended, the line near the view). ⚠ The projected
+ * offset on the glass cannot tell them apart: the piece in front of the look point at mid distance is 1.3 mm off it there (`09fv_r03` f13389, 666 mm apart).
  */
 export const FRAMED_LINE_VIEW_MM = 5;
 export const FRAMED_LINE_FULL_MM = 15;

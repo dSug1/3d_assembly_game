@@ -126,7 +126,7 @@ describe("⭐⭐⭐ B-a — the framed line's degenerate case read on the glass 
     }
   });
 
-  it("beyond the band at mid distance: his `09fv_r02` f7020 (the nearest of his close-drawer frames before the floor: 120 mm apart at 1.37 m, 5.6° off — 20.3 mm) and `09fv_r03` f13389 (666 mm apart, 0.6° off the view: ~1.3 mm off on the glass) — today's", () => {
+  it("beyond the band at mid distance: his `09fv_r02` f7020 (one of the nearest of his close-drawer frames before the floor: 120 mm apart at 1.37 m, 5.6° off — 20.3 mm; the nearest, `09fv_r04` f17747, 19.9 mm) and `09fv_r03` f13389 (666 mm apart, 0.6° off the view: ~1.3 mm off on the glass) — today's", () => {
     const { G, piece } = R02D_F7020;
     expect(separationOnGlassMm(G, piece, HIS)).toBeGreaterThan(20.3);
     expect(framedLine(G, piece, HIS)).toEqual(framedLine(G, piece));
