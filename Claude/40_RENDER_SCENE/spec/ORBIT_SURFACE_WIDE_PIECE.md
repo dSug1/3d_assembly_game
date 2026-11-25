@@ -3,7 +3,8 @@
 > **STATUS (2026-11-25):** ✅ the rule PROPOSED and BUILT as vectors on his word *"Then propose the rule for B. and implement"* (B = the classes of
 > [`ORBIT_SURFACE.md`](ORBIT_SURFACE.md) §5.2 with no rule yet). **No game code changes**: P2 already answers the landing; the rule fixes what the
 > gizmo's domain is, and the vectors (`tests/wide_piece.test.ts`) pin it. C22 and C41: their SURFACE part already answered by P2's vectors; their
-> LAYOUT part is the orbit's (L3 / L4, §5.1 there), PROPOSED handed to the orbit — §5. His word owed on §5 only.
+> LAYOUT part is the orbit's (L3 / L4, §5.1 there) — ✅ DECIDED 2026-11-25: handed to the orbit's list (`RND8`), reopened ONLY if a scene shows
+> an issue, else nothing built (§5).
 
 ## 1. The rules that bind (the four-part method, part 1)
 
@@ -57,14 +58,15 @@ a step at a threshold (§2.6 (3) there, B6). (c) A stability test: ③ stands (n
 | W4 | far and medium the piece rides the shell (a box, `orbit_shell.ts`): its width is not in it | the solver keeps it out of the parts | the closed orbit's — recorded, not reopened |
 | W5 | off `Scene_1` today's POINT reads the facet's level at the gizmo, not the body | R-W holds there when P2 drives (`GM13`) | the surface, with `Scene_2` |
 
-## 5. C22 and C41 — PROPOSED: their surface part answered, their layout part the orbit's
+## 5. C22 and C41 — ✅ DECIDED: their surface part answered, their layout part the orbit's, dormant
 
 * **C22 very long, flat shapes**: the LANDING on them is P2's, exact (S1's thin bar, 400 × 8 mm, against the brute force); the LAYOUT (the spits'
   zones, the charts on a 730 × 483 mm slab) is L3 / L4 — the orbit's; *"the spits handle the layout"* is the orbit's own answer.
 * **C41 a singularity on a singularity**: its landing parts by P2 (the study's Q01, Q05, Q08), a mouth at a pole by Q4 (Q02); the LAYOUT'S EVENTS AT
   A POLE are L4's (poles, fans — `ORBIT_CHARTS.md`) — the orbit's.
-* ⏳ **PROPOSED (his word owed)**: both rows of §5.2 marked *"surface: P2 — the layout: the orbit's"*, handed to the orbit's queue like F17 and the
-  mouth's lip (§0quater there) — nothing built for them in the surface.
+* ✅ **DECIDED 2026-11-25** (his word: *"Agree with 1 but mention this has to be reopened only if a scene shows an issue, otherwise nothing to be built as the orbit is currently satisfactory"*): both rows of §5.2
+  marked *"surface: P2 — the layout: the orbit's"*, handed to the orbit's list like F17 and the mouth's lip ([`RND8`](../../00_CORE/queue_notes/RND8.md)) —
+  **reopened only if a scene shows an issue**; otherwise nothing is built, the orbit being satisfactory as it is.
 
 ## 6. The audit (part 4) — the vectors, each RED first
 

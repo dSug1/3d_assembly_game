@@ -302,7 +302,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | RND5 | ✅ Orbit on charts | RND | feature | ✅ CLOSED 2026-11-22 (his word): the charts and the camera follower; the best so far LIVE `3b7a479` (+ D-H23, D-H24); step 3, FO3 no longer owed; step B → `RND7` → `queue_notes/RND5.md` | — |
 | RND6 | ⛔ Black canvas on iPhone: WebGL context lost, never restored; Safari dead until force-quit | RND | defect | diagnosed to `Scene_2`'s loads (≈ 4th reload); mechanism probable; ⛔ no fix built — the owner's instruction; ⏸ worked on AFTER the orbit surface work (2026-11-22) → `queue_notes/RND6.md` | — |
 | RND7 | ⭐ The orbit's surface — where the gizmo travels (the landing map, the entry sets, the reach check) | RND | feature | 🔧 S2 – S14 + ring + the 5 jitter fixes ON DEPLOYED (LIVE `870078b`, 2026-11-25); branch `1.0.158from1.0.157-Orbit_surface` → `queue_notes/RND7.md` | RND5 |
-| RND8 | ⛔ The surface study's findings handed over: F17 and the mouth's lip (the orbit's), the drop into a slot in contact range (the contact's) | RND | defect | open since 2026-11-16 (`ORBIT_SURFACE.md` §2.2 P1, P5); none decided — the orbit is closed: his word → `queue_notes/RND8.md` | RND7 |
+| RND8 | ⛔ The surface study's findings handed over: F17, the mouth's lip, C22, C41 (the orbit's; C22, C41 only if a scene shows one), the drop into a slot in contact range (the contact's) | RND | defect | open since 2026-11-16 (`ORBIT_SURFACE.md` §2.2 P1, P5); none decided — the orbit is closed: his word → `queue_notes/RND8.md` | RND7 |
 
 ## Phase DEP — build and deployment
 
