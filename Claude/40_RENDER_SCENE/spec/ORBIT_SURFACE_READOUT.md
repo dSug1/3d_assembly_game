@@ -300,3 +300,37 @@ placed body the orbit reads is convex (its hull's volume = its mesh's)"* would m
 * **How he looks** (rule 5): `npm run dev:usb` from `../orbit_surface` with `adb reverse` (`50_BUILD_DEPLOY/DEVICE_TESTING_USB.md`), `Scene_1`; or his
   word to deploy (⭐ done 2026-11-23: LIVE main `ff41fc3` = `5d30edf5`). The ring and the HUD's `landing` line; the slider `landingReadout` (GIZMO & SECTIONS): 0 =
   `3b7a479`.
+
+## 15. ✅ BUILT (`cfc5e325`) — THE RING SHOWS WHAT THE GIZMO USES (his word 2026-11-24: *"make the white ring show what the gizmo uses"*) — the design, before the build
+
+**Why.** His question (2026-11-24, a screenshot: `P2 Δ+51.8 mm land Piece21`, the white ring above the yellow): *"why the white gizmo and the yellow
+gizmo do not coincide?"* Since S4 (`landingDrives` 2, `ORBIT_SURFACE_DRIVE.md` §3) P2 places the gizmo — read FROM WHERE THE PIECE IS (`F`, the face
+the piece is over: `landing_drive.ts` `fromAlong`) and marking the CONTACT (the landing less the piece's reach: `landing_map.ts` `driveLevel`). The
+ring still answered S2's question — read FROM OUTSIDE at the gizmo's place, at the piece's REFERENCE (`readoutAt`): two answers to two questions,
+the rings apart wherever the piece is already below a rim or does not rest on its resting face. Two options were offered; he chose this one.
+
+**The rule.**
+* Where P2 DRIVES the gizmo (`landingDrives` 2, `Scene_1`, a piece held: `driveGizmoLanding` not null) the ring and the HUD's `landing` line show
+  THE DRIVE'S OWN READING for the frame's gizmo: the same call (`driveGizmoLanding` at the gizmo's facet normal and place), the same level
+  (`driveLevel`: `land` → the depth less the reach; `nothing` → the facet's plane; `inside` / `uncovered` → today's) — so the white ring sits on the
+  yellow one by construction, and ⛔ a gap between them is a DEFECT, never a reading. The HUD: `P2 Δ` = the drive's level − today's (what P2 changes),
+  the part, `nothing` (magenta, as before), `inside` / `uncovered` named (the gizmo kept as built there).
+* Where P2 does NOT drive (`landingDrives` 0 or 1, another scene): the readout as built (§2 — from outside), S2's instrument against the gizmo as built.
+* ONE OWNER: the ring calls the drive's functions, never a copy of them. ⛔ `mouthP2` (S3's hold domain, `ORBIT_SURFACE_MOUTH_HOLD.md` §4 H2) keeps
+  its own evaluation from outside at a mouth, unchanged: its question is another (*is the mouth open to the piece from outside?*).
+* Nothing else moves: the gizmo, the piece, the camera and the hold are the same at every setting (G1: his records bit for bit on `g`, `c`, `t`, `p`);
+  only the ring's place and the HUD line change.
+* ⚠ In an edge band the drawn gizmo is BLENDED between two facets (`band`): the ring follows the driven point before the blend, with the gizmo's lag
+  (`gizmoShownAt`) as today — a small gap there is the blend's, named on the HUD (`band`).
+
+**Vectors** (red first against the readout as built): the ring's point equals the driven gizmo's point for `land` (resting face and a side: the reach),
+`nothing`, `inside` and `uncovered`; read from `F` below a rim (his case: the from-outside point on the rim, the driven one below it).
+
+**When.** After S14 lands (`ORBIT_SURFACE_LANDING_CAST.md` — it edits `landing_readout.ts` now). Then the gates (G1) and his look.
+
+**As built (2026-11-24, `cfc5e325`).** `landing_readout.ts`: the source's `drive` (= `driveGizmoLanding`), `DriveShown`, `shown.drive` (the
+driven gizmo `mr0` handed in as the readout's last argument — its point taken, never recomputed), `ringOf` (the ring's place and colour); the HUD line
+from `drive` where P2 drives, as built elsewhere (its text unchanged). `tests/landing_ring_drive.test.ts` (6), each RED first on a mutant: the ring on
+the readout always (4 red), the line ignoring the drive (4), the drive's point taken as today's (1). `npm run verify`: 2556 of 2557 — the one red
+`boot_heaps`' 3 s wall-clock cap under load (a headless replay ran beside it), 9 / 9 alone; on a quiet PC 2557 / 2557. ✅ G1 (2026-11-24, with S14's — `ORBIT_SURFACE_LANDING_CAST.md` §10): his two `Scene_1` records,
+`g`, `c`, `t`, `p` identical to the defaults' replays of 2026-11-23 on every frame. His look owed.

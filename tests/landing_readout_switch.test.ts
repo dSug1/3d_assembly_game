@@ -59,7 +59,7 @@ describe("⭐⭐⭐ V4 — the switch `landingReadout`", () => {
     expect(m.lastIndexOf("title:", at)).toBe(sub);
     const r = code("render/landing_readout.ts");
     // ⭐ (2026-11-23, S3 — `ORBIT_SURFACE_MOUTH_HOLD.md` §5) …or the mouth's hold asks (`forHold`, `mouth_hold_domain.test.ts` V2)
-    expect(r).toContain("export function landingReadoutFrame(st: SceneState, raw: GizmoRead | null, drawn: GizmoRead | null, src: ReadoutSource, forHold = false): void { if (st.cfg.landingReadout !== 1 && !forHold) return;");
+    expect(r).toContain("export function landingReadoutFrame(st: SceneState, raw: GizmoRead | null, drawn: GizmoRead | null, src: ReadoutSource, forHold = false, driven: GizmoRead | null = null): void { if (st.cfg.landingReadout !== 1 && !forHold) return;");
     expect(r).toContain("export function landingMarkerFrame(st: SceneState): void { if (st.cfg.landingReadout !== 1) {");
     expect(r).toContain('export function landingLine(st: SceneState): string { if (st.cfg.landingReadout !== 1) return "";');
   });
@@ -70,7 +70,7 @@ describe("⭐⭐⭐ V4 — the switch `landingReadout`", () => {
     // ⭐ (2026-11-23, S4 — `ORBIT_SURFACE_DRIVE.md` §3.5) the frame's gizmo = today's (`rawGizmoToday`) driven (`driveGizmo`); the readout fed TODAY's point and,
     // where P2 moved it, today's blend — at `landingDrives` 0 `mr0 === mrT`: the call as before
     expect(a).toContain("const mrT = rawGizmoToday(st, mq.yaw, mq.pitch); const mr0 = driveGizmo(st, mrT); const m0g = gizmoOf(st, mq.yaw, mq.pitch, mr0);");
-    expect(a).toMatch(/const m0g = gizmoOf\(st, mq\.yaw, mq\.pitch, mr0\);( \/\/[^\n]*)? const askHold = st\.cfg\.mouthHoldDomain === 2 && m0g !== null && m0g\.mouth !== undefined; landingReadoutFrame\(st, mrT, mr0 === mrT \|\| \(st\.cfg\.landingReadout !== 1 && !askHold\) \? m0g : gizmoOf\(st, mq\.yaw, mq\.pitch, mrT\), READOUT_SOURCE, askHold\); if \(m0g !== null\) \{/); // ⭐ (S4 §9bis 6) today's blend only when the readout runs
+    expect(a).toMatch(/const m0g = gizmoOf\(st, mq\.yaw, mq\.pitch, mr0\);( \/\/[^\n]*)? const askHold = st\.cfg\.mouthHoldDomain === 2 && m0g !== null && m0g\.mouth !== undefined; landingReadoutFrame\(st, mrT, mr0 === mrT \|\| \(st\.cfg\.landingReadout !== 1 && !askHold\) \? m0g : gizmoOf\(st, mq\.yaw, mq\.pitch, mrT\), READOUT_SOURCE, askHold, mr0\); if \(m0g !== null\) \{/); // ⭐ (S4 §9bis 6) today's blend only when the readout runs
     // ⛔ exactly one call in the product (not in the sections' samples, the edge blend's, the solver's queries)
     const calls = srcFiles().reduce((n, f) => n + (strip(readFileSync(f, "utf8")).match(/\blandingReadoutFrame\(/g) ?? []).length, 0);
     expect(calls).toBe(2); // its definition and its one call
@@ -114,7 +114,7 @@ describe("⭐⭐ V4b — the module AT 1 on a stub frame: the readout into `st.l
     const map = shared?.map ?? ({ facets: [{ n: [0, 1, 0], t: [1, 0, 0], b: [0, 0, 1] }, { n: [1, 0, 0], t: [0, 0, -1], b: [0, 1, 0] }] } as unknown as FaceMap);
     const parts = turn === null ? placed : placed.map((p) => ({ id: p.id, points: p.points.map((q) => qRotate(turn.qR, q)) }));
     let frameR: Turn | null = turn?.R ?? null;
-    const src: ReadoutSource = { map: () => map, frame: () => frameR, placed: () => ({ key: "plate|block", parts: parts.map((p) => p.points), ids: parts.map((p) => p.id) }) };
+    const src: ReadoutSource = { map: () => map, frame: () => frameR, placed: () => ({ key: "plate|block", parts: parts.map((p) => p.points), ids: parts.map((p) => p.id) }), drive: () => null };
     /** the map's frame changed under the same map object and placed key (a zone's frame): the world's parts as they are */
     const reframe = (R: Turn) => {
       frameR = R;

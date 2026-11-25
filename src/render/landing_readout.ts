@@ -17,7 +17,8 @@ import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import type { LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
-import { heldPiece, heldReach, heldSumsOn, landingAxes, landingFor, preparePlaced, readoutAt, readoutKey, voidOpenFor, type HeldSums, type PlacedPolys, type PreparedLanding, type Readout, type Turn } from "../core/landing_map";
+import { castHeldHulls, castHeldOn, castPlacedOn, landingCast, type HeldHulls, type HeldOnFrame, type PlacedOnFrame } from "../core/landing_cast";
+import { heldPiece, heldReach, heldSumsOn, landingAxes, landingFor, preparePlaced, readoutAt, readoutKey, voidOpenFor, type HeldSums, type Landing, type LandingAxes, type PlacedPolys, type PreparedLanding, type Readout, type Turn } from "../core/landing_map";
 import { worldPlacementOf } from "../core/object_model";
 import type { Vec3 } from "../core/vec";
 import { trackingMetresPerPx } from "../input";
@@ -46,6 +47,19 @@ export interface ReadoutSource {
   frame(st: SceneState): Turn | null;
   /** the placed parts on their model pose: the set's key, each body's points and its part id (parallel) */
   placed(st: SceneState): { readonly key: string; readonly parts: readonly (readonly Vec3[])[]; readonly ids: readonly string[] };
+  /** ⭐ (2026-11-24, §15) the DRIVE's landing at the world place `p` along the world normal `n` (`driveGizmoLanding`); `null` where P2 does not drive */
+  drive(st: SceneState, n: Vec3, p: Vec3): { readonly landing: Landing; readonly reach: number } | null;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-24, `ORBIT_SURFACE_READOUT.md` §15 — his word *"make the white ring show what the gizmo uses"*) WHAT THE GIZMO USES, where P2 drives
+ * it: the driven gizmo's own point (`driveGizmo`'s, before the edge blend — in the world), the drive's landing's kind and part, Δ = its level − today's.
+ */
+export interface DriveShown {
+  readonly kind: Landing["kind"];
+  readonly part: string | null;
+  readonly delta: number;
+  readonly point: Vec3;
 }
 
 /** ⭐ The frame's gizmo as the readout reads it: `rawGizmo`'s (today's point, the facet, the place) or `mapGizmo`'s (the point drawn: the blend in a band). */
@@ -61,7 +75,8 @@ export interface LandingReadoutState {
   readonly prepared: Map<string, PreparedLanding>;
   /** the frame's readout (in the world): the frame it was read in, P2's answer, whether the drawn gizmo is the edge blend, the pieces refused; ⭐ (S3) the
    *  held piece's reach toward the facet (`heldReach`: Δ when it rests on the facet's plane) */
-  shown: { readonly frame: number; readonly readout: Readout; readonly band: boolean; readonly refused: readonly string[]; readonly reach: number } | null;
+  /** ⭐ (§15) `drive`: what the gizmo uses where P2 drives it — the ring and the HUD line read it; ⛔ `readout` (from outside) stays `mouthP2`'s */
+  shown: { readonly frame: number; readonly readout: Readout; readonly band: boolean; readonly refused: readonly string[]; readonly reach: number; readonly drive: DriveShown | null } | null;
   /** the last preparation (ms), the worst over 2 s and when it was set, the query (µs, a mean over ~30 frames) */
   prepLastMs: number;
   prepWorstMs: number;
@@ -77,17 +92,76 @@ export interface LandingReadoutState {
  */
 const PLACED = new WeakMap<object, PlacedPolys>();
 const HELD = new WeakMap<PlacedPolys, { readonly key: string; readonly sums: HeldSums }>();
-export function heldSumsFor(parts: { readonly parts: readonly (readonly Vec3[])[]; readonly ids: readonly string[] }, heldKey: string, held: () => readonly (readonly Vec3[])[]): HeldSums {
+type PlacedParts = { readonly parts: readonly (readonly Vec3[])[]; readonly ids: readonly string[] };
+/** the placed parts' hulls, once per placed set (its arrays' identity) — both engines' (S14: the cast reads the same hulls) */
+function placedOf(parts: PlacedParts): PlacedPolys {
   let pp = PLACED.get(parts.parts);
   if (pp === undefined) {
     pp = preparePlaced(parts.parts.map((points, k) => ({ id: parts.ids[k]!, points })));
     PLACED.set(parts.parts, pp);
   }
+  return pp;
+}
+export function heldSumsFor(parts: PlacedParts, heldKey: string, held: () => readonly (readonly Vec3[])[]): HeldSums {
+  const pp = placedOf(parts);
   const known = HELD.get(pp);
   if (known !== undefined && known.key === heldKey) return known.sums;
   const sums = heldSumsOn(pp, held());
   HELD.set(pp, { key: heldKey, sums });
   return sums;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-24, S14 — `ORBIT_SURFACE_LANDING_CAST.md` §3, §6; `landingEngine` 1) THE CAST'S SHARED PREPARATION — the readout's and the drive's one,
+ * keyed as `heldSumsFor`'s, and ⛔ NO SUM BUILT (`heldSumsOn` never runs here): the placed parts' hulls once per placed set (`placedOf`, the same cache);
+ * their points on a direction once per (placed set, direction) — `castLandingFor`; the held pieces' hulls once per held SHAPE (`shapeKey`: the piece's
+ * id and points — a turn never changes a hull: re-read by index, `castHeldHulls`' `like`), the held key's own (a turn, a new resting face, a seat);
+ * their points on a direction per (held key, direction). `held` is read only when the held key changes.
+ */
+export interface HeldCast {
+  readonly key: string;
+  readonly pp: PlacedPolys;
+  readonly hulls: HeldHulls;
+  /** the held pieces on each direction asked (`axesKey`) */
+  readonly frames: Map<string, HeldOnFrame>;
+}
+const HELD_CAST = new WeakMap<PlacedPolys, HeldCast>();
+const PLACED_ON = new WeakMap<PlacedPolys, Map<string, PlacedOnFrame>>();
+/** the last held shape's hulls (its key: the piece's id and points' identity) — a turn re-reads them by index */
+let LAST_HULLS: { readonly shape: string; readonly hulls: HeldHulls } | null = null;
+/** a cache of directions holds at most this many (a frame that keeps turning — a tilted map's — must not grow it without end) */
+const DIRS_KEPT = 64;
+export function heldCastFor(parts: PlacedParts, heldKey: string, shapeKey: string, held: () => readonly (readonly Vec3[])[]): HeldCast {
+  const pp = placedOf(parts);
+  const known = HELD_CAST.get(pp);
+  if (known !== undefined && known.key === heldKey) return known;
+  const hulls = castHeldHulls(held(), LAST_HULLS !== null && LAST_HULLS.shape === shapeKey ? LAST_HULLS.hulls : undefined);
+  LAST_HULLS = { shape: shapeKey, hulls };
+  const c: HeldCast = { key: heldKey, pp, hulls, frames: new Map() };
+  HELD_CAST.set(pp, c);
+  return c;
+}
+/** a direction's key: its four vectors, every number exact */
+const axesKey = (f: LandingAxes): string => `${f.origin.join(",")}|${f.u.join(",")}|${f.v.join(",")}|${f.n.join(",")}`;
+/** ⭐⭐ (S14) THE LANDING ON A DIRECTION, CAST — `landingFor(heldSumsFor(…), frame)`'s answer at `landingEngine` 1: the placed pieces on the direction
+ *  (cached per placed set), the held pieces on it (cached per held key), nothing built per pair */
+export function castLandingFor(c: HeldCast, frame: LandingAxes): PreparedLanding & { readonly top: number } {
+  const k = axesKey(frame);
+  let dirs = PLACED_ON.get(c.pp);
+  if (dirs === undefined) PLACED_ON.set(c.pp, (dirs = new Map()));
+  let pl = dirs.get(k);
+  if (pl === undefined) {
+    if (dirs.size >= DIRS_KEPT) dirs.clear();
+    pl = castPlacedOn(c.pp, frame);
+    dirs.set(k, pl);
+  }
+  let hd = c.frames.get(k);
+  if (hd === undefined) {
+    if (c.frames.size >= DIRS_KEPT) c.frames.clear();
+    hd = castHeldOn(c.hulls, frame);
+    c.frames.set(k, hd);
+  }
+  return landingCast(pl, c.hulls, hd);
 }
 
 /** ⭐ each object its own number (the cache key's identities — a face map, a held piece's points list): a rebuilt one is a new object, a new number */
@@ -107,11 +181,11 @@ const facetEntry = (stack: number, n: Vec3): string => `${stack}:${n[0]},${n[1]}
  * (nothing read, prepared or allocated). Else: the cache's key, the frame's facet prepared if it is not yet (at most one preparation a frame, timed), the
  * readout at the facet's place (timed) — into `st.landing`, read by nothing but its ring, the HUD and the hold's domain (`mouthP2`).
  */
-export function landingReadoutFrame(st: SceneState, raw: GizmoRead | null, drawn: GizmoRead | null, src: ReadoutSource, forHold = false): void {
+export function landingReadoutFrame(st: SceneState, raw: GizmoRead | null, drawn: GizmoRead | null, src: ReadoutSource, forHold = false, driven: GizmoRead | null = null): void {
   if (st.cfg.landingReadout !== 1 && !forHold) return;
   const s = st.landing ?? (st.landing = { key: "", prepared: new Map(), shown: null, prepLastMs: 0, prepWorstMs: 0, prepWorstAt: 0, queryUs: 0 });
   s.shown = null;
-  const prepMs = readFrame(st, s, raw, drawn, src);
+  const prepMs = readFrame(st, s, raw, drawn, src, driven);
   // ⭐ the worst over 2 s as the `solver` field's peak: every frame at 1, so it falls back once the preparations stop
   const now = performance.now();
   if (now - s.prepWorstAt > PREP_WORST_HOLD_MS || prepMs >= s.prepWorstMs) {
@@ -121,7 +195,7 @@ export function landingReadoutFrame(st: SceneState, raw: GizmoRead | null, drawn
 }
 
 /** the frame's readout into `s.shown` (none: no piece held, no map); the preparation's time this frame (ms; 0: none) */
-function readFrame(st: SceneState, s: LandingReadoutState, raw: GizmoRead | null, drawn: GizmoRead | null, src: ReadoutSource): number {
+function readFrame(st: SceneState, s: LandingReadoutState, raw: GizmoRead | null, drawn: GizmoRead | null, src: ReadoutSource, driven: GizmoRead | null): number {
   if (st.sceneSpec.id !== READOUT_SCENE || raw === null || drawn === null || st.orbitPiecePlaced) return 0;
   // ⭐ the held piece as `supportFrame` poses it: its local points, its MODEL orientation, its resting face's centre
   const id = st.greenBox?.name;
@@ -134,7 +208,9 @@ function readFrame(st: SceneState, s: LandingReadoutState, raw: GizmoRead | null
   if (f === undefined) return 0;
   const R = src.frame(st);
   const parts = src.placed(st);
-  const key = readoutKey({ map: idOf(map), frame: R, placed: parts.key, held: id, shape: idOf(local), orientation: place.orientation, restingCentre: rc });
+  // ⭐ (S14) the engine in the key at 1 only (a switch flushes the preparations; at 0 the key as before, byte for byte)
+  const cast = st.cfg.landingEngine === 1;
+  const key = readoutKey({ map: idOf(map), frame: R, placed: parts.key, held: id, shape: idOf(local), orientation: place.orientation, restingCentre: rc }) + (cast ? "|E1" : "");
   if (key !== s.key) {
     s.key = key;
     s.prepared.clear();
@@ -148,7 +224,9 @@ function readFrame(st: SceneState, s: LandingReadoutState, raw: GizmoRead | null
     // ⭐⭐ (2026-11-23, S4b — `ORBIT_SURFACE_DRIVE.md` §12) on the SHARED preparation (`heldSumsFor`): the placed parts' hulls once per placed set, the held
     // piece's sums once per held key — the drive's own; `prepareLanding` bit for bit
     const hk = readoutKey({ map: 0, frame: null, placed: parts.key, held: id, shape: idOf(local), orientation: place.orientation, restingCentre: rc });
-    prep = landingFor(heldSumsFor(parts, hk, () => held), landingAxes(raw.t.normal, f.t, f.b, R));
+    // ⭐⭐⭐ (2026-11-24, S14) at `landingEngine` 1 the CAST (`castLandingFor`, the same keys) — the sums never built
+    const axes = landingAxes(raw.t.normal, f.t, f.b, R);
+    prep = cast ? castLandingFor(heldCastFor(parts, hk, `${id}#${idOf(local)}`, () => held), axes) : landingFor(heldSumsFor(parts, hk, () => held), axes);
     prepMs = performance.now() - t0;
     s.prepLastMs = prepMs;
     s.prepared.set(entry, prep);
@@ -161,8 +239,29 @@ function readFrame(st: SceneState, s: LandingReadoutState, raw: GizmoRead | null
   s.queryUs += ((performance.now() - t1) * 1000 - s.queryUs) / QUERY_MEAN_FRAMES;
   // ⭐ (§10 choice 3) in an edge band the drawn gizmo is the blend (`gizmoOf`): not today's point — the readout keeps the facet's place and says `band`
   const d = drawn.hit.point;
-  s.shown = { frame: st.frames, readout, band: d[0] !== today[0] || d[1] !== today[1] || d[2] !== today[2], refused: prep.refused, reach: heldReach(held, prep.frame.n) };
+  s.shown = { frame: st.frames, readout, band: d[0] !== today[0] || d[1] !== today[1] || d[2] !== today[2], refused: prep.refused, reach: heldReach(held, prep.frame.n), drive: driveShown(st, raw, driven, src, R, at, today) };
   return prepMs;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-24, `ORBIT_SURFACE_READOUT.md` §15) WHAT THE GIZMO USES: where P2 drives the frame's gizmo (`src.drive` not null — the drive's own call,
+ * at the same place and normal `driveGizmo` gives it), the DRIVEN gizmo's own point (`driven`: `driveGizmo`'s result, in the map's frame) — never a
+ * second computation of it, so the ring sits on the gizmo by construction. `null` where P2 does not drive (the readout as built, from outside).
+ */
+function driveShown(st: SceneState, raw: GizmoRead, driven: GizmoRead | null, src: ReadoutSource, R: Turn | null, at: Vec3, today: Vec3): DriveShown | null {
+  if (driven === null) return null;
+  const n = R === null ? raw.t.normal : mulM(R, raw.t.normal);
+  const dl = src.drive(st, n, at);
+  if (dl === null) return null;
+  const point = R === null ? driven.hit.point : mulM(R, driven.hit.point);
+  const lv = (q: Vec3): number => q[0] * n[0] + q[1] * n[1] + q[2] * n[2];
+  return { kind: dl.landing.kind, part: dl.landing.kind === "land" || dl.landing.kind === "inside" ? dl.landing.part : null, delta: lv(point) - lv(today), point };
+}
+
+/** ⭐ (§15) the ring's place and colour: what the gizmo uses where P2 drives it, else the readout's (from outside) */
+export function ringOf(sh: { readonly readout: Readout; readonly drive: DriveShown | null }): { readonly point: Vec3; readonly nothing: boolean } {
+  if (sh.drive !== null) return { point: sh.drive.point, nothing: sh.drive.kind === "nothing" };
+  return { point: sh.readout.point, nothing: sh.readout.kind !== "land" };
 }
 
 /**
@@ -192,7 +291,9 @@ export function landingMarkerFrame(st: SceneState): void {
     return;
   }
   const ring = st.landingMarker ?? (st.landingMarker = makeRing(st));
-  const t = gizmoShownAt(sh.readout.point, st.centreBlend.targetM, st.asmGizmoLag);
+  // ⭐⭐⭐ (2026-11-24, §15) what the gizmo uses where P2 drives it (`ringOf`), else the readout (from outside)
+  const rg = ringOf(sh);
+  const t = gizmoShownAt(rg.point, st.centreBlend.targetM, st.asmGizmoLag);
   const cam = st.camera.position;
   const dist = Math.hypot(t[0] - cam.x, t[1] - cam.y, t[2] - cam.z);
   if (!(dist > 1e-6)) {
@@ -200,7 +301,7 @@ export function landingMarkerFrame(st: SceneState): void {
     return;
   }
   ring.isVisible = true;
-  ring.color.copyFrom(sh.readout.kind === "land" ? LAND_COLOUR : NOTHING_COLOUR);
+  ring.color.copyFrom(rg.nothing ? NOTHING_COLOUR : LAND_COLOUR);
   const m = trackingMetresPerPx(dist, st.camera.fov, st.canvas.clientHeight) * GIZMO_RING_PX * LANDING_RING_SHARE;
   ring.scaling.set(m, m, m);
   ring.position.set(t[0], t[1], t[2]);
@@ -231,7 +332,20 @@ export function landingLine(st: SceneState): string {
   // ⭐ the HUD paints before the frame's readout: the last one is the frame before's
   const sh = s.shown !== null && s.shown.frame >= st.frames - 1 ? s.shown : null;
   const r = sh?.readout ?? null;
-  const head = r === null ? "—" : r.kind === "land" ? `P2 Δ${signedMm(r.delta)} mm  land ${r.part}` : "P2 nothing";
+  // ⭐⭐⭐ (2026-11-24, §15) where P2 drives the gizmo: what the gizmo uses (Δ = the driven level − today's); else the readout from outside (S2)
+  const dv = sh?.drive ?? null;
+  const head =
+    dv !== null
+      ? dv.kind === "land"
+        ? `P2 Δ${signedMm(dv.delta)} mm  land ${dv.part}`
+        : dv.kind === "nothing"
+          ? "P2 nothing"
+          : `P2 ${dv.kind}${dv.part !== null ? ` ${dv.part}` : ""} (the gizmo as built)`
+      : r === null
+        ? "—"
+        : r.kind === "land"
+          ? `P2 Δ${signedMm(r.delta)} mm  land ${r.part}`
+          : "P2 nothing";
   const band = sh !== null && sh.band ? "  band" : "";
   const refused = sh !== null && sh.refused.length > 0 ? ` · ⛔refused ${sh.refused.join(",")}` : "";
   return `${head}${band} · prep ${s.prepLastMs.toFixed(1)} ms (worst ${s.prepWorstMs.toFixed(1)}) · query ${s.queryUs.toFixed(1)} µs · facets ${s.prepared.size}${refused}`;

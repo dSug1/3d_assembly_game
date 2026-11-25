@@ -154,7 +154,7 @@ describe("⭐⭐ V5 — the switch, the drive's module, the wiring", () => {
     return { cfg, landingDrive: null, greenBox, world: { objects }, orbitPieces: [{ mesh: greenBox, restingCentre: [0, 0, 0] }], orbitPiecePlaced: false, frames: 5, sceneSpec: { id: scene }, pieceHoldPrev: { anchor: [-10 * M, 110 * M, 0], approach: 0 }, asmShown: { t: { normal: UP }, yaw: 0, pitch: 0 } } as unknown as SceneState;
   };
   const conv = toConvex(PROUD);
-  const src: ReadoutSource = { map: () => null, frame: () => null, placed: () => ({ key: "k", parts: conv.map((p) => p.points), ids: conv.map((p) => p.id) }) };
+  const src: ReadoutSource = { map: () => null, frame: () => null, placed: () => ({ key: "k", parts: conv.map((p) => p.points), ids: conv.map((p) => p.id) }), drive: () => null };
   it("at 0 NOTHING is prepared nor read (as deployed); in another scene neither", () => {
     for (const [cfg, scene] of [[{ landingDrives: 0 }, "Scene_1"], [{ landingDrives: 2 }, "Scene_2"]] as const) {
       const st = stub(cfg, scene);
@@ -204,7 +204,7 @@ describe("⭐⭐ V5 — the switch, the drive's module, the wiring", () => {
     expect(A).toContain("if (memo === undefined || memo.frame !== st.frames || memo.drive !== driveStamp(st)) {"); // (§9bis 1) the memo, one snapshot
     expect(A).toContain("return driveGizmo(st, rawGizmoToday(st, yaw, pitch));");
     expect(A).toContain("const mrT = rawGizmoToday(st, mq.yaw, mq.pitch); const mr0 = driveGizmo(st, mrT);");
-    expect(A).toContain("landingReadoutFrame(st, mrT, mr0 === mrT || (st.cfg.landingReadout !== 1 && !askHold) ? m0g : gizmoOf(st, mq.yaw, mq.pitch, mrT), READOUT_SOURCE, askHold);");
+    expect(A).toContain("landingReadoutFrame(st, mrT, mr0 === mrT || (st.cfg.landingReadout !== 1 && !askHold) ? m0g : gizmoOf(st, mq.yaw, mq.pitch, mrT), READOUT_SOURCE, askHold, mr0);");
     expect(A.split("supportOf(st, ").length - 1).toBe(2);
     expect(A.split("footprintSupport(").length - 1).toBe(1);
     expect(A).toContain("const optKey = `${o.edgeMm}|${o.edgeDeg}|${driveKey(st)}`;");

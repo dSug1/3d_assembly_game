@@ -19,7 +19,7 @@ import { worldPlacementOf } from "../core/object_model";
 import type { Vec3 } from "../core/vec";
 import { planeAxes } from "../input/contact";
 import { SUPPORT_SLACK_M } from "../input/footprint";
-import { heldSumsFor, idOf, READOUT_SCENE, type ReadoutSource } from "./landing_readout";
+import { castLandingFor, heldCastFor, heldSumsFor, idOf, READOUT_SCENE, type HeldCast, type ReadoutSource } from "./landing_readout";
 import type { SceneState } from "./scene_state";
 
 /** ⭐ One direction prepared: its landing, the held piece's reach toward it (`heldReach`). */
@@ -33,6 +33,8 @@ export interface LandingDriveState {
   /** the key of the direction-free sums (`readoutKey` without the map and its frame); "" none */
   key: string;
   sums: HeldSums | null;
+  /** ⭐ (2026-11-24, S14) the cast's preparation at `landingEngine` 1 (then `sums` stays null: never built) */
+  cast: HeldCast | null;
   /** the held piece AS HELD (`heldPiece`: relative to its reference point) — its reach toward a direction */
   held: readonly (readonly Vec3[])[];
   readonly dirs: Map<string, DirEntry>;
@@ -62,7 +64,7 @@ export function landingDriveFrame(st: SceneState, src: ReadoutSource): void {
     if (st.landingDrive !== null) (st.landingDrive.from = null), (st.landingDrive.facetN = null);
     return;
   }
-  const s = st.landingDrive ?? (st.landingDrive = { key: "", sums: null, held: [], dirs: new Map(), stamp: 0, from: null, facetN: null });
+  const s = st.landingDrive ?? (st.landingDrive = { key: "", sums: null, cast: null, held: [], dirs: new Map(), stamp: 0, from: null, facetN: null });
   const id = st.greenBox?.name;
   const local = id === undefined ? undefined : st.world.objects.get(id)?.shape?.points;
   const place = id === undefined ? null : worldPlacementOf(st.world, id);
@@ -75,29 +77,36 @@ export function landingDriveFrame(st: SceneState, src: ReadoutSource): void {
   if (id === undefined || local === undefined || place === null || rc === undefined) {
     s.key = "";
     s.sums = null;
+    s.cast = null;
     s.held = [];
     s.dirs.clear();
     return;
   }
   const parts = src.placed(st);
-  const key = readoutKey({ map: 0, frame: null, placed: parts.key, held: id, shape: idOf(local), orientation: place.orientation, restingCentre: rc });
+  const hk = readoutKey({ map: 0, frame: null, placed: parts.key, held: id, shape: idOf(local), orientation: place.orientation, restingCentre: rc });
+  // ⭐ (S14) the engine in the key at 1 only (a switch rebuilds; at 0 the key as before, byte for byte)
+  const engine = st.cfg.landingEngine === 1;
+  const key = engine ? `${hk}|E1` : hk;
   if (key === s.key) return;
   s.key = key;
   s.dirs.clear();
   s.held = [heldPiece(local, place.orientation, rc)];
   // ⭐⭐ (2026-11-23, S4b — §12) the SHARED preparation (`heldSumsFor`): the placed parts' hulls once per placed set — a turn pays the held piece's part
   const held = s.held;
-  s.sums = heldSumsFor(parts, key, () => held);
+  // ⭐⭐⭐ (2026-11-24, S14) at `landingEngine` 1 the CAST's (`heldCastFor`, the readout's held key): the sums never built
+  if (engine) (s.sums = null), (s.cast = heldCastFor(parts, hk, `${id}#${idOf(local)}`, () => held));
+  else (s.cast = null), (s.sums = heldSumsFor(parts, key, () => held));
 }
 
 /** the direction prepared on demand (`null`: no sums) */
 function dirOf(s: LandingDriveState, n: Vec3): DirEntry | null {
-  if (s.sums === null) return null;
+  if (s.sums === null && s.cast === null) return null;
   const k = dirKey(n);
   const known = s.dirs.get(k);
   if (known !== undefined) return known;
   const [a, b] = planeAxes(n);
-  const prep = landingFor(s.sums, landingAxes(n, a, b, null));
+  // ⭐ (S14) the cast at `landingEngine` 1, the sums at 0
+  const prep = s.cast !== null ? castLandingFor(s.cast, landingAxes(n, a, b, null)) : landingFor(s.sums!, landingAxes(n, a, b, null));
   const e = { prep, reach: heldReach(s.held, n) };
   s.dirs.set(k, e);
   return e;
@@ -148,7 +157,7 @@ export function driveSupport(st: SceneState, u: Vec3, ref: Vec3, windowM: number
  */
 export function driveKey(st: SceneState): string {
   const s = st.landingDrive;
-  if (level(st) < 2 || s === null || s.sums === null) return "";
+  if (level(st) < 2 || s === null || (s.sums === null && s.cast === null)) return "";
   const out: string[] = [];
   for (const [k, e] of [...s.dirs.entries()].sort((x, y) => (x[0] < y[0] ? -1 : x[0] > y[0] ? 1 : 0))) {
     const n = e.prep.frame.n;
@@ -156,5 +165,5 @@ export function driveKey(st: SceneState): string {
     const f = F === null ? Infinity : dot(F, n) + SUPPORT_SLACK_M;
     out.push(f >= e.prep.top ? `${k}:o` : `${k}:${f.toFixed(4)}`);
   }
-  return `D${idOf(s.sums)}|${out.join(";")}`;
+  return `D${idOf(s.sums ?? s.cast!)}|${out.join(";")}`;
 }

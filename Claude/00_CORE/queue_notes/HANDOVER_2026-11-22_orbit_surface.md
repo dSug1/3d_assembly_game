@@ -119,3 +119,10 @@ collision pieces (one measurement before the plunge is built); the frozen plinth
   without it: `Scene_1` has ONE cap, the 13 mm tunnel behind Piece41's goal (`ORBIT_SURFACE_L1.md` §9). Every surface measure leaves frozen bodies out.
 * S11's build designed (§10 there): the cap a virtual FILLER glued to the tunnel's walls, precomputed with the scene, behind `surfaceL1` (0 = LIVE).
 * S14 (the landing read at query time) still waits for his word.
+
+## ⭐ 2026-11-24, night — S11 deployed; S14 and the ring built and gated; his camera jitters diagnosed
+
+* **LIVE main `df5426a`** = `00e59251` (S11, his word *"deploy"*, 18:51Z). On the branch since (pushed, not deployed): S14 (`landingEngine`, 0 = LIVE —
+  `ORBIT_SURFACE_LANDING_CAST.md` §9 – §10), the white ring showing what the gizmo uses (`ORBIT_SURFACE_READOUT.md` §15) — both gated on his records.
+* **His camera jitters** (nine play records, `../orbit_surface/.recordings/`): all the closed orbit's — `APPROACH_CAMERA_JITTER.md` (A1 – A3, B, C; five
+  fix options, each its own switch). His word owed: A1-a or A1-b; A2-a's band after a way out.
