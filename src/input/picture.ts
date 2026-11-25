@@ -95,6 +95,23 @@ export function bandHeld(on: boolean, wasHeld: boolean, unlatched: boolean, latc
   return wasHeld || unlatched;
 }
 
+/** ⭐⭐⭐ (2026-11-25, D-J5) The way out's turn as the picture reads it (`asmZoneMix`): its smooth share `k` and its progress `out.p` (absent: not a way out). */
+export interface WayOutTurn {
+  readonly k: number;
+  readonly out?: { readonly p: number };
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J5 — `pictureHandWhole` 1: `end`) THE WAY OUT'S SHARE THE HAND-OVER READS: its turn's own share while it
+ * lives (`now`); on the frame it ENDS — the turn read last frame (`was`) gone, its own progress whole (`seamOutFrame` writes its share 1, then nulls it) — 1,
+ * once (the turn read is the one alive last frame); else none (`null`: his mm). ⛔ Its end unread: the last share read (≈ 0.986) held ≈ 1.4 % of the
+ * hand-over until his finger next moved (under A1-a ≈ 2.8 mm of the look point).
+ */
+export function wayOutShare(now: WayOutTurn | null, was: WayOutTurn | null | undefined, end: boolean): number | null {
+  if (now !== null && now.out !== undefined) return now.k;
+  return end && was !== null && was !== undefined && was !== now && was.out !== undefined && was.out.p >= 1 ? 1 : null;
+}
+
 /**
  * ⛔ (R3-FIX, §4.3a) `bandDir` (the follower's direction slerped toward `us` by w) and `bandEye` (the residual toward G's eye by w) DELETED: both carried the
  * logic's heading by place — on a spit nearly opposite to the follower's, the slerp passed over the vertical. The band moves the elevation only
