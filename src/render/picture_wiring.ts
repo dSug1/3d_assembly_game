@@ -21,7 +21,7 @@ import { blendShare, squareTurning, tiltDir, type CamFrame, type CamPose } from 
 import { orbitDir } from "../input/assembly_orbit";
 import { poseTurnAngle } from "../input/roll_follow";
 import { changeSeen, holdSeen } from "../input/upright";
-import { bandHeld, PICTURE_CONE_DEG, PICTURE_REST, pictureStep, type PictureIn, type PicturePose } from "../input/picture";
+import { bandHeld, PICTURE_CONE_DEG, PICTURE_REST, pictureStep, wayOutShare, type PictureIn, type PicturePose, type WayOutTurn } from "../input/picture";
 import { followActive, followFrame, type FollowPicture } from "./camera_follow_wiring";
 import { CHANGE_NONE, rollPictureFrame, type ChangeLeft } from "./roll_shadow";
 import { approachBand, changeApply, dirFrame, gizmoFacetW, pictureEventsRead } from "./assembly_wiring";
@@ -86,6 +86,8 @@ export function pictureFrame(
 ): CamPose {
   const left = changeResolve(st, eye, look, up);
   const was = st.asmPicture;
+  // ⭐⭐⭐ (D-J5) the way out's turn read this frame, kept to read its end next frame (`pictureHandWhole` 1 only)
+  const outKept = (z: SceneState["asmZoneMix"]): { readonly outTurn?: WayOutTurn } => (st.cfg.pictureHandWhole === 1 && z !== null && z.out !== undefined ? { outTurn: z } : {});
   const s0 = was?.s ?? PICTURE_REST;
   // ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J2 — A2-a) THE BAND THE WAY IN'S RULE ONLY (`pictureBandWayIn` 1; 0 = `3b7a479`): its share held at 0 from
   // the unlatch until the piece is beyond its far edge or latches again (`bandHeld`) — while the way out lives the follower's own pose the owner, its share the one payer
@@ -111,8 +113,10 @@ export function pictureFrame(
     const Gl = followActive(st) ? null : rollPictureFrame(st, pp, eye, look, up, dtMs, left);
     if (Gl !== null) pictureEventsRead(st, Gl.ev);
     // the hand-over left from the latch closed by the way out's OWN share (C3: his out mm) while its turn lives; else by his mm (`pictureStep`)
+    // ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J5 — `pictureHandWhole` 1) …and its END read on the frame it ends (`wayOutShare`: the turn read last frame,
+    // `outTurn`, gone with its progress whole — share 1, once): ⛔ unread, ≈ 1.4 % of the hand-over held until his finger next moved
     const zmO = st.asmZoneMix;
-    const share = zmO !== null && zmO.out !== undefined ? zmO.k : null;
+    const share = wayOutShare(zmO, was?.outTurn, st.cfg.pictureHandWhole === 1);
     const hook: FollowPicture = (P, dFar, hangF, usF) => {
       const inp: PictureIn = { ...base, hang: hangF, us: usF, w, dFar, F: P, G: { eye, look, up, piece: pp }, latched: false, share };
       const r = pictureStep(s0, inp);
@@ -126,7 +130,7 @@ export function pictureFrame(
       // the heading the follower carries — where it is parked if close in begins without a latch
       const fs = st.asmFollow;
       const psiPark = fs?.top?.psiT ?? (fs?.state ? headingOf(fs.state.d) : null) ?? was?.psiPark ?? null;
-      st.asmPicture = { s: s1, aWas: st.approach, w, far: true, psiPark, ...(bandOff ? { bandHeld: true } : {}) };
+      st.asmPicture = { s: s1, aWas: st.approach, w, far: true, psiPark, ...outKept(zmO), ...(bandOff ? { bandHeld: true } : {}) };
       return fp;
     }
   }
@@ -135,7 +139,7 @@ export function pictureFrame(
   pictureEventsRead(st, G.ev);
   const latched = st.asmTiltAuto;
   const zm = st.asmZoneMix;
-  const share = latched ? (st.asmTiltPending ? 0 : st.asmBlend !== null ? blendShare(st.asmBlend.mm, st.cfg.tiltBlendMm) : 1) : zm !== null && zm.out !== undefined ? zm.k : null;
+  const share = latched ? (st.asmTiltPending ? 0 : st.asmBlend !== null ? blendShare(st.asmBlend.mm, st.cfg.tiltBlendMm) : 1) : wayOutShare(zm, was?.outTurn, st.cfg.pictureHandWhole === 1);
   const Gp: PicturePose = { eye: G.eye, look: G.look, up: G.up, piece: pp };
   // the follower parked at rest on its own target (the heading carried) — through the way out the band draws toward it by place
   // ⭐ its heading: latched the turntable's, set from the drawn up (last frame); unlatched (the way out) HELD from there — ⛔ re-read from the view drawn
@@ -164,7 +168,7 @@ export function pictureFrame(
     st.pieceAnchor = r.pose.piece;
     st.asmPieceDrawn = [r.pose.piece[0], r.pose.piece[1], r.pose.piece[2]];
   }
-  st.asmPicture = { s: r.state, aWas: st.approach, w, far: false, psiPark: latched ? (parkOwn(r.state.tt?.psi) ?? psiPark) : psiPark, ...(bandOff ? { bandHeld: true } : {}) };
+  st.asmPicture = { s: r.state, aWas: st.approach, w, far: false, psiPark: latched ? (parkOwn(r.state.tt?.psi) ?? psiPark) : psiPark, ...outKept(zm), ...(bandOff ? { bandHeld: true } : {}) };
   return { eye: r.pose.eye, look: r.pose.look, up: r.pose.up };
 }
 
