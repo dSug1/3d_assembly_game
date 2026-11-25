@@ -158,6 +158,11 @@ export interface UpHand {
   readonly de?: number;
   /** (C4, the lead) latched: the span of his orbit mm that pays the gap held, read once at its start — `undefined`: the square camera's share as given */
   readonly span?: number;
+  /** ⭐⭐⭐ (2026-11-25, D-J1 — A1-a, `whole`) the unlatch's held PLACES, closed by the same share `r`: the look point's offset `dl`, the piece's `dp` (m, the pose
+   *  drawn the frame before minus the new owner's turned by the angles held) and the eye's distance from the look point `dr` (m) — absent: none (the latch's own) */
+  readonly dl?: Vec3;
+  readonly dp?: Vec3;
+  readonly dr?: number;
 }
 
 /** ⭐ The picture's state — never dropped: the turntable, the hand-over, the up drawn last frame (squared to its view), the view drawn's heading and elevation (R3-FIX). */
@@ -166,6 +171,8 @@ export interface PictureState {
   readonly hand: UpHand | null;
   readonly up: Vec3 | null;
   readonly dir?: { readonly psi: number; readonly el: number } | null;
+  /** ⭐⭐⭐ (2026-11-25, D-J1 — A1-a) the pose drawn last frame (its eye, look point, up and piece) — kept only under `whole` */
+  readonly drawn?: PicturePose | null;
 }
 
 export const PICTURE_REST: PictureState = { tt: null, hand: null, up: null, dir: null };
@@ -203,6 +210,26 @@ export function turnedPose(P: PicturePose, foot: Vec3, psi: number, el: number, 
 
 const viewOf = (P: PicturePose): Vec3 => unit3(sub3(P.eye, P.look));
 
+/**
+ * ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J1 — A1-a) THE UNLATCH'S HELD PLACES: the pose drawn the frame before (`drawn`) against the new owner's pose
+ * turned by the angles held (`P1`, whose view is the drawn view's) — the look point's offset, the piece's, and the eye's distance from its look point.
+ */
+export function heldPlaces(drawn: PicturePose, P1: PicturePose): { readonly dl: Vec3; readonly dp: Vec3; readonly dr: number } {
+  return { dl: sub3(drawn.look, P1.look), dp: sub3(drawn.piece, P1.piece), dr: len3(sub3(drawn.eye, drawn.look)) - len3(sub3(P1.eye, P1.look)) };
+}
+
+/**
+ * ⭐⭐⭐ (D-J1 — A1-a) A POSE MOVED BY THE PLACES LEFT (`k` the hand-over's share left): the look point and the piece by their offsets, the eye with its look point and
+ * its distance by its own — along the view, so the view's direction stays the angles' (one owner of the direction: the hand-over's turn).
+ */
+export function placedPose(P: PicturePose, dl: Vec3, dp: Vec3, dr: number, k: number): PicturePose {
+  const look: Vec3 = [P.look[0] + k * dl[0], P.look[1] + k * dl[1], P.look[2] + k * dl[2]];
+  const v = sub3(P.eye, P.look);
+  const R = len3(v);
+  const g = R > 1e-9 ? Math.max(1e-6, R + k * dr) / R : 1;
+  return { eye: [look[0] + g * v[0], look[1] + g * v[1], look[2] + g * v[2]], look, up: P.up, piece: [P.piece[0] + k * dp[0], P.piece[1] + k * dp[1], P.piece[2] + k * dp[2]] };
+}
+
 /** ⭐ One frame's readings (read-only: the logic's, last computed this frame; the follower's, far out). */
 export interface PictureIn {
   /** the band's share (`bandShare`, by place) */
@@ -233,6 +260,8 @@ export interface PictureIn {
   readonly pace?: { readonly mm: number; readonly minMm: number; readonly degPerMm: number };
   /** ⭐ (§4.3a round 2, decided by the lead) in a polar zone (`asmZone`, the spit included: no pending turn at the latch) the band pays no pitch */
   readonly polar?: boolean;
+  /** ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J1 — A1-a, `pictureHandWhole` 1) the unlatch's hand-over holds the WHOLE pose (`pictureStep` 2.) */
+  readonly whole?: boolean;
 }
 
 /**
@@ -267,6 +296,9 @@ export function pictureStep(s: PictureState, inp: PictureIn): { readonly pose: P
   // 2. the hand-over: a change of owner holds the view drawn (its heading, its elevation) and its up (bumpless), his finger closes them
   let hand: UpHand = s.hand ?? { latched: inp.latched, phi0: 0, r: 0, dh: 0, de: 0 };
   let o: { readonly psi: number; readonly el: number } | null = null;
+  // ⭐⭐⭐ (2026-11-25, D-J1 — A1-a, `whole`) THE UNLATCH'S OWN FRAME draws the pose held whole: the way out's share (its one payer) is born the frame after
+  // (`asmZoneMix.out`; measured on `09fv_r01`: the unlatch at f1906, the way out's turn first at f1907) — ⛔ paid by his mm of this frame, 4 % of a 191 mm gap
+  let fresh = false;
   if (hand.latched !== inp.latched) {
     o = own();
     const dh = s.dir ? wrapPi(s.dir.psi - o.psi) : 0;
@@ -284,9 +316,16 @@ export function pictureStep(s: PictureState, inp: PictureIn): { readonly pose: P
     const pc = inp.pace;
     const gapDeg = Math.max(Math.abs(dh), Math.abs(de)) / DEG;
     const span = inp.latched && pc !== undefined && pc.degPerMm > 0 && (1.5 * gapDeg) / Math.max(1e-9, pc.minMm) > pc.degPerMm ? Math.max(pc.minMm, gapDeg / pc.degPerMm) : undefined;
-    hand = { latched: inp.latched, phi0, r: phi0 !== 0 || dh !== 0 || de !== 0 ? 1 : 0, dh, de, ...(span !== undefined ? { span } : {}) };
+    // ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J1 — A1-a, `whole`) AT THE UNLATCH THE WHOLE POSE: the look point, the piece and the eye's distance held
+    // too (the pose drawn the frame before against the new owner's turned by the angles held), closed by the same share — ⛔ the angles alone: the look point
+    // leapt 35 – 366 mm, the piece 26 – 194 mm, the eye 48 – 193 mm in one frame (the latched G rode with the piece, the follower looks at the gizmo). At the
+    // latch none: G's turn starts there from the pose drawn (`poseShown`) and carries it with the piece (⛔ the offsets read there are the piece's own step of
+    // that frame, 26 – 443 mm on `09fv_r01`, and the pending share 0 would have held them behind the piece through the whole pending)
+    const held = inp.whole === true && !inp.latched && s.drawn !== undefined && s.drawn !== null ? heldPlaces(s.drawn, P1) : null;
+    hand = { latched: inp.latched, phi0, r: phi0 !== 0 || dh !== 0 || de !== 0 || held !== null ? 1 : 0, dh, de, ...(span !== undefined ? { span } : {}), ...(held !== null ? held : {}) };
+    fresh = held !== null;
   }
-  if (hand.r > 0) {
+  if (hand.r > 0 && !fresh) {
     const share = inp.latched && hand.span !== undefined && inp.pace !== undefined ? Math.min(1, Math.max(0, inp.pace.mm) / hand.span) : inp.share;
     const r = share !== null ? Math.min(hand.r, clamp01(1 - share)) : inp.spanMm > 0 ? Math.max(0, hand.r - Math.max(0, inp.mm) / inp.spanMm) : 0;
     hand = { ...hand, r };
@@ -298,6 +337,8 @@ export function pictureStep(s: PictureState, inp: PictureIn): { readonly pose: P
     const ow = o ?? own();
     P = turnedPose(P, inp.foot, ow.psi, ow.el, dhr, der);
   }
+  // ⭐⭐⭐ (D-J1 — A1-a) …and moved by the places left (the unlatch's, `whole`): the view's direction untouched
+  if (hand.r > 0 && hand.dl !== undefined && hand.dp !== undefined && hand.dr !== undefined) P = placedPose(P, hand.dl, hand.dp, hand.dr, hand.r);
   const c = viewOf(P);
   const vd: Vec3 = [-c[0], -c[1], -c[2]];
   const t = turntableUp(c, s.tt, inp.coneDeg, inp.latched ? undefined : psiF + dhr);
@@ -307,5 +348,6 @@ export function pictureStep(s: PictureState, inp: PictureIn): { readonly pose: P
   const up = tq === null ? target : rotateAbout(tq, vd, ang);
   const upSq = squared(up, vd) ?? up;
   const tt = inp.latched ? turntableFromDrawn(c, upSq, inp.coneDeg) : t.s;
-  return { pose: { eye: P.eye, look: P.look, up, piece: P.piece }, state: { tt, hand, up: upSq, dir: viewHeadEl(c, upSq) } };
+  const pose: PicturePose = { eye: P.eye, look: P.look, up, piece: P.piece };
+  return { pose, state: { tt, hand, up: upSq, dir: viewHeadEl(c, upSq), ...(inp.whole === true ? { drawn: pose } : {}) } };
 }
