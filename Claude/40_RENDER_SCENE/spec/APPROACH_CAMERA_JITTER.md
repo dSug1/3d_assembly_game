@@ -442,3 +442,24 @@ none built, each behind its own switch.
   latched in the camera's convention where the follower reads a direction's. A fix (the parked heading in the direction's convention — the far path's
   own heading carried through the latch, or the turntable's ψ turned by the owner's offset at the drawn elevation) changes the follower's state through
   every latch: for his word / the lead's, with A3's study (packet 2) — not patched here.
+
+### 7.3 ⭐ The lead's decisions for packet 2 (2026-11-25, under his word *"proceed as you recommend. do not ask me further question until you finish those fixes"*)
+
+* **D-J4 — A3 corrected by packet 1's measurement (§7.2).** The swing left after A1-a + A2-a (4 of 10 unlatches over 2°) is not the calm's release:
+  the far reading (`asmAskLevel`) stays at 91.46° through the release while the calm's share eases 0.85 → 0.28. Its measured cause: while latched,
+  the follower is PARKED on the turntable's heading ψ (the camera's convention: `picture_wiring.ts` `psiPark`, `followPark`), while its state is a
+  direction to which the owner's yaw offset is added when drawn — the parked heading is off its direction's by 1.65 – 6.44° on his records (§7.2's
+  table). At the unlatch that false gap is then paid twice: the follower's spring by time and the hand-over's offset by the way out's share. ⛔ One
+  quantity, two conventions: the root. **A3-p (the lead's recommendation, built):** the follower parked in ITS OWN convention — the parked heading
+  is the one whose drawn heading (with the offset) equals the camera's drawn heading at the latch's frames, so at the unlatch the follower starts
+  where the picture is and the hand-over reads the TRUE gap (≈ 0.2° in heading on `r01`, as §4.2 computed). Of the two forms §7.2 names (the far path's
+  heading carried through the latch; the turntable's ψ turned by the owner's offset), the one that keeps ONE owner of the parked heading and gives
+  zero gap at every unlatch on his records is built — the choice and its measurement recorded. Behind its own switch, 0 = today frame for frame.
+  **A3-a (the calm carried out of the tilt):** built only if a swing from the calm's release and re-take is MEASURED on his records once A3-p is on
+  (the camera's view turn there and back at the tilt-off, not explained by A3-p); otherwise recorded as refuted, not built.
+* **D-J5 — the way out's end reaches the picture.** The way out's turn is nulled on the frame its progress reaches 1, while the last share the
+  picture read was ≈ 0.986: ≈ 1.4 % of the hand-over stays held until his finger next moves (then closed over 10 mm; under A1-a ≈ 2.8 mm of the look
+  point). The share's completion (1) must reach the picture on the frame the turn ends — one owner, the turn's own end, read once. Under
+  `pictureHandWhole` 1 (it completes D-J1's *"closed by the way out's share"*); at 0, today's game frame for frame.
+* **The packets.** **2a = A3-p (+ A3-a only if measured) + D-J5** — the unlatch's join, gated on family A (the 2° swing on all 10 unlatches, the
+  latch and the way in unchanged). **2b = B-a + C-a** (§4.4, §4.5), after 2a's gates. Then the port (D-J3) and the push of `1.0.157` / `1.0.156`.
