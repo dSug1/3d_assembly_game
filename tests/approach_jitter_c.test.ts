@@ -102,8 +102,8 @@ describe("⭐⭐⭐ C-a — the ring shows the gizmo's travel's lag, not the app
     expect(gizmoLag([1, 2, 3], [0, 0, 0], null, null)).toEqual([1, 2, 3]);
   });
 
-  it("`gizmoLagTravel`, 0 by default (= `3b7a479`), 0 or 1 only; the wiring: none at 0, the move read at THIS frame's gizmo and direction, the base at rest none, the state reset", () => {
-    expect(DEFAULT_CONFIG.gizmoLagTravel).toBe(0);
+  it("`gizmoLagTravel`, 1 by default (his word 2026-11-25: deploy with all sliders at 1; 0 = `3b7a479`), 0 or 1 only; the wiring: none at 0, the move read at THIS frame's gizmo and direction, the base at rest none, the state reset", () => {
+    expect(DEFAULT_CONFIG.gizmoLagTravel).toBe(1);
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, gizmoLagTravel: 1 })).not.toThrow();
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, gizmoLagTravel: 2 })).toThrow();
     const w = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\r\n/g, "\n");
