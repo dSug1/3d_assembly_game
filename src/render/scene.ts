@@ -71,6 +71,7 @@ import { JumpWatch } from "../input/jump_watch";
 import { createHud } from "./hud";
 import { bootGizmoHostOf, bootGizmoNormalOf, bootTargetOnBlueFace, createGreenBox, registerOrbitPieces } from "./green_box_wiring";
 import { createScoreOverlay } from "./score_overlay";
+import { newPieceTurnState } from "./piece_turn_wiring";
 import { attachMouseSecondTouch } from "./mouse_adapter";
 import { CAMERA_RADIUS_M, ORBIT_START_CENTRE_M, ORBIT_START_ELEVATION, ORBIT_START_YAW_RAD, type Follow, type SceneState } from "./scene_state";
 import { bootYawForFront } from "../core/scene_dims";
@@ -587,6 +588,8 @@ export function createScene(
   st.restingQuads = null;
   st.quadPress = null;
   st.orientShown = { candidate: -1, clicked: null };
+  st.pieceTurn = newPieceTurnState(); // ⭐⭐⭐ (2026-11-25, IN14) the piece zone
+  st.modelIdle = 0;
   st.quadTurnCheck = { blockedBy: null, key: "", at: 0 };
   st.pieceGuardMs = 0;
   st.pieceGuardFrameMs = 0;
@@ -671,7 +674,7 @@ export function createScene(
   // ⛔⛔ (2026-11-13, the owner: *"remove the zoom function entirely"*) the WHEEL ZOOM deleted — the wheel does nothing (the page does not scroll)
   st.mouseLayer = attachMouseSecondTouch(st.canvas, st.scene,
   // ⭐⭐ (2026-10-11, `RESTING_FACE_ALIGNMENT.md` §20) ALT / CTRL is the orbit's HELD SECOND TOUCH whenever a piece is orbited
-  () => st.greenBox !== null);
+  () => st.greenBox !== null && st.cfg.pieceTurnZone !== 1); // ⭐⭐⭐ (2026-11-25, IN14 §4.8) the piece zone: ALT / CTRL no longer the held second touch
   // ⭐⭐ TUNABLES MAY BE OVERRIDDEN FROM THE URL, so a number can be A/B'd ON THE
   // DEVICE without a rebuild — e.g. `?rollFilterBeta=0&rollAngle=45`. Every value
   // here is an `IN5` placeholder, and `IN5` is a device procedure. ⛔ ONE config

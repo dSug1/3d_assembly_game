@@ -75,8 +75,8 @@ describe("⭐⭐ the quads (2026-10-15, the owner: *\"Make the quads' non-yellow
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, quadUnlitAlpha: -0.1 })).toThrow();
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, quadUnlitAlpha: 1.1 })).toThrow();
     const q = code("render/orient_cube.ts");
-    expect(q).toContain("x.edges.alpha = quadEdgeAlpha(lit, st.cfg.quadUnlitAlpha);");
-    expect(q).toContain("(x.fill.material as StandardMaterial).alpha = quadFillAlpha(lit, st.cfg.quadUnlitAlpha);");
+    expect(q).toContain("x.edges.alpha = quadEdgeAlpha(lit, st.cfg.quadUnlitAlpha) * share;"); // ⭐ (2026-11-25, IN14 §4.3) × the piece zone's fade (1 at `pieceTurnZone` 0)
+    expect(q).toContain("(x.fill.material as StandardMaterial).alpha = quadFillAlpha(lit, st.cfg.quadUnlitAlpha) * share;");
     expect(q).not.toMatch(/QUAD_EDGE_ALPHA|QUAD_ALPHA\b/); // one place: `quad_gate.ts` and the tunable
     // ⭐ (2026-11-13) the opacity in RENDERING, the yellow gizmo's switch in GIZMO & SECTIONS (just below it before)
     const m = code("render/tuning_menu.ts");

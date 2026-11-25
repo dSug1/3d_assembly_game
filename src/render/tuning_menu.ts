@@ -150,6 +150,21 @@ export function installTuningMenu(st: SceneState): void {
         tunable(st, "orbit drag deadband (mm on glass, ≥ 3× the pointer noise)", "orbitDeadbandMm", 2.3, 8, 0.1),
         tunable(st, "orbit drag deadband — the pause that re-arms it (ms)", "orbitBandRestMs", 0, 1500, 50),
       ],
+      subsections: [
+        {
+          // ⭐⭐⭐ (2026-11-25, IN14, `PIECE_TURN.md`) a drag started on the held piece turns it; the step back; the roll; the face tap; the undo
+          title: "PIECE ZONE",
+          sliders: [
+            tunable(st, "piece zone: a drag on the piece turns it (1; 0 = fe917b8's inputs)", "pieceTurnZone", 0, 1, 1),
+            tunable(st, "zone: margin round the piece on the glass (mm)", "pieceZoneMarginMm", 0, 30, 1),
+            tunable(st, "zone: smallest radius (mm)", "pieceZoneMinMm", 4, 30, 1),
+            tunable(st, "zone: largest radius (share of the short side)", "pieceZoneCapShare", 0.1, 0.5, 0.01),
+            tunable(st, "turn under the finger (°/mm)", "pieceTurnDegPerMm", 0.2, 10, 0.1),
+            tunable(st, "roll by A + dx (°/mm)", "pieceRollDegPerMm", 0.2, 10, 0.1),
+            tunable(st, "lit quad: hysteresis (°)", "pieceTurnLitHysteresisDeg", 0, 15, 0.5),
+          ],
+        },
+      ],
     },
     {
       // ⭐ The orbited piece round the assembly: how fast, how smooth, the calm on a face, the tilted pole.

@@ -134,14 +134,14 @@ export function holdRelease(
   if (mode === "HELD") {
     // ⭐⭐ (2026-10-12, the owner: *"Second touch tap on seated / placed part now sets the pink gizmo (same as first touch tap on seated / placed
     // part)"*) — the orbit centre (the pink gizmo) to where the press hit the placed part; ⛔ never also the tap roll (`pressActed`)
-    if (tapped && h.centreAt !== null) {
+    if (tapped && h.centreAt !== null && st.cfg.pieceTurnZone !== 1) { // ⭐ (2026-11-25, IN14 §4.8) the piece zone: a first finger's tap moves the gizmo, a second's no more
       // ⭐⭐⭐ (2026-10-16) and the rig turned onto the face the tap hit, at the camera's yaw
       retargetGizmo(st, [h.centreAt[0], h.centreAt[1], h.centreAt[2]], h.centreNormal, h.centreHost ?? null);
       st.lastVerdict = "orbit: second touch tap on a placed part — the orbit centre (the pink gizmo) moved there";
     }
     // ⭐⭐ (2026-10-11, *"left click held + CTRL/ALT tap on empty … rolls to the next axis"*) → (2026-10-13, *"the second touch's tap on empty space to do exactly what the first touch's tap does: align to the yellow quad, or roll if already aligned there"*) — the YELLOW quad tapped
     // (`orientTapShown`: aligned to its direction, or the roll when already aligned there); one episode (its own)
-    if (holdTapTapsYellow(tapped, mode, h.first !== null, h.pressActed) && orientTapShown(st)) {
+    if (st.cfg.pieceTurnZone !== 1 && holdTapTapsYellow(tapped, mode, h.first !== null, h.pressActed) && orientTapShown(st)) { // ⭐ (IN14 §4.8) no yellow quad to tap
       st.lastVerdict = st.lastVerdict.replace(/^orbit: /, "orbit: second touch tap, first held — ");
     }
   }

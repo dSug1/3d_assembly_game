@@ -29,6 +29,7 @@ import { mmToPx } from "../core/units";
 import { faceFromPickedNormal } from "../core/face_pick";
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { holdFirstPress, holdMove, holdRelease, holdSecondPress } from "./hold_wiring";
+import { pieceZoneEmptyTap, pieceZoneFaceTap, pieceZoneKey, pieceZonePointer } from "./piece_turn_wiring";
 import { episodeCounts } from "../input/episode_ledger";
 import { beginGesture, endGesture, gestureChangedSoFar } from "./gesture_wiring";
 import { type SceneState } from "./scene_state";
@@ -43,6 +44,7 @@ export function installPointerHandler(st: SceneState): void {
     if (!isApproachKey(e.key)) return;
     if (!down && st.orbitApproachKey && assemblyOn(st)) approachRelease(st);
     st.orbitApproachKey = down;
+    pieceZoneKey(st, down); // ⭐⭐⭐ (2026-11-25, IN14 §4.4, his third modification) A any time during a zone drag: the turn snaps, dx rolls
   };
   window.addEventListener("keydown", approachKey(true));
   window.addEventListener("keyup", approachKey(false));
@@ -94,6 +96,8 @@ export function installPointerHandler(st: SceneState): void {
       }
       st.eventGaps.set(e.pointerId, { last: s.t, gaps: seen?.gaps ?? [] });
     }
+    // ⭐ (2026-11-25, IN14 §4.7) this release moved the gizmo (a tap on a placed part): never an empty space's tap
+    let gizmoTapped = false;
     if (info.type === PointerEventTypes.POINTERUP) {
       // ⭐⭐ (2026-10-13, §11nonies) the press on a placed part released: a TAP moves the gizmo there (`orbitTargetOnRelease`), a drag does not
       const pc = st.pendingPartCentre;
@@ -101,12 +105,21 @@ export function installPointerHandler(st: SceneState): void {
         st.pendingPartCentre = null;
         const to = orbitTargetOnRelease(pc.target, isTapRelease(pc.t, pc.x, pc.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop)));
         // ⭐⭐⭐ (2026-10-16) and the rig turned onto the face the tap hit, at the camera's yaw
-        if (to !== null) retargetGizmo(st, to, pc.normal, pc.host ?? null);
+        if (to !== null) {
+          retargetGizmo(st, to, pc.normal, pc.host ?? null);
+          gizmoTapped = true;
+        }
       }
       st.eventGaps.delete(e.pointerId);
       st.pointerTypeOf.delete(e.pointerId);
     }
 
+    // ⭐⭐⭐ (2026-11-25, IN14, `PIECE_TURN.md`) THE PIECE ZONE — before the router: a press in it noted (and goes on), its moves and committed release the
+    // zone's, a second finger after a zone start the roll's
+    if (pieceZonePointer(st, info.type, e, s)) {
+      st.hudDirty = true;
+      return;
+    }
     // ⭐⭐ (2026-10-12, §21) A PRESS IN THE ORIENTATION CUBE'S WINDOW IS THE CUBE'S — before the router: it never orbits
     // ⭐⭐ (2026-10-12) a press on a resting-face quad is the quads' (a tap aligns to its side; a drag orbits)
     if (restingQuadPointer(st, info.type, e, s, (id, ss, prev) => orbitDragStep(st, id, ss, prev))) {
@@ -235,8 +248,10 @@ export function installPointerHandler(st: SceneState): void {
         st.modelTapTaken = null; // ⭐ (2026-11-14) the pick-up flow took this tap (the held part's, a cycle's — `model_bodies_wiring.ts`)
       } else if (st.hold === null && e.pointerId !== MOUSE_SECOND_ID && tapped) {
         // ⭐⭐ (2026-10-12, *"a left click / first touch tap on empty is equivalent to a left click / first touch tap on the polyhedron pink face"*) —
-        // a TAP elsewhere taps the cube's face SHOWN
-        orientTapShown(st);
+        // a TAP elsewhere taps the cube's face SHOWN — ⭐⭐⭐ (2026-11-25, IN14 §4.7) the piece zone: a single tap there does nothing, a DOUBLE tap undoes
+        if (st.cfg.pieceTurnZone === 1) {
+          if (!gizmoTapped) pieceZoneEmptyTap(st, routed.pressed, s.t);
+        } else orientTapShown(st);
       }
     }
     st.hudDirty = true;
@@ -460,6 +475,8 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
  */
 export function selectRestingFace(st: SceneState, faceId: string): boolean {
   if (st.orbitPiecePlaced) return false; // ⭐ (2026-10-14) a piece placed in its goal keeps its faces
+  // ⭐⭐⭐ (2026-11-25, IN14 §4.6, his second and fourth modifications) the piece zone: at any distance, onto the last selected quad, else the nearest
+  if (st.cfg.pieceTurnZone === 1) return pieceZoneFaceTap(st, faceId);
   // ⭐⭐⭐ (2026-10-15, the owner: *"allow the resting face selection by tap on piece only if quads are shown"*)
   if (!quadTapsAllowed(st.restingQuads?.shown === true)) return false;
   // ⭐⭐ (2026-10-14, the owner: *"a tap on the green-turquoise piece will select it as the resting face and align it with the current yellow-highlighted quad or part's face"*) — aligned to the direction SHOWN now (the yellow quad; ⛔ the gizmo's supporting face is deleted, 2026-10-15)

@@ -111,8 +111,11 @@ describe("⭐⭐ the quads: their size with the gizmo's distance, capped; a clic
     expect(c).toContain("const onePx = trackingMetresPerPx(Math.hypot(at[0] - cam.x, at[1] - cam.y, at[2] - cam.z), st.camera.fov, st.canvas.clientHeight);");
     // ⭐⭐ *\"the scale 0.1 should be reached at half the maximal distance. below this, the quads shall be hidden. fit the power curve accordingly\"*
     expect(quadsShownFromM(6)).toBeCloseTo(3.9, 12); // ⭐ (2026-10-15) 65 % of the farthest (it was half)
-    expect(c).toContain("const from = quadsShownFromM(range.maxM); // ⭐ (2026-11-14) a `.glb` part's proxy is never drawn (its own meshes are): it counts as shown (`model_bodies_wiring.ts`) const show = st.greenBox !== null && p.mesh.isEnabled() && (p.mesh.isVisible || p.mesh.metadata?.modelBody === true) && d >= from;");
-    expect(c).toContain("const side = quadSize(d, from, range.maxM, st.cfg.quadGrowthLogK, onePx, full); q.growth = side / full; q.root.scaling.setAll(side);");
+    // ⭐ (2026-11-25, IN14 §4.3) with the piece zone (`pieceTurnZone` 1) shown by its gesture at full size; at 0 by the distance, as before
+    expect(c).toContain("const from = quadsShownFromM(range.maxM);");
+    expect(c).toContain("const show = st.greenBox !== null && p.mesh.isEnabled() && (p.mesh.isVisible || p.mesh.metadata?.modelBody === true) && (zone ? share > 0 : d >= from);");
+    expect(c).toContain("const side = zone ? full : quadSize(d, from, range.maxM, st.cfg.quadGrowthLogK, onePx, full);");
+    expect(c).toContain("const side = zone ? full : quadSize(d, from, range.maxM, st.cfg.quadGrowthLogK, onePx, full); q.growth = side / full; q.root.scaling.setAll(side);");
     expect(c).toContain("if (!q.quads.some((k) => k.fill.isVisible)) return false;");
     expect(c).not.toContain("dRef");
     expect(c).not.toContain("GIZMO_RING_PX");
@@ -149,7 +152,7 @@ describe("⛔⛔ the window deleted; the quads carry it (2026-10-12, *\"remove t
     const c = flat("render/orient_cube.ts");
     expect(c).toContain("const k = at === null ? -1 : carouselQuad(st.orientCarousel.c, Math.atan2(cam.z - g.z, cam.x - g.x), prevPlane);"); // ⭐ (2026-10-19) by yaw
     expect(c).not.toContain("sh.clicked.cand !== cand"); // ⭐ (2026-10-12) kept until the next drag, not until the candidate changes
-    expect(c).toContain("restingQuadsFrame(st, shownTag(st));");
+    expect(c).toContain("restingQuadsFrame(st, st.cfg.pieceTurnZone === 1 ? pieceTurnLit(st) : shownTag(st));"); // ⭐ (2026-11-25, IN14) the piece zone's lit quad at 1
     // ⛔ (2026-10-15) the gizmo's supporting face as the mating direction is deleted: the tapped one, else the candidate
     expect(c).toContain("return st.orientShown.clicked?.tag ?? st.orientShown.candidate;");
     expect(c).toContain("st.orientShown.clicked = { tag, cand: st.orientShown.candidate };");

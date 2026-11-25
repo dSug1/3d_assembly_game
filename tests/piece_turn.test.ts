@@ -1,0 +1,177 @@
+// ⭐⭐⭐ (2026-11-25, `IN14`, `PIECE_TURN.md` §4) THE PIECE ZONE'S RULES, engine-free — the zone on the glass, the commit, the turn under the finger, the lit
+// quad, the twist, the roll's nearest stop, the step back's two searches (sphere tracing, conservative advancement), the pivot about the centre, the
+// undo's history. RED against `9dacca36` (the module did not exist).
+import { describe, expect, it } from "vitest";
+import {
+  advanceAlong,
+  boundingSphereOf,
+  inZone,
+  litDirection,
+  nearestAngle,
+  pivotOffset,
+  sphereRadiusOnGlassPx,
+  traceStep,
+  trackballTurn,
+  TurnHistory,
+  twistAngle,
+  twistIsTap,
+  zoneCommitted,
+  zoneRadiusPx,
+} from "../src/input/piece_turn";
+import { qRotate, type Quat, type Vec3 } from "../src/core/vec";
+
+const close = (a: readonly number[], b: readonly number[], eps = 1e-9) => a.forEach((x, i) => expect(x).toBeCloseTo(b[i]!, -Math.log10(eps)));
+
+describe("⭐ the zone on the glass (§4.1)", () => {
+  it("the sphere on the glass plus the margin, floored, capped", () => {
+    expect(zoneRadiusPx(40, 20, 36, 300)).toBe(60);
+    expect(zoneRadiusPx(5, 10, 36, 300)).toBe(36); // the floor: a finger's target
+    expect(zoneRadiusPx(900, 20, 36, 300)).toBe(300); // the cap: room outside it always
+    expect(zoneRadiusPx(900, 20, 36, 10)).toBe(36); // a cap under the floor never shrinks it below the floor
+  });
+  it("in or out, the edge in", () => {
+    expect(inZone(10, 0, 0, 0, 10)).toBe(true);
+    expect(inZone(10.01, 0, 0, 0, 10)).toBe(false);
+  });
+  it("a sphere's radius on the glass (vertical field of view)", () => {
+    // R = d · tan(fov/2): the sphere's radius is half the glass's height
+    expect(sphereRadiusOnGlassPx(Math.tan(0.4), 1, 0.8, 1000)).toBeCloseTo(500, 6);
+    expect(sphereRadiusOnGlassPx(1, 0, 0.8, 1000)).toBe(Infinity); // at the eye: everywhere
+  });
+});
+
+describe("⭐ the commit (§4.2): the tap slop, or the deadband once the tap time is over", () => {
+  it("quick: past the slop only", () => {
+    expect(zoneCommitted(20, 100, 30, 9, 200)).toBe(false);
+    expect(zoneCommitted(31, 100, 30, 9, 200)).toBe(true);
+  });
+  it("slow: past the deadband", () => {
+    expect(zoneCommitted(8, 250, 30, 9, 200)).toBe(false);
+    expect(zoneCommitted(10, 250, 30, 9, 200)).toBe(true);
+  });
+});
+
+describe("⭐ the turn under the finger (§4.3): the near point of the piece goes with the finger", () => {
+  const f: Vec3 = [0, 0, 1]; // the view: the camera looks along +z
+  it("a finger to the right takes the near point to the right", () => {
+    const q = trackballTurn([1, 0, 0, 0], [1, 0, 0], f, 90);
+    close(qRotate(q, [0, 0, -1]), [1, 0, 0], 1e-9);
+  });
+  it("a finger down (world −y on the glass) takes it down; the gain is degrees per mm", () => {
+    const q = trackballTurn([1, 0, 0, 0], [0, -0.5, 0], f, 90); // 0.5 mm × 90°/mm = 45°
+    close(qRotate(q, [0, 0, -1]), [0, -Math.SQRT1_2, -Math.SQRT1_2], 1e-9);
+  });
+  it("no travel: the pose as it is", () => {
+    const q0: Quat = [Math.cos(0.3), Math.sin(0.3), 0, 0];
+    expect(trackballTurn(q0, [0, 0, 0], f, 2)).toEqual(q0);
+  });
+});
+
+describe("⭐ the lit quad (§4.3, D-P5): the direction the resting face is nearest to sitting on, with hysteresis", () => {
+  const dirs: Vec3[] = [[0, 1, 0], [0, -1, 0], [1, 0, 0]];
+  it("the resting normal down sits on the up direction", () => {
+    expect(litDirection([0, -1, 0], dirs, -1, 0)).toBe(0);
+  });
+  it("the current one kept until another is nearer by the hysteresis", () => {
+    const n = (deg: number): Vec3 => [-Math.sin((deg * Math.PI) / 180), -Math.cos((deg * Math.PI) / 180), 0]; // from down (sits on +y) to −x (sits on +x)
+    expect(litDirection(n(46), dirs, 0, (3 * Math.PI) / 180)).toBe(0); // +x nearer by 2°: kept
+    expect(litDirection(n(49), dirs, 0, (3 * Math.PI) / 180)).toBe(2); // nearer by 8°: taken
+  });
+  it("none", () => {
+    expect(litDirection([0, -1, 0], [], -1, 0)).toBe(-1);
+  });
+});
+
+describe("⭐ the twist (§4.4): the line between the fingers, clockwise on the glass positive (y down)", () => {
+  it("a quarter turn clockwise", () => {
+    expect(twistAngle([0, 0], [10, 0], [0, 0], [0, 10])).toBeCloseTo(Math.PI / 2, 9);
+  });
+  it("wrapped to (−π, π]", () => {
+    expect(twistAngle([0, 0], [-10, 1], [0, 0], [-10, -1])).toBeCloseTo(2 * Math.atan2(1, 10), 9);
+  });
+  it("a second finger's tap: the tap rules and under 10° of twist", () => {
+    expect(twistIsTap(true, 0.1)).toBe(true);
+    expect(twistIsTap(true, 0.2)).toBe(false);
+    expect(twistIsTap(false, 0)).toBe(false);
+  });
+  it("the nearest stop", () => {
+    expect(nearestAngle(0.9, [0, Math.PI / 2, -Math.PI / 2])).toBe(Math.PI / 2);
+    expect(nearestAngle(0.7, [0, Math.PI / 2])).toBe(0);
+  });
+});
+
+describe("⭐⭐ the step back (§4.5): the first free place on the line, and the way there checked", () => {
+  // the frames' loop the wiring runs (one query a frame)
+  const trace = (g: (s: number) => number, need: number, maxLift: number, frames: number): number | null => {
+    let lift = 0;
+    for (let i = 0; i < frames; i++) {
+      const next = traceStep(lift, g(lift), need, 1e-6);
+      if (next === null) return lift;
+      if (next > maxLift) return null;
+      lift = next;
+    }
+    return null;
+  };
+  it("sphere tracing reaches the first place the clearance is enough — never past it", () => {
+    // a wall at 0, the line straight out: the clearance is the lift + 0.1
+    expect(trace((s) => s + 0.1, 0.5, 2, 12)).toBeCloseTo(0.4, 9);
+    // a wall at an angle: the clearance grows at half the lift's pace — the first place is 0.8, reached from below
+    const r = trace((s) => s / 2 + 0.1, 0.5, 2, 60)!;
+    expect(r).toBeLessThanOrEqual(0.8 + 1e-6);
+    expect(r).toBeGreaterThan(0.8 - 1e-3);
+  });
+  it("free at once: no lift", () => {
+    expect(traceStep(0, 1, 0.5, 1e-6)).toBeNull();
+  });
+  it("a line that never clears (or a lift past the most): none", () => {
+    expect(trace(() => 0.1, 0.5, 2, 12)).toBeNull();
+    expect(trace((s) => s * 0.01, 0.5, 2, 50)).toBeNull();
+  });
+  it("conservative advancement: every step within the clearance, a wall stops it", () => {
+    // free away from a wall at s = 1: the gap is 1 − s; the gap kept 0.1
+    const r = advanceAlong((s) => 1 - s, 2, 0.1, 50, 1e-4);
+    expect(r.blocked).toBe(true);
+    expect(r.reached).toBeLessThan(0.9);
+    expect(r.reached).toBeGreaterThan(0.89);
+    const free = advanceAlong(() => 5, 2, 0.1, 50, 1e-4);
+    expect(free).toEqual({ reached: 2, queries: 1, blocked: false });
+  });
+  it("out of queries: stopped where it is, not blocked", () => {
+    const r = advanceAlong((s) => 0.2 + s, 10, 0.1, 3, 1e-4);
+    expect(r.blocked).toBe(false);
+    expect(r.queries).toBe(3);
+    expect(r.reached).toBeLessThan(10);
+  });
+});
+
+describe("⭐ the pivot about the centre (§4.3): the offset that keeps the centre still", () => {
+  it("the centre stays where it was whatever the turn", () => {
+    const c: Vec3 = [0, 0.2, 0]; // the centre in the piece's frame
+    const r: Vec3 = [0, 0, 0]; // the resting face's centre
+    const A: Vec3 = [1, 2, 3]; // the ring's anchor
+    const W: Vec3 = [1, 2.2, 3]; // the centre in the world at the start (q = identity)
+    const q: Quat = [Math.SQRT1_2, Math.SQRT1_2, 0, 0]; // 90° about x
+    const off = pivotOffset(A, W, q, c, r);
+    // the mesh: its resting centre at A + off; its centre at A + off + q(c − r) — W
+    const cw = qRotate(q, [c[0] - r[0], c[1] - r[1], c[2] - r[2]]);
+    close([A[0] + off[0] + cw[0], A[1] + off[1] + cw[1], A[2] + off[2] + cw[2]], W, 1e-12);
+  });
+  it("the bounding sphere of a shape: the box's centre, the farthest point", () => {
+    const s = boundingSphereOf([[[0, 0, 0], [2, 0, 0]], [[0, 4, 0]]]);
+    close(s.centre, [1, 2, 0]);
+    expect(s.radius).toBeCloseTo(Math.hypot(1, 2), 12);
+  });
+});
+
+describe("⭐ the undo's history (§4.7)", () => {
+  it("last in, first out; at most its size; cleared", () => {
+    const h = new TurnHistory<number>(3);
+    for (const x of [1, 2, 3, 4]) h.push(x);
+    expect(h.size).toBe(3);
+    expect(h.peek()).toBe(4);
+    expect(h.pop()).toBe(4);
+    expect(h.pop()).toBe(3);
+    h.clear();
+    expect(h.pop()).toBeNull();
+  });
+});

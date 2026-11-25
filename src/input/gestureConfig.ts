@@ -389,6 +389,21 @@ export interface GestureConfig {
   topRollBandDeg: number;
   /** ⭐⭐ (2026-10-19, the owner) the YELLOW QUAD by yaw: each quad's slice of a lap at most this (°) — the lap a whole multiple of the quads (anchored). */
   quadSliceMaxDeg: number;
+  /** ⭐⭐⭐ (2026-11-25, `IN14`, `PIECE_TURN.md`) THE PIECE ZONE: 1 — a drag started on the held piece turns it, the step back, the roll, the face tap
+   * onto the last quad, the double-tap undo; 0 — the inputs as on LIVE `fe917b8` (the quads by the distance, the taps on empty space and on the quads). */
+  pieceTurnZone: number;
+  /** ⭐ (IN14 §4.1) the zone's margin round the piece's sphere on the glass (mm). */
+  pieceZoneMarginMm: number;
+  /** ⭐ (IN14 §4.1) the zone's smallest radius on the glass (mm) — a finger's target. */
+  pieceZoneMinMm: number;
+  /** ⭐ (IN14 §4.1) the zone's largest radius, a share of the glass's short side — room outside it always. */
+  pieceZoneCapShare: number;
+  /** ⭐ (IN14 §4.3) the turn under the finger: degrees of turn per mm of finger travel. */
+  pieceTurnDegPerMm: number;
+  /** ⭐ (IN14 §4.4) the desktop's roll by A + dx: degrees per mm. */
+  pieceRollDegPerMm: number;
+  /** ⭐ (IN14 §4.3, D-P5) the lit quad changes only for a direction nearer by this (°). */
+  pieceTurnLitHysteresisDeg: number;
   /** ⭐⭐ (2026-10-19, the owner) THE TURN GOVERNOR on a curve that passes over the gizmo (a horizontal face): at most this many degrees of camera turn
    * (view and roll together) per mm of dy — the dy gain lowered where the camera would turn faster (°/mm). */
   /** ⭐⭐⭐ (2026-10-28, the owner) THE ORBIT: 0 — AROUND THE ASSEMBLY (dx yaw, dy pitch ±85°, two fingers' / Shift + drag's dy the approach to the gizmo the
@@ -932,6 +947,13 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // from the gizmo to the piece, the fingers keeping the centre orbit meanwhile; it replaced a 60 mm fade and a 10 mm slerp
   topRollBandDeg: 20, // ⭐ the owner, 2026-10-17/18
   quadSliceMaxDeg: 30, // ⭐ (2026-10-20, *"Same quad switch speed as current"*) 3 or 4 quads → 12 slices of 30°, as 6 quads at 40° (2026-10-19)
+  pieceTurnZone: 1, // ⭐⭐⭐ (2026-11-25, IN14 — his *"proceed as you recommended"*; D-P1) 0 = LIVE fe917b8's inputs
+  pieceZoneMarginMm: 5, // ⭐ (IN14 D-P2)
+  pieceZoneMinMm: 9, // ⭐ (IN14 D-P2) a pick's finger target (`HIT_MM`)
+  pieceZoneCapShare: 0.33, // ⭐ (IN14 D-P2) a third of the short side
+  pieceTurnDegPerMm: 2, // ⭐ (IN14 D-P4)
+  pieceRollDegPerMm: 2, // ⭐ (IN14 D-P8)
+  pieceTurnLitHysteresisDeg: 3, // ⭐ (IN14 D-P5) as the carousel's 3°
   orbitMode: 0, // ⭐⭐⭐ (2026-10-28) the orbit around the assembly
   assemblyLockDistM: 0.3, // ⭐ (2026-10-28) the look at the gizmo within 30 cm (the lock deleted 2026-11-04)
   orbitShellOffsetMm: 60, // ⭐⭐⭐ (2026-11-04, Step 2) the shell's offset
@@ -1125,6 +1147,13 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   }
   if (!(cfg.topRollBandDeg >= 2 && cfg.topRollBandDeg <= 60)) throw new Error(`topRollBandDeg (${cfg.topRollBandDeg}) must be in [2, 60]°.`);
   if (!(cfg.quadSliceMaxDeg >= 10 && cfg.quadSliceMaxDeg <= 180)) throw new Error(`quadSliceMaxDeg (${cfg.quadSliceMaxDeg}) must be in [10, 180]°.`);
+  if (cfg.pieceTurnZone !== 0 && cfg.pieceTurnZone !== 1) throw new Error(`pieceTurnZone (${cfg.pieceTurnZone}) must be 0 or 1.`);
+  if (!(cfg.pieceZoneMarginMm >= 0 && cfg.pieceZoneMarginMm <= 30)) throw new Error(`pieceZoneMarginMm (${cfg.pieceZoneMarginMm}) must be in [0, 30] mm.`);
+  if (!(cfg.pieceZoneMinMm >= 4 && cfg.pieceZoneMinMm <= 30)) throw new Error(`pieceZoneMinMm (${cfg.pieceZoneMinMm}) must be in [4, 30] mm.`);
+  if (!(cfg.pieceZoneCapShare >= 0.1 && cfg.pieceZoneCapShare <= 0.5)) throw new Error(`pieceZoneCapShare (${cfg.pieceZoneCapShare}) must be in [0.1, 0.5].`);
+  if (!(cfg.pieceTurnDegPerMm >= 0.2 && cfg.pieceTurnDegPerMm <= 10)) throw new Error(`pieceTurnDegPerMm (${cfg.pieceTurnDegPerMm}) must be in [0.2, 10] °/mm.`);
+  if (!(cfg.pieceRollDegPerMm >= 0.2 && cfg.pieceRollDegPerMm <= 10)) throw new Error(`pieceRollDegPerMm (${cfg.pieceRollDegPerMm}) must be in [0.2, 10] °/mm.`);
+  if (!(cfg.pieceTurnLitHysteresisDeg >= 0 && cfg.pieceTurnLitHysteresisDeg <= 15)) throw new Error(`pieceTurnLitHysteresisDeg (${cfg.pieceTurnLitHysteresisDeg}) must be in [0, 15]°.`);
   if (cfg.orbitMode !== 0 && cfg.orbitMode !== 1) throw new Error(`orbitMode (${cfg.orbitMode}) must be 0 or 1.`);
   if (!(cfg.assemblyLockDistM >= 0.05 && cfg.assemblyLockDistM <= 2)) throw new Error(`assemblyLockDistM (${cfg.assemblyLockDistM}) must be in [0.05, 2] m.`);
   if (!(cfg.orbitShellOffsetMm >= 5 && cfg.orbitShellOffsetMm <= 300)) throw new Error(`orbitShellOffsetMm (${cfg.orbitShellOffsetMm}) must be in [5, 300] mm.`);

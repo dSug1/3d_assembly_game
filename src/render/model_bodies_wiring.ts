@@ -212,6 +212,11 @@ class ModelPlay {
       return;
     }
     if (type === PointerEventTypes.POINTERDOWN || type === PointerEventTypes.POINTERMOVE) this.lastInput = now;
+    // ⭐⭐⭐ (2026-11-25, IN14 §2) a pointer the piece zone owns (a second finger rolling the piece): never a tap of this flow
+    if (type !== PointerEventTypes.POINTERDOWN && this.st.pieceTurn.owned.has(e.pointerId)) {
+      if (type === PointerEventTypes.POINTERUP) this.presses.delete(e.pointerId);
+      return;
+    }
     if (type === PointerEventTypes.POINTERDOWN) {
       this.presses.set(e.pointerId, { x: e.clientX, y: e.clientY, t: now, heldFace: this.held === null ? null : this.heldFaceAt(e.clientX, e.clientY), placedHit: null });
       return;
@@ -410,7 +415,8 @@ class ModelPlay {
     // ⭐⭐ but never nearer than where the resting-face QUADS show (`quadsShownFromM`: half the rings' farthest — `Scene_2` 3.1 m): nearer, they are
     // hidden and the part cannot be turned before it comes in (the seat probe: on its side at contact, 90° off, never placed)
     const own = a === null ? 0 : Math.hypot(pose.position[0] - a.centre[0], pose.position[1] - a.centre[1], pose.position[2] - a.centre[2]);
-    st.approach = approachFor(st, Math.max(own, 1.05 * quadsShownFromM(pieceDistanceRange(st.cfg).maxM)));
+    // ⭐⭐⭐ (2026-11-25, IN14 §4.8) the piece zone turns the part at ANY distance: the part's own distance (⛔ the quads' floor)
+    st.approach = approachFor(st, st.cfg.pieceTurnZone === 1 ? own : Math.max(own, 1.05 * quadsShownFromM(pieceDistanceRange(st.cfg).maxM)));
     // ⭐ its resting face: the face most DOWN as it lay — the turn onto the nearest quad the least (`bootRestAlign` turns it onto the floor's top)
     const q = pose.orientation;
     let down: { id: string; d: number } | null = null;
@@ -615,11 +621,13 @@ class ModelPlay {
     // ⭐⭐ (§6) a part held, no finger down and no input for the idle orbit's time: the camera out to the scene orbit's distance, the idle orbit there
     if (this.held === null || st.asm === null) {
       this.idle = 0;
+      st.modelIdle = 0;
       return;
     }
     const quiet = st.router.all().length === 0 && now - this.lastInput > st.cfg.idleOrbitAfterS * 1000 && st.cfg.idleOrbitOn === 1;
     const step = (st.engine.getDeltaTime() || 16) / IDLE_MS;
     this.idle = Math.min(1, Math.max(0, this.idle + (quiet ? step : -step)));
+    st.modelIdle = this.idle; // ⭐ (2026-11-25, IN14 §4.1) no piece zone while the idle blend is out
     if (this.idle <= 0) return;
     const k = smoother(this.idle);
     const game = this.camPose();

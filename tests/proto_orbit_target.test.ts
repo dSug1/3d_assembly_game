@@ -31,7 +31,7 @@ describe("⭐⭐⭐ prototype — the yellow orbit target on a press", () => {
     // ⭐ (2026-10-13, §11nonies) NOTED at the press, moved at a TAP's release
     expect(p).toContain("st.pendingPartCentre = newTarget !== null ? { pointerId: e.pointerId, target: newTarget, normal: hitN ? [hitN.x, hitN.y, hitN.z] : null, host: hitId ?? null, x: s.x, y: s.y, t: s.t } : null;"); // ⭐ (2026-10-19) and the host part // ⭐ (2026-10-16) the rig turned onto the gizmo's face (`orbit_rig.ts`)
     expect(p.replace(/\s+/g, " ")).toContain("const to = orbitTargetOnRelease(pc.target, isTapRelease(pc.t, pc.x, pc.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop))); "); // ⭐ (2026-10-16) the rig turned onto the gizmo's face (`orbit_rig.ts`)
-    expect(p).toContain("if (to !== null) retargetGizmo(st, to, pc.normal, pc.host ?? null);"); // ⛔ (2026-11-12) the slide removed
+    expect(p).toMatch(/if \(to !== null\) \{\s*retargetGizmo\(st, to, pc\.normal, pc\.host \?\? null\);\s*gizmoTapped = true;/); // ⭐ (2026-11-25, IN14 §4.7) noted: never an empty space's tap // ⛔ (2026-11-12) the slide removed
     expect(p).not.toContain("st.centreBlend.retarget(newTarget);");
   });
 

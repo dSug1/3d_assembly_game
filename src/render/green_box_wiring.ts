@@ -56,6 +56,7 @@ import { FIRST_ITERATION_MAX_QUERIES, STUCK_FRESH } from "../input/piece_orbit_s
 import { ringHoldStep } from "../input/ring_hold";
 import type { OrientDirection } from "../core/orientation_set";
 import { headingAbout, ringDistanceRange } from "../input/piece_orbit";
+import { pieceTurnFree, pieceTurnPlace, pieceTurnPost, pieceTurnPre, pieceTurnWaits, resetPieceTurn } from "./piece_turn_wiring";
 
 /** ⭐ The green. */
 const GREEN = new Color3(0.12, 0.62, 0.2);
@@ -335,8 +336,9 @@ export function alignRestingFace(st: SceneState, now: number, carryRolls = 0): b
     if (rolls !== 0 && couple !== null) st.lastVerdict += ` — ${Math.abs(rolls)} roll${Math.abs(rolls) > 1 ? "s" : ""} carried over (${rolls > 0 ? "clockwise" : "counter-clockwise"}): a${couple[0]} ∥ b${couple[1]}`;
   }
   // ⛔⛔ (2026-10-13, `COLLISION.md` §11) the turn checked WHOLE before it starts — refused when it would push the piece into a part (a turn
-  // cut short would leave the resting face misaligned); nothing changes, no episode
-  const blockedBy = pieceTurnBlocker(st, base);
+  // cut short would leave the resting face misaligned); nothing changes, no episode — ⭐⭐⭐ (2026-11-25, IN14 §4.5) with the piece zone the STEP BACK makes
+  // the room first (`piece_turn_wiring.ts`): no check here
+  const blockedBy = st.cfg.pieceTurnZone === 1 ? null : pieceTurnBlocker(st, base);
   if (blockedBy !== null) {
     st.pinkTargetNormal = pinkWas;
     st.lastVerdict = `orbit: the turn is blocked by ${blockedBy} — refused`;
@@ -384,6 +386,14 @@ export function restOnTappedFace(st: SceneState, faceId: string): boolean {
   return true;
 }
 
+/** ⭐ (2026-11-25, IN14) the resting face's id (its first face's, the topology's) — what the undo puts back; `null` with none. */
+export function restingFaceIdOf(st: SceneState): string | null {
+  const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
+  if (p === undefined || p.restingFace === null) return null;
+  const idx = p.restingFace.faces[0];
+  return idx === undefined ? null : (topologyFromMesh(p.mesh)?.faces[idx]?.id ?? null);
+}
+
 /** ⭐ The face a tap would align the orbited piece to now (`alignFaceOf`'s label; "" with none) — compared with the last alignment's. */
 export function restTargetKey(st: SceneState): string {
   const b = st.greenBox;
@@ -424,8 +434,8 @@ export function rollRestingFace(st: SceneState, now: number, sense: 1 | -1 = 1, 
     st.hudDirty = true;
     return false;
   }
-  // ⛔⛔ (2026-10-13, `COLLISION.md` §11) refused when the whole turn is not free
-  const blockedBy = pieceTurnBlocker(st, roll.q);
+  // ⛔⛔ (2026-10-13, `COLLISION.md` §11) refused when the whole turn is not free — ⭐ (IN14 §4.5) with the piece zone the step back makes the room first
+  const blockedBy = st.cfg.pieceTurnZone === 1 ? null : pieceTurnBlocker(st, roll.q);
   if (blockedBy !== null) {
     st.lastVerdict = `orbit: the roll is blocked by ${blockedBy} — refused`;
     st.hudDirty = true;
@@ -476,8 +486,16 @@ function restAlignFrame(st: SceneState, now: number): void {
   // the piece's place NOW, is held when it would take it under the margin (`turnStepHeld`): the slerp waits, and resumes once the way is open
   const b = st.greenBox;
   const anchor = st.pieceAnchor;
+  // ⭐⭐⭐ (2026-11-25, IN14 §4.5) the piece stepping back: the turn WAITS until it is out; out, its sphere free: no step is checked
+  if (pieceTurnWaits(st)) {
+    u = a.u ?? 0;
+    st.restAlign = { ...a, t0: now - u * REST_ALIGN_MS };
+  } else if (pieceTurnFree(st)) {
+    st.restAlign = { ...a, u };
+    st.restAlignHeld = false;
+  }
   // ⭐⭐⭐ (2026-11-12, F5) its two queries within what the frame left — else the turn WAITS a frame (never past the cap)
-  if (anchor !== null && u > (a.u ?? 0) && worldPlacementOf(st.world, b.name) !== null && queriesLeft(st) < 2) {
+  else if (anchor !== null && u > (a.u ?? 0) && worldPlacementOf(st.world, b.name) !== null && queriesLeft(st) < 2) {
     u = a.u ?? 0;
     st.restAlign = { ...a, t0: now - u * REST_ALIGN_MS };
   } else if (anchor !== null && u > (a.u ?? 0) && worldPlacementOf(st.world, b.name) !== null) {
@@ -591,6 +609,7 @@ export function resetPieceOrbit(st: SceneState): void {
     st.orbitPiecePlaced = false; // ⭐ (2026-10-14) a switch or a respawn brings a piece back to the orbit
     st.orbitRawPrev = null;
     st.orbitUserV = null;
+    resetPieceTurn(st); // ⭐⭐⭐ (2026-11-25, IN14) the zone's gesture, the step back, the undo's history, the last quad
   }
 }
 
@@ -869,6 +888,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // refused target: no pull-back); the camera is driven by the solved place.
   const b0 = st.greenBox;
   // ⭐ (2026-10-14) a piece captured onto its goal stays placed: no solve (the camera still rides the rings)
+  pieceTurnPre(st); // ⭐⭐⭐ (2026-11-25, IN14 §4.5) the step back's offset the solve reads this frame (no query)
   if (pieceSolveRuns(st)) {
     const t0 = performance.now();
     const env = pieceSolverEnv(st);
@@ -984,7 +1004,9 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // (`anchorFrame`); until then everything orbit-side reads the anchor
   // ⭐ (2026-10-13) how far the piece moved this frame (the yellow quad's check waits while it sweeps)
   st.pieceFrameStepM = st.pieceAnchor === null ? 0 : length(sub(pp, st.pieceAnchor));
-  st.pieceAnchor = pp;
+  // ⭐⭐⭐ (2026-11-25, IN14 §4.5) the step back's offset on the anchor drawn — ⛔ never on `pp` itself: the picture reads it (the camera stays, R5)
+  const turnOff = st.pieceTurn.offset;
+  st.pieceAnchor = turnOff === null ? pp : [pp[0] + turnOff[0], pp[1] + turnOff[1], pp[2] + turnOff[2]];
   if (st.bootRestAlign) bootRestAlign(st, pp); // ⭐ (2026-10-10) a spawn: aligned to the frozen body, now that the orbit placed it
   // ⭐⭐ (2026-10-14, *"Piece stays placed"*) captured onto its goal, the piece is the pull's, then stays — the orbit no longer places it
   if (!st.orbitPiecePlaced) box.position.set(pp[0], pp[1], pp[2]);
@@ -1111,6 +1133,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   if (!st.orbitPiecePlaced) {
     counterYawFrame(st);
     restAlignFrame(st, now);
+    pieceTurnPost(st, now, dtSec * 1000); // ⭐⭐⭐ (2026-11-25, IN14) the drawn turn's ease, the lit quad, the step back's out / back steps
     anchorFrame(st, now);
   }
   contactFrame(st, now); // ⭐ (2026-11-12) the contact readout: the shadow, the hosting face, the outline — ⭐ (2026-10-15, the Fable audit) BEFORE the contour reads its readiness
@@ -1129,6 +1152,7 @@ function anchorFrame(st: SceneState, now: number): void {
   const a = st.pieceAnchor;
   const p = st.orbitPieces.find((o) => o.mesh === b);
   if (b === null || a === null || p === undefined) return;
+  if (pieceTurnPlace(st)) return; // ⭐⭐⭐ (2026-11-25, IN14 §4.3) turning: about the piece's CENTRE, held where it was (stepped back)
   const r = b.rotationQuaternion ?? Quaternion.Identity();
   const at = placeByFaceCentre(a, [r.w, r.x, r.y, r.z], p.restingCentre);
   const s = anchorShiftNow(st, now);
@@ -1148,8 +1172,18 @@ function anchorShiftNow(st: SceneState, now: number): Vec3 {
   return [sh.off[0] * left, sh.off[1] * left, sh.off[2] * left];
 }
 
-/** ⭐ (2026-10-13) the piece's anchor (its resting face's centre) on the rings at `o`, the piece's own distance clamp applied. */
+/**
+ * ⭐ (2026-10-13) the piece's anchor (its resting face's centre) on the rings at `o`, the piece's own distance clamp applied — ⭐⭐⭐ (2026-11-25, IN14 §4.5)
+ * plus the piece zone's step back (`st.pieceTurn.offset`, a world offset like the ring's hold): every reader sees the piece where it is.
+ */
 export function ringAnchorAt(st: SceneState, o: OrbitQ): Vec3 {
+  const a = ringAnchorRaw(st, o);
+  const t = st.pieceTurn.offset;
+  return t === null ? a : [a[0] + t[0], a[1] + t[1], a[2] + t[2]];
+}
+
+/** ⭐ (2026-11-25, IN14) the ring's anchor WITHOUT the step back's offset (the ring's hold included). */
+export function ringAnchorRaw(st: SceneState, o: OrbitQ): Vec3 {
   const c = st.orbitCentreM;
   const offP = ringPlaceNow(st, o.yaw, o.v, o.zoom); // ⭐⭐⭐ (2026-10-16) the turned curve on level rings (`ringPlaceNow`)
   const off = { offsetM: offP, radiusM: Math.hypot(offP[0], offP[1], offP[2]) };
