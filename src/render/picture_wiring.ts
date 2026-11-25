@@ -21,7 +21,7 @@ import { blendShare, squareTurning, tiltDir, type CamFrame, type CamPose } from 
 import { orbitDir } from "../input/assembly_orbit";
 import { poseTurnAngle } from "../input/roll_follow";
 import { changeSeen, holdSeen } from "../input/upright";
-import { PICTURE_CONE_DEG, PICTURE_REST, pictureStep, type PictureIn, type PicturePose } from "../input/picture";
+import { bandHeld, PICTURE_CONE_DEG, PICTURE_REST, pictureStep, type PictureIn, type PicturePose } from "../input/picture";
 import { followActive, followFrame, type FollowPicture } from "./camera_follow_wiring";
 import { CHANGE_NONE, rollPictureFrame, type ChangeLeft } from "./roll_shadow";
 import { approachBand, changeApply, dirFrame, gizmoFacetW, pictureEventsRead } from "./assembly_wiring";
@@ -87,7 +87,11 @@ export function pictureFrame(
   const left = changeResolve(st, eye, look, up);
   const was = st.asmPicture;
   const s0 = was?.s ?? PICTURE_REST;
-  const w = approachBand(st);
+  // ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J2 — A2-a) THE BAND THE WAY IN'S RULE ONLY (`pictureBandWayIn` 1; 0 = `3b7a479`): its share held at 0 from
+  // the unlatch until the piece is beyond its far edge or latches again (`bandHeld`) — while the way out lives the follower's own pose the owner, its share the one payer
+  const wPlace = approachBand(st);
+  const bandOff = bandHeld(st.cfg.pictureBandWayIn === 1, was?.bandHeld === true, s0.hand !== null && s0.hand.latched && !st.asmTiltAuto, st.asmTiltAuto, wPlace);
+  const w = bandOff ? 0 : wPlace;
   // his finger's mm this frame: the orbit's (deadbanded, `asmFrameMm`) and the approach's outward (the way out's own count, C3)
   const da = was === null ? 0 : st.approach - was.aWas;
   const mm = Math.max(0, st.asmFrameMm) + (da > 0 && dvPerMm > 0 ? da / dvPerMm : 0);
@@ -122,7 +126,7 @@ export function pictureFrame(
       // the heading the follower carries — where it is parked if close in begins without a latch
       const fs = st.asmFollow;
       const psiPark = fs?.top?.psiT ?? (fs?.state ? headingOf(fs.state.d) : null) ?? was?.psiPark ?? null;
-      st.asmPicture = { s: s1, aWas: st.approach, w, far: true, psiPark };
+      st.asmPicture = { s: s1, aWas: st.approach, w, far: true, psiPark, ...(bandOff ? { bandHeld: true } : {}) };
       return fp;
     }
   }
@@ -155,7 +159,7 @@ export function pictureFrame(
     st.pieceAnchor = r.pose.piece;
     st.asmPieceDrawn = [r.pose.piece[0], r.pose.piece[1], r.pose.piece[2]];
   }
-  st.asmPicture = { s: r.state, aWas: st.approach, w, far: false, psiPark: latched ? (r.state.tt?.psi ?? psiPark) : psiPark };
+  st.asmPicture = { s: r.state, aWas: st.approach, w, far: false, psiPark: latched ? (r.state.tt?.psi ?? psiPark) : psiPark, ...(bandOff ? { bandHeld: true } : {}) };
   return { eye: r.pose.eye, look: r.pose.look, up: r.pose.up };
 }
 
