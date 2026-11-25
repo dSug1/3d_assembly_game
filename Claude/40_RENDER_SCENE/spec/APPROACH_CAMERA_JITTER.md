@@ -1,6 +1,6 @@
 # THE CAMERA'S JUMPS ON THE APPROACH — his records of 2026-11-24, replayed (a STUDY — nothing built)
 
-> **STATUS** · ⏳ **A STUDY, 2026-11-24 — NOTHING BUILT, NO DEFAULT CHANGED.** The owner's four-part method: the rules (§2), the obstacle measured
+> **STATUS** · ⏳ **A STUDY, 2026-11-24 — ⭐ HIS WORD 2026-11-25 (§7): A1-a and A2-a; the build of packet 1 (A1-a + A2-a) launched, behind switches at 0 = LIVE.** The owner's four-part method: the rules (§2), the obstacle measured
 > (§3), the fix options from the root (§4), the risks and the audit (§5); in plain words (§6). Code read on `00e59251` (branch
 > `1.0.158from1.0.157-Orbit_surface`, LIVE main `df5426a`); the picture's chain (`picture_wiring.ts`, `picture.ts`, `camera_follow*.ts`, `roll_shadow.ts`,
 > `seam_turn.ts`, `orbit_calm.ts`) is byte for byte the reference's (`2cd1be34` = LIVE `3b7a479`, `git diff` empty).
@@ -347,3 +347,22 @@ path, and the ring is drawn sliding with it (up to 3 cm off and back) though the
 work: with the surface's drive off, the same jumps happen to the same frames. The fixes proposed hand over the whole picture, let one rule pay each
 gap, keep the calm through the switch, decide the "upright" axis by what you see on the glass, and draw the ring with the gizmo's own delay only —
 none built, each behind its own switch.
+
+## 7. ⭐ His word (2026-11-25) and the build's packets
+
+**His word, verbatim:** *"A1-a and A2-a as you recommend."* (asked in plain words: A1-a vs A1-b; A2-a with the band acting on the way IN only.)
+
+* **D-J1 — A1-a.** At the unlatch the hand-over holds the WHOLE pose: the three angles as today, AND the look point's offset and the drawn piece's
+  offset (the new owner's minus the pose drawn the frame before), all closed by ONE share — the way out's (C3: his out mm while the finger is down,
+  then by time at the one speed after the lift, D-T1). ⛔ A1-b refused (the camera keeps riding with the piece close in: his approved close in, P17,
+  unchanged). At the latch the offsets are ≈ 0 (G is set from the pose drawn): unchanged.
+* **D-J2 — A2-a.** While the way out's turn lives, the band pays nothing: rule 1's owner is the follower's own pose, so the hand-over reads the TRUE gap
+  and the way out's share is its one payer. **The band after a way out (his answer to the question):** the band is the way IN's rule only. Its share
+  is held at 0 from the unlatch until either (a) the piece is again beyond the band's far edge (`pictureBandMm` of approach finger past the unlatch —
+  where the band's share is 0 by place anyway, so re-arming there is continuous), or (b) the piece latches again (the latch's own hand-over, from the
+  pose drawn). So: he stops inside the band after a way out → no step, the follower's pose stays; he goes on out past the far edge → the band armed for
+  the next way in, as today; he comes back in without leaving the band → no band, the latch's hand-over takes the view.
+* **The packets** (his standing rule: small, sequential): **packet 1 = A1-a + A2-a** (one join — the unlatch's hand-over and what it measures
+  against), each behind its own switch, 0 = LIVE frame for frame; vectors red first; verify; the gates of §5 on his records (family A: `09fv_r01`,
+  `r03`, `n2b8_r01`; the way in unchanged: `S1B` / `S1F`). **Packet 2 = A3-a, B-a, C-a** — as recommended (he raised no objection when told they
+  would follow), each behind its own switch, after packet 1's gates. His look on the device closes each (rule 5).
