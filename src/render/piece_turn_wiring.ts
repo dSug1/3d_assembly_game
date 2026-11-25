@@ -414,8 +414,7 @@ export function pieceTurnPost(st: SceneState, now: number, dtMs: number): void {
     const off = pt.offset;
     const d = off === null ? 0 : length(off);
     if (off === null || d < 1e-5) {
-      pt.offset = null;
-      pt.phase = "IDLE";
+      endStepBack(pt);
     } else if (queriesLeft(st) >= 1 && st.pieceQ !== null) {
       const dir = scale(off, -1 / d);
       const raw = ringAnchorRaw(st, st.pieceQ);
@@ -429,11 +428,19 @@ export function pieceTurnPost(st: SceneState, now: number, dtMs: number): void {
           st.pieceHold = [h[0] + next[0], h[1] + next[1], h[2] + next[2]];
           st.lastVerdict = `piece zone: back in to the contact (${(length(next) * 1000).toFixed(0)} mm short of its place)`;
         }
-        pt.offset = null;
-        pt.phase = "IDLE";
+        endStepBack(pt);
       } else pt.offset = next;
     }
   }
+}
+
+/** ⭐ The step back over: the piece on its ring's place (or the rest in the ring's hold). */
+function endStepBack(pt: PieceTurnState): void {
+  pt.offset = null;
+  pt.phase = "IDLE";
+  pt.held = null;
+  pt.u = null;
+  pt.lift = 0;
 }
 
 /**
