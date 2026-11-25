@@ -184,3 +184,8 @@
   the approach's share of the base's lag taken out of the ring's); each 0 = LIVE frame for frame (G1 bit for bit). At 1: family B at the floor 0
   frames over 1° / 30 mm (today up to 11.1°), the ring still on `n2b8_r04` (today 39.7 mm); all five at 1 family A bit for bit with 2a but the ring's
   lag, the way in and his far hand bit for bit. verify 2601. Not deployed; his look owed; the port next.
+* **2026-11-25** — S14's look given (the iPhone, `Scene_1`: no difference, 59 fps at 0 and 1); on his *"do what is best for game playability"*: `landingEngine` **1 by default**
+  (`dfb158a8`, verify 2601; 0 = the sums), D9 WITHDRAWN (`PART_AUTHORING.md`). Not deployed yet.
+* **2026-11-25** — S11's look given (under the cube: no difference at 0 and 1); on his *"Do what's best for game playability"*: `surfaceL1` **1 by default** (`cd85616e`, verify 2601). Not deployed yet.
+* **2026-11-25** — S15 on his *"Then propose the rule for B. and implement"*: C24's rule **R-W** (`ORBIT_SURFACE_WIDE_PIECE.md`: the body the ruler, the facet the gizmo's domain never widened by the piece, a seat past its facet B4 / C5) — no game code; `tests/wide_piece.test.ts` (10, both engines, 8 of 8 RED with the piece as a point). C22, C41: their surface part P2's, their layout the orbit's — PROPOSED, his word owed.
+* **2026-11-25** — C22, C41 handed to the orbit (`RND8`), his word: *"Agree with 1 but mention this has to be reopened only if a scene shows an issue, otherwise nothing to be built as the orbit is currently satisfactory"*.

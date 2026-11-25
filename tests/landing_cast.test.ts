@@ -226,14 +226,14 @@ describe("⭐⭐ V5 — a TURN re-reads the held hulls by index (`castHeldHulls`
 });
 
 describe("⭐⭐⭐ V6 — the switch `landingEngine`, the wiring: at 1 the cast, and `heldSumsOn` NEVER runs", () => {
-  it("`landingEngine`: default 0 (the sums, LIVE); 0, 1 valid, 2 refused", () => {
-    expect(DEFAULT_CONFIG.landingEngine).toBe(0);
+  it("`landingEngine`: default 1 (the cast — his look 2026-11-25, *do what is best for game playability*; 0 = the sums, before); 0, 1 valid, 2 refused", () => {
+    expect(DEFAULT_CONFIG.landingEngine).toBe(1);
     for (const v of [0, 1]) expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, landingEngine: v })).not.toThrow();
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, landingEngine: 2 })).toThrow(/landingEngine/);
   });
   it("the menu: the slider in THE ORBIT'S SURFACE, next to P2 drives", () => {
     const m = readFileSync(new URL("../src/render/tuning_menu.ts", import.meta.url), "utf8");
-    expect(m).toContain('tunable(st, "P2 engine (0 = the sums, LIVE; 1 = the cast)", "landingEngine", 0, 1, 1),');
+    expect(m).toContain('tunable(st, "P2 engine (0 = the sums, before; 1 = the cast)", "landingEngine", 0, 1, 1),');
     expect(m.indexOf('"landingEngine", 0, 1, 1)')).toBeGreaterThan(m.indexOf('"landingDrives", 0, 2, 1)'));
   });
 

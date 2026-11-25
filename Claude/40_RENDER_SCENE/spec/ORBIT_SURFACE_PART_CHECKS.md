@@ -339,7 +339,7 @@ prism); 2 mutants RED (the sums counted for their half-spaces, one sum's only).
 **`Scene_2`** (≈ 15 s): from 2.5 × (stage 2) to **3 203 ×** `Scene_1`'s (stage 16: 115 placed pieces × E16's 16 — 1 840 sums, 691 764 half-spaces);
 a turn frame **318 – 694 ms on this PC** at stages 13 – 16 (the heads and covers held, 15 – 16 pieces each), 11 – 34 ms elsewhere. ⭐ **A FINDING —
 the ledger's row 7 measured:** P2 cannot drive `Scene_2` as drawn (it runs on `Scene_1` only — `READOUT_SCENE` — nothing live is touched). The
-ways, for his word (with `GM13`): FEWER held pieces (the drawing: a part's pieces multiply every placed piece's sums — rule **D9**, PROPOSED), the
+ways, for his word (with `GM13`): FEWER held pieces (the drawing: a part's pieces multiply every placed piece's sums — rule **D9**, PROPOSED; ⛔ WITHDRAWN 2026-11-25: S14's cast the default), the
 held piece read by its HULL for P2 (a rule of the game: its concavities lost to the landing), or the sums built only near the gizmo (the game's
 code: a tile round it — S1's option).
 
