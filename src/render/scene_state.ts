@@ -533,7 +533,7 @@ export interface SceneState {
   /** ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §4.1 — R3a, `pictureOne` 1) THE ONE PICTURE's state (`render/picture_wiring.ts`, `input/picture.ts`): the turntable, the
    *  up's hand-over, the up drawn; the approach's place last frame (his outward mm); the band's share and the regime drawn this frame (the record); the heading
    *  the follower is parked on (latched: from the drawn up; the way out: held) — never dropped */
-  asmPicture: { readonly s: import("../input/picture").PictureState; readonly aWas: number; readonly w: number; readonly far: boolean; readonly psiPark: number | null; readonly bandHeld?: boolean } | null;
+  asmPicture: { readonly s: import("../input/picture").PictureState; readonly aWas: number; readonly w: number; readonly far: boolean; readonly psiPark: number | null; readonly bandHeld?: boolean; readonly outTurn?: import("../input/picture").WayOutTurn } | null;
   asmFollow: {
     readonly state: import("../input/camera_follow").FollowState | null;
     readonly piece: import("../core/vec").Vec3 | null;
