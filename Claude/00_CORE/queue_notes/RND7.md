@@ -166,3 +166,9 @@
 * **2026-11-24** — S14 and the ring GATED (`ORBIT_SURFACE_LANDING_CAST.md` §10): G1 bit for bit at the defaults on his two `Scene_1` records;
   `landingEngine` 1 within 3.6e-15 m; verify 2557 / 2557 on a quiet PC. The jitter's diagnosis committed (`APPROACH_CAMERA_JITTER.md`, `ab17666d`).
 * **2026-11-25** — S14 and the ring DEPLOYED on his word *"deploy"* (LIVE main `6f03b65` = `c6a4ffa5`, 2026-11-25 02:12Z). His look owed: S14 at 1, the ring.
+* **2026-11-25** — his camera jitters, packet 1 BUILT and GATED (`APPROACH_CAMERA_JITTER.md` §7.1 – §7.2; his word *"A1-a and A2-a as you recommend"*):
+  A1-a `a3d7446d` (`pictureHandWhole`: the unlatch's hand-over holds the whole pose), A2-a `e591a9d2` (`pictureBandWayIn`: the band the way in's
+  rule only), each 0 = LIVE frame for frame (G1 bit for bit on `09fv_r01`); at 1 the unlatch's jump gone on all 10 unlatches of `09fv_r01`, `r03`,
+  `n2b8_r01` (0 mm, 0°), `09fv_r01`'s swing 10 – 14° → 0.6 – 4.1°, the turn after the lift under 1°, the way in unchanged; ⚠ 4 of 10 still over the 2° swing
+  — measured: the follower PARKED on the camera's heading while latched (1.7 – 6.4° off its direction's; the study's A3 attribution contradicted),
+  outside the packet, for his word. verify 2574. Not deployed; his look owed.
