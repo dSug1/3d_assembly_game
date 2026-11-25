@@ -77,4 +77,4 @@ body is**, which the base plate proved →
 * **The assembly tree has never held more than two objects** (`3D5`).
 * ⭐ **Import (`3D4`)**: Blender → `.glb` → [`spec/MATERIALS_AND_IMPORT.md`](spec/MATERIALS_AND_IMPORT.md);
   `.blend` files → [`spec/BLENDER_ASSETS.md`](spec/BLENDER_ASSETS.md).
-* ⭐ Any scene's parts → [`spec/PART_AUTHORING.md`](spec/PART_AUTHORING.md); `Scene_2`: [`spec/SCENE_2_ASSEMBLY.md`](spec/SCENE_2_ASSEMBLY.md) (⛔ proposed).
+* ⭐ Any scene's parts → [`spec/PART_AUTHORING.md`](spec/PART_AUTHORING.md); `Scene_2`: [plan](spec/SCENE_2_ASSEMBLY.md), [rework](spec/SCENE_2_REWORK.md).
