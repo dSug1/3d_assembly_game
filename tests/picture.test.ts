@@ -272,7 +272,7 @@ describe("R3a — the wiring (source)", () => {
     const p = raw("render/picture_wiring.ts");
     expect(p).toContain("const G = rollPictureFrame(st, pp, eye, look, up, dtMs, left);");
     expect(p).toContain("const dFar = followPark(st, psiPark) ?? us;");
-    expect(p).toContain("const psiPark = latched ? (s0.tt?.psi ?? was?.psiPark ?? null) : (was?.psiPark ?? s0.tt?.psi ?? null);");
+    expect(p).toContain("const psiPark = latched ? (parkOwn(s0.tt?.psi) ?? was?.psiPark ?? null) : (was?.psiPark ?? parkOwn(s0.tt?.psi) ?? null);"); // ⭐ (2026-11-25, APPROACH_CAMERA_JITTER.md §7 D-J4 — A3-p) the turntable's ψ through `parkOwn` (`followParkOwn` 0: as is)
     expect(p).not.toMatch(/followStart\(\s*us|followStart\(hang/);
   });
 

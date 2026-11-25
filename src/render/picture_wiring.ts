@@ -15,7 +15,7 @@
  *   piece). The latch and the unlatch hold the pose drawn and hand it over by his finger (`pictureStep`'s hand-over).
  */
 import type { Vec3 } from "../core/vec";
-import { followStart, followTopTarget, headingOf } from "../input/camera_follow";
+import { followParkHeading, followStart, followTopTarget, headingOf } from "../input/camera_follow";
 import { upSquareToView } from "../input/camera_frame";
 import { blendShare, squareTurning, tiltDir, type CamFrame, type CamPose } from "../input/orbit_tilt";
 import { orbitDir } from "../input/assembly_orbit";
@@ -140,7 +140,12 @@ export function pictureFrame(
   // the follower parked at rest on its own target (the heading carried) — through the way out the band draws toward it by place
   // ⭐ its heading: latched the turntable's, set from the drawn up (last frame); unlatched (the way out) HELD from there — ⛔ re-read from the view drawn
   // in the band, the heading fed back on itself frame by frame (a drift by time)
-  const psiPark = latched ? (s0.tt?.psi ?? was?.psiPark ?? null) : (was?.psiPark ?? s0.tt?.psi ?? null);
+  // ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J4 — A3-p, `followParkOwn` 1; 0 = `3b7a479`) IN THE FOLLOWER'S OWN CONVENTION: the turntable's ψ is the
+  // CAMERA's heading drawn, the follower's state a DIRECTION the owner's offsets turn when drawn — parked as the direction whose pose drawn has that heading
+  // (`followParkHeading`), so at the unlatch it starts where the picture is (⛔ fed as is: 1.65 – 6.44° off at his latches, paid twice — the spring, the hand-over)
+  const parkAsk = st.cfg.followParkOwn === 1 ? st.asmAsk : null;
+  const parkOwn = (psi: number | undefined): number | null => (psi === undefined ? null : parkAsk !== null ? followParkHeading(psi, parkAsk, st.cfg.followPoleDeg, off.yawRad, off.pitchRad) : psi);
+  const psiPark = latched ? (parkOwn(s0.tt?.psi) ?? was?.psiPark ?? null) : (was?.psiPark ?? parkOwn(s0.tt?.psi) ?? null);
   const dFar = followPark(st, psiPark) ?? us;
   // ⭐⭐⭐ (C4, decided by the lead) latched: his orbit mm since the blend began (0 pending) — the hand-over's gap paid at his own pace (`pictureStep`)
   const pace = latched && (st.asmTiltPending || st.asmBlend !== null) ? { mm: st.asmTiltPending ? 0 : st.asmBlend!.mm, minMm: st.cfg.tiltBlendMm, degPerMm: st.cfg.uprightAlignDegPerMm } : undefined;
@@ -159,7 +164,7 @@ export function pictureFrame(
     st.pieceAnchor = r.pose.piece;
     st.asmPieceDrawn = [r.pose.piece[0], r.pose.piece[1], r.pose.piece[2]];
   }
-  st.asmPicture = { s: r.state, aWas: st.approach, w, far: false, psiPark: latched ? (r.state.tt?.psi ?? psiPark) : psiPark, ...(bandOff ? { bandHeld: true } : {}) };
+  st.asmPicture = { s: r.state, aWas: st.approach, w, far: false, psiPark: latched ? (parkOwn(r.state.tt?.psi) ?? psiPark) : psiPark, ...(bandOff ? { bandHeld: true } : {}) };
   return { eye: r.pose.eye, look: r.pose.look, up: r.pose.up };
 }
 

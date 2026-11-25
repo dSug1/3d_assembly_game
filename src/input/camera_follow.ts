@@ -241,6 +241,21 @@ export function followTopTarget(psi: number, ask: Vec3, poleDeg: number): Vec3 {
   return dirAtHeading(psi, clampN(Math.asin(clampN(ask[1], -1, 1)), -cap, cap));
 }
 
+const ORIGIN: Vec3 = [0, 0, 0];
+
+/**
+ * ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J4 — A3-p, `followParkOwn` 1) THE FOLLOWER'S OWN HEADING FOR A CAMERA HEADING: the heading of the direction
+ * whose pose drawn (`followPose`: the owner's camera offsets turned at the direction) has the camera heading `psiCam` (rad, `atan2(x, z)` of look → eye), at the
+ * elevation `followTopTarget` gives the direction (the asked height of `ask` capped at 90° − `poleDeg`). The offsets are turned in the direction's own frame,
+ * which a turn about the world vertical carries: their turn of the heading depends on the elevation only — read once at heading 0 and taken off. ⛔ The
+ * camera's heading parked AS the direction's (the turntable's ψ fed as is): its pose drawn turned once more by the offsets (≈ atan(sin yaw / cos el)) —
+ * 1.65 – 6.44° off at the latches of his records, paid twice at the unlatch (the follower's spring by time, the hand-over by the way out's share).
+ */
+export function followParkHeading(psiCam: number, ask: Vec3, poleDeg: number, offYawRad: number, offPitchRad: number): number {
+  const P = followPose(followTopTarget(0, ask, poleDeg), ORIGIN, ORIGIN, 1, 0, offYawRad, offPitchRad);
+  return wrapPi(psiCam - (headingOf(P.eye) ?? 0));
+}
+
 /**
  * ⭐⭐⭐ (H2, D-H6 — the owner: *"Your pace + a slider"*) THE TURN'S SPEED (deg a second): close in's (`rollDegS`, `tiltRollDegS`) raised toward his own orbit
  * pace at the crossing (`paceRadS`) by `share` — 1 (the default) his pace whenever it is faster, never slower than close in's; 0 close in's speed.
