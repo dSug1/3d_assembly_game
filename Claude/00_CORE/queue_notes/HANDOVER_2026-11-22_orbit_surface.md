@@ -132,3 +132,13 @@ collision pieces (one measurement before the plunge is built); the frozen plinth
 * **LIVE main `6f03b65`** = `c6a4ffa5` (his word *"deploy"*, 2026-11-25 02:12Z): S14 behind `landingEngine` (0 = the sums, as before; 1 = the cast) and the
   white ring on the driven gizmo where P2 drives. At the defaults the game is `df5426a`'s but for the ring (G1 bit for bit). His looks owed: S14 at 1,
   the ring; then S14's default and D9's withdrawal. The jitters' fixes wait for his word (A1-a / A1-b, A2-a's band).
+
+## ⭐ 2026-11-25, later — the camera jitters' five fixes built, gated, ported
+
+* His words: *"A1-a and A2-a as you recommend"*, *"make sure you commit these five fixes also in branches 1.0.156 and 1.0.157"*, *"yes, push them too.
+  proceed as you recommend. do not ask me further question until you finish those fixes"* → `APPROACH_CAMERA_JITTER.md` §7 (D-J1 – D-J5).
+* Five switches, all 0 = LIVE: `pictureHandWhole` (A1-a + D-J5), `pictureBandWayIn` (A2-a), `followParkOwn` (A3-p — A3 corrected by measurement),
+  `framedLineGlass` (B-a), `gizmoLagTravel` (C-a). All at 1 on his records: the unlatch's jump 0 mm on 10 / 10, no swing over 2°, the floor's roll
+  gone (0 frames over 1°), the ring still while the gizmo is. Ported and pushed: `1.0.157-Orbit_surface` `5eaf3eb4`, `1.0.156-` `4a6a95a1` (§7.8).
+* Not deployed. His look owed (all five at 1 on the phone; B-a's band is in screen mm — on the phone's smaller screen mid-distance frames may enter
+  it, §7.6); then their defaults.

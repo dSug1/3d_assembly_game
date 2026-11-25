@@ -651,3 +651,19 @@ none built, each behind its own switch.
   as defined); B-a's band on a smaller glass (§7.6: mid distances inside it on a phone — his device look); the elevation's two payers of 2a (§7.4).
   Then the port (D-J3: every file applies on `1.0.157-Orbit_surface` after packets 1 and 2a, except `tests/menu_layout.test.ts`'s two hunks a commit —
   the folder's list, clean once packets' CAMERA FOLLOWER line is hand-ported, and the count). His look on the device closes each (rule 5).
+
+### 7.8 ✅ The port (D-J3, 2026-11-25) — the five fixes on the orbit's branches, pushed
+
+Each fix its own commit (B-a with its follow-up `e4c096a6` folded in), ported by `git cherry-pick`; the one hand-resolved file
+`tests/menu_layout.test.ts` (the folder lists and the slider count: 135 there → 140). The fixes' own files (`picture.ts`, `picture_wiring.ts`,
+`camera_follow.ts`, `roll_follow.ts`, `roll_shadow.ts`, `assembly_orbit.ts`, the six `approach_jitter_*` test files, `picture.test.ts`) are byte for
+byte this branch's; `gestureConfig.ts`'s five switches the same lines.
+
+| branch (pushed) | A1-a | A2-a | A3-p | D-J5 | B-a | C-a | docs | `npm run verify` |
+|---|---|---|---|---|---|---|---|---|
+| `1.0.157-Orbit_surface` (`5eaf3eb4`) | `c51ebd02` | `3984c79f` | `927c3da5` | `7ecd0274` | `f712f1ca` | `48e58073` | `5eaf3eb4` | 194 files, 2365 tests, all pass |
+| `1.0.156-Orbits_with_camera_follow_final` (`4a6a95a1`) | `387d620e` | `e3c4df66` | `d7388a68` | `9146ce1c` | `9b1542e8` | `24c97403` | `4a6a95a1` | the same (its code = `1.0.157`'s, `git diff` empty) |
+
+The docs there: this study (with a note on what is this branch's — the surface work), `TUNING_MENU.md` (the five sliders), `RND5.md` (a dated
+line). ⚠ Not replayed headless on those branches: their switches at 0 are today's code by the vectors, and the per-frame gates of §7.2 – §7.7 were
+run here on the same files. Main untouched (LIVE `6f03b65`). His device look closes each fix (rule 5).
