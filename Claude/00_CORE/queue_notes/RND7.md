@@ -165,3 +165,22 @@
   gizmo the ring and the HUD line are the driven gizmo's own point and the drive's landing; `mouthP2` unchanged. G1 and his look owed.
 * **2026-11-24** — S14 and the ring GATED (`ORBIT_SURFACE_LANDING_CAST.md` §10): G1 bit for bit at the defaults on his two `Scene_1` records;
   `landingEngine` 1 within 3.6e-15 m; verify 2557 / 2557 on a quiet PC. The jitter's diagnosis committed (`APPROACH_CAMERA_JITTER.md`, `ab17666d`).
+* **2026-11-25** — S14 and the ring DEPLOYED on his word *"deploy"* (LIVE main `6f03b65` = `c6a4ffa5`, 2026-11-25 02:12Z). His look owed: S14 at 1, the ring.
+* **2026-11-25** — his camera jitters, packet 1 BUILT and GATED (`APPROACH_CAMERA_JITTER.md` §7.1 – §7.2; his word *"A1-a and A2-a as you recommend"*):
+  A1-a `a3d7446d` (`pictureHandWhole`: the unlatch's hand-over holds the whole pose), A2-a `e591a9d2` (`pictureBandWayIn`: the band the way in's
+  rule only), each 0 = LIVE frame for frame (G1 bit for bit on `09fv_r01`); at 1 the unlatch's jump gone on all 10 unlatches of `09fv_r01`, `r03`,
+  `n2b8_r01` (0 mm, 0°), `09fv_r01`'s swing 10 – 14° → 0.6 – 4.1°, the turn after the lift under 1°, the way in unchanged; ⚠ 4 of 10 still over the 2° swing
+  — measured: the follower PARKED on the camera's heading while latched (1.7 – 6.4° off its direction's; the study's A3 attribution contradicted),
+  outside the packet, for his word. verify 2574. Not deployed; his look owed.
+* **2026-11-25** — his camera jitters, packet 2a BUILT and GATED (`APPROACH_CAMERA_JITTER.md` §7.4 – §7.5; his *"proceed as you recommend"*, D-J4,
+  D-J5): A3-p `caac1b3b` (`followParkOwn`: the follower parked in its own convention — the turntable's ψ turned by the owner's offsets at the parked
+  elevation), D-J5 `b6cf50c1` (the way out's end read on the frame its turn ends, under `pictureHandWhole`); 0 = LIVE frame for frame (G1 bit for bit
+  on the three records, the way in bit for bit); all three at 1: all 10 unlatches PASS (steps 0, view 0.00°, swing 0.00°, lift ≤ 0.57°). A3-a not
+  built: refuted as stated (the asked step at the tilt-off never comes back); a residual of 0.86° of elevation at `n2b8_r01` f3380 recorded for the
+  lead. verify 2588. Not deployed; his look owed.
+* **2026-11-25** — his camera jitters, packet 2b BUILT and GATED (`APPROACH_CAMERA_JITTER.md` §7.6 – §7.7; his *"proceed as you recommend"*, §4.4
+  B-a, §4.5 C-a): B-a `307338dd` (+ `e4c096a6`, comment) (`framedLineGlass`: the carried up's framed line decided on the glass — the view's within 5 mm,
+  the line through both from 15 mm, measured first: far ≥ 77.8 mm, mid ≥ 19.9 mm, B's floor jumps 0.5 – 7.9 mm), C-a `020b139b` (`gizmoLagTravel`:
+  the approach's share of the base's lag taken out of the ring's); each 0 = LIVE frame for frame (G1 bit for bit). At 1: family B at the floor 0
+  frames over 1° / 30 mm (today up to 11.1°), the ring still on `n2b8_r04` (today 39.7 mm); all five at 1 family A bit for bit with 2a but the ring's
+  lag, the way in and his far hand bit for bit. verify 2601. Not deployed; his look owed; the port next.

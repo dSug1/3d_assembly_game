@@ -1,6 +1,6 @@
 # THE LANDING READ AT QUERY TIME — the landing map's cost rebuilt from its root (package S14, a study + a prototype, 2026-11-24)
 
-> **STATUS** · ✅ **BUILT 2026-11-24 (`defb1195`) behind `landingEngine` (0 = the sums, LIVE `19c7f88`; 1 = the cast)** on his word *"proceed with S14"* —
+> **STATUS** · ✅ **BUILT 2026-11-24 (`defb1195`) behind `landingEngine` (0 = the sums; 1 = the cast) — ⭐ DEPLOYED 2026-11-25 (LIVE `6f03b65`)** on his word *"proceed with S14"* —
 > **§9, as built** (the deviations, the cost per engine, the vectors and their red mutants). Owed: G1 at 0 bit for bit and at 1 within 1e-9 m on
 > `Scene_1`, the queries a frame counted, his look at 1; then the default, then D9 withdrawn (§6 item 5 — not before his look).
 > Written on his word *"The landing cost: i do not accept these costs. You need to find another solution"* (2026-11-24), by his rules (root cause

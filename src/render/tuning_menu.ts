@@ -191,6 +191,8 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "green box smoothing (ms, 0 = steps with the input)", "boxSmoothMs", 0, 300, 5),
             // ⭐⭐ (2026-11-04, the owner: *"add a slider for gizmo position and one for orbit angles"*) the piece's lag behind the ring, its two parts
             tunable(st, "lag: the gizmo's position the piece follows (ease, ms; 0 at once)", "gizmoEaseMs", 0, 500, 5),
+            // ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §4.5 C-a) the ring and its sections sliding as he approaches, the gizmo still
+            tunable(st, "lag: the ring shows the gizmo's travel only, not the approach's (1; 0 = 3b7a479)", "gizmoLagTravel", 0, 1, 1),
             tunable(st, "lag: the orbit's angles (spring, ms; 0 at once)", "orbitSpringMs", 0, 500, 5),
             // ⭐⭐⭐ (2026-11-18, `FAST_ORBIT.md` §14 — FO3 S1) the picture a follower of the logic: its roll's time; the changes of frame it frees
             tunable(st, "lag: the camera's roll behind the orbit's (ms)", "rollFollowMs", 60, 600, 10),
@@ -209,6 +211,8 @@ export function installTuningMenu(st: SceneState): void {
             // ⭐⭐⭐ (2026-11-20, `UPRIGHT_CARRIED_UP.md` — packet E) the carried up
             tunable(st, "carried up: the alignment a dx pays near the vertical (deg a mm)", "uprightAlignDegPerMm", 0, 20, 0.5),
             tunable(st, "carried up: the gizmo still for the whole half turn (1; 0 = never)", "uprightHalfHold", 0, 1, 1),
+            // ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §4.4 B-a) his view swinging 4 – 11° at a side face's floor: the line rolled about, read on the glass
+            tunable(st, "carried up: its line read on the glass — the view's where the piece and the look point are one place (1; 0 = 3b7a479)", "framedLineGlass", 0, 1, 1),
           ],
         },
         // ⭐⭐⭐ (2026-11-20, `CAMERA_FOLLOWS_GIZMO.md` §13 — F2) far out the camera a simple polar orbit following the direction asked
@@ -220,6 +224,12 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "the far top rule as decided, R5 (1; 0 = H2 / H3)", "pictureFarTop", 0, 1, 1),
             // ⭐⭐⭐ (2026-11-21, `PICTURE_REBUILD.md` §4.2 — R3a) the band: the follower's picture to the logic's over his last mm of approach before 0.65 m
             tunable(st, "the picture's band: far to close over the last mm of approach before 0.65 m (mm)", "pictureBandMm", 0, 100, 1),
+            // ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J1 — A1-a) his jump of the camera taking the piece out of close in
+            tunable(st, "the unlatch's hand-over: the whole pose, the look point and the piece too (1; 0 = 3b7a479)", "pictureHandWhole", 0, 1, 1),
+            // ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J2 — A2-a) his view swinging away and back taking the piece out
+            tunable(st, "the band on the way in only: none after a way out until past its far edge or a latch (1; 0 = 3b7a479)", "pictureBandWayIn", 0, 1, 1),
+            // ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J4 — A3-p) the view's swing left taking the piece out: the follower parked in the camera's convention
+            tunable(st, "the follower parked in its own convention: at the unlatch it starts where the picture is (1; 0 = 3b7a479)", "followParkOwn", 0, 1, 1),
             tunable(st, "follower: its one ease on the sphere (ms)", "followMs", 0, 500, 10), // ⭐ (2026-11-21, the owner: *"up to 500 ms with 10 ms increment"*)
             tunable(st, "follower: round the vertical, never nearer than (deg; 0 = over it)", "followPoleDeg", 0, 60, 1),
           ],

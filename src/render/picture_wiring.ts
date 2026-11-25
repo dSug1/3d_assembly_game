@@ -15,13 +15,13 @@
  *   piece). The latch and the unlatch hold the pose drawn and hand it over by his finger (`pictureStep`'s hand-over).
  */
 import type { Vec3 } from "../core/vec";
-import { followStart, followTopTarget, headingOf } from "../input/camera_follow";
+import { followParkHeading, followStart, followTopTarget, headingOf } from "../input/camera_follow";
 import { upSquareToView } from "../input/camera_frame";
 import { blendShare, squareTurning, tiltDir, type CamFrame, type CamPose } from "../input/orbit_tilt";
 import { orbitDir } from "../input/assembly_orbit";
 import { poseTurnAngle } from "../input/roll_follow";
 import { changeSeen, holdSeen } from "../input/upright";
-import { PICTURE_CONE_DEG, PICTURE_REST, pictureStep, type PictureIn, type PicturePose } from "../input/picture";
+import { bandHeld, PICTURE_CONE_DEG, PICTURE_REST, pictureStep, wayOutShare, type PictureIn, type PicturePose, type WayOutTurn } from "../input/picture";
 import { followActive, followFrame, type FollowPicture } from "./camera_follow_wiring";
 import { CHANGE_NONE, rollPictureFrame, type ChangeLeft } from "./roll_shadow";
 import { approachBand, changeApply, dirFrame, gizmoFacetW, pictureEventsRead } from "./assembly_wiring";
@@ -86,14 +86,21 @@ export function pictureFrame(
 ): CamPose {
   const left = changeResolve(st, eye, look, up);
   const was = st.asmPicture;
+  // ⭐⭐⭐ (D-J5) the way out's turn read this frame, kept to read its end next frame (`pictureHandWhole` 1 only)
+  const outKept = (z: SceneState["asmZoneMix"]): { readonly outTurn?: WayOutTurn } => (st.cfg.pictureHandWhole === 1 && z !== null && z.out !== undefined ? { outTurn: z } : {});
   const s0 = was?.s ?? PICTURE_REST;
-  const w = approachBand(st);
+  // ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J2 — A2-a) THE BAND THE WAY IN'S RULE ONLY (`pictureBandWayIn` 1; 0 = `3b7a479`): its share held at 0 from
+  // the unlatch until the piece is beyond its far edge or latches again (`bandHeld`) — while the way out lives the follower's own pose the owner, its share the one payer
+  const wPlace = approachBand(st);
+  const bandOff = bandHeld(st.cfg.pictureBandWayIn === 1, was?.bandHeld === true, s0.hand !== null && s0.hand.latched && !st.asmTiltAuto, st.asmTiltAuto, wPlace);
+  const w = bandOff ? 0 : wPlace;
   // his finger's mm this frame: the orbit's (deadbanded, `asmFrameMm`) and the approach's outward (the way out's own count, C3)
   const da = was === null ? 0 : st.approach - was.aWas;
   const mm = Math.max(0, st.asmFrameMm) + (da > 0 && dvPerMm > 0 ? da / dvPerMm : 0);
   const hang = Math.hypot(pp[0] - foot[0], pp[1] - foot[1], pp[2] - foot[2]);
   const us: Vec3 = hang > 1e-9 ? [(pp[0] - foot[0]) / hang, (pp[1] - foot[1]) / hang, (pp[2] - foot[2]) / hang] : (st.asmAsk ?? [0, 0, 1]);
-  const base = { us, look, foot, hang, gapM, offYawRad: off.yawRad, offPitchRad: off.pitchRad, mm, spanMm: st.cfg.pictureBandMm, coneDeg: PICTURE_CONE_DEG, polar: st.asmZone !== null };
+  // ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J1 — A1-a) `whole`: the unlatch's hand-over holds the whole pose (`pictureHandWhole` 1; 0 = `3b7a479`)
+  const base = { us, look, foot, hang, gapM, offYawRad: off.yawRad, offPitchRad: off.pitchRad, mm, spanMm: st.cfg.pictureBandMm, coneDeg: PICTURE_CONE_DEG, polar: st.asmZone !== null, ...(st.cfg.pictureHandWhole === 1 ? { whole: true } : {}) };
   let s1 = s0;
   // ⭐⭐⭐ (2026-11-21 night, `PICTURE_REBUILD.md` §4.3a rule 4 — R3-FIX, the lead's amendment) NOT LATCHED THE FOLLOWER DRAWS — far, the band, between it and
   // the latch, through EVERY logic turn (`asmZoneMix`, the way out's included), the square camera's share, a tilt turning off: `followActive` is no reason to
@@ -106,8 +113,10 @@ export function pictureFrame(
     const Gl = followActive(st) ? null : rollPictureFrame(st, pp, eye, look, up, dtMs, left);
     if (Gl !== null) pictureEventsRead(st, Gl.ev);
     // the hand-over left from the latch closed by the way out's OWN share (C3: his out mm) while its turn lives; else by his mm (`pictureStep`)
+    // ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J5 — `pictureHandWhole` 1) …and its END read on the frame it ends (`wayOutShare`: the turn read last frame,
+    // `outTurn`, gone with its progress whole — share 1, once): ⛔ unread, ≈ 1.4 % of the hand-over held until his finger next moved
     const zmO = st.asmZoneMix;
-    const share = zmO !== null && zmO.out !== undefined ? zmO.k : null;
+    const share = wayOutShare(zmO, was?.outTurn, st.cfg.pictureHandWhole === 1);
     const hook: FollowPicture = (P, dFar, hangF, usF) => {
       const inp: PictureIn = { ...base, hang: hangF, us: usF, w, dFar, F: P, G: { eye, look, up, piece: pp }, latched: false, share };
       const r = pictureStep(s0, inp);
@@ -121,7 +130,7 @@ export function pictureFrame(
       // the heading the follower carries — where it is parked if close in begins without a latch
       const fs = st.asmFollow;
       const psiPark = fs?.top?.psiT ?? (fs?.state ? headingOf(fs.state.d) : null) ?? was?.psiPark ?? null;
-      st.asmPicture = { s: s1, aWas: st.approach, w, far: true, psiPark };
+      st.asmPicture = { s: s1, aWas: st.approach, w, far: true, psiPark, ...outKept(zmO), ...(bandOff ? { bandHeld: true } : {}) };
       return fp;
     }
   }
@@ -130,12 +139,17 @@ export function pictureFrame(
   pictureEventsRead(st, G.ev);
   const latched = st.asmTiltAuto;
   const zm = st.asmZoneMix;
-  const share = latched ? (st.asmTiltPending ? 0 : st.asmBlend !== null ? blendShare(st.asmBlend.mm, st.cfg.tiltBlendMm) : 1) : zm !== null && zm.out !== undefined ? zm.k : null;
+  const share = latched ? (st.asmTiltPending ? 0 : st.asmBlend !== null ? blendShare(st.asmBlend.mm, st.cfg.tiltBlendMm) : 1) : wayOutShare(zm, was?.outTurn, st.cfg.pictureHandWhole === 1);
   const Gp: PicturePose = { eye: G.eye, look: G.look, up: G.up, piece: pp };
   // the follower parked at rest on its own target (the heading carried) — through the way out the band draws toward it by place
   // ⭐ its heading: latched the turntable's, set from the drawn up (last frame); unlatched (the way out) HELD from there — ⛔ re-read from the view drawn
   // in the band, the heading fed back on itself frame by frame (a drift by time)
-  const psiPark = latched ? (s0.tt?.psi ?? was?.psiPark ?? null) : (was?.psiPark ?? s0.tt?.psi ?? null);
+  // ⭐⭐⭐ (2026-11-25, `APPROACH_CAMERA_JITTER.md` §7 D-J4 — A3-p, `followParkOwn` 1; 0 = `3b7a479`) IN THE FOLLOWER'S OWN CONVENTION: the turntable's ψ is the
+  // CAMERA's heading drawn, the follower's state a DIRECTION the owner's offsets turn when drawn — parked as the direction whose pose drawn has that heading
+  // (`followParkHeading`), so at the unlatch it starts where the picture is (⛔ fed as is: 1.65 – 6.44° off at his latches, paid twice — the spring, the hand-over)
+  const parkAsk = st.cfg.followParkOwn === 1 ? st.asmAsk : null;
+  const parkOwn = (psi: number | undefined): number | null => (psi === undefined ? null : parkAsk !== null ? followParkHeading(psi, parkAsk, st.cfg.followPoleDeg, off.yawRad, off.pitchRad) : psi);
+  const psiPark = latched ? (parkOwn(s0.tt?.psi) ?? was?.psiPark ?? null) : (was?.psiPark ?? parkOwn(s0.tt?.psi) ?? null);
   const dFar = followPark(st, psiPark) ?? us;
   // ⭐⭐⭐ (C4, decided by the lead) latched: his orbit mm since the blend began (0 pending) — the hand-over's gap paid at his own pace (`pictureStep`)
   const pace = latched && (st.asmTiltPending || st.asmBlend !== null) ? { mm: st.asmTiltPending ? 0 : st.asmBlend!.mm, minMm: st.cfg.tiltBlendMm, degPerMm: st.cfg.uprightAlignDegPerMm } : undefined;
@@ -154,7 +168,7 @@ export function pictureFrame(
     st.pieceAnchor = r.pose.piece;
     st.asmPieceDrawn = [r.pose.piece[0], r.pose.piece[1], r.pose.piece[2]];
   }
-  st.asmPicture = { s: r.state, aWas: st.approach, w, far: false, psiPark: latched ? (r.state.tt?.psi ?? psiPark) : psiPark };
+  st.asmPicture = { s: r.state, aWas: st.approach, w, far: false, psiPark: latched ? (parkOwn(r.state.tt?.psi) ?? psiPark) : psiPark, ...outKept(zm), ...(bandOff ? { bandHeld: true } : {}) };
   return { eye: r.pose.eye, look: r.pose.look, up: r.pose.up };
 }
 
