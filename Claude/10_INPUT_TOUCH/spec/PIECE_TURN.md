@@ -237,12 +237,20 @@ and on a placed part (the gizmo); ALT / CTRL as the held second touch; Scene_2's
 * **G-B** the switch at 0 against `9dacca36`, `replay_batch.sh` (2 794 frames a scene): `Scene_1`, `Scene_0bis` identical in every frame; `Scene_0`
   under 1e-9 from frame 3 (its known run-to-run noise; 1e-6 never). At 1 the replays run without error and leave the base where the seeded script
   first presses on the piece (`Scene_1`, `Scene_0`: frame 59, its first drag) or taps empty space (`Scene_0bis`: frame 144) — as designed; the steps a
-  frame as the base's.
+  frame as the base's. ⭐ Re-run after the review's fixes (`6ffcc93e`): all three scenes identical in every frame.
 * **G-C** `scripts/probes/zone_batch.sh` (`zone_probe.mjs`, `Scene_1`): the zone's drag turns the piece, the quads up, **the camera still (4e-7 m)**,
   the release snaps onto a direction (0.000°), one undo step, the quads faded; a single tap on empty space nothing, the double click undoes; A + drag
   rolls about the resting normal to one stop, A + click one stop; the face tap rests the tapped face on a direction; the touch twist after a zone start
   rolls one stop; close in the piece steps out as far as its sphere needs (2 – 36 mm in the runs), turns, comes back, **never closer to a part than
   it started**; the solver's anchor equals the drawn one at rest (0.00 mm). `Scene_2`: `pick_probe.mjs` all pass; `seat_probe.mjs` as at 0.
+* **G-E** an independent read of the code (a reviewer agent, the code only, no conclusion given): eight findings, all confirmed and FIXED (`6ffcc93e`) —
+  (1) a lost release (the window lost; a mouse moving with no button) left the gesture alive: now it ends as a release would (`pieceZoneForget`);
+  (2) a refused turn read its offset from the refused pose and face: now from the pose put back; (3) a snap or a roll's start while stepping out wrote
+  the turned pose before the room was made: nothing is drawn (nor solved) turned during OUT; (4) the second finger's lift acted after a refusal;
+  (5, 6) a release the zone takes moved the gizmo or counted as a tap of `Scene_2`'s flow (`pieceZoneTakesRelease`); (7) the piece held still while an
+  orbit started within 300 ms: the way back in now starts at once on another press; (8) the undo's history repaired by truncation; the way out's
+  queries exact; a roll with nothing to snap to goes back to its base. The probe gained two checks (a blur mid-drag, then the orbit; `Scene_2`: a part
+  picked and turned in the zone): all pass.
 * **G-D** his look on the device — owed.
 
 ### 8.3 Known limits (for his look)
