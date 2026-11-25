@@ -245,8 +245,8 @@ describe("S11 — the acceptance (`fillerVerdict`): every face glued or flush, n
 });
 
 describe("S11 — the switch and the file", () => {
-  it("`surfaceL1`: default 0 (LIVE); 0, 1 valid, 2 refused", () => {
-    expect(DEFAULT_CONFIG.surfaceL1).toBe(0);
+  it("`surfaceL1`: default 1 (the fillers — his look 2026-11-25, *do what's best for game playability*; 0 = none, before); 0, 1 valid, 2 refused", () => {
+    expect(DEFAULT_CONFIG.surfaceL1).toBe(1);
     for (const v of [0, 1]) expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, surfaceL1: v })).not.toThrow();
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, surfaceL1: 2 })).toThrow(/surfaceL1/);
   });

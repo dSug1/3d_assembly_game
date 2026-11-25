@@ -367,7 +367,7 @@ export function installTuningMenu(st: SceneState): void {
             // ⭐⭐⭐ (2026-11-24, `ORBIT_SURFACE_LANDING_CAST.md` §6 — S14) P2's engine: the sums built ahead (LIVE) or the cast at query time
             tunable(st, "P2 engine (0 = the sums, before; 1 = the cast)", "landingEngine", 0, 1, 1),
             // ⭐⭐⭐ (2026-11-24, `ORBIT_SURFACE_L1.md` §10 — S11) L1's caps: the fillers between placed parts in the face map
-            tunable(st, "L1 caps (0 = LIVE 19c7f88; 1 = the fillers)", "surfaceL1", 0, 1, 1),
+            tunable(st, "L1 caps (0 = none, before; 1 = the fillers)", "surfaceL1", 0, 1, 1),
           ],
         },
       ],

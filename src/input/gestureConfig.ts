@@ -988,7 +988,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   sectionLines: 1, // ⭐ (2026-10-28) the sections drawn
   mouthHoldDomain: 2, // ⭐⭐⭐ (2026-11-23, S3 — `ORBIT_SURFACE_MOUTH_HOLD.md` §6, D3) H1 + H2 by default; 0 = `3b7a479`'s hold
   landingDrives: 2, // ⭐⭐⭐ (2026-11-23, S4 — `ORBIT_SURFACE_DRIVE.md` §3.7, D6) the support and the gizmo on P2 by default; 0 = as deployed (`e80a7b0`)
-  surfaceL1: 0, // ⭐⭐⭐ (2026-11-24, S11 — `ORBIT_SURFACE_L1.md` §10) 0 = LIVE (`19c7f88`); 1 = the fillers in the face map, for his look
+  surfaceL1: 1, // ⭐⭐⭐⭐ (2026-11-25, his look under the cube: no difference at 0 and 1 — *"do what's best for game playability"*: the default 1, the lids, as the rule asks) ⭐⭐⭐ (2026-11-24, S11 — `ORBIT_SURFACE_L1.md` §10) 0 = no fillers (LIVE `19c7f88` – `870078b`); 1 = the fillers in the face map
   landingEngine: 1, // ⭐⭐⭐⭐ (2026-11-25, his look: no difference on the iPhone, 59 fps at 0 and 1 — *"do what is best for game playability"*: the default 1, the cast) ⭐⭐⭐ (2026-11-24, S14 — `ORBIT_SURFACE_LANDING_CAST.md` §6) 0 = the sums (LIVE `19c7f88` – `870078b`); 1 = the cast
   landingReadout: 1, // ⭐⭐⭐ (2026-11-22, S2 — his word *"proceed"* on `ORBIT_SURFACE_READOUT.md` §10: default 1 on this branch, his look needs it) 0 = `3b7a479`: no readout
   orbitTurnCapDegMm: 12.5, // ⭐ (2026-10-19, the owner: *"set the turn governor horizontal face to 12.5"*; first 40) the horizontal face's turn over the top (96°/mm at the shipped gains, view and roll) capped
