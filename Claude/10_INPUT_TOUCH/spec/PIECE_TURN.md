@@ -326,3 +326,11 @@ His words: *"When i tap the second finger during orbit of the piece, the piece i
 * **D-P23** — ONE undo step per gesture (press to release), however many rolls and turns inside (the commit's snapshot; none if it ends where it
   began); an episode per snap (D-P13).
 * **`pieceRollGain`** default **8** (his word; 3 in §9.1): the twist **8:1**, A + dx 2°/mm × 8 = **16°/mm**; range 0.1 – 10 unchanged.
+* **As built and gated (2026-11-26)**: `piece_turn_wiring.ts` — `snapOnto` (the one snap, `snapTurn` and the free roll's end through it),
+  `keepNearestStop`, `endRoll`, `turnOn` (the mode `INERT` deleted), `secondDown` / `pieceZoneKey` (the roll from `turnPoseNow`), `secondUp`
+  (`oneStopInGesture`). 6 vectors red first (`nearestRollStop` × 5, the gain's default); `npm run verify` 210 files, 2647 vectors; `zone_batch.sh`
+  all pass on `Scene_1` (the new `turnroll`: 0.000° at the landing and at A, the twist's roll 60.00° at the gain 8, one history step a gesture) and
+  `Scene_2`; `turnroll` and the twist's new check shown red on the old code (9 FAIL). ⚠ The probe's second-finger lift was a `touchMove` without it,
+  which lifts NOTHING in Chrome — the lift had never been tested; now a `touchEnd` naming the point (measured). ⚠ The roll count (`restRoll.rolls`,
+  what a face tap carries) after a snap that keeps the roll is counted from that snap's own long-axes pairing — a 90° roll on a face whose pairing
+  ties may read −1 where the old count read +1.
