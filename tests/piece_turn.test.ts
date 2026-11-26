@@ -9,6 +9,7 @@ import {
   litDirection,
   nearestAngle,
   nearestRollStop,
+  pressHeldShows,
   pieceRollAngle,
   pieceTurnDegrees,
   pivotOffset,
@@ -20,6 +21,7 @@ import {
   twistAngle,
   twistIsTap,
   zoneCommitted,
+  zoneQuadsShare,
   zoneRadiusPx,
 } from "../src/input/piece_turn";
 import { qFromAxisAngle, qmul, qRotate, type Quat, type Vec3 } from "../src/core/vec";
@@ -293,5 +295,32 @@ describe("⭐ the stop nearest the pose asked (§9.2, D-P21)", () => {
     same(r.q, ID);
     expect(r.rolls).toBe(0);
     expect(r.couple).toBeNull();
+  });
+});
+
+// ⭐⭐⭐ (2026-11-26, §9.3, D-P24, D-P25 — his word: *"a press or left click held on the piece shows the quads after the same timer as when the quads fade
+// away"*) THE QUADS BY A HELD PRESS: none before the hold (300 ms), all from it, at once; its end held, then faded. RED against `01d07e11` (neither exists).
+describe("⭐ the quads shown by a press held on the piece (§9.3)", () => {
+  const HOLD = 300;
+  const FADE = 250;
+  it("a press held: nothing before the hold, the quads from it (at once, no fade in)", () => {
+    expect(pressHeldShows(1299, 1000, HOLD)).toBe(false);
+    expect(pressHeldShows(1300, 1000, HOLD)).toBe(true);
+    expect(zoneQuadsShare(1150, false, 1000, -Infinity, HOLD, FADE)).toBe(0);
+    expect(zoneQuadsShare(1299, false, 1000, -Infinity, HOLD, FADE)).toBe(0);
+    expect(zoneQuadsShare(1300, false, 1000, -Infinity, HOLD, FADE)).toBe(1);
+    expect(zoneQuadsShare(5000, false, 1000, -Infinity, HOLD, FADE)).toBe(1);
+  });
+  it("no press, nothing live: hidden; a live gesture: shown whatever its press", () => {
+    expect(zoneQuadsShare(5000, false, null, -Infinity, HOLD, FADE)).toBe(0);
+    expect(zoneQuadsShare(1010, true, null, -Infinity, HOLD, FADE)).toBe(1);
+  });
+  it("its release (D-P25): held for the hold, then faded over the fade — as after a snap", () => {
+    const up = 2000;
+    const until = up + HOLD; // what the release sets
+    expect(zoneQuadsShare(up + 100, false, null, until, HOLD, FADE)).toBe(1);
+    expect(zoneQuadsShare(until, false, null, until, HOLD, FADE)).toBe(1);
+    expect(zoneQuadsShare(until + FADE / 2, false, null, until, HOLD, FADE)).toBeCloseTo(0.5, 12);
+    expect(zoneQuadsShare(until + FADE, false, null, until, HOLD, FADE)).toBe(0);
   });
 });

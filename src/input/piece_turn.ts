@@ -42,6 +42,24 @@ export function zoneCommitted(travelPx: number, elapsedMs: number, slopPx: numbe
   return travelPx > slopPx || (elapsedMs > tapMs && travelPx > deadbandPx);
 }
 
+/**
+ * ⭐⭐⭐ (2026-11-26, §9.3 — his word: *"a press or left click held on the piece shows the quads after the same timer as when the quads fade away"*)
+ * A PRESS HELD in the zone, not committed, shows the quads once held `holdMs` — the quads' hold after a snap (one constant for both).
+ */
+export function pressHeldShows(now: number, pressedAt: number, holdMs: number): boolean {
+  return now - pressedAt >= holdMs;
+}
+
+/**
+ * ⭐⭐⭐ (§4.3, §9.3) THE QUADS' SHARE: 1 while a committed gesture lives (`live`), while a press is held past `holdMs` (`pressedAt`: the time of a press
+ * still down and not committed, null none), and until `showUntil` (the hold after either ended); then faded to 0 over `fadeMs`.
+ */
+export function zoneQuadsShare(now: number, live: boolean, pressedAt: number | null, showUntil: number, holdMs: number, fadeMs: number): number {
+  if (live || now <= showUntil || (pressedAt !== null && pressHeldShows(now, pressedAt, holdMs))) return 1;
+  const k = 1 - (now - showUntil) / fadeMs;
+  return k > 0 ? k : 0;
+}
+
 // ─── the turn ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
 /**

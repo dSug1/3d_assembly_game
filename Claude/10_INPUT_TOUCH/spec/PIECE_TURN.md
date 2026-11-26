@@ -350,3 +350,7 @@ His word: *"modify so that a press or left click held on the piece shows the qua
   tap's own flash, §4.6). A drag after the hold commits as before — the quads stay up.
 * Engine-free: `zoneQuadsShare` (`src/input/piece_turn.ts`) — 1 while a committed gesture lives, while a press is held past the hold, and until the
   hold's end after either; then faded.
+* **As built and gated (2026-11-26)**: `pressHeldShows`, `zoneQuadsShare` (`src/input/piece_turn.ts`); `piece_turn_wiring.ts` — `pieceTurnQuadsShare`
+  reads the uncommitted press's time, `heldPressEnds` (the release, a lost release). 3 vectors red first; `npm run verify` 210 files, 2650 vectors;
+  `zone_batch.sh` all pass on `Scene_1` (the new `held`, touch and mouse: none at 150 ms, shown at 450 ms, the pose kept to 1e-5, held at the
+  release, gone by 820 ms, no history step) and `Scene_2`; `held` shown red on the old wiring (4 FAIL).

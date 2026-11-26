@@ -34,11 +34,13 @@ import {
   trackballTurn,
   pieceRollAngle,
   pieceTurnDegrees,
+  pressHeldShows,
   sceneOrbitDegPerMm,
   TurnHistory,
   twistAngle,
   twistIsTap,
   zoneCommitted,
+  zoneQuadsShare,
   zoneRadiusPx,
 } from "../input/piece_turn";
 import { pieceCollisionSetup } from "./collision_wiring";
@@ -46,7 +48,7 @@ import { alignRestingFace, pieceSolveOptions, queriesLeft, restingFaceIdOf, rest
 import { assemblyOn } from "./assembly_wiring";
 import type { SceneState } from "./scene_state";
 
-/** ⭐ The quads held after a snap, then faded (ms) — §4.3. */
+/** ⭐ The quads held after a snap, then faded (ms) — §4.3. ⭐⭐⭐ (2026-11-26, §9.3) the hold also a held press's wait before they show. */
 const HOLD_MS = 300;
 const FADE_MS = 250;
 /** ⭐ The step back's way in starts this long after the last turn (ms) — §4.5. */
@@ -828,6 +830,7 @@ export function pieceZonePointer(st: SceneState, type: number, e: PointerEvent, 
     pt.zone = null;
     const tapped = isTapRelease(z.pressed.t, z.pressed.x, z.pressed.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop));
     if (!z.committed) {
+      heldPressEnds(st, z); // ⭐⭐⭐ (§9.3) the held press's quads held, then faded
       // ⭐ A + a click in the zone: one stop clockwise (the A key gives the click its meaning); else the tap it always was
       if (z.mouse && (z.aHeld || st.orbitApproachKey) && tapped) {
         consumeRelease(st, id);
@@ -861,6 +864,7 @@ export function pieceZoneForget(st: SceneState): void {
   const z = pt.zone;
   pt.zone = null;
   pt.owned.clear();
+  if (z !== null) heldPressEnds(st, z); // ⭐⭐⭐ (§9.3)
   if (z !== null && z.committed && !z.refused) {
     if (z.mode === "TURN") snapTurn(st, z);
     else if (z.roll !== null) endRoll(st, z, false);
@@ -1097,9 +1101,15 @@ export function pieceZoneEmptyTap(st: SceneState, pressed: Sample, releaseT: num
 export function pieceTurnQuadsShare(st: SceneState, now: number): number {
   const pt = st.pieceTurn;
   if (!pieceTurnOn(st)) return 0;
-  if (pt.live || now <= pt.showUntil) return 1;
-  const k = 1 - (now - pt.showUntil) / FADE_MS;
-  return k > 0 ? k : 0;
+  // ⭐⭐⭐ (2026-11-26, §9.3) …and while a press is held still in the zone, from the hold's length
+  const z = pt.zone;
+  return zoneQuadsShare(now, pt.live, z !== null && !z.committed ? z.pressed.t : null, pt.showUntil, HOLD_MS, FADE_MS);
+}
+
+/** ⭐⭐⭐ (§9.3, D-P25) a held press ended (released, lost) uncommitted: the quads it showed held, then faded, as after a snap. */
+function heldPressEnds(st: SceneState, z: ZoneGesture): void {
+  const now = performance.now();
+  if (!z.committed && pressHeldShows(now, z.pressed.t, HOLD_MS)) st.pieceTurn.showUntil = now + HOLD_MS;
 }
 
 /** ⭐ The lit direction's index (−1 none) — the quads' yellow. */

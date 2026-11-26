@@ -353,6 +353,37 @@ try {
     check("turnroll: the release snapped; ONE history step (the desktop)", (await num("window.__z.alignErr()")) < 0.5 && end.hist === h0 + 1, `history ${h0} → ${end.hist}; ${JSON.stringify(end)}`);
   }
 
+  // ── 8. ⭐ (2026-11-26, §9.3) a press HELD still on the piece (a finger, then the left button): no quads before the hold (300 ms), the quads from it — nothing
+  //       turned, no commit; the release — held, then faded; no history step ──
+  if (run("held")) {
+    for (const how of ["touch", "mouse"]) {
+      await idle();
+      await sleep(800); // the quads of the scenario before faded
+      const c = await centrePx();
+      const h0 = (await S()).hist;
+      const q0 = await arr("window.__z.q()");
+      const pre = await S();
+      if (how === "touch") await send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: c[0], y: c[1], id: 1, radiusX: 2, radiusY: 2, force: 1 }] });
+      else await mouse("mousePressed", c[0], c[1], 1);
+      await sleep(150);
+      const m1 = await S();
+      check(`held (${how}): no quads before the hold (150 ms)`, pre.quads === false && m1.quads === false && m1.zone === "TURN", `before ${pre.quads}; ${JSON.stringify(m1)}`);
+      await sleep(300);
+      const m2 = await S();
+      const q2 = await arr("window.__z.q()");
+      check(`held (${how}): the quads from the hold (450 ms), nothing turned, not committed`, m2.quads === true && m2.zone === "TURN" && dot4(q0, q2) > 0.99999, `${JSON.stringify(m2)}; |q0·q| ${dot4(q0, q2).toFixed(6)}`);
+      if (how === "touch") await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+      else await mouse("mouseReleased", c[0], c[1], 0);
+      await sleep(120);
+      const m3 = await S();
+      check(`held (${how}): the release holds the quads`, m3.quads === true && m3.zone === null, JSON.stringify(m3));
+      await sleep(700);
+      const m4 = await S();
+      const q4 = await arr("window.__z.q()");
+      check(`held (${how}): then faded; no history step, the pose kept`, m4.quads === false && m4.hist === h0 && dot4(q0, q4) > 0.99999, `${JSON.stringify(m4)}; history ${h0} → ${m4.hist}`);
+    }
+  }
+
   // ── 5. close in: the step back — out, turned, back in, never into a part ──
   if (run("close")) {
     await idle();
