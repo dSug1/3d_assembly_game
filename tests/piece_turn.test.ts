@@ -8,6 +8,7 @@ import {
   inZone,
   litDirection,
   nearestAngle,
+  pieceRollAngle,
   pieceTurnDegrees,
   pivotOffset,
   sceneOrbitDegPerMm,
@@ -206,17 +207,40 @@ describe("⭐ the piece orbit's gains (§9): scene orbit gains × piece orbit ga
     const q = trackballTurn([1, 0, 0, 0], [d.dx, 0, 0], [0, 0, 1], 1);
     expect(2 * Math.acos(Math.min(1, Math.abs(q[0]))) * DEG).toBeCloseTo(s.x * DEFAULT_CONFIG.pieceTurnGainX * 10, 6);
   });
-  it("the defaults keep the turn's feel (D-P16: 0.4 → 2.04°/mm, 2°/mm before); the old single gain is gone", () => {
+  // ⭐⭐⭐ (2026-11-26, §9.1 — his word: *"Set the two sliders default to 2.00. Increase their range up to 5.00"*) RED against `263e809d` (0.4; [0.05, 2]).
+  it("the defaults his 2.00 each (10.2°/mm at the shipped scene gains); the old single gain is gone", () => {
     const s = sceneOrbitDegPerMm(DEFAULT_CONFIG);
-    expect(s.x * DEFAULT_CONFIG.pieceTurnGainX).toBeGreaterThan(1.9);
-    expect(s.x * DEFAULT_CONFIG.pieceTurnGainX).toBeLessThan(2.1);
-    expect(s.y * DEFAULT_CONFIG.pieceTurnGainY).toBeGreaterThan(1.9);
-    expect(s.y * DEFAULT_CONFIG.pieceTurnGainY).toBeLessThan(2.1);
+    expect(DEFAULT_CONFIG.pieceTurnGainX).toBe(2);
+    expect(DEFAULT_CONFIG.pieceTurnGainY).toBe(2);
+    expect(s.x * DEFAULT_CONFIG.pieceTurnGainX).toBeCloseTo(10.21, 1);
+    expect(s.y * DEFAULT_CONFIG.pieceTurnGainY).toBeCloseTo(10.21, 1);
     expect("pieceTurnDegPerMm" in DEFAULT_CONFIG).toBe(false);
   });
-  it("the gains validated in [0.05, 2]", () => {
+  it("the gains validated in [0.05, 5]", () => {
     expect(() => validateGestureConfig(DEFAULT_CONFIG)).not.toThrow();
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, pieceTurnGainX: 5, pieceTurnGainY: 5 })).not.toThrow();
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, pieceTurnGainX: 0 })).toThrow();
-    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, pieceTurnGainY: 2.5 })).toThrow();
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, pieceTurnGainY: 5.5 })).toThrow();
+  });
+});
+
+// ⭐⭐⭐ (2026-11-26, §9.1 — his word: *"add a slider for piece roll gain and set it by default to three times the current setup"*) THE PIECE ROLL'S
+// GAIN on both roll inputs. RED against `263e809d` (no `pieceRollAngle`, no `pieceRollGain`).
+describe("⭐ the piece roll's gain (§9.1): the roll = the gain × the input's own angle", () => {
+  it("the gain multiplies the input's angle; 1 = as before", () => {
+    expect(pieceRollAngle(0.5, 3)).toBeCloseTo(1.5, 12);
+    expect(pieceRollAngle(-0.2, 1)).toBeCloseTo(-0.2, 12);
+    expect(pieceRollAngle(0.7, 0)).toBe(0);
+  });
+  it("the default three times the current setup: the twist 3:1, A + dx 2°/mm × 3 = 6°/mm", () => {
+    expect(DEFAULT_CONFIG.pieceRollGain).toBe(3);
+    expect(pieceRollAngle(Math.PI / 6, DEFAULT_CONFIG.pieceRollGain)).toBeCloseTo(Math.PI / 2, 12); // a 30° twist rolls 90°
+    const aDx = (10 * DEFAULT_CONFIG.pieceRollDegPerMm * Math.PI) / 180; // 10 mm of A + dx
+    expect((pieceRollAngle(aDx, DEFAULT_CONFIG.pieceRollGain) * 180) / Math.PI).toBeCloseTo(60, 9);
+  });
+  it("validated in [0.1, 10]", () => {
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, pieceRollGain: 10 })).not.toThrow();
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, pieceRollGain: 0 })).toThrow();
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, pieceRollGain: 11 })).toThrow();
   });
 });

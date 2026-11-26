@@ -292,3 +292,7 @@ His words: *"This is all good. Set the two sliders default to 2.00. Increase the
   too). Engine-free: `pieceRollAngle` (`src/input/piece_turn.ts`).
 * **D-P17** — the second finger's TAP stays read on the FINGERS' twist (under 10°), never on the gained roll (at 3 the tap would shrink to 3.3°);
   the one-stop rolls (a tap, A + a click) are stops, not gained.
+* **As built and gated (2026-11-26)**: 5 vectors red first (two D-P16 vectors moved to his 2.00 / 5.00, three for the roll's gain), the menu's count
+  154; `npm run verify` 210 files, 2642 vectors; `zone_batch.sh` all pass on `Scene_1` and on `Scene_2` (`ONLY=s2`, index 3) — the twist's roll
+  measured 60.00° for 20° of the fingers at the gain 3. ⚠ The probe's own drags were sized for 2°/mm: at 10.2°/mm its far drag turned ~330°, back onto
+  the start's direction (no history step, D-P13) — the probe now sizes its far drag by the turn's gains and its roll inputs by the roll's gain.

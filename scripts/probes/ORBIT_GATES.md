@@ -611,4 +611,5 @@ node scripts/probes/gravity_read.mjs <rec.json> ...          # JSON=1: one objec
 the undo, the A roll and click, the face tap, the touch twist, the close-in step back (the least gap while turning, never below 0) and the solver's
 anchor against the drawn one (`drift`, 0.00 mm at rest). Good: `ZONE PROBE: ALL PASS`. ⚠ Never set `st.approach` by hand before a zone gesture: the
 solver does not follow a hand-set approach (a 6 m drift, the step back then refused) — move it with `approachMove`, or reload. ⭐ (2026-11-26) The roll
-and twist scenarios divide their inputs by `pieceRollGain` (one stop at any gain) and check the twist's roll = the gain × the fingers' twist.
+and twist scenarios divide their inputs by `pieceRollGain` (one stop at any gain) and check the twist's roll = the gain × the fingers' twist; the far
+drag is sized by the turn's gains (≈ 65° at any gain). `Scene_2` is index 3: `ONLY=s2 bash scripts/probes/zone_batch.sh 3` (index 2 is the painting's demo, no piece held).
