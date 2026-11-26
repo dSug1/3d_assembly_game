@@ -14,9 +14,9 @@ record. **A status changes in BOTH places or neither.**
 
 ---
 
-## ⭐⭐⭐ YOU ARE HERE (2026-11-25 night, branch `1.0.159-Orbit_of_piece`, the main folder)
+## ⭐⭐⭐ YOU ARE HERE (2026-11-26, branch `1.0.160-`, the main folder)
 
-⭐⭐⭐ **NOW: `IN14`, THE PIECE ZONE** (his word; LIVE main `f5dce4c`, his look 2026-11-26: *"Looks good on device"*) — the held piece turned by a drag on it, the step back to turn, the roll, the face tap, the undo → [`PIECE_TURN.md`](../10_INPUT_TOUCH/spec/PIECE_TURN.md). Then `GM13`, `RND6`. The 2026-11-22 lines moved → [`history/2026-11-25_queue_status_moved.md`](history/2026-11-25_queue_status_moved.md).
+⭐⭐⭐ **NOW: `IN14`, THE PIECE ZONE** (his word; LIVE main `f5dce4c`, his look 2026-11-26: *"Looks good on device"*; D-P1 – D-P25 owed) — the held piece turned by a drag on it, the step back to turn, the roll, the face tap, the undo → [`PIECE_TURN.md`](../10_INPUT_TOUCH/spec/PIECE_TURN.md). Then `GM13`, `RND6`. The 2026-11-22 lines moved → [`history/2026-11-25_queue_status_moved.md`](history/2026-11-25_queue_status_moved.md).
 ⭐ The lines of 2026-11-22 (the merge, D-H20; the orbit closed; D-H23 + D-H24) moved → [`history/2026-11-22_queue_orbit_closed_moved.md`](history/2026-11-22_queue_orbit_closed_moved.md), [`history/2026-11-22_queue_evening_moved.md`](history/2026-11-22_queue_evening_moved.md).
 ⭐ The lines of 2026-11-19 (LIVE `675ec23`, the upright law U, option 3) moved → [`history/2026-11-22_queue_status_moved.md`](history/2026-11-22_queue_status_moved.md).
 ⭐ The lines of 2026-11-18 (LIVE `4eabab8`, FO3, the upright study, NEXT) moved → [`history/2026-11-18_queue_status_moved.md`](history/2026-11-18_queue_status_moved.md).

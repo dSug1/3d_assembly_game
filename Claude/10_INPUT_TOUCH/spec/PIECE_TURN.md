@@ -7,7 +7,7 @@
 > turn going on after it; a press held still on the piece shows the quads after 200 ms (§9, §9.2, §9.3).
 > **OWNS** · what a press near the held piece does, the piece's own turn, the step back, the roll, the face tap, the undo
 > **READ IF** · you touch a gesture on the held piece, the resting-face quads, or Scene_2's taps
-> **LAST VERIFIED** · 2026-11-25 (written from the code of `9dacca36`)
+> **LAST VERIFIED** · 2026-11-25 (written from the code of `9dacca36`); 2026-11-26 §9 – §9.3 as built (`9a57e04e`, LIVE `f5dce4c`)
 
 ## 0. His words
 
@@ -204,6 +204,7 @@ and on a placed part (the gizmo); ALT / CTRL as the held second touch; Scene_2's
 * **D-P12** — the camera stays (§4.5 last line); the coasts stop at the commit.
 * **D-P13** — one episode per snap, per roll, per face tap, per undo.
 * **D-P14** — the stuck check (the red pop-up, the respawn) unchanged: its turns read at the place, not stepped back.
+* ⇢ **D-P15 – D-P25** came with his modifications of 2026-11-26: §9 (D-P15, D-P16), §9.1 (D-P17), §9.2 (D-P18 – D-P23), §9.3 (D-P24, D-P25).
 
 ## 7. The packets and their gates
 
@@ -256,7 +257,7 @@ and on a placed part (the gizmo); ALT / CTRL as the held second touch; Scene_2's
   orbit started within 300 ms: the way back in now starts at once on another press; (8) the undo's history repaired by truncation; the way out's
   queries exact; a roll with nothing to snap to goes back to its base. The probe gained two checks (a blur mid-drag, then the orbit; `Scene_2`: a part
   picked and turned in the zone): all pass.
-* **G-D** his look on the device — owed.
+* **G-D** his look on the device — ✅ 2026-11-26 on §9.2's build: *"Looks good on device"*; owed on §9.3 (the held press, 200 ms).
 
 ### 8.3 Known limits (for his look)
 * The zone is a circle (the piece's bounding sphere on the glass, capped at a third of the short side): close in the piece fills more than that;
