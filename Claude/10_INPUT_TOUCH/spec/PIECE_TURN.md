@@ -3,6 +3,7 @@
 > **STATUS** · 🔧 **BUILT 2026-11-25 night** (his word: *"proceed as you recommended (md files, packets) … Do not stop until you finish all the
 > packets … Deploy at the end so I can test"*) on `1.0.159-Orbit_of_piece`, under the switch **`pieceTurnZone`** (1 = this page, the default; 0 = the
 > inputs as on LIVE `fe917b8`). Gated headless (§8.2). ⛔ No device look yet (rule 5) — **his look closes it**. The packets: §7; as built: §8.
+> ⭐ 2026-11-26: the piece orbit's gains (x, y) on the scene orbit's (§9).
 > **OWNS** · what a press near the held piece does, the piece's own turn, the step back, the roll, the face tap, the undo
 > **READ IF** · you touch a gesture on the held piece, the resting-face quads, or Scene_2's taps
 > **LAST VERIFIED** · 2026-11-25 (written from the code of `9dacca36`)
@@ -109,7 +110,8 @@ Nothing moves before the COMMIT: past the tap slop (`doubleTapSlop`, 8 mm), or p
 the step back's room is asked (§4.5), the quads show.
 
 ### 4.3 The turn under the finger, the lit quad, the snap
-* dx turns the piece about the screen's vertical, dy about its horizontal, **`pieceTurnDegPerMm`** (2°/mm) of finger travel since the press, about the
+* dx turns the piece about the screen's vertical, dy about its horizontal — the scene orbit's degrees per mm × **`pieceTurnGainX`** / **`pieceTurnGainY`**
+  (§9; 2.04°/mm at the shipped gains) of finger travel since the press, about the
   piece's CENTRE; drawn eased over 40 ms toward the finger's.
 * **The lit quad**: of the level's distinct directions (the quads' — `orientationFrames`), the one the resting face's normal is nearest to sitting against
   (anti-parallel); another takes over only when nearer by **`pieceTurnLitHysteresisDeg`** (3°). Its quad edged yellow; the quads and the resting face's
@@ -186,7 +188,7 @@ and on a placed part (the gizmo); ALT / CTRL as the held second touch; Scene_2's
 * **D-P1** — a switch `pieceTurnZone` (default 1); 0 = LIVE `fe917b8`'s inputs, his comparison on the device. The obsolete code stays until his look (P8).
 * **D-P2** — the zone a circle on the glass (§4.1): 5 mm margin, 9 mm floor, a third of the short side as cap.
 * **D-P3** — the commit (§4.2): the tap slop, or the deadband after the tap time.
-* **D-P4** — the turn 2°/mm about the screen's axes through the piece's centre, drawn eased 40 ms.
+* **D-P4** — the turn 2°/mm about the screen's axes through the piece's centre, drawn eased 40 ms. ⇢ 2026-11-26 his gains on the scene orbit's (§9).
 * **D-P5** — the lit quad = the nearest direction to sit on, 3° hysteresis (his "same rule as current" cannot read a pitch: today's carousel is the camera's yaw).
 * **D-P6** — the last selected quad = the direction of the last snap (a drag's release, a face tap, an undo restores it); cleared at a pick, a put down, a
   spawn or respawn.
@@ -258,3 +260,20 @@ and on a placed part (the gizmo); ALT / CTRL as the held second touch; Scene_2's
   outside the circle a drag orbits.
 * The step back moves the piece toward the camera (the camera stays): a long step makes it look bigger for the turn.
 * The stuck check and the red pop-up are unchanged (D-P14).
+
+## 9. The piece orbit's gains (2026-11-26)
+
+His words: *"I want to be able to manually change the gain of the piece orbit vs the input, this gain being proportional to the gain which already exist
+for the scene orbit. Therefore, make slider piece orbit gains such as : piece orbit speed = scene orbit gains (x, y) * piece orbit gains (x, y) * inputs
+(x,y)"* — then *"then deploy"*.
+
+* **The rule**, per axis of the glass: the turn's degrees = the scene orbit's degrees per mm × the piece orbit's gain × the finger's mm — x:
+  `sceneX × pieceTurnGainX × dx`, y: `sceneY × pieceTurnGainY × dy`. The trackball (§4.3) turns about the axis ⟂ that scaled travel, by its length.
+  `pieceTurnDegPerMm` deleted (one gain, one place). Engine-free: `sceneOrbitDegPerMm`, `pieceTurnDegrees` (`src/input/piece_turn.ts`).
+* **The scene orbit's degrees per mm**: x = `gainOrbitYaw` × `boxGainYaw` (0.054 rad/mm × 1.65 = **5.1°/mm** shipped). y — ⚠ **a finding**: on the
+  orbit around the assembly, the only place the zone runs, a mm of dy turns the camera as many degrees as a mm of dx (`pointer_wiring.ts`, `dvWant`):
+  `gainOrbitElevation` and `boxGainPitch` do not act there. So sceneY = sceneX; the piece's own y gain makes the difference.
+* **D-P15** — the close-in gain (`closeInGain`) not carried: a distance law of the orbit, not a gain a slider sets; close in the piece steps back to turn.
+* **D-P16** — the defaults `pieceTurnGainX` = `pieceTurnGainY` = **0.4** (2.04°/mm at the shipped gains; 2°/mm before, D-P4); sliders 0.05 – 2 (INPUT ›
+  PIECE ZONE).
+* The roll's gain (`pieceRollDegPerMm`, A + dx) unchanged — not the orbit.
