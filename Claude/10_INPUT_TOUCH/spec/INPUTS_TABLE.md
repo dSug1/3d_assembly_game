@@ -28,9 +28,9 @@ pinch, the wheel, the boot zoom); around the assembly **the PINCH is the APPROAC
 |---|---|---|
 | both | a drag started OUTSIDE the piece zone (the piece on the glass + 5 mm, ≥ 9 mm, ≤ ⅓ of the short side) | the orbit (unchanged) |
 | tablet / desktop | the pinch, the first finger outside / A + left drag started outside | the approach (unchanged) |
-| both | a drag started IN the zone | the piece turns under the finger (the scene orbit's °/mm × the piece orbit's gains x, y — 0.4: 2.04°/mm; about its centre); the quads at any distance, the nearest lit; the release snaps onto it |
-| tablet | first finger started in the zone (wherever now) + a second finger: twist / tap | the turn snaps, then the roll: continuous 1:1, snapped at the lift / one stop clockwise |
-| desktop | A at the zone press or any time during the zone drag: dx / A + a click in the zone | the turn snaps, then the roll: dx right clockwise, snapped at the release / one stop |
+| both | a drag started IN the zone | the piece turns under the finger (the scene orbit's °/mm × the piece orbit's gains x, y — 2.00: 10.2°/mm; about its centre); the quads at any distance, the nearest lit; the release snaps onto it |
+| tablet | first finger started in the zone (wherever now) + a second finger: twist / tap | the turn snaps, then the roll: continuous, the twist × the roll gain (3:1), snapped at the lift / one stop clockwise |
+| desktop | A at the zone press or any time during the zone drag: dx / A + a click in the zone | the turn snaps, then the roll: dx right clockwise (2°/mm × the roll gain 3 = 6°/mm), snapped at the release / one stop |
 | both | a tap / click on a face of the piece | its resting face, onto the last selected quad, else the nearest direction; the quads flash |
 | both | a double tap / double click on empty space (the floor, a loose part) | the undo: the last turn, face or roll (one episode) |
 | both | close in, any turn | the piece steps back along its approach line until it can turn, turns, steps back in |

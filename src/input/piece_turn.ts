@@ -54,6 +54,14 @@ export function sceneOrbitDegPerMm(cfg: GestureConfig): { readonly x: number; re
   return { x: d, y: d };
 }
 
+/**
+ * ⭐⭐⭐ (2026-11-26, §9.1 — his word: *"add a slider for piece roll gain"*) THE PIECE ROLL: the gain × the input's own angle (rad) — the twist's
+ * (1:1 at gain 1) or A + dx's (mm × `pieceRollDegPerMm`). ⛔ The second finger's tap reads the fingers' twist, never this (D-P17).
+ */
+export function pieceRollAngle(inputRad: number, gain: number): number {
+  return inputRad * gain;
+}
+
 /** ⭐⭐⭐ (§9) THE PIECE ORBIT'S TRAVEL, degrees per axis of the glass: the scene orbit's °/mm × the piece orbit's gain × the finger's mm. */
 export function pieceTurnDegrees(
   dxMm: number,

@@ -159,9 +159,10 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "zone: margin round the piece on the glass (mm)", "pieceZoneMarginMm", 0, 30, 1),
             tunable(st, "zone: smallest radius (mm)", "pieceZoneMinMm", 4, 30, 1),
             tunable(st, "zone: largest radius (share of the short side)", "pieceZoneCapShare", 0.1, 0.5, 0.01),
-            tunable(st, "piece orbit gain ←→ (× the scene orbit's)", "pieceTurnGainX", 0.05, 2, 0.01), // ⭐⭐⭐ (2026-11-26, §9)
-            tunable(st, "piece orbit gain ↑↓ (× the scene orbit's)", "pieceTurnGainY", 0.05, 2, 0.01),
+            tunable(st, "piece orbit gain ←→ (× the scene orbit's)", "pieceTurnGainX", 0.05, 5, 0.01), // ⭐⭐⭐ (2026-11-26, §9; 0.05 – 5 since §9.1)
+            tunable(st, "piece orbit gain ↑↓ (× the scene orbit's)", "pieceTurnGainY", 0.05, 5, 0.01),
             tunable(st, "roll by A + dx (°/mm)", "pieceRollDegPerMm", 0.2, 10, 0.1),
+            tunable(st, "piece roll gain (× the twist, × A + dx)", "pieceRollGain", 0.1, 10, 0.1), // ⭐⭐⭐ (2026-11-26, §9.1)
             tunable(st, "lit quad: hysteresis (°)", "pieceTurnLitHysteresisDeg", 0, 15, 0.5),
           ],
         },

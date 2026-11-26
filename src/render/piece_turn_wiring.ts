@@ -31,6 +31,7 @@ import {
   sphereRadiusOnGlassPx,
   traceStep,
   trackballTurn,
+  pieceRollAngle,
   pieceTurnDegrees,
   sceneOrbitDegPerMm,
   TurnHistory,
@@ -831,7 +832,7 @@ function moveBy(st: SceneState, z: ZoneGesture, dxPx: number, dyPx: number): voi
     z.target = trackballTurn(z.target, t.m, t.f, 1); // ⭐ (§9) `t.m` already in degrees per axis
     st.pieceTurn.lastTurnAt = performance.now();
   } else if (z.mode === "ROLL" && z.roll !== null) {
-    z.roll.angle += ((dxPx / mmToPx(1)) * st.cfg.pieceRollDegPerMm * Math.PI) / 180;
+    z.roll.angle += pieceRollAngle(((dxPx / mmToPx(1)) * st.cfg.pieceRollDegPerMm * Math.PI) / 180, st.cfg.pieceRollGain); // ⭐ (§9.1) × the roll's gain
     applyRoll(st, z);
   } else if (z.mode === "HOST" && z.second !== null) twistNow(st, z);
 }
@@ -854,11 +855,16 @@ function secondDown(st: SceneState, z: ZoneGesture, id: number, s: Sample): void
   startRoll(st, z, push);
 }
 
-/** ⭐ The twist now: the line from the first finger to the second, against where it was when the second landed. */
+/** ⭐ (§9.1, D-P17) the FINGERS' twist (rad): the line from the first finger to the second, against where it was when the second landed. */
+function fingersTwist(z: ZoneGesture, sec: NonNullable<ZoneGesture["second"]>): number {
+  return twistAngle(sec.firstAt, [sec.pressed.x, sec.pressed.y], [z.last.x, z.last.y], [sec.last.x, sec.last.y]);
+}
+
+/** ⭐ The twist now: the fingers' twist × the roll's gain. */
 function twistNow(st: SceneState, z: ZoneGesture): void {
   const sec = z.second;
   if (sec === null || z.roll === null) return;
-  z.roll.angle = twistAngle(sec.firstAt, [sec.pressed.x, sec.pressed.y], [z.last.x, z.last.y], [sec.last.x, sec.last.y]);
+  z.roll.angle = pieceRollAngle(fingersTwist(z, sec), st.cfg.pieceRollGain); // ⭐ (§9.1) × the roll's gain
   applyRoll(st, z);
 }
 
@@ -872,7 +878,7 @@ function secondUp(st: SceneState, z: ZoneGesture, s: Sample): void {
     return;
   }
   const tapped = isTapRelease(sec.pressed.t, sec.pressed.x, sec.pressed.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop));
-  const twist = z.roll?.angle ?? 0;
+  const twist = z.roll === null ? 0 : fingersTwist(z, sec); // ⭐ (§9.1, D-P17) the tap on the fingers' twist, never the gained roll
   z.second = null;
   if (twistIsTap(tapped, twist) && z.roll !== null) {
     // the small twist undone, its snapshot dropped, then one stop

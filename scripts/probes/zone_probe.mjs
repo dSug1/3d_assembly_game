@@ -139,7 +139,11 @@ try {
     const cam0 = await arr("window.__z.cam()");
     const h0 = (await S()).hist;
     await drift("far, at rest");
-    await drag(c, [30, 120], 30);
+    // ⭐ (2026-11-26, §9.1) the drag sized by the piece orbit's gains: ≈ 65° at any gain, as at 2°/mm (⛔ at 10.2°/mm the old drag turned ~330° — back
+    // onto the start's direction, a snap that changes nothing: no history step, by D-P13)
+    const kT = JSON.parse(await ev(`(async () => { const P = await import("/src/input/piece_turn.ts"); const cfg = window.__st.cfg; const s = P.sceneOrbitDegPerMm(cfg); return JSON.stringify([2 / (s.x * cfg.pieceTurnGainX), 2 / (s.y * cfg.pieceTurnGainY)]); })()`));
+    const dF = [Math.round(30 * kT[0]), Math.round(120 * kT[1])];
+    await drag(c, dF, 30);
     const mid = await S();
     const qMid = await arr("window.__z.q()");
     const cam1 = await arr("window.__z.cam()");
@@ -147,7 +151,7 @@ try {
     check("far: the piece turns under the finger", dot4(q0, qMid) < 0.995, `|q0·q| ${dot4(q0, qMid).toFixed(4)}`);
     check("far: the quads shown during the drag", mid.quads === true, `quads ${mid.quads}, lit ${mid.lit}`);
     check("far: the camera stays", Math.hypot(cam1[0] - cam0[0], cam1[1] - cam0[1], cam1[2] - cam0[2]) < 1e-3, `moved ${Math.hypot(cam1[0] - cam0[0], cam1[1] - cam0[1], cam1[2] - cam0[2]).toExponential(2)} m`);
-    await mouse("mouseReleased", c[0] + 30, c[1] + 120, 0);
+    await mouse("mouseReleased", c[0] + dF[0], c[1] + dF[1], 0);
     const end = await idle();
     const err = await num("window.__z.alignErr()");
     check("far: snapped onto a direction", err < 0.5, `the resting face ${err.toFixed(3)}° off the nearest direction; ${JSON.stringify(end)}`);
@@ -177,17 +181,19 @@ try {
     const c = await centrePx();
     const n0 = await arr("window.__z.restN()");
     const r0 = (await S()).rolls;
+    const gR = await num("window.__st.cfg.pieceRollGain"); // ⭐ (2026-11-26, §9.1) the drag over the roll's gain: ≈ 85° at any gain
+    const dxR = Math.round(160 / gR);
     await key("keyDown", "a");
-    await drag(c, [160, 0], 30);
+    await drag(c, [dxR, 0], 30);
     const mid = await S();
     check("roll: A + drag in the zone is the roll", mid.zone === "ROLL+", JSON.stringify(mid));
-    await mouse("mouseReleased", c[0] + 160, c[1], 0);
+    await mouse("mouseReleased", c[0] + dxR, c[1], 0);
     await key("keyUp", "a");
     const end = await idle();
     const n1 = await arr("window.__z.restN()");
     const same = n0[0] * n1[0] + n0[1] * n1[1] + n0[2] * n1[2];
     check("roll: about the resting face's normal (the normal kept)", same > 0.9999, `n0·n1 ${same.toFixed(6)}`);
-    check("roll: snapped to the next stop (160 px ≈ 42 mm × 2°/mm ≈ 85°: one stop)", end.rolls !== null && r0 !== null && Math.abs(end.rolls - r0) === 1, `rolls ${r0} → ${end.rolls}; ${end.v}`);
+    check(`roll: snapped to the next stop (${dxR} px × 2°/mm × the gain ${gR} ≈ 85°: one stop)`, end.rolls !== null && r0 !== null && Math.abs(end.rolls - r0) === 1, `rolls ${r0} → ${end.rolls}; ${end.v}`);
     check("roll: still on a direction", (await num("window.__z.alignErr()")) < 0.5, `err ${(await num("window.__z.alignErr()")).toFixed(3)}°`);
     // A + a click in the zone: one stop clockwise
     await key("keyDown", "a");
@@ -220,15 +226,18 @@ try {
     await send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: t([[c[0], c[1]]]) });
     await sleep(30);
     const R = 90;
+    const gT = await num("window.__st.cfg.pieceRollGain"); // ⭐ (2026-11-26, §9.1) the fingers twist 60° / the gain: the roll 60° at any gain
     await send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: t([[c[0], c[1]], [c[0] + R, c[1]]]) });
     await sleep(30);
     for (let i = 1; i <= 20; i++) {
-      const a = ((60 * i) / 20) * (Math.PI / 180);
+      const a = ((60 / gT) * i / 20) * (Math.PI / 180);
       await send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: t([[c[0], c[1]], [c[0] + R * Math.cos(a), c[1] + R * Math.sin(a)]]) });
       await sleep(16);
     }
     const mid = await S();
     check("twist: the second finger rolls (the first started in the zone)", mid.zone === "HOST+", JSON.stringify(mid));
+    const rollDeg = await num("(window.__st.pieceTurn.zone?.roll?.angle ?? NaN) * 180 / Math.PI");
+    check("twist: the roll = the gain × the fingers' twist", Math.abs(rollDeg - 60) < 1.5, `the fingers ${(60 / gT).toFixed(1)}°, the gain ${gT}, the roll ${rollDeg.toFixed(2)}°`);
     await send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: t([[c[0], c[1]]]) }); // the second lifted
     await sleep(50);
     await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
