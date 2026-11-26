@@ -31,6 +31,8 @@ import {
   sphereRadiusOnGlassPx,
   traceStep,
   trackballTurn,
+  pieceTurnDegrees,
+  sceneOrbitDegPerMm,
   TurnHistory,
   twistAngle,
   twistIsTap,
@@ -504,10 +506,12 @@ function zoneHit(st: SceneState, e: PointerEvent): boolean {
 /** ⭐ The finger's travel on the glass (px) as a world vector in the glass's plane (mm), and the view. */
 function travelWorld(st: SceneState, dxPx: number, dyPx: number): { readonly m: Vec3; readonly f: Vec3 } {
   const k = 1 / mmToPx(1);
+  // ⭐⭐⭐ (2026-11-26, §9) each axis in DEGREES: the scene orbit's °/mm × the piece orbit's gain × the finger's mm (the turn then 1° per unit)
+  const d = pieceTurnDegrees(dxPx * k, dyPx * k, sceneOrbitDegPerMm(st.cfg), st.cfg.pieceTurnGainX, st.cfg.pieceTurnGainY);
   const r = st.camera.getDirection(new Vector3(1, 0, 0));
   const u = st.camera.getDirection(new Vector3(0, 1, 0));
   const f = st.camera.getDirection(new Vector3(0, 0, 1));
-  const m: Vec3 = [(r.x * dxPx - u.x * dyPx) * k, (r.y * dxPx - u.y * dyPx) * k, (r.z * dxPx - u.z * dyPx) * k];
+  const m: Vec3 = [r.x * d.dx - u.x * d.dy, r.y * d.dx - u.y * d.dy, r.z * d.dx - u.z * d.dy];
   return { m, f: [f.x, f.y, f.z] };
 }
 
@@ -824,7 +828,7 @@ function consumeRelease(st: SceneState, id: number): void {
 function moveBy(st: SceneState, z: ZoneGesture, dxPx: number, dyPx: number): void {
   if (z.mode === "TURN" && z.target !== null) {
     const t = travelWorld(st, dxPx, dyPx);
-    z.target = trackballTurn(z.target, t.m, t.f, st.cfg.pieceTurnDegPerMm);
+    z.target = trackballTurn(z.target, t.m, t.f, 1); // ⭐ (§9) `t.m` already in degrees per axis
     st.pieceTurn.lastTurnAt = performance.now();
   } else if (z.mode === "ROLL" && z.roll !== null) {
     z.roll.angle += ((dxPx / mmToPx(1)) * st.cfg.pieceRollDegPerMm * Math.PI) / 180;

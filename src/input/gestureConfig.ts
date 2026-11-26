@@ -398,8 +398,10 @@ export interface GestureConfig {
   pieceZoneMinMm: number;
   /** ⭐ (IN14 §4.1) the zone's largest radius, a share of the glass's short side — room outside it always. */
   pieceZoneCapShare: number;
-  /** ⭐ (IN14 §4.3) the turn under the finger: degrees of turn per mm of finger travel. */
-  pieceTurnDegPerMm: number;
+  /** ⭐⭐⭐ (2026-11-26, IN14 §9) the piece orbit's gain ←→: a multiplier on the scene orbit's degrees per mm of dx (`sceneOrbitDegPerMm`). */
+  pieceTurnGainX: number;
+  /** ⭐⭐⭐ (2026-11-26, IN14 §9) the piece orbit's gain ↑↓: a multiplier on the scene orbit's degrees per mm of dy. */
+  pieceTurnGainY: number;
   /** ⭐ (IN14 §4.4) the desktop's roll by A + dx: degrees per mm. */
   pieceRollDegPerMm: number;
   /** ⭐ (IN14 §4.3, D-P5) the lit quad changes only for a direction nearer by this (°). */
@@ -951,7 +953,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   pieceZoneMarginMm: 5, // ⭐ (IN14 D-P2)
   pieceZoneMinMm: 9, // ⭐ (IN14 D-P2) a pick's finger target (`HIT_MM`)
   pieceZoneCapShare: 0.33, // ⭐ (IN14 D-P2) a third of the short side
-  pieceTurnDegPerMm: 2, // ⭐ (IN14 D-P4)
+  pieceTurnGainX: 0.4, // ⭐⭐⭐ (2026-11-26, IN14 §9, D-P16) × 5.1°/mm shipped = 2.04°/mm (`pieceTurnDegPerMm` 2 before, D-P4)
+  pieceTurnGainY: 0.4, // ⭐⭐⭐ (2026-11-26, IN14 §9, D-P16)
   pieceRollDegPerMm: 2, // ⭐ (IN14 D-P8)
   pieceTurnLitHysteresisDeg: 3, // ⭐ (IN14 D-P5) as the carousel's 3°
   orbitMode: 0, // ⭐⭐⭐ (2026-10-28) the orbit around the assembly
@@ -1151,7 +1154,8 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.pieceZoneMarginMm >= 0 && cfg.pieceZoneMarginMm <= 30)) throw new Error(`pieceZoneMarginMm (${cfg.pieceZoneMarginMm}) must be in [0, 30] mm.`);
   if (!(cfg.pieceZoneMinMm >= 4 && cfg.pieceZoneMinMm <= 30)) throw new Error(`pieceZoneMinMm (${cfg.pieceZoneMinMm}) must be in [4, 30] mm.`);
   if (!(cfg.pieceZoneCapShare >= 0.1 && cfg.pieceZoneCapShare <= 0.5)) throw new Error(`pieceZoneCapShare (${cfg.pieceZoneCapShare}) must be in [0.1, 0.5].`);
-  if (!(cfg.pieceTurnDegPerMm >= 0.2 && cfg.pieceTurnDegPerMm <= 10)) throw new Error(`pieceTurnDegPerMm (${cfg.pieceTurnDegPerMm}) must be in [0.2, 10] °/mm.`);
+  if (!(cfg.pieceTurnGainX >= 0.05 && cfg.pieceTurnGainX <= 2)) throw new Error(`pieceTurnGainX (${cfg.pieceTurnGainX}) must be in [0.05, 2].`);
+  if (!(cfg.pieceTurnGainY >= 0.05 && cfg.pieceTurnGainY <= 2)) throw new Error(`pieceTurnGainY (${cfg.pieceTurnGainY}) must be in [0.05, 2].`);
   if (!(cfg.pieceRollDegPerMm >= 0.2 && cfg.pieceRollDegPerMm <= 10)) throw new Error(`pieceRollDegPerMm (${cfg.pieceRollDegPerMm}) must be in [0.2, 10] °/mm.`);
   if (!(cfg.pieceTurnLitHysteresisDeg >= 0 && cfg.pieceTurnLitHysteresisDeg <= 15)) throw new Error(`pieceTurnLitHysteresisDeg (${cfg.pieceTurnLitHysteresisDeg}) must be in [0, 15]°.`);
   if (cfg.orbitMode !== 0 && cfg.orbitMode !== 1) throw new Error(`orbitMode (${cfg.orbitMode}) must be 0 or 1.`);

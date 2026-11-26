@@ -13,6 +13,8 @@
  * ⛔ No engine: points, angles, callbacks. The wiring is `render/piece_turn_wiring.ts`.
  */
 import { cross, dot, length, normalize, qFromAxisAngle, qmul, qRotate, sub, type Quat, type Vec3 } from "../core/vec";
+import { orbitDegPerMm } from "./follow_camera";
+import type { GestureConfig } from "./gestureConfig";
 
 // ─── the zone ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -40,6 +42,28 @@ export function zoneCommitted(travelPx: number, elapsedMs: number, slopPx: numbe
 }
 
 // ─── the turn ─────────────────────────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * ⭐⭐⭐ (2026-11-26, §9 — his word: *"piece orbit speed = scene orbit gains (x, y) * piece orbit gains (x, y) * inputs (x,y)"*) THE SCENE ORBIT'S
+ * DEGREES PER MM on the orbit around the assembly (the only place the zone runs): x the yaw's (`gainOrbitYaw` × `boxGainYaw`, `orbitDegPerMm`); y the
+ * same — there a mm of dy turns as many degrees as a mm of dx (`pointer_wiring.ts`, `dvWant`; `gainOrbitElevation`, `boxGainPitch` do not act).
+ * ⛔ The close-in gain not carried (D-P15).
+ */
+export function sceneOrbitDegPerMm(cfg: GestureConfig): { readonly x: number; readonly y: number } {
+  const d = orbitDegPerMm(cfg, 0.5).yawDegPerMm;
+  return { x: d, y: d };
+}
+
+/** ⭐⭐⭐ (§9) THE PIECE ORBIT'S TRAVEL, degrees per axis of the glass: the scene orbit's °/mm × the piece orbit's gain × the finger's mm. */
+export function pieceTurnDegrees(
+  dxMm: number,
+  dyMm: number,
+  scene: { readonly x: number; readonly y: number },
+  gainX: number,
+  gainY: number,
+): { readonly dx: number; readonly dy: number } {
+  return { dx: scene.x * gainX * dxMm, dy: scene.y * gainY * dyMm };
+}
 
 /**
  * ⭐⭐ The pose `q0` turned by the finger's travel since the press — `m` the travel as a WORLD vector in the glass's plane (mm: its right × dx, its up × −dy),
