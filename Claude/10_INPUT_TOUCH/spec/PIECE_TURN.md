@@ -277,3 +277,6 @@ for the scene orbit. Therefore, make slider piece orbit gains such as : piece or
 * **D-P16** — the defaults `pieceTurnGainX` = `pieceTurnGainY` = **0.4** (2.04°/mm at the shipped gains; 2°/mm before, D-P4); sliders 0.05 – 2 (INPUT ›
   PIECE ZONE).
 * The roll's gain (`pieceRollDegPerMm`, A + dx) unchanged — not the orbit.
+* **As built and gated (2026-11-26)**: 5 vectors red first (`tests/piece_turn.test.ts`), the menu's count 153; `npm run verify` 210 files, 2639 vectors;
+  `zone_batch.sh` on `Scene_1` all pass; at both gains 0.8 the same drag turns the piece twice as far (66.7° → 133.6°). The switch at 0 untouched
+  (the gains read only in the zone's turn).

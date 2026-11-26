@@ -8,7 +8,9 @@ import {
   inZone,
   litDirection,
   nearestAngle,
+  pieceTurnDegrees,
   pivotOffset,
+  sceneOrbitDegPerMm,
   sphereRadiusOnGlassPx,
   traceStep,
   trackballTurn,
@@ -19,6 +21,7 @@ import {
   zoneRadiusPx,
 } from "../src/input/piece_turn";
 import { qRotate, type Quat, type Vec3 } from "../src/core/vec";
+import { DEFAULT_CONFIG, validateGestureConfig } from "../src/input/gestureConfig";
 
 const close = (a: readonly number[], b: readonly number[], eps = 1e-9) => a.forEach((x, i) => expect(x).toBeCloseTo(b[i]!, -Math.log10(eps)));
 
@@ -173,5 +176,47 @@ describe("⭐ the undo's history (§4.7)", () => {
     expect(h.pop()).toBe(3);
     h.clear();
     expect(h.pop()).toBeNull();
+  });
+});
+
+// ⭐⭐⭐ (2026-11-26, `PIECE_TURN.md` §9 — his word: *"piece orbit speed = scene orbit gains (x, y) * piece orbit gains (x, y) * inputs (x,y)"*) THE PIECE
+// ORBIT'S GAINS on the scene orbit's. RED against `ba252368` (no `sceneOrbitDegPerMm`, no `pieceTurnDegrees`, no `pieceTurnGainX` / `pieceTurnGainY`).
+describe("⭐ the piece orbit's gains (§9): scene orbit gains × piece orbit gains × the finger, per axis", () => {
+  const DEG = 180 / Math.PI;
+  it("the scene orbit's degrees per mm: x the yaw's chain; y the same on the assembly orbit (the pitch sliders do not act there)", () => {
+    const s = sceneOrbitDegPerMm(DEFAULT_CONFIG);
+    expect(s.x).toBeCloseTo(DEFAULT_CONFIG.gainOrbitYaw * DEFAULT_CONFIG.boxGainYaw * DEG, 9);
+    expect(s.y).toBe(s.x);
+    const doubled = sceneOrbitDegPerMm({ ...DEFAULT_CONFIG, boxGainYaw: 2 * DEFAULT_CONFIG.boxGainYaw });
+    expect(doubled.x).toBeCloseTo(2 * s.x, 9); // proportional to the scene orbit's gain
+    expect(doubled.y).toBeCloseTo(2 * s.y, 9);
+    const pitchMoved = sceneOrbitDegPerMm({ ...DEFAULT_CONFIG, gainOrbitElevation: 0.05, boxGainPitch: 1.5 });
+    expect(pitchMoved.y).toBeCloseTo(s.y, 9);
+  });
+  it("each axis its own gain: scene × piece × mm", () => {
+    expect(pieceTurnDegrees(10, 0, { x: 5, y: 5 }, 0.4, 1)).toEqual({ dx: 20, dy: 0 });
+    expect(pieceTurnDegrees(0, 10, { x: 5, y: 5 }, 1, 0.2)).toEqual({ dx: 0, dy: 10 });
+    const d = pieceTurnDegrees(3, -4, { x: 2, y: 3 }, 0.5, 2);
+    expect(d.dx).toBeCloseTo(3, 12);
+    expect(d.dy).toBeCloseTo(-24, 12);
+  });
+  it("the turn's angle: a dx of 10 mm at the shipped gains turns the piece sceneX × gainX × 10 degrees", () => {
+    const s = sceneOrbitDegPerMm(DEFAULT_CONFIG);
+    const d = pieceTurnDegrees(10, 0, s, DEFAULT_CONFIG.pieceTurnGainX, DEFAULT_CONFIG.pieceTurnGainY);
+    const q = trackballTurn([1, 0, 0, 0], [d.dx, 0, 0], [0, 0, 1], 1);
+    expect(2 * Math.acos(Math.min(1, Math.abs(q[0]))) * DEG).toBeCloseTo(s.x * DEFAULT_CONFIG.pieceTurnGainX * 10, 6);
+  });
+  it("the defaults keep the turn's feel (D-P16: 0.4 → 2.04°/mm, 2°/mm before); the old single gain is gone", () => {
+    const s = sceneOrbitDegPerMm(DEFAULT_CONFIG);
+    expect(s.x * DEFAULT_CONFIG.pieceTurnGainX).toBeGreaterThan(1.9);
+    expect(s.x * DEFAULT_CONFIG.pieceTurnGainX).toBeLessThan(2.1);
+    expect(s.y * DEFAULT_CONFIG.pieceTurnGainY).toBeGreaterThan(1.9);
+    expect(s.y * DEFAULT_CONFIG.pieceTurnGainY).toBeLessThan(2.1);
+    expect("pieceTurnDegPerMm" in DEFAULT_CONFIG).toBe(false);
+  });
+  it("the gains validated in [0.05, 2]", () => {
+    expect(() => validateGestureConfig(DEFAULT_CONFIG)).not.toThrow();
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, pieceTurnGainX: 0 })).toThrow();
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, pieceTurnGainY: 2.5 })).toThrow();
   });
 });
