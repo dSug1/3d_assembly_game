@@ -31,6 +31,7 @@ pinch, the wheel, the boot zoom); around the assembly **the PINCH is the APPROAC
 | both | a drag started IN the zone | the piece turns under the finger (the scene orbit's °/mm × the piece orbit's gains x, y — 2.00: 10.2°/mm; about its centre); the quads at any distance, the nearest lit; the release snaps onto it |
 | tablet | first finger started in the zone (wherever now) + a second finger: twist / tap | the roll from the pose as it is (no snap, `PIECE_TURN.md` §9.2): continuous, the twist × the roll gain (8:1); the second's lift snaps it (the lit quad, the nearest stop) and the first finger turns again / one stop clockwise |
 | desktop | A at the zone press or any time during the zone drag: dx / A + a click in the zone | the roll from the pose as it is (no snap, §9.2): dx right clockwise (2°/mm × the roll gain 8 = 16°/mm); snapped at the release, or at A's and the drag turns again / one stop |
+| both | a press / left click HELD still in the zone (no drag) | the quads after 300 ms (the hold after a snap's, `PIECE_TURN.md` §9.3), the one it sits on lit; at the release held 300 ms, then faded; nothing turns |
 | both | a tap / click on a face of the piece | its resting face, onto the last selected quad, else the nearest direction; the quads flash |
 | both | a double tap / double click on empty space (the floor, a loose part) | the undo: the last turn, face or roll (one episode) |
 | both | close in, any turn | the piece steps back along its approach line until it can turn, turns, steps back in |
