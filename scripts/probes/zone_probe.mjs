@@ -365,13 +365,19 @@ try {
       const pre = await S();
       if (how === "touch") await send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: c[0], y: c[1], id: 1, radiusX: 2, radiusY: 2, force: 1 }] });
       else await mouse("mousePressed", c[0], c[1], 1);
-      await sleep(150);
-      const m1 = await S();
-      check(`held (${how}): no quads before the hold (150 ms)`, pre.quads === false && m1.quads === false && m1.zone === "TURN", `before ${pre.quads}; ${JSON.stringify(m1)}`);
-      await sleep(300);
+      // ⭐ (his word: 200 ms) the page's own time since the press, polled: the last frame without the quads, the first with them (⛔ fixed sleeps ran past
+      //    300 ms on touch — they could not tell 200 from 300)
+      let lastOff = -1, firstOn = -1;
+      for (let t0 = Date.now(); Date.now() - t0 < 700 && firstOn < 0; ) {
+        const r = JSON.parse(await ev(`(() => { const st = window.__st, pt = st.pieceTurn; return JSON.stringify({ el: pt.zone ? performance.now() - pt.zone.pressed.t : -1, q: st.restingQuads?.shown ?? null }); })()`));
+        if (r.q === true) firstOn = r.el;
+        else lastOff = r.el;
+        await sleep(8);
+      }
+      check(`held (${how}): no quads before the wait (none seen until ${lastOff.toFixed(0)} ms)`, pre.quads === false && lastOff >= 150, `before ${pre.quads}; last without ${lastOff.toFixed(0)} ms, first with ${firstOn.toFixed(0)} ms`);
       const m2 = await S();
       const q2 = await arr("window.__z.q()");
-      check(`held (${how}): the quads from the hold (450 ms), nothing turned, not committed`, m2.quads === true && m2.zone === "TURN" && dot4(q0, q2) > 0.99999, `${JSON.stringify(m2)}; |q0·q| ${dot4(q0, q2).toFixed(6)}`);
+      check(`held (${how}): the quads from the wait (first seen at ${firstOn.toFixed(0)} ms: 200 – 290), nothing turned, not committed`, firstOn >= 200 && firstOn < 290 && m2.quads === true && m2.zone === "TURN" && dot4(q0, q2) > 0.99999, `${JSON.stringify(m2)}; |q0·q| ${dot4(q0, q2).toFixed(6)}`);
       if (how === "touch") await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
       else await mouse("mouseReleased", c[0], c[1], 0);
       await sleep(120);

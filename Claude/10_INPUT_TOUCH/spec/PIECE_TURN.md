@@ -351,6 +351,9 @@ His word: *"modify so that a press or left click held on the piece shows the qua
 * ⇢ **2026-11-26, his word *"set it at 200 ms instead of 300 ms. deploy"***: the held press's wait is **200 ms**, its OWN constant (`PRESS_SHOWS_QUADS_MS`, `src/input/piece_turn.ts`);
   the hold after a snap (and after the held press's release, D-P25) stays 300 ms (`HOLD_MS`). The one-constant reading above is superseded; a release
   before 200 ms shows nothing (200 ms is also the tap's time, `tapMaxDuration` — a coincidence, not a link: the slider moves the tap alone).
+  As built: 1 vector red first; verify 210 files, 2651 vectors; `held` now reads the page's own time from the press (⛔ its fixed sleeps ran past
+  300 ms on touch and could not tell 200 from 300): the quads first drawn at 235 ms (touch) / 243 ms (mouse), none until 199 – 201 ms; on the old
+  wiring 336 / 330 ms (2 FAIL); `zone_batch.sh` all pass on `Scene_1` and `Scene_2`.
 * Engine-free: `zoneQuadsShare` (`src/input/piece_turn.ts`) — 1 while a committed gesture lives, while a press is held past the hold, and until the
   hold's end after either; then faded.
 * **As built and gated (2026-11-26)**: `pressHeldShows`, `zoneQuadsShare` (`src/input/piece_turn.ts`); `piece_turn_wiring.ts` — `pieceTurnQuadsShare`
