@@ -2,9 +2,9 @@
 
 > **STATUS** · 🔧 **BUILT 2026-11-25 night** (his word: *"proceed as you recommended (md files, packets) … Do not stop until you finish all the
 > packets … Deploy at the end so I can test"*) on `1.0.159-Orbit_of_piece`, under the switch **`pieceTurnZone`** (1 = this page, the default; 0 = the
-> inputs as on LIVE `fe917b8`). Gated headless (§8.2). ⛔ No device look yet (rule 5) — **his look closes it**. The packets: §7; as built: §8.
+> inputs as on LIVE `fe917b8`). Gated headless (§8.2). ⇢ 2026-11-26 his look on the device: *"Deploy. Looks good on device"* (LIVE `d40e48c`). The packets: §7; as built: §8.
 > ⭐ 2026-11-26: the piece orbit's gains (x, y) on the scene orbit's, 2.00 each; the piece roll's gain, 8; the roll with no snap at its start, the
-> turn going on after it (§9, §9.2).
+> turn going on after it; a press held still on the piece shows the quads after 300 ms (§9, §9.2, §9.3).
 > **OWNS** · what a press near the held piece does, the piece's own turn, the step back, the roll, the face tap, the undo
 > **READ IF** · you touch a gesture on the held piece, the resting-face quads, or Scene_2's taps
 > **LAST VERIFIED** · 2026-11-25 (written from the code of `9dacca36`)
@@ -109,7 +109,7 @@ idle blend out, the switch at 0.
 ### 4.2 The press in the zone, and its commit
 Nothing moves before the COMMIT: past the tap slop (`doubleTapSlop`, 8 mm), or past the orbit's deadband (`orbitDeadbandMm`, 2.3 mm) once the tap's time
 (`tapMaxDuration`, 200 ms) is over. A release before the commit is a TAP — to what it hit (R3). At the commit: the orbit's and the approach's coasts stop,
-the step back's room is asked (§4.5), the quads show.
+the step back's room is asked (§4.5), the quads show. ⇢ 2026-11-26 a press HELD still in the zone shows them too, from 300 ms (§9.3).
 
 ### 4.3 The turn under the finger, the lit quad, the snap
 * dx turns the piece about the screen's vertical, dy about its horizontal — the scene orbit's degrees per mm × **`pieceTurnGainX`** / **`pieceTurnGainY`**
@@ -217,7 +217,7 @@ and on a placed part (the gizmo); ALT / CTRL as the held second touch; Scene_2's
 | P5 | the face tap onto the last selected quad; the double tap undo; the empty tap inert | verify + probe | ✅ same |
 | P6 | Scene_2 (the pick at any distance, the flow ignoring the zone's pointers, no zone in the idle blend); the obsolete inputs gated; `INPUTS_TABLE.md`, `TUNING_MENU.md`, `PROVENANCE.md` | verify + probe Scene_2 | ✅ same + docs |
 | P7 | the gates: G-A verify; G-B the switch at 0 bit for bit against `9dacca36`; G-C the probes; an independent review; then DEPLOY; the docs as built | all green | ✅ §8.2 |
-| P8 | ⏳ after his look: the obsolete code deleted (the switch removed) | his look | owed |
+| P8 | ⏳ after his look (given 2026-11-26): the obsolete code deleted (the switch removed) | his word | owed |
 
 ## 8. As built (2026-11-25 night)
 
@@ -334,3 +334,23 @@ His words: *"When i tap the second finger during orbit of the piece, the piece i
   which lifts NOTHING in Chrome — the lift had never been tested; now a `touchEnd` naming the point (measured). ⚠ The roll count (`restRoll.rolls`,
   what a face tap carries) after a snap that keeps the roll is counted from that snap's own long-axes pairing — a 90° roll on a face whose pairing
   ties may read −1 where the old count read +1.
+
+### 9.3 The quads shown by a press held on the piece (2026-11-26, his word)
+
+His word: *"modify so that a press or left click held on the piece shows the quads after the same timer as when the quads fade away (currently, only drag on
+  the piece shows the quads). update the md files. deploy"*.
+
+* **The root**: the quads came with the COMMIT (§4.2) — a move past the slop, or past the deadband after the tap's time. A press held STILL never
+  commits (no move), so it showed nothing.
+* **The rule**: a press (a finger, the left button; A held or not) in the zone, held past **300 ms** without its commit, shows the quads — the lit one the
+  direction the resting face sits on. 300 ms is the quads' hold after a snap before they fade (§4.3): ONE constant (`HOLD_MS`,
+  `render/piece_turn_wiring.ts`), read for both. Nothing turns, no history step, no step back: the press is still not committed.
+* **D-P24** — shown at once at 300 ms (no fade in), at full size and at any distance, as during a drag.
+* **D-P25** — its release: held 300 ms, then faded over 250 ms, as after a snap. A release before 300 ms shows nothing (a tap stays a tap: the face
+  tap's own flash, §4.6). A drag after the hold commits as before — the quads stay up.
+* Engine-free: `zoneQuadsShare` (`src/input/piece_turn.ts`) — 1 while a committed gesture lives, while a press is held past the hold, and until the
+  hold's end after either; then faded.
+* **As built and gated (2026-11-26)**: `pressHeldShows`, `zoneQuadsShare` (`src/input/piece_turn.ts`); `piece_turn_wiring.ts` — `pieceTurnQuadsShare`
+  reads the uncommitted press's time, `heldPressEnds` (the release, a lost release). 3 vectors red first; `npm run verify` 210 files, 2650 vectors;
+  `zone_batch.sh` all pass on `Scene_1` (the new `held`, touch and mouse: none at 150 ms, shown at 450 ms, the pose kept to 1e-5, held at the
+  release, gone by 820 ms, no history step) and `Scene_2`; `held` shown red on the old wiring (4 FAIL).

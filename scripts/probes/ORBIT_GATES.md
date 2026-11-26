@@ -616,5 +616,7 @@ drag is sized by the turn's gains (≈ 65° at any gain). `Scene_2` is index 3: 
 ⭐ (2026-11-26, `PIECE_TURN.md` §9.2) `ONLY=turnroll`: a drag turns the piece, a second finger lands — the pose unchanged at the landing (no snap),
 the twist rolls about the face's normal; the second lifts — snapped, and the first finger turns the piece again; its lift — snapped, ONE history
 step; then the same with A pressed and released during a mouse drag. The twist scenario reads its stop as the pose's turn (≈ 90°), not the roll count.
+⭐ (2026-11-26, `PIECE_TURN.md` §9.3) `ONLY=held`: a press held still on the piece (a finger, then the left button) — no quads at 150 ms, the quads at
+450 ms with nothing turned and no commit; the release — still shown at 120 ms, hidden by 820 ms; no history step, the pose kept.
 ⚠ To lift ONE touch point: `Input.dispatchTouchEvent` `touchEnd` NAMING it (`touchPoints: [{ id, x, y }]`) — a `touchMove` without it lifts nothing
 (measured 2026-11-26).
