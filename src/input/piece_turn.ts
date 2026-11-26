@@ -13,6 +13,7 @@
  * ⛔ No engine: points, angles, callbacks. The wiring is `render/piece_turn_wiring.ts`.
  */
 import { cross, dot, length, normalize, qFromAxisAngle, qmul, qRotate, sub, type Quat, type Vec3 } from "../core/vec";
+import { nextCoupleRoll } from "../core/resting_face";
 import { orbitDegPerMm } from "./follow_camera";
 import type { GestureConfig } from "./gestureConfig";
 
@@ -115,6 +116,38 @@ export function twistAngle(a0: readonly [number, number], b0: readonly [number, 
 /** ⭐ A second finger's contact that rolls ONE stop: released as a tap, under `maxRad` (10°) of twist. */
 export function twistIsTap(tapped: boolean, twistRad: number, maxRad = (10 * Math.PI) / 180): boolean {
   return tapped && Math.abs(twistRad) < maxRad;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-26, §9.2, D-P21 — his words: *"a roll based on accumulated input"*, *"the roll shall snap to alignment and the piece orbit shall
+ * continue"*) THE STOP NEAREST THE POSE ASKED: from an aligned stop `base` (the resting face on its quad), the edge stops both ways round (`nextCoupleRoll`'s
+ * couples, half a turn each way), the one the least turn from `asked`; a tie — the fewer rolls. `rolls`: signed, clockwise as seen +. No couple to roll
+ * to: the base. A snap after a roll keeps the roll (⛔ the long-axes pairing alone would undo a 90° roll of the green piece).
+ */
+export function nearestRollStop(
+  base: Quat,
+  asked: Quat,
+  restNormal: Vec3,
+  restAxes: readonly Vec3[],
+  pinkAxes: readonly Vec3[],
+  view: Vec3,
+): { readonly q: Quat; readonly rolls: number; readonly couple: readonly [number, number] | null } {
+  const near = (q: Quat): number => Math.abs(q[0] * asked[0] + q[1] * asked[1] + q[2] * asked[2] + q[3] * asked[3]); // cos of half the turn between
+  let best: { q: Quat; rolls: number; couple: readonly [number, number] | null; d: number } = { q: base, rolls: 0, couple: null, d: near(base) };
+  for (const sense of [1, -1] as const) {
+    let q = base;
+    let acc = 0;
+    for (let i = 1; i <= 12; i++) {
+      const step = nextCoupleRoll(q, restNormal, restAxes, pinkAxes, view, sense);
+      if (step === null) break;
+      acc += step.angleRad;
+      if (acc > Math.PI + 1e-6) break;
+      q = step.q;
+      const d = near(q);
+      if (d > best.d + 1e-9 || (d > best.d - 1e-9 && i < Math.abs(best.rolls))) best = { q, rolls: sense * i, couple: [step.rest, step.pink], d };
+    }
+  }
+  return { q: best.q, rolls: best.rolls, couple: best.couple };
 }
 
 /** ⭐ Of the candidate stops (signed angles), the nearest to `theta`; the first of a tie. */

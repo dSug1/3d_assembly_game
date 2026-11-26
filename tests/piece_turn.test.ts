@@ -8,6 +8,7 @@ import {
   inZone,
   litDirection,
   nearestAngle,
+  nearestRollStop,
   pieceRollAngle,
   pieceTurnDegrees,
   pivotOffset,
@@ -21,7 +22,7 @@ import {
   zoneCommitted,
   zoneRadiusPx,
 } from "../src/input/piece_turn";
-import { qRotate, type Quat, type Vec3 } from "../src/core/vec";
+import { qFromAxisAngle, qmul, qRotate, type Quat, type Vec3 } from "../src/core/vec";
 import { DEFAULT_CONFIG, validateGestureConfig } from "../src/input/gestureConfig";
 
 const close = (a: readonly number[], b: readonly number[], eps = 1e-9) => a.forEach((x, i) => expect(x).toBeCloseTo(b[i]!, -Math.log10(eps)));
@@ -232,15 +233,65 @@ describe("⭐ the piece roll's gain (§9.1): the roll = the gain × the input's 
     expect(pieceRollAngle(-0.2, 1)).toBeCloseTo(-0.2, 12);
     expect(pieceRollAngle(0.7, 0)).toBe(0);
   });
-  it("the default three times the current setup: the twist 3:1, A + dx 2°/mm × 3 = 6°/mm", () => {
-    expect(DEFAULT_CONFIG.pieceRollGain).toBe(3);
-    expect(pieceRollAngle(Math.PI / 6, DEFAULT_CONFIG.pieceRollGain)).toBeCloseTo(Math.PI / 2, 12); // a 30° twist rolls 90°
+  // ⭐⭐⭐ (2026-11-26, §9.2 — his word: *"Set the piece roll gain to default 8.00"*) RED against `66aa017a` (3).
+  it("the default his 8.00: the twist 8:1, A + dx 2°/mm × 8 = 16°/mm", () => {
+    expect(DEFAULT_CONFIG.pieceRollGain).toBe(8);
+    expect(pieceRollAngle(Math.PI / 12, DEFAULT_CONFIG.pieceRollGain)).toBeCloseTo((2 * Math.PI) / 3, 12); // a 15° twist rolls 120°
     const aDx = (10 * DEFAULT_CONFIG.pieceRollDegPerMm * Math.PI) / 180; // 10 mm of A + dx
-    expect((pieceRollAngle(aDx, DEFAULT_CONFIG.pieceRollGain) * 180) / Math.PI).toBeCloseTo(60, 9);
+    expect((pieceRollAngle(aDx, DEFAULT_CONFIG.pieceRollGain) * 180) / Math.PI).toBeCloseTo(160, 9);
   });
   it("validated in [0.1, 10]", () => {
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, pieceRollGain: 10 })).not.toThrow();
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, pieceRollGain: 0 })).toThrow();
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, pieceRollGain: 11 })).toThrow();
+  });
+});
+
+// ⭐⭐⭐ (2026-11-26, §9.2, D-P21 — his words: *"i don't want this snap but i want a roll based on accumulated input"*; *"the roll shall snap to alignment
+// and the piece orbit shall continue"*) THE STOP NEAREST A POSE: from an aligned stop, the edge stops both ways round, the least turn from the pose asked
+// — a snap after a roll keeps the roll. RED against `66aa017a` (no `nearestRollStop`).
+describe("⭐ the stop nearest the pose asked (§9.2, D-P21)", () => {
+  const D = Math.PI / 180;
+  const DOWN: Vec3 = [0, -1, 0];
+  const LOOK_DOWN: Vec3 = [0, -1, 0]; // the camera above: the roll's axis +y (toward it), clockwise as seen +
+  const Y: Vec3 = [0, 1, 0];
+  const RECT: Vec3[] = [[1, 0, 0], [0, 0, 1]]; // a rectangle's edge-to-edge lines
+  const PINK: Vec3[] = [[1, 0, 0], [0, 0, 1]];
+  const ID: Quat = [1, 0, 0, 0];
+  const about = (a: Vec3, deg: number): Quat => qFromAxisAngle(a, deg * D);
+  const same = (a: Quat, b: Quat) => expect(Math.abs(Math.abs(a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3]) - 1)).toBeLessThan(1e-9);
+  it("a rectangle (90° stops): 70° → the 90° stop (one roll), −20° → the base, −100° → the −90° stop", () => {
+    const a = nearestRollStop(ID, about(Y, 70), DOWN, RECT, PINK, LOOK_DOWN);
+    same(a.q, about(Y, 90));
+    expect(a.rolls).toBe(1);
+    expect(a.couple).not.toBeNull();
+    const b = nearestRollStop(ID, about(Y, -20), DOWN, RECT, PINK, LOOK_DOWN);
+    same(b.q, ID);
+    expect(b.rolls).toBe(0);
+    const c = nearestRollStop(ID, about(Y, -100), DOWN, RECT, PINK, LOOK_DOWN);
+    same(c.q, about(Y, -90));
+    expect(c.rolls).toBe(-1);
+  });
+  it("past a quarter turn: 170° → the half turn (two rolls, either way round)", () => {
+    const r = nearestRollStop(ID, about(Y, 170), DOWN, RECT, PINK, LOOK_DOWN);
+    same(r.q, about(Y, 180));
+    expect(Math.abs(r.rolls)).toBe(2);
+  });
+  it("a hexagon's lines (60° stops): 100° → the 120° stop", () => {
+    const HEXL: Vec3[] = [0, 60, 120].map((t) => [Math.cos(t * D), 0, Math.sin(t * D)] as Vec3);
+    const r = nearestRollStop(ID, about(Y, 100), DOWN, HEXL, [[1, 0, 0]], LOOK_DOWN);
+    same(r.q, about(Y, 120));
+    expect(Math.abs(r.rolls)).toBe(2);
+  });
+  it("the pose asked off the quad (a turn's): still the least turn — tilted 10°, rolled 80° → the 90° stop", () => {
+    const asked = qmul(about(Y, 80), about([1, 0, 0], 10));
+    const r = nearestRollStop(ID, asked, DOWN, RECT, PINK, LOOK_DOWN);
+    same(r.q, about(Y, 90));
+  });
+  it("nothing to pair (no pink axis): the base", () => {
+    const r = nearestRollStop(ID, about(Y, 70), DOWN, RECT, [], LOOK_DOWN);
+    same(r.q, ID);
+    expect(r.rolls).toBe(0);
+    expect(r.couple).toBeNull();
   });
 });

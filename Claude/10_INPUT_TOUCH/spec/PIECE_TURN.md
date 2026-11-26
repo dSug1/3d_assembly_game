@@ -3,7 +3,8 @@
 > **STATUS** · 🔧 **BUILT 2026-11-25 night** (his word: *"proceed as you recommended (md files, packets) … Do not stop until you finish all the
 > packets … Deploy at the end so I can test"*) on `1.0.159-Orbit_of_piece`, under the switch **`pieceTurnZone`** (1 = this page, the default; 0 = the
 > inputs as on LIVE `fe917b8`). Gated headless (§8.2). ⛔ No device look yet (rule 5) — **his look closes it**. The packets: §7; as built: §8.
-> ⭐ 2026-11-26: the piece orbit's gains (x, y) on the scene orbit's, 2.00 each; the piece roll's gain, 3 (§9).
+> ⭐ 2026-11-26: the piece orbit's gains (x, y) on the scene orbit's, 2.00 each; the piece roll's gain, 8; the roll with no snap at its start, the
+> turn going on after it (§9, §9.2).
 > **OWNS** · what a press near the held piece does, the piece's own turn, the step back, the roll, the face tap, the undo
 > **READ IF** · you touch a gesture on the held piece, the resting-face quads, or Scene_2's taps
 > **LAST VERIFIED** · 2026-11-25 (written from the code of `9dacca36`)
@@ -60,6 +61,7 @@ the undo several steps within the hold, no redo, one episode each.
 * **R5 — the camera stays.** A turn moves neither the camera nor the orbit; the reference orbit (`3b7a479` + the surface work) is untouched outside the zone.
 * **R6 — mm on the glass** (rule 3): every threshold a slider in mm or degrees, one constant in one place.
 * **R7 — one driver.** Once a second finger (or A) rolls, the first finger's own motion is inert until it lifts (`METHOD.md`: a driver and a validator, never a blend).
+  ⇢ 2026-11-26 (his word, §9.2): until the SECOND lifts (or A) — then the first drives the turn again; one driver at a time, still never a blend.
 * **R8 — the budget.** 24 gap queries a frame, all checks included (`ORBIT_ANY_SHAPE.md` F5).
 * **R9 — no view widget.** The quads guide the PIECE; they never select a view and the camera never turns to face one (the ViewCube condition, `no-3d-orientation-widget`).
 * **R10 — provenance.** Every gesture tagged at adoption ([`../PROVENANCE.md`](../PROVENANCE.md), IN14's section).
@@ -120,13 +122,14 @@ the step back's room is asked (§4.5), the quads show.
   the centre; the quads held 300 ms then faded over 250 ms. The lit direction becomes **the last selected quad**.
 
 ### 4.4 The roll
-* **Tablet** — the first finger STARTED in the zone (wherever it is now, his first modification); a second finger lands: the turn under way snaps (§4.3),
-  then the TWIST of the two fingers (the angle of the line between them) rolls the piece about its resting face's normal, × **`pieceRollGain`** (3, §9), clockwise on the glass =
-  clockwise as seen; at the second finger's lift (or the first's) the roll snaps to the nearest edge stop (`nextCoupleRoll`'s couples: 90° the green
+* **Tablet** — the first finger STARTED in the zone (wherever it is now, his first modification); a second finger lands: ⇢ 2026-11-26 NOTHING snaps (§9.2, the free
+  roll), the TWIST of the two fingers (the angle of the line between them) rolls the piece about its resting face's normal, × **`pieceRollGain`** (8, §9.2), clockwise on the glass =
+  clockwise as seen; at the second finger's lift (or the first's) the roll snaps (from a turn: onto the lit quad first, §9.2) to the nearest edge stop (`nextCoupleRoll`'s couples: 90° the green
   piece, 60° the turquoise). A second finger's TAP (tap rules, under 10° of the FINGERS' twist) = one stop clockwise. While the first stays down, more second-finger
-  contacts roll again; its own moves are inert (R7).
-* **Desktop** — A held at a press in the zone, or pressed ANY TIME during a zone drag (his third modification): the turn under way snaps, then **dx**
-  rolls (**`pieceRollDegPerMm`** 2°/mm × `pieceRollGain` 3 = 6°/mm, right = clockwise), snapping at the button's release or A's; a click in the zone with A held (no drag) = one
+  contacts roll again; ⇢ 2026-11-26 once the second lifts, its own moves TURN the piece again until it lifts (§9.2, R7 amended).
+* **Desktop** — A held at a press in the zone, or pressed ANY TIME during a zone drag (his third modification): nothing snaps (§9.2, D-P18), **dx**
+  rolls (**`pieceRollDegPerMm`** 2°/mm × `pieceRollGain` 8 = 16°/mm, right = clockwise), snapping at the button's release or A's (A's: the drag
+  then turns again, D-P22); a click in the zone with A held (no drag) = one
   stop clockwise.
 * Outside the zone, A + drag and the pinch are the approach, as before.
 
@@ -296,3 +299,38 @@ His words: *"This is all good. Set the two sliders default to 2.00. Increase the
   154; `npm run verify` 210 files, 2642 vectors; `zone_batch.sh` all pass on `Scene_1` and on `Scene_2` (`ONLY=s2`, index 3) — the twist's roll
   measured 60.00° for 20° of the fingers at the gain 3. ⚠ The probe's own drags were sized for 2°/mm: at 10.2°/mm its far drag turned ~330°, back onto
   the start's direction (no history step, D-P13) — the probe now sizes its far drag by the turn's gains and its roll inputs by the roll's gain.
+
+### 9.2 The roll with no snap at its start, the turn going on after it; the roll's gain 8 (2026-11-26, his word)
+
+His words: *"When i tap the second finger during orbit of the piece, the piece immediately snaps to an aligned roll before rolling further with the input:
+  i don't want this snap but i want a roll based on accumulated input"*; then *"Set the piece roll gain to default 8.00"*; then *"Also, during piece orbit mode, when the second finger is released while the first finger is still pressed, the roll shall snap to alignment and
+  the piece orbit shall continue with the first finger input until it is released (currently, the second finger release stops the piece orbit)"*.
+
+* **The root**: the second finger's landing (and A pressed during a drag) ran the turn's RELEASE snap (`snapTurn`: the face onto the lit quad, the long
+  axes paired), then rolled from that stop — a snap in the middle of the gesture; and its lift left the first finger inert (R7). This replaces his
+  earlier *"the turn snaps and then the twist"* (§0, his first modification) on his word.
+* **The free roll**: a second finger landing on a turn under way (or A pressed during it) snaps NOTHING. The roll starts from the pose the turn has (the
+  drawn one; the one asked while the piece still steps out), about its resting face's normal, by the ACCUMULATED input × `pieceRollGain` (the fingers'
+  twist since the second landed; A + dx's mm since A). The lit quad holds: a roll about the face's normal never moves the normal.
+* **The second finger's lift, the first still down**: the roll snaps — the resting face onto the lit quad, then the edge stop (`nextCoupleRoll`'s
+  couples, both ways round) NEAREST the pose asked — and the first finger TURNS the piece again from there, until it lifts (R7 amended). Its lift: the
+  turn's snap (§4.3).
+* **D-P18** — the desktop's A pressed during a drag: the same free roll (the mirror of the second finger, `INPUTS_TABLE.md` §0).
+* **D-P19** — a second finger's TAP during a turn (D-P17): at its lift the turn snaps, then one stop clockwise, as before — a stop needs a snapped pose;
+  the landing itself snaps nothing; the first finger then turns again.
+* **D-P20** — a roll that starts from a stop (the first finger not yet committed, A held at the press) starts from that stop, as before (`snapRoll`).
+* **D-P21** — every snap after a roll in the same gesture KEEPS the roll: the stop nearest the pose asked (⛔ the alignment's long-axes pairing alone
+  would undo a 90° roll of the green piece). Engine-free: `nearestRollStop` (`src/input/piece_turn.ts`). A turn with no roll in its gesture snaps as
+  before (§4.3, the long axes paired).
+* **D-P22** — A released while the button is still down: the same as the second finger's lift (the roll snaps, the drag turns again).
+* **D-P23** — ONE undo step per gesture (press to release), however many rolls and turns inside (the commit's snapshot; none if it ends where it
+  began); an episode per snap (D-P13).
+* **`pieceRollGain`** default **8** (his word; 3 in §9.1): the twist **8:1**, A + dx 2°/mm × 8 = **16°/mm**; range 0.1 – 10 unchanged.
+* **As built and gated (2026-11-26)**: `piece_turn_wiring.ts` — `snapOnto` (the one snap, `snapTurn` and the free roll's end through it),
+  `keepNearestStop`, `endRoll`, `turnOn` (the mode `INERT` deleted), `secondDown` / `pieceZoneKey` (the roll from `turnPoseNow`), `secondUp`
+  (`oneStopInGesture`). 6 vectors red first (`nearestRollStop` × 5, the gain's default); `npm run verify` 210 files, 2647 vectors; `zone_batch.sh`
+  all pass on `Scene_1` (the new `turnroll`: 0.000° at the landing and at A, the twist's roll 60.00° at the gain 8, one history step a gesture) and
+  `Scene_2`; `turnroll` and the twist's new check shown red on the old code (9 FAIL). ⚠ The probe's second-finger lift was a `touchMove` without it,
+  which lifts NOTHING in Chrome — the lift had never been tested; now a `touchEnd` naming the point (measured). ⚠ The roll count (`restRoll.rolls`,
+  what a face tap carries) after a snap that keeps the roll is counted from that snap's own long-axes pairing — a 90° roll on a face whose pairing
+  ties may read −1 where the old count read +1.

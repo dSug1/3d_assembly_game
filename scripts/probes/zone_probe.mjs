@@ -222,6 +222,8 @@ try {
     await drift("twist, at rest");
     const c = await centrePx();
     const r0 = (await S()).rolls;
+    const qT0 = await arr("window.__z.q()");
+    const nT0 = await arr("window.__z.restN()");
     const t = (pts) => pts.map(([x, y], i) => ({ x, y, id: i + 1, radiusX: 2, radiusY: 2, force: 1 }));
     await send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: t([[c[0], c[1]]]) });
     await sleep(30);
@@ -238,11 +240,117 @@ try {
     check("twist: the second finger rolls (the first started in the zone)", mid.zone === "HOST+", JSON.stringify(mid));
     const rollDeg = await num("(window.__st.pieceTurn.zone?.roll?.angle ?? NaN) * 180 / Math.PI");
     check("twist: the roll = the gain × the fingers' twist", Math.abs(rollDeg - 60) < 1.5, `the fingers ${(60 / gT).toFixed(1)}°, the gain ${gT}, the roll ${rollDeg.toFixed(2)}°`);
-    await send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: t([[c[0], c[1]]]) }); // the second lifted
-    await sleep(50);
+    // ⭐ (2026-11-26) the second lifted: a touchEnd NAMING it (⛔ a touchMove without it lifted nothing — the lift was never tested before)
+    await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [{ x: c[0] + R * Math.cos((60 / gT) * (Math.PI / 180)), y: c[1] + R * Math.sin((60 / gT) * (Math.PI / 180)), id: 2, radiusX: 2, radiusY: 2, force: 1 }] });
+    await sleep(300);
+    check("twist: the second's lift snaps the roll; the first finger turns again (§9.2)", (await S()).zone === "TURN+" && (await num("window.__z.alignErr()")) < 0.5, JSON.stringify(await S()));
     await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
     const end = await idle();
-    check("twist: snapped to the nearest stop (60° → 90°: one stop)", end.rolls !== null && r0 !== null && Math.abs(end.rolls - r0) === 1, `rolls ${r0} → ${end.rolls}; ${end.v}`);
+    // ⭐ (2026-11-26, §9.2) the second's lift snaps, the first turns on (it did not move): its lift keeps the roll (D-P21) — the stop read as the pose's turn
+    const qT1 = await arr("window.__z.q()");
+    const nT1 = await arr("window.__z.restN()");
+    const turnT = (2 * Math.acos(Math.min(1, dot4(qT0, qT1))) * 180) / Math.PI;
+    check("twist: snapped to the nearest stop (60° → one stop: the pose turned 60° or 90° about the normal)", (Math.abs(turnT - 90) < 1 || Math.abs(turnT - 60) < 1) && nT0[0] * nT1[0] + nT0[1] * nT1[1] + nT0[2] * nT1[2] > 0.9999 && (await num("window.__z.alignErr()")) < 0.5, `turned ${turnT.toFixed(2)}°, rolls ${r0} → ${end.rolls}; ${end.v}`);
+  }
+
+  // ── 7. ⭐ (2026-11-26, §9.2) a turn, then a roll with NO snap at its start; the second lifts (A lifts) — snapped, the first finger (the drag) turns on;
+  //       its lift snapped; ONE history step ──
+  if (run("turnroll")) {
+    const k = JSON.parse(await ev(`(async () => { const P = await import("/src/input/piece_turn.ts"); const U = await import("/src/core/units.ts"); const cfg = window.__st.cfg;
+      return JSON.stringify({ degPerPx: (P.sceneOrbitDegPerMm(cfg).x * cfg.pieceTurnGainX) / U.mmToPx(1), mmPx: U.mmToPx(1), g: cfg.pieceRollGain, aDegPerMm: cfg.pieceRollDegPerMm }); })()`));
+    const dT = Math.round(40 / k.degPerPx); // ≈ 40° of turn (committed by the tap's time: 20 steps)
+    const angle = (a, b) => (2 * Math.acos(Math.min(1, dot4(a, b))) * 180) / Math.PI;
+    const ndot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+    const t = (pts) => pts.map(([x, y], i) => ({ x, y, id: i + 1, radiusX: 2, radiusY: 2, force: 1 }));
+    // (a) the tablet
+    await idle();
+    let c = await centrePx();
+    let h0 = (await S()).hist;
+    await send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: t([[c[0], c[1]]]) });
+    for (let i = 1; i <= 20; i++) {
+      await send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: t([[c[0] + (dT * i) / 20, c[1]]]) });
+      await sleep(16);
+    }
+    await sleep(150);
+    const p1 = [c[0] + dT, c[1]];
+    const m1 = await S();
+    const q1 = await arr("window.__z.q()");
+    const n1 = await arr("window.__z.restN()");
+    const off1 = await num("window.__z.alignErr()");
+    check("turnroll: the first finger turns the piece off its quad", m1.zone === "TURN+" && off1 > 2, `off the nearest direction ${off1.toFixed(1)}°; ${JSON.stringify(m1)}`);
+    const R = 90;
+    await send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: t([p1, [p1[0] + R, p1[1]]]) });
+    await sleep(150);
+    const m2 = await S();
+    const q2 = await arr("window.__z.q()");
+    check("turnroll: NO snap when the second finger lands (the pose unchanged)", m2.zone === "HOST+" && dot4(q1, q2) > 0.9999, `turned ${angle(q1, q2).toFixed(3)}° at the landing; ${JSON.stringify(m2)}`);
+    for (let i = 1; i <= 20; i++) {
+      const a = ((60 / k.g) * i / 20) * (Math.PI / 180);
+      await send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: t([p1, [p1[0] + R * Math.cos(a), p1[1] + R * Math.sin(a)]]) });
+      await sleep(16);
+    }
+    await sleep(60);
+    const q3 = await arr("window.__z.q()");
+    const n3 = await arr("window.__z.restN()");
+    check("turnroll: the twist rolls from the pose as it is (60°, about the face's normal)", Math.abs(angle(q2, q3) - 60) < 2 && ndot(n1, n3) > 0.9999, `rolled ${angle(q2, q3).toFixed(2)}°, n1·n3 ${ndot(n1, n3).toFixed(6)}`);
+    const aE = (60 / k.g) * (Math.PI / 180);
+    await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [{ x: p1[0] + R * Math.cos(aE), y: p1[1] + R * Math.sin(aE), id: 2, radiusX: 2, radiusY: 2, force: 1 }] }); // the second lifted (a touchEnd naming it)
+    await sleep(300);
+    const m4 = await S();
+    const err4 = await num("window.__z.alignErr()");
+    check("turnroll: the second's lift snaps the roll onto the quad; the first still turns", m4.zone === "TURN+" && err4 < 0.5, `err ${err4.toFixed(3)}°; ${JSON.stringify(m4)}`);
+    const q4 = await arr("window.__z.q()");
+    for (let i = 1; i <= 10; i++) {
+      await send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: t([[p1[0], p1[1] + (dT * i) / 10]]) });
+      await sleep(16);
+    }
+    await sleep(150);
+    const q5 = await arr("window.__z.q()");
+    check("turnroll: the first finger turns the piece again", angle(q4, q5) > 20, `turned ${angle(q4, q5).toFixed(1)}°`);
+    await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    let end = await idle();
+    check("turnroll: its lift snapped; ONE history step for the gesture", (await num("window.__z.alignErr()")) < 0.5 && end.hist === h0 + 1, `history ${h0} → ${end.hist}; ${JSON.stringify(end)}`);
+    // (b) the desktop: A pressed and released during the drag
+    c = await centrePx();
+    h0 = (await S()).hist;
+    await mouse("mousePressed", c[0], c[1], 1);
+    for (let i = 1; i <= 20; i++) {
+      await mouse("mouseMoved", c[0] + (dT * i) / 20, c[1], 1);
+      await sleep(16);
+    }
+    await sleep(150);
+    const b1 = await arr("window.__z.q()");
+    const bn1 = await arr("window.__z.restN()");
+    await key("keyDown", "a");
+    await sleep(150);
+    const mb2 = await S();
+    const b2 = await arr("window.__z.q()");
+    check("turnroll: NO snap when A is pressed during the drag", mb2.zone === "ROLL+" && dot4(b1, b2) > 0.9999, `turned ${angle(b1, b2).toFixed(3)}° at A; ${JSON.stringify(mb2)}`);
+    const dR = Math.round((60 / (k.aDegPerMm * k.g)) * k.mmPx); // ≈ 60° of roll
+    for (let i = 1; i <= 10; i++) {
+      await mouse("mouseMoved", c[0] + dT + (dR * i) / 10, c[1], 1);
+      await sleep(16);
+    }
+    await sleep(60);
+    const b3 = await arr("window.__z.q()");
+    const bn3 = await arr("window.__z.restN()");
+    check("turnroll: A + dx rolls from the pose as it is (≈ 60°, about the face's normal)", Math.abs(angle(b2, b3) - 60) < 4 && ndot(bn1, bn3) > 0.9999, `rolled ${angle(b2, b3).toFixed(2)}° (${dR} px), n·n ${ndot(bn1, bn3).toFixed(6)}`);
+    await key("keyUp", "a");
+    await sleep(300);
+    const mb4 = await S();
+    const berr = await num("window.__z.alignErr()");
+    check("turnroll: A's release snaps the roll; the drag still turns", mb4.zone === "TURN+" && berr < 0.5, `err ${berr.toFixed(3)}°; ${JSON.stringify(mb4)}`);
+    const b4 = await arr("window.__z.q()");
+    for (let i = 1; i <= 10; i++) {
+      await mouse("mouseMoved", c[0] + dT + dR, c[1] + (dT * i) / 10, 1);
+      await sleep(16);
+    }
+    await sleep(150);
+    const b5 = await arr("window.__z.q()");
+    check("turnroll: the drag turns the piece again after A", angle(b4, b5) > 20, `turned ${angle(b4, b5).toFixed(1)}°`);
+    await mouse("mouseReleased", c[0] + dT + dR, c[1] + dT, 0);
+    end = await idle();
+    check("turnroll: the release snapped; ONE history step (the desktop)", (await num("window.__z.alignErr()")) < 0.5 && end.hist === h0 + 1, `history ${h0} → ${end.hist}; ${JSON.stringify(end)}`);
   }
 
   // ── 5. close in: the step back — out, turned, back in, never into a part ──

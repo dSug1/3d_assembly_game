@@ -27,6 +27,7 @@ import {
   inZone,
   litDirection,
   nearestAngle,
+  nearestRollStop,
   pivotOffset,
   sphereRadiusOnGlassPx,
   traceStep,
@@ -83,12 +84,14 @@ export interface ZoneGesture {
   last: Sample;
   travelPx: number;
   committed: boolean;
-  /** TURN the trackball; ROLL A + dx; HOST a second finger rolls; INERT nothing until the lift */
-  mode: "TURN" | "ROLL" | "HOST" | "INERT";
+  /** TURN the trackball; ROLL A + dx; HOST a second finger rolls — ⭐ (§9.2, R7 amended) its lift (or A's) back to TURN */
+  mode: "TURN" | "ROLL" | "HOST";
   /** the trackball's target pose */
   target: Quat | null;
-  /** a continuous roll: from a stop (`base`), clockwise + (rad) */
-  roll: { readonly base: Quat; angle: number } | null;
+  /** a continuous roll from `base`, clockwise + (rad): ⭐ (§9.2) `free` — from the pose a turn had (no snap at its start), else from a stop */
+  roll: { readonly base: Quat; angle: number; readonly free: boolean } | null;
+  /** ⭐ (§9.2, D-P21) a roll happened in this gesture: its later snaps keep the roll (the nearest stop) */
+  rolled: boolean;
   /** the tablet's rolling second finger */
   second: { readonly pointerId: number; readonly pressed: Sample; last: Sample; readonly firstAt: readonly [number, number] } | null;
   /** the desktop's A held for this gesture */
@@ -381,8 +384,9 @@ export function pieceTurnPost(st: SceneState, now: number, dtMs: number): void {
     b.rotationQuaternion = toB(k >= 1 ? z.target : qSlerp(meshQ(st), z.target, k));
   }
   // ⭐ the lit quad: the direction the resting face is nearest to sitting on (D-P5); after a snap, the one it sits on
-  if (z !== null && z.mode === "TURN" && z.committed) {
-    const n = qRotate(z.target ?? meshQ(st), p.restingFace.normal); // ⭐ the pose the finger asks (drawn once the room is made)
+  if (z !== null && z.committed && (z.mode === "TURN" || z.roll?.free === true)) {
+    // ⭐ the pose the finger asks (drawn once the room is made); ⭐ (§9.2) the free roll's base — a roll about the face's normal never moves the normal
+    const n = qRotate(z.mode === "TURN" ? (z.target ?? meshQ(st)) : z.roll!.base, p.restingFace.normal);
     pt.lit = litDirection(n, st.orientDirs.map((d) => d.normal), pt.lit, (st.cfg.pieceTurnLitHysteresisDeg * Math.PI) / 180);
   } else if (st.pinkTargetNormal !== null) {
     const tn = st.pinkTargetNormal;
@@ -548,48 +552,81 @@ function commit(st: SceneState, z: ZoneGesture): void {
     z.target = st.restAlign?.base ?? meshQ(st);
     st.restAlign = null;
     st.lastVerdict = "piece zone: the piece turns under the finger — release to snap onto the lit quad";
-  } else if (z.mode === "ROLL") startRoll(st, z, null);
+  } else if (z.mode === "ROLL") startRoll(st, z);
   st.hudDirty = true;
 }
 
-/** ⭐ The turn under the finger snapped onto the lit quad (the release, a second finger, A). */
-function snapTurn(st: SceneState, z: ZoneGesture): void {
+/** ⭐ The turn under the finger snapped onto the lit quad (the release, a lost release). `goesOn`: the gesture goes on (D-P23). */
+function snapTurn(st: SceneState, z: ZoneGesture, goesOn = false): void {
+  const target = z.target;
+  z.target = null;
+  snapOnto(st, target, z.rolled, goesOn);
+}
+
+/**
+ * ⭐⭐ THE SNAP onto the lit quad from the pose ASKED (the finger's turn, the roll's): the resting face onto the lit direction (`alignRestingFace`), then
+ * — `keepRoll`, a roll in this gesture (§9.2, D-P21) — the edge stop nearest the pose asked, else the long axes paired (§4.3). `goesOn`: the first finger
+ * (or the button) still down — the gesture's undo step decided at its end (D-P23). `true`: snapped.
+ */
+function snapOnto(st: SceneState, asked: Quat | null, keepRoll: boolean, goesOn: boolean): boolean {
   const pt = st.pieceTurn;
   const now = performance.now();
   const b = st.greenBox;
-  const target = z.target;
-  z.target = null;
   const drawn = meshQ(st);
-  // ⭐ the alignment reads the pose the finger asked
-  if (target !== null && b !== null) b.rotationQuaternion = toB(target);
+  // ⭐ the alignment reads the pose asked
+  if (asked !== null && b !== null) b.rotationQuaternion = toB(asked);
   const dir = pt.lit >= 0 ? st.orientDirs[pt.lit] : undefined;
   let ok = false;
   if (dir !== undefined) {
     st.pinkDir = dir;
     ok = alignRestingFace(st, now);
+    if (ok && keepRoll) keepNearestStop(st, asked ?? drawn);
   }
   // ⭐⭐ (review finding 3) STEPPING OUT: nothing drawn (nor solved) turned before the room is made — the pose put back, the turn waits from it
   if (pt.phase === "OUT" && b !== null) {
     b.rotationQuaternion = toB(drawn);
     if (st.restAlign !== null) st.restAlign = { ...st.restAlign, from: drawn };
-    else if (target !== null) st.restAlign = { from: drawn, t0: now, base: target };
+    else if (asked !== null) st.restAlign = { from: drawn, t0: now, base: asked };
   }
-  if (dir !== undefined) {
-    if (ok) {
-      pt.lastDir = dir;
-      pt.lastTurnAt = now;
-      if (!popIfSame(st, st.restAlign?.base ?? meshQ(st))) episode(st);
-      st.lastVerdict = st.lastVerdict.replace(/^orbit: tap 1 — /, "piece zone: snapped — ");
-    }
+  if (dir !== undefined && ok) {
+    pt.lastDir = dir;
+    pt.lastTurnAt = now;
+    if (goesOn || !popIfSame(st, st.restAlign?.base ?? meshQ(st))) episode(st);
+    st.lastVerdict = st.lastVerdict.replace(/^orbit: tap 1 — /, "piece zone: snapped — ");
   }
   st.hudDirty = true;
+  return ok;
 }
 
-/** ⭐ A continuous roll starts (§4.4): aligned first if it is not; from the stop it is at. */
-function startRoll(st: SceneState, z: ZoneGesture, push: UndoSnap | null): void {
+/** ⭐⭐ (§9.2, D-P21) the alignment's stop moved to the edge stop NEAREST the pose asked — the roll kept (`nearestRollStop`). */
+function keepNearestStop(st: SceneState, asked: Quat): void {
+  const p = entry(st);
+  const ra = st.restAlign;
+  const rr = st.restRoll;
+  if (p === undefined || p.restingFace === null || ra === null || rr === null) return;
+  const f = st.camera.getDirection(new Vector3(0, 0, 1));
+  let pinkAxes = rr.pinkAxes;
+  if (pinkAxes.length === 0) {
+    const right = st.camera.getDirection(new Vector3(1, 0, 0));
+    pinkAxes = [[right.x, right.y, right.z]];
+  }
+  const s = nearestRollStop(ra.base, asked, p.restingFace.normal, p.restingFlush, pinkAxes, [f.x, f.y, f.z]);
+  st.restAlign = { ...ra, base: s.q };
+  st.restRoll = { ...rr, rolls: rr.rolls + s.rolls, couple: s.couple ?? rr.couple };
+}
+
+/** ⭐ The pose a turn under way has: the drawn one — or the one asked while the piece still steps out (nothing drawn turned yet). */
+function turnPoseNow(st: SceneState, z: ZoneGesture): Quat {
+  return st.pieceTurn.phase === "TURNING" ? meshQ(st) : (z.target ?? meshQ(st));
+}
+
+/**
+ * ⭐ A continuous roll starts (§4.4). ⭐⭐⭐ (§9.2, his word: *"i don't want this snap"*) `from` — the pose a turn under way has: the FREE roll, nothing
+ * snapped; else from the stop it is at (aligned first if it is not, D-P20).
+ */
+function startRoll(st: SceneState, z: ZoneGesture, from: Quat | null = null): void {
   const now = performance.now();
-  if (push !== null) st.pieceTurn.history.push(push);
-  if (!st.restAligned || st.restRoll === null) {
+  if (from === null && (!st.restAligned || st.restRoll === null)) {
     const d = faceTarget(st);
     if (d !== null) {
       st.pinkDir = d;
@@ -597,7 +634,8 @@ function startRoll(st: SceneState, z: ZoneGesture, push: UndoSnap | null): void 
     }
   }
   // ⭐ (review finding 3) from the stop a turn playing is going to — drawn only once the room is made (`applyRoll`)
-  z.roll = { base: st.restAlign?.base ?? meshQ(st), angle: 0 };
+  z.roll = from !== null ? { base: from, angle: 0, free: true } : { base: st.restAlign?.base ?? meshQ(st), angle: 0, free: false };
+  z.rolled = true;
   st.pieceTurn.lastTurnAt = now;
   st.lastVerdict = z.mouse ? "piece zone: A — dx rolls the piece (right: clockwise), release to snap" : "piece zone: two fingers — the twist rolls the piece, lift to snap";
   st.hudDirty = true;
@@ -624,8 +662,36 @@ function applyRoll(st: SceneState, z: ZoneGesture): void {
   st.pieceTurn.lastTurnAt = performance.now();
 }
 
-/** ⭐⭐ The continuous roll snapped to the nearest edge stop (`nextCoupleRoll`'s couples, both senses). */
-function snapRoll(st: SceneState, z: ZoneGesture): void {
+/**
+ * ⭐⭐⭐ (§9.2) THE ROLL'S END: the free roll — the face onto the lit quad, then the stop nearest the pose asked (`snapOnto`); a roll from a stop — its
+ * nearest stop (`snapRoll`). `goesOn`: the first finger (or the button) still down (D-P23).
+ */
+function endRoll(st: SceneState, z: ZoneGesture, goesOn: boolean): void {
+  const r = z.roll;
+  if (r === null) return;
+  if (!r.free) {
+    snapRoll(st, z, goesOn);
+    return;
+  }
+  z.roll = null;
+  const a = rollAxis(st, r.base);
+  snapOnto(st, a === null ? r.base : qmul(qFromAxisAngle(a, r.angle), r.base), true, goesOn);
+}
+
+/**
+ * ⭐⭐⭐ (§9.2, his word: *"the piece orbit shall continue with the first finger input until it is released"* — R7 amended) the roll snapped, the first
+ * finger (or the button) still down: it TURNS the piece again, from the snapped pose (eased to it as the commit does).
+ */
+function turnOn(st: SceneState, z: ZoneGesture): void {
+  z.mode = "TURN";
+  z.target = st.restAlign?.base ?? meshQ(st);
+  st.restAlign = null;
+  st.pieceTurn.lastTurnAt = performance.now();
+  st.hudDirty = true;
+}
+
+/** ⭐⭐ The continuous roll from a stop snapped to the nearest edge stop (`nextCoupleRoll`'s couples, both senses). */
+function snapRoll(st: SceneState, z: ZoneGesture, goesOn = false): void {
   const r = z.roll;
   z.roll = null;
   const p = entry(st);
@@ -659,10 +725,10 @@ function snapRoll(st: SceneState, z: ZoneGesture): void {
   st.pieceTurn.lastTurnAt = now;
   if (s.rolls !== 0) {
     st.restRoll = { ...rr, rolls: rr.rolls + s.rolls, couple: s.couple };
-    if (!popIfSame(st, s.q)) episode(st);
+    if (goesOn || !popIfSame(st, s.q)) episode(st);
     st.lastVerdict = `piece zone: rolled ${s.rolls > 0 ? "clockwise" : "counter-clockwise"} ${Math.abs(s.rolls)} stop${Math.abs(s.rolls) > 1 ? "s" : ""}`;
   } else {
-    popIfSame(st, s.q);
+    if (!goesOn) popIfSame(st, s.q);
     st.lastVerdict = "piece zone: the roll back to its stop";
   }
   st.hudDirty = true;
@@ -734,7 +800,7 @@ export function pieceZonePointer(st: SceneState, type: number, e: PointerEvent, 
     if (st.modelIdle > 0) return false; // ⭐ Scene_2's idle blend out: no zone (the first press brings the view back)
     if (!zoneHit(st, e)) return false;
     const aHeld = e.pointerType === "mouse" && st.orbitApproachKey;
-    pt.zone = { pointerId: id, mouse: e.pointerType === "mouse", pressed: s, last: s, travelPx: 0, committed: false, mode: aHeld ? "ROLL" : "TURN", target: null, roll: null, second: null, aHeld, refused: false };
+    pt.zone = { pointerId: id, mouse: e.pointerType === "mouse", pressed: s, last: s, travelPx: 0, committed: false, mode: aHeld ? "ROLL" : "TURN", target: null, roll: null, second: null, aHeld, refused: false, rolled: false };
     return false;
   }
   if (z === null || id !== z.pointerId) return false;
@@ -773,9 +839,8 @@ export function pieceZonePointer(st: SceneState, type: number, e: PointerEvent, 
     consumeRelease(st, id);
     if (!z.refused) {
       if (z.mode === "TURN") snapTurn(st, z);
-      else if (z.mode === "ROLL") snapRoll(st, z);
-      else if (z.mode === "HOST" && z.second !== null) {
-        snapRoll(st, z);
+      else if (z.roll !== null) {
+        endRoll(st, z, false);
         z.second = null;
       }
     }
@@ -798,7 +863,7 @@ export function pieceZoneForget(st: SceneState): void {
   pt.owned.clear();
   if (z !== null && z.committed && !z.refused) {
     if (z.mode === "TURN") snapTurn(st, z);
-    else if (z.roll !== null) snapRoll(st, z);
+    else if (z.roll !== null) endRoll(st, z, false);
   }
   if (pt.live) {
     pt.live = false;
@@ -837,22 +902,25 @@ function moveBy(st: SceneState, z: ZoneGesture, dxPx: number, dyPx: number): voi
   } else if (z.mode === "HOST" && z.second !== null) twistNow(st, z);
 }
 
-/** ⭐ A second finger on the glass after a zone start: the turn snaps, the twist rolls from there. */
+/**
+ * ⭐ A second finger on the glass after a zone start: the twist rolls. ⭐⭐⭐ (§9.2, his word: *"i don't want this snap"*) a turn under way is NOT snapped —
+ * the roll starts from the pose it has (the free roll); the commit's snapshot is the whole gesture's undo step (D-P23).
+ */
 function secondDown(st: SceneState, z: ZoneGesture, id: number, s: Sample): void {
-  let push: UndoSnap | null = null;
+  let from: Quat | null = null;
   if (!z.committed) {
     // ⭐ the first finger never went past the commit: the zone's gesture starts now, a roll's host (no turn of its own; the commit's snapshot is the roll's step)
     z.mode = "HOST";
     commit(st, z);
     if (z.refused) return;
-  } else {
-    if (z.mode === "TURN") snapTurn(st, z); // ⭐ the turn under way snaps first
-    push = snapNow(st); // ⭐ the roll its own step of the undo
+  } else if (z.mode === "TURN") {
+    from = turnPoseNow(st, z);
+    z.target = null;
   }
   z.mode = "HOST";
   z.second = { pointerId: id, pressed: s, last: s, firstAt: [z.last.x, z.last.y] };
   st.pieceTurn.live = true;
-  startRoll(st, z, push);
+  startRoll(st, z, from);
 }
 
 /** ⭐ (§9.1, D-P17) the FINGERS' twist (rad): the line from the first finger to the second, against where it was when the second landed. */
@@ -868,7 +936,10 @@ function twistNow(st: SceneState, z: ZoneGesture): void {
   applyRoll(st, z);
 }
 
-/** ⭐ The second finger lifted: a tap — one stop clockwise; else the roll snapped. The first stays down: inert until it lifts (R7). */
+/**
+ * ⭐ The second finger lifted: a tap — the pose snapped, then one stop clockwise (D-P19); else the roll snapped. ⭐⭐⭐ (§9.2, his word — R7 amended) the
+ * first finger still down then TURNS the piece again, until it lifts.
+ */
 function secondUp(st: SceneState, z: ZoneGesture, s: Sample): void {
   const sec = z.second;
   if (sec === null) return;
@@ -880,14 +951,36 @@ function secondUp(st: SceneState, z: ZoneGesture, s: Sample): void {
   const tapped = isTapRelease(sec.pressed.t, sec.pressed.x, sec.pressed.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop));
   const twist = z.roll === null ? 0 : fingersTwist(z, sec); // ⭐ (§9.1, D-P17) the tap on the fingers' twist, never the gained roll
   z.second = null;
-  if (twistIsTap(tapped, twist) && z.roll !== null) {
-    // the small twist undone, its snapshot dropped, then one stop
-    if (st.greenBox !== null && st.pieceTurn.phase === "TURNING") st.greenBox.rotationQuaternion = toB(z.roll.base); // ⭐ only if it was drawn
-    z.roll = null;
-    st.pieceTurn.history.pop();
-    rollOneStop(st);
-  } else snapRoll(st, z);
-  z.mode = "INERT";
+  const r = z.roll;
+  if (twistIsTap(tapped, twist) && r !== null) {
+    // the small twist undone; the pose snapped (a free roll's: onto the lit quad); then one stop — within the gesture (its one undo step, D-P23)
+    r.angle = 0;
+    if (r.free) endRoll(st, z, true);
+    else {
+      if (st.greenBox !== null && st.pieceTurn.phase === "TURNING") st.greenBox.rotationQuaternion = toB(r.base); // ⭐ only if it was drawn
+      z.roll = null;
+    }
+    oneStopInGesture(st);
+  } else endRoll(st, z, true);
+  turnOn(st, z);
+}
+
+/** ⭐ (D-P19) one stop clockwise within a gesture: no undo step of its own (the gesture's, D-P23), the step back already asked by the commit. */
+function oneStopInGesture(st: SceneState): void {
+  const now = performance.now();
+  if (!st.restAligned || st.restRoll === null) {
+    const d = faceTarget(st);
+    if (d !== null) {
+      st.pinkDir = d;
+      if (alignRestingFace(st, now)) st.pieceTurn.lastDir = d;
+    }
+  }
+  if (rollRestingFace(st, now, 1)) {
+    episode(st);
+    st.lastVerdict = st.lastVerdict.replace(/^orbit: tap — roll/, "piece zone: one stop clockwise — roll");
+  }
+  st.pieceTurn.lastTurnAt = now;
+  st.hudDirty = true;
 }
 
 /** ⭐ The desktop's A pressed or lifted (any time during the zone's drag — his third modification). */
@@ -900,9 +993,14 @@ export function pieceZoneKey(st: SceneState, down: boolean): void {
       z.mode = "ROLL";
       return;
     }
-    if (z.mode === "TURN") snapTurn(st, z);
+    // ⭐⭐⭐ (§9.2, D-P18) a turn under way NOT snapped: the free roll from the pose it has
+    let from: Quat | null = null;
+    if (z.mode === "TURN") {
+      from = turnPoseNow(st, z);
+      z.target = null;
+    }
     z.mode = "ROLL";
-    startRoll(st, z, snapNow(st));
+    startRoll(st, z, from);
   } else if (!down && z.aHeld) {
     z.aHeld = false;
     if (!z.committed) {
@@ -910,8 +1008,9 @@ export function pieceZoneKey(st: SceneState, down: boolean): void {
       return;
     }
     if (z.mode === "ROLL") {
-      snapRoll(st, z);
-      z.mode = "INERT";
+      // ⭐⭐⭐ (§9.2, D-P22) the roll snapped, the button still down: the drag turns the piece again
+      endRoll(st, z, true);
+      turnOn(st, z);
     }
   }
 }

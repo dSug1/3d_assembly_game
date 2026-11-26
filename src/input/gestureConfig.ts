@@ -958,7 +958,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   pieceTurnGainX: 2, // ⭐⭐⭐ (2026-11-26, IN14 §9.1, his word *"Set the two sliders default to 2.00"*) × 5.1°/mm shipped = 10.2°/mm (0.4 before, D-P16)
   pieceTurnGainY: 2, // ⭐⭐⭐ (2026-11-26, IN14 §9.1, his word)
   pieceRollDegPerMm: 2, // ⭐ (IN14 D-P8)
-  pieceRollGain: 3, // ⭐⭐⭐ (2026-11-26, IN14 §9.1, his word *"three times the current setup"*): the twist 3:1, A + dx 6°/mm
+  pieceRollGain: 8, // ⭐⭐⭐ (2026-11-26, IN14 §9.2, his word *"Set the piece roll gain to default 8.00"*): the twist 8:1, A + dx 16°/mm (3 in §9.1)
   pieceTurnLitHysteresisDeg: 3, // ⭐ (IN14 D-P5) as the carousel's 3°
   orbitMode: 0, // ⭐⭐⭐ (2026-10-28) the orbit around the assembly
   assemblyLockDistM: 0.3, // ⭐ (2026-10-28) the look at the gizmo within 30 cm (the lock deleted 2026-11-04)
