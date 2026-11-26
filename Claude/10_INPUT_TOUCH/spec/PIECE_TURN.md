@@ -3,7 +3,7 @@
 > **STATUS** · 🔧 **BUILT 2026-11-25 night** (his word: *"proceed as you recommended (md files, packets) … Do not stop until you finish all the
 > packets … Deploy at the end so I can test"*) on `1.0.159-Orbit_of_piece`, under the switch **`pieceTurnZone`** (1 = this page, the default; 0 = the
 > inputs as on LIVE `fe917b8`). Gated headless (§8.2). ⛔ No device look yet (rule 5) — **his look closes it**. The packets: §7; as built: §8.
-> ⭐ 2026-11-26: the piece orbit's gains (x, y) on the scene orbit's (§9).
+> ⭐ 2026-11-26: the piece orbit's gains (x, y) on the scene orbit's, 2.00 each; the piece roll's gain, 3 (§9).
 > **OWNS** · what a press near the held piece does, the piece's own turn, the step back, the roll, the face tap, the undo
 > **READ IF** · you touch a gesture on the held piece, the resting-face quads, or Scene_2's taps
 > **LAST VERIFIED** · 2026-11-25 (written from the code of `9dacca36`)
@@ -111,7 +111,7 @@ the step back's room is asked (§4.5), the quads show.
 
 ### 4.3 The turn under the finger, the lit quad, the snap
 * dx turns the piece about the screen's vertical, dy about its horizontal — the scene orbit's degrees per mm × **`pieceTurnGainX`** / **`pieceTurnGainY`**
-  (§9; 2.04°/mm at the shipped gains) of finger travel since the press, about the
+  (§9; 2.00 each: 10.2°/mm at the shipped gains) of finger travel since the press, about the
   piece's CENTRE; drawn eased over 40 ms toward the finger's.
 * **The lit quad**: of the level's distinct directions (the quads' — `orientationFrames`), the one the resting face's normal is nearest to sitting against
   (anti-parallel); another takes over only when nearer by **`pieceTurnLitHysteresisDeg`** (3°). Its quad edged yellow; the quads and the resting face's
@@ -121,12 +121,12 @@ the step back's room is asked (§4.5), the quads show.
 
 ### 4.4 The roll
 * **Tablet** — the first finger STARTED in the zone (wherever it is now, his first modification); a second finger lands: the turn under way snaps (§4.3),
-  then the TWIST of the two fingers (the angle of the line between them) rolls the piece about its resting face's normal, 1:1, clockwise on the glass =
+  then the TWIST of the two fingers (the angle of the line between them) rolls the piece about its resting face's normal, × **`pieceRollGain`** (3, §9), clockwise on the glass =
   clockwise as seen; at the second finger's lift (or the first's) the roll snaps to the nearest edge stop (`nextCoupleRoll`'s couples: 90° the green
-  piece, 60° the turquoise). A second finger's TAP (tap rules, under 10° of twist) = one stop clockwise. While the first stays down, more second-finger
+  piece, 60° the turquoise). A second finger's TAP (tap rules, under 10° of the FINGERS' twist) = one stop clockwise. While the first stays down, more second-finger
   contacts roll again; its own moves are inert (R7).
 * **Desktop** — A held at a press in the zone, or pressed ANY TIME during a zone drag (his third modification): the turn under way snaps, then **dx**
-  rolls (**`pieceRollDegPerMm`**, 2°/mm, right = clockwise), snapping at the button's release or A's; a click in the zone with A held (no drag) = one
+  rolls (**`pieceRollDegPerMm`** 2°/mm × `pieceRollGain` 3 = 6°/mm, right = clockwise), snapping at the button's release or A's; a click in the zone with A held (no drag) = one
   stop clockwise.
 * Outside the zone, A + drag and the pinch are the approach, as before.
 
@@ -194,7 +194,7 @@ and on a placed part (the gizmo); ALT / CTRL as the held second touch; Scene_2's
   spawn or respawn.
 * **D-P7** — the step back (§4.5): the bounding sphere about the centre, the approach's line, ≤ 12 queries, eased ≤ 0.08 m a frame, back 300 ms after the
   last turn, the rest to the ring's hold; the fallback refuses at the start.
-* **D-P8** — the roll (§4.4): twist 1:1, a tap under 10° = one stop; A + dx 2°/mm; snapping to the nearest edge stop.
+* **D-P8** — the roll (§4.4): twist 1:1, a tap under 10° = one stop; A + dx 2°/mm; snapping to the nearest edge stop. ⇢ 2026-11-26 × his roll gain (§9).
 * **D-P9** — the face tap (§4.6) — his words; the rolls carried as today.
 * **D-P10** — the undo (§4.7): ≤ 32 steps, empty space only, one episode.
 * **D-P11** — obsolete inputs inert at 1 (§4.8).
@@ -274,9 +274,21 @@ for the scene orbit. Therefore, make slider piece orbit gains such as : piece or
   orbit around the assembly, the only place the zone runs, a mm of dy turns the camera as many degrees as a mm of dx (`pointer_wiring.ts`, `dvWant`):
   `gainOrbitElevation` and `boxGainPitch` do not act there. So sceneY = sceneX; the piece's own y gain makes the difference.
 * **D-P15** — the close-in gain (`closeInGain`) not carried: a distance law of the orbit, not a gain a slider sets; close in the piece steps back to turn.
-* **D-P16** — the defaults `pieceTurnGainX` = `pieceTurnGainY` = **0.4** (2.04°/mm at the shipped gains; 2°/mm before, D-P4); sliders 0.05 – 2 (INPUT ›
-  PIECE ZONE).
-* The roll's gain (`pieceRollDegPerMm`, A + dx) unchanged — not the orbit.
+* **D-P16** — the defaults `pieceTurnGainX` = `pieceTurnGainY` = 0.4 (2.04°/mm at the shipped gains; 2°/mm before, D-P4); sliders 0.05 – 2 (INPUT ›
+  PIECE ZONE). ⇢ **his word, the same day** (below): **2.00** each (**10.2°/mm**), sliders 0.05 – **5**.
+* The roll's gain (`pieceRollDegPerMm`, A + dx) unchanged — not the orbit. ⇢ his word, the same day: a roll gain (below).
 * **As built and gated (2026-11-26)**: 5 vectors red first (`tests/piece_turn.test.ts`), the menu's count 153; `npm run verify` 210 files, 2639 vectors;
   `zone_batch.sh` on `Scene_1` all pass; at both gains 0.8 the same drag turns the piece twice as far (66.7° → 133.6°). The switch at 0 untouched
   (the gains read only in the zone's turn).
+
+### 9.1 The defaults moved, the roll's gain (2026-11-26, his word)
+
+His words: *"This is all good. Set the two sliders default to 2.00. Increase their range up to 5.00. Also, add a slider for piece roll gain and set it by
+  default to three times the current setup. Then update the md files. Deploy"*.
+
+* `pieceTurnGainX` = `pieceTurnGainY` = **2.00** (× 5.1°/mm = **10.2°/mm** each, five times D-P16's); sliders and validation **0.05 – 5.00**.
+* **`pieceRollGain`** (INPUT › PIECE ZONE, 0.1 – 10), default **3** — the roll = the gain × the input's own angle, for BOTH roll inputs (the current
+  setup being the twist 1:1 and A + dx 2°/mm): the twist **3:1**, A + dx 2°/mm × 3 = **6°/mm**; `pieceRollDegPerMm` kept as A + dx's base (its slider
+  too). Engine-free: `pieceRollAngle` (`src/input/piece_turn.ts`).
+* **D-P17** — the second finger's TAP stays read on the FINGERS' twist (under 10°), never on the gained roll (at 3 the tap would shrink to 3.3°);
+  the one-stop rolls (a tap, A + a click) are stops, not gained.
