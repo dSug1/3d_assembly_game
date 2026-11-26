@@ -2,7 +2,7 @@
 
 > **STATUS** · 🔧 **BUILT 2026-11-25 night** (his word: *"proceed as you recommended (md files, packets) … Do not stop until you finish all the
 > packets … Deploy at the end so I can test"*) on `1.0.159-Orbit_of_piece`, under the switch **`pieceTurnZone`** (1 = this page, the default; 0 = the
-> inputs as on LIVE `fe917b8`). Gated headless (§8.2). ⛔ No device look yet (rule 5) — **his look closes it**. The packets: §7; as built: §8.
+> inputs as on LIVE `fe917b8`). Gated headless (§8.2). ⇢ 2026-11-26 his look on the device: *"Deploy. Looks good on device"* (LIVE `d40e48c`). The packets: §7; as built: §8.
 > ⭐ 2026-11-26: the piece orbit's gains (x, y) on the scene orbit's, 2.00 each; the piece roll's gain, 8; the roll with no snap at its start, the
 > turn going on after it (§9, §9.2).
 > **OWNS** · what a press near the held piece does, the piece's own turn, the step back, the roll, the face tap, the undo
@@ -217,7 +217,7 @@ and on a placed part (the gizmo); ALT / CTRL as the held second touch; Scene_2's
 | P5 | the face tap onto the last selected quad; the double tap undo; the empty tap inert | verify + probe | ✅ same |
 | P6 | Scene_2 (the pick at any distance, the flow ignoring the zone's pointers, no zone in the idle blend); the obsolete inputs gated; `INPUTS_TABLE.md`, `TUNING_MENU.md`, `PROVENANCE.md` | verify + probe Scene_2 | ✅ same + docs |
 | P7 | the gates: G-A verify; G-B the switch at 0 bit for bit against `9dacca36`; G-C the probes; an independent review; then DEPLOY; the docs as built | all green | ✅ §8.2 |
-| P8 | ⏳ after his look: the obsolete code deleted (the switch removed) | his look | owed |
+| P8 | ⏳ after his look (given 2026-11-26): the obsolete code deleted (the switch removed) | his word | owed |
 
 ## 8. As built (2026-11-25 night)
 
