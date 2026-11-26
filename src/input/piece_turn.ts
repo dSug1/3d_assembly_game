@@ -44,18 +44,22 @@ export function zoneCommitted(travelPx: number, elapsedMs: number, slopPx: numbe
 
 /**
  * ⭐⭐⭐ (2026-11-26, §9.3 — his word: *"a press or left click held on the piece shows the quads after the same timer as when the quads fade away"*)
- * A PRESS HELD in the zone, not committed, shows the quads once held `holdMs` — the quads' hold after a snap (one constant for both).
+ * A PRESS HELD in the zone, not committed, shows the quads once held `waitMs` (`PRESS_SHOWS_QUADS_MS`).
  */
-export function pressHeldShows(now: number, pressedAt: number, holdMs: number): boolean {
-  return now - pressedAt >= holdMs;
+export function pressHeldShows(now: number, pressedAt: number, waitMs: number): boolean {
+  return now - pressedAt >= waitMs;
 }
 
+/** ⭐⭐⭐ (2026-11-26, §9.3 — his word: *"set it at 200 ms instead of 300 ms"*) the held press's wait before the quads show (ms): its own constant — the
+ * quads' hold after a snap stays 300 ms (`HOLD_MS`, `render/piece_turn_wiring.ts`). */
+export const PRESS_SHOWS_QUADS_MS = 200;
+
 /**
- * ⭐⭐⭐ (§4.3, §9.3) THE QUADS' SHARE: 1 while a committed gesture lives (`live`), while a press is held past `holdMs` (`pressedAt`: the time of a press
+ * ⭐⭐⭐ (§4.3, §9.3) THE QUADS' SHARE: 1 while a committed gesture lives (`live`), while a press is held past `waitMs` (`pressedAt`: the time of a press
  * still down and not committed, null none), and until `showUntil` (the hold after either ended); then faded to 0 over `fadeMs`.
  */
-export function zoneQuadsShare(now: number, live: boolean, pressedAt: number | null, showUntil: number, holdMs: number, fadeMs: number): number {
-  if (live || now <= showUntil || (pressedAt !== null && pressHeldShows(now, pressedAt, holdMs))) return 1;
+export function zoneQuadsShare(now: number, live: boolean, pressedAt: number | null, showUntil: number, waitMs: number, fadeMs: number): number {
+  if (live || now <= showUntil || (pressedAt !== null && pressHeldShows(now, pressedAt, waitMs))) return 1;
   const k = 1 - (now - showUntil) / fadeMs;
   return k > 0 ? k : 0;
 }

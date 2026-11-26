@@ -9,6 +9,7 @@ import {
   litDirection,
   nearestAngle,
   nearestRollStop,
+  PRESS_SHOWS_QUADS_MS,
   pressHeldShows,
   pieceRollAngle,
   pieceTurnDegrees,
@@ -322,5 +323,11 @@ describe("⭐ the quads shown by a press held on the piece (§9.3)", () => {
     expect(zoneQuadsShare(until, false, null, until, HOLD, FADE)).toBe(1);
     expect(zoneQuadsShare(until + FADE / 2, false, null, until, HOLD, FADE)).toBeCloseTo(0.5, 12);
     expect(zoneQuadsShare(until + FADE, false, null, until, HOLD, FADE)).toBe(0);
+  });
+  // ⭐⭐⭐ (2026-11-26 — his word: *"set it at 200 ms instead of 300 ms"*) the held press's wait its own, 200 ms. RED against `b20c9ce8` (no constant).
+  it("the held press's wait: 200 ms, its own constant (the hold after a snap stays 300 ms)", () => {
+    expect(PRESS_SHOWS_QUADS_MS).toBe(200);
+    expect(zoneQuadsShare(1199, false, 1000, -Infinity, PRESS_SHOWS_QUADS_MS, FADE)).toBe(0);
+    expect(zoneQuadsShare(1200, false, 1000, -Infinity, PRESS_SHOWS_QUADS_MS, FADE)).toBe(1);
   });
 });
